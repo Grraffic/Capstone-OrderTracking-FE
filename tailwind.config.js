@@ -70,6 +70,7 @@ export default {
         heading: ["Poppins", "ui-sans-serif", "system-ui"],
         SFPro: ["SF-Pro", "sans-serif"],
         SFRegular: ["SF-ProRegular", "sans-serif"],
+        Tolkien: ["Tolkien"],
       },
       spacing: {
         18: "4.5rem",

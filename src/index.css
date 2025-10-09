@@ -12,6 +12,10 @@
   font-family: "Regular";
   src: local("SFPro") url("../public//assets/font/SFPRODISPLAYREGULAR.OTF")
     format("truetype");
+
+  font-family: ("Tolkien");
+  src: local("Tolkien") url("../public/assets/font/Tolkien.ttf")
+    format("truetype");
 }
 
 @layer base {

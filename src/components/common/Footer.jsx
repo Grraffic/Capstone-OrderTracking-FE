@@ -19,11 +19,11 @@ const Footer = () => {
                 alt="LV Logo"
                 className="w-16 h-16 sm:w-20 sm:h-20 hover:scale-105 transition-transform cursor-pointer"
               />
-              <p className="text-center sm:text-left font-regular text-xl sm:text-2xl md:text-[32px] text-LBackground">
+              <p className="text-center sm:text-left text-[#161F55] font-Tolkien text-xl sm:text-2xl md:text-[28px]">
                 LA VERDAD CHRISTIAN COLLEGE
               </p>
             </Link>
-            <p className="text-sm sm:text-[14px] text-center lg:text-left font-LatoRegular text-LBackground max-w-[510px] mt-2 ml-24">
+            <p className="text-sm sm:text-[14px] text-center lg:text-left font-LatoRegular text-LBackground max-w-[510px] ml-24">
               Seamless appointment management—stay organized, save time, and
               never miss an appointment with ease and efficiency.
             </p>
