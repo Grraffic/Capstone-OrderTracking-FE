@@ -1,18 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { 
-  signInWithPopup, 
-  GoogleAuthProvider, 
-  signOut, 
-  onAuthStateChanged 
-} from 'firebase/auth';
-import { auth } from '../services/firebase';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { authAPI } from "../services/api";
 
 const AuthContext = createContext();
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 };
@@ -22,72 +16,105 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
 
-  // User roles based on the system requirements
+  // User roles for school uniform ordering system
+  // - STUDENT: Students ordering uniforms (@student.laverdad.edu.ph)
+  // - ADMIN: Administrators managing uniform orders (@laverdad.edu.ph)
   const USER_ROLES = {
-    STUDENT: 'student',
-    FINANCE: 'finance',
-    PSAS: 'psas',
-    STUDENT_ORG: 'student_org',
-    ADMIN: 'admin'
+    STUDENT: "student",
+    ADMIN: "admin",
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        // In a real implementation, you would fetch the user role from your backend
-        // For now, we'll determine role based on email domain or other criteria
-        const role = await determineUserRole(user);
-        setUserRole(role);
-      } else {
+    const checkAuthStatus = async () => {
+      try {
+        const storedToken = localStorage.getItem("authToken");
+        if (storedToken) {
+          const response = await authAPI.getProfile();
+          const userData = response.data;
+          // Normalize profile shape for frontend components
+          // Extract email safely - handle both string and object cases
+          let emailString = "";
+          if (typeof userData.email === "string") {
+            emailString = userData.email;
+          } else if (userData.email && typeof userData.email === "object") {
+            // Try common object property names
+            emailString = userData.email.email || userData.email.value || "";
+          }
+
+          const normalized = {
+            id: userData.id,
+            email: emailString,
+            role: userData.role,
+            displayName:
+              userData.name || (emailString ? emailString.split("@")[0] : ""),
+            photoURL: userData.photoURL || null,
+          };
+
+          setUser(normalized);
+          const role = userData.role || determineUserRole(userData);
+          setUserRole(role);
+        }
+      } catch (error) {
+        console.error("Error checking auth status:", error);
+        // If token is invalid, clear it
+        localStorage.removeItem("authToken");
         setUser(null);
         setUserRole(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    };
 
-    return unsubscribe;
+    checkAuthStatus();
   }, []);
 
-  const determineUserRole = async (user) => {
-    // This is a placeholder implementation
-    // In a real app, you would call your backend API to get the user's role
-    const email = user.email.toLowerCase();
-    
-    if (email.includes('finance')) {
-      return USER_ROLES.FINANCE;
-    } else if (email.includes('psas')) {
-      return USER_ROLES.PSAS;
-    } else if (email.includes('admin')) {
-      return USER_ROLES.ADMIN;
-    } else if (email.includes('org')) {
-      return USER_ROLES.STUDENT_ORG;
-    } else {
+  const determineUserRole = (userData) => {
+    // Extract email safely - handle both string and object cases
+    let emailString = "";
+    if (typeof userData.email === "string") {
+      emailString = userData.email;
+    } else if (userData.email && typeof userData.email === "object") {
+      emailString = userData.email.email || userData.email.value || "";
+    }
+
+    const email = (emailString || "").toLowerCase();
+
+    // Enforce domain-based roles per project rules
+    if (email.endsWith("@student.laverdad.edu.ph")) {
       return USER_ROLES.STUDENT;
     }
+
+    // Exact admin domain (no student subdomain)
+    if (
+      email.endsWith("@laverdad.edu.ph") &&
+      !email.endsWith("@student.laverdad.edu.ph")
+    ) {
+      return USER_ROLES.ADMIN;
+    }
+
+    return USER_ROLES.STUDENT; // default to student when in doubt
   };
 
   const signInWithGoogle = async () => {
     try {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('email');
-      provider.addScope('profile');
-      
-      const result = await signInWithPopup(auth, provider);
-      return result.user;
+      // Redirect to backend Google OAuth endpoint using environment variable
+      const baseUrl =
+        import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+      window.location.href = `${baseUrl}/auth/google`;
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.error("Error signing in with Google:", error);
       throw error;
     }
   };
 
   const logout = async () => {
     try {
-      await signOut(auth);
+      await authAPI.logout();
+      localStorage.removeItem("authToken");
       setUser(null);
       setUserRole(null);
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       throw error;
     }
   };
@@ -111,9 +138,5 @@ export const AuthProvider = ({ children }) => {
     hasAnyRole,
   };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

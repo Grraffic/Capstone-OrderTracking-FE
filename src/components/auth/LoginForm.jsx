@@ -1,7 +1,19 @@
-import React, { useState } from "react";
+import React from "react";
+import { useLoginForm } from "../../hooks/useLoginForm";
+import { useRoleSelection } from "../../hooks/useRoleSelection";
 
-export default function LoginPage() {
-  const [role, setRole] = useState("Student"); // Default role
+export default function LoginForm() {
+  // Extract business logic into hooks
+  const { email, password, rememberMe, errors, handleChange, handleSubmit } =
+    useLoginForm(async (formData) => {
+      console.log("Form submitted:", formData);
+      // TODO: Call login API
+    });
+
+  const { role, selectRole, getCurrentRoleInfo, getAvailableRoles } =
+    useRoleSelection();
+
+  const roleInfo = getCurrentRoleInfo();
 
   return (
     <div className="h-screen w-screen flex bg-white overflow-hidden">
@@ -25,26 +37,19 @@ export default function LoginPage() {
 
           {/* Role Switch */}
           <div className="inline-flex justify-center rounded-lg shadow-sm mb-6">
-            <button
-              className={`px-8 py-2 text-sm font-medium rounded-l-lg border ${
-                role === "Student"
-                  ? "bg-blue-900 text-white border-blue-900 rounded-lg"
-                  : "bg-white text-orange-500 border-gray-200 hover:bg-gray-50"
-              }`}
-              onClick={() => setRole("Student")}
-            >
-              Student
-            </button>
-            <button
-              className={`px-8 py-2 text-sm font-medium rounded-r-lg border ${
-                role === "Coordinator"
-                  ? "bg-blue-900 text-white border-blue-900 rounded-lg"
-                  : "bg-white text-orange-500 border-gray-200 hover:bg-gray-50"
-              }`}
-              onClick={() => setRole("Coordinator")}
-            >
-              Coordinator
-            </button>
+            {getAvailableRoles().map((availableRole) => (
+              <button
+                key={availableRole}
+                className={`px-8 py-2 text-sm font-medium border ${
+                  role === availableRole
+                    ? "bg-blue-900 text-white border-blue-900 rounded-lg"
+                    : "bg-white text-orange-500 border-gray-200 hover:bg-gray-50"
+                }`}
+                onClick={() => selectRole(availableRole)}
+              >
+                {availableRole}
+              </button>
+            ))}
           </div>
 
           {/* Info Box */}
@@ -66,12 +71,10 @@ export default function LoginPage() {
             </div>
             <div>
               <p className="font-semibold text-gray-700">
-                {role === "Student" ? "Student Portal" : "Coordinator Portal"}
+                {getCurrentRoleInfo().portal}
               </p>
               <p className="text-sm text-gray-500">
-                {role === "Student"
-                  ? "You can now access the user side of the site"
-                  : "You can now manage and coordinate the site"}
+                {getCurrentRoleInfo().description}
               </p>
             </div>
           </div>
@@ -83,9 +86,15 @@ export default function LoginPage() {
             </label>
             <input
               type="email"
+              name="email"
+              value={email}
+              onChange={handleChange}
               placeholder="Enter your e-mail"
-              className="w-full  py-2 border-b border-blue-500 focus:outline-none focus:border-blue-500"
+              className="w-full py-2 border-b border-blue-500 focus:outline-none focus:border-blue-500"
             />
+            {errors.email && (
+              <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+            )}
           </div>
 
           {/* Password Input */}
@@ -95,15 +104,27 @@ export default function LoginPage() {
             </label>
             <input
               type="password"
+              name="password"
+              value={password}
+              onChange={handleChange}
               placeholder="Enter your password"
               className="w-full py-2 border-b border-blue-500 focus:outline-none focus:border-blue-500"
             />
+            {errors.password && (
+              <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+            )}
           </div>
 
           {/* Remember Me & Forgot Password */}
           <div className="flex justify-between items-center mb-6">
             <label className="flex items-center text-sm text-gray-600 px-16">
-              <input type="checkbox" className="mr-2" />
+              <input
+                type="checkbox"
+                name="rememberMe"
+                checked={rememberMe}
+                onChange={handleChange}
+                className="mr-2"
+              />
               Remember me
             </label>
             <a href="#" className="text-sm text-[#00396E] mr-16 ">
@@ -113,7 +134,10 @@ export default function LoginPage() {
 
           {/* Login Button */}
           <div className="flex justify-center">
-            <button className="w-[70%] bg-[#003363] text-white py-2 rounded-lg font-semibold shadow-md hover:bg-blue-800">
+            <button
+              onClick={handleSubmit}
+              className="w-[70%] bg-[#003363] text-white py-2 rounded-lg font-semibold shadow-md hover:bg-blue-800"
+            >
               Login
             </button>
           </div>

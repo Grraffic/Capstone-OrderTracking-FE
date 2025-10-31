@@ -1,80 +1,65 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { useScrollOnState } from "../hooks/useScrollOnState";
 import Header from "../components/common/Header";
 import Footer from "../components/common/Footer";
+import ContactForm from "../components/common/ContactForm";
+import FeatureCarousel from "../constants/carouselSlides";
 
 export default function LandingPage() {
+  useScrollOnState();
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <Header />
 
-      {/* Hero Section */}
-      <section className="relative w-full px-8 bg-white">
+      {/* Hero Section - Add padding-top to account for fixed header */}
+      <section className="relative w-full px-4 sm:px-6 lg:px-8 bg-white pt-20 sm:pt-24">
         {/* Background Image with Text Behind */}
-        <div className="relative w-full h-[70vh]">
-          {/* Text BEHIND the image */}
-
-          <h1 className="absolute px-8 py-6 tracking-[-10px] leading-none text-[130px] font-SFRegular text-[#00396E] opacity-100 z-0">
-            La Verdad{" "}
-            <span className="text-[#f59301] drop-shadow-lg leading-[90px] text-[130px] flex font-SFRegular">
-              OrderFlow
-            </span>
-          </h1>
-
-          <p className="absolute right-8 top-10 font-SFRegular text-xl text-[#00396E] opacity-100 z-0">
-            A seamless Order Tracking for{" "}
-            <span className="text-[#E68B00]">School Uniform and Items</span>
-          </p>
-
-          {/* Foreground Image */}
-          <img
-            src="../../assets/image/LandingPage.png"
-            alt="La Verdad Christian College"
-            className="relative z-10 w-full h-full object-cover shadow-gray-800 rounded-xl shadow-md bg-black bg-opacity-10"
-          />
-        </div>
+        <FeatureCarousel />
 
         {/* Content under the Background */}
-        <div className="container mx-auto px-6 py-12 grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-          <div className="max-w-xl space-y-6">
-            <p className="text-lg text-[#003363]">
+        <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+          <div className="max-w-xl space-y-4 sm:space-y-6">
+            <p className="text-sm sm:text-base lg:text-lg text-[#003363] leading-relaxed">
               A Web-Based Order Tracking System with QR-integrated Inventory
               Monitoring of school uniforms at La Verdad Christian College Inc.,
               Apalit.
             </p>
             <Link
               to="/get-started"
-              className="border-2 border-[#E68B00] text-[#E68B00] px-8 py-3 rounded-full font-semibold hover:bg-orange-50 hover:text-orange-600 transition ml-auto block w-fit"
+              className="border-2 border-[#E68B00] text-[#E68B00] px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:bg-orange-50 hover:text-orange-600 transition ml-auto block w-fit text-sm sm:text-base min-h-[44px] flex items-center justify-center"
             >
               Get Started
             </Link>
           </div>
 
           {/* Right Content (Social Media Preview) */}
-          <div className="bg-white p-6 rounded-xl shadow-lg relative flex items-center">
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg relative flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-0">
             <img
               src="../../assets/image/page.png"
               alt="La Verdad Christian College Facebook"
-              className="w-[320px] h-auto rounded-lg shadow-md"
+              className="w-full sm:w-[200px] md:w-[280px] lg:w-[320px] h-auto rounded-lg shadow-md flex-shrink-0"
             />
-            <div className="ml-8 text-left">
-              <h2 className="text-2xl font-bold text-[#163869]">
-                Follow us on our <br />
+            <div className="sm:ml-4 md:ml-6 lg:ml-8 text-center sm:text-left w-full sm:w-auto">
+              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[#163869] leading-tight">
+                Follow us on our <br className="hidden sm:block" />
                 <span className="text-[#E68B00]">Social Media</span>
               </h2>
-              <p className="mt-2 text-lg text-[#235292] font-semibold">
+              <p className="mt-2 text-base sm:text-lg text-[#235292] font-semibold">
                 La Verdad Christian College
               </p>
-              <p className="text-base text-orange-600">Apalit, Pampanga</p>
+              <p className="text-sm sm:text-base text-orange-600">
+                Apalit, Pampanga
+              </p>
             </div>
             <a
               href="https://www.facebook.com/lvcc.apalit"
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute bottom-4 right-4"
+              className="absolute bottom-4 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center"
             >
-              <button className="bg-yellow-400 rounded-lg p-3 shadow flex items-center">
+              <button className="bg-yellow-400 rounded-lg p-3 shadow flex items-center hover:bg-yellow-500 transition">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5 text-white"
@@ -97,27 +82,29 @@ export default function LandingPage() {
       </section>
 
       {/* Featured Section */}
-      <section className="bg-gray-50 py-4">
-        <div className="container mx-auto px-6">
-          <h2 className="text-3xl font-bold  text-[#003363] mb-12">
+      <section id="featured" className="bg-gray-50 py-8 sm:py-12 lg:py-16">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#003363] mb-8 sm:mb-12">
             Now <span className="text-[#E68B00]">Available</span>
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Card 1 */}
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-              <h3 className="text-xl text-[38px] font-semibold text-[#003363]">
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-lg transition">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
                 Senior High Uniforms
               </h3>
-              <p className="text-gray-600">are now Available!</p>
+              <p className="text-sm sm:text-base text-gray-600 mb-4">
+                are now Available!
+              </p>
               <img
                 src="../../assets/image/card1.png"
                 alt="Senior High Uniforms"
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
               />
               <div>
                 <Link
                   to="/order"
-                  className="text-orange-500 font-semibold mt-4 inline-block hover:underline"
+                  className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
                 >
                   Click here to Order →
                 </Link>
@@ -125,36 +112,42 @@ export default function LandingPage() {
             </div>
 
             {/* Card 2 */}
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-              <h3 className="text-xl font-semibold">
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-lg transition">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
                 Basic Education Uniforms
               </h3>
-              <p className="text-gray-600">are now Available!</p>
+              <p className="text-sm sm:text-base text-gray-600 mb-4">
+                are now Available!
+              </p>
               <img
                 src="../../assets/image/card2.png"
                 alt="Basic Education Uniforms"
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
               />
               <Link
                 to="/order"
-                className="text-orange-500 font-semibold mt-4 inline-block hover:underline"
+                className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
               >
                 Click here to Order →
               </Link>
             </div>
 
             {/* Card 3 */}
-            <div className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition">
-              <h3 className="text-xl font-semibold">Notebooks</h3>
-              <p className="text-gray-600">are now Available!</p>
+            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-lg transition sm:col-span-2 lg:col-span-1">
+              <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                Notebooks
+              </h3>
+              <p className="text-sm sm:text-base text-gray-600 mb-4">
+                are now Available!
+              </p>
               <img
                 src="../../assets/image/card3.png"
                 alt="Notebooks"
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
               />
               <Link
                 to="/order"
-                className="text-orange-500 font-semibold mt-4 inline-block hover:underline"
+                className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
               >
                 Click here to Order →
               </Link>
@@ -163,169 +156,165 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <div className="relative w-full h-[80vh] my-10 overflow-hidden rounded-lg">
-        {/* LAYER 1: Solid background */}
-        <div className="absolute inset-0 w-full h-full bg-[#fefefe] z-0 opacity-95" />
+      {/* About Section - Vision & Mission */}
+      <section className="relative w-full min-h-[60vh] sm:min-h-[70vh] lg:min-h-[80vh] my-6 sm:my-8 lg:my-10 overflow-hidden">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="relative w-full min-h-[60vh] sm:min-h-[70vh] lg:min-h-[80vh] overflow-hidden rounded-lg">
+            {/* LAYER 1: Solid background */}
+            <div className="absolute inset-0 w-full h-full bg-[#fefefe] z-0 opacity-95" />
 
-        {/* LAYER 2: Background image, half-height or custom */}
-        <div
-          className="absolute inset-x-0 bottom-0 w-full h-[50vh] bg-center z-10"
-          style={{
-            backgroundImage:
-              "url('../../public/assets/image/Untitled design.png')",
-          }}
-        />
+            {/* LAYER 2: Background image, half-height or custom */}
+            <div
+              className="absolute inset-x-0 bottom-0 w-full h-[40vh] sm:h-[45vh] lg:h-[50vh] bg-center bg-cover bg-no-repeat z-10"
+              style={{
+                backgroundImage:
+                  "url('../../assets/image/Untitled design.png')",
+                backgroundSize: "contain",
+                backgroundPosition: "center bottom",
+              }}
+            />
 
-        {/* LAYER 3: Vision & Mission text on top */}
-        <div className="absolute inset-0 flex flex-col justify-start items-center h-full z-20 px-10">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full p-10">
-            {/* Vision */}
-            <div className="text-center p-6">
-              <h2 className="text-4xl font-bold text-[#163869] mb-2">Vision</h2>
-              <p className="mt-2 text-lg text-[#003363] font-SFPro">
-                The institution that ensures
-                <span className="text-[#E68B00] font-semibold">
-                  {" "}
-                  quality learning{" "}
-                </span>
-                and <br />
-                <span className="text-[#E68B00] font-semibold ">
-                  {" "}
-                  biblical moral standards.
-                </span>
-              </p>
-            </div>
-            {/* Mission */}
-            <div className="text-center p-6 ">
-              <h2 className="text-4xl font-bold text-[#163869] mb-2">
-                Mission
-              </h2>
-              <p className="mt-2 text-lg text-[#003363] font-SFPro">
-                To be the frontrunner in providing
-                <span className="text-[#E68B00] font-semibold">
-                  {" "}
-                  academic <br /> excellence{" "}
-                </span>
-                and
-                <span className="text-[#E68B00] font-semibold">
-                  {" "}
-                  morally upright principles.
-                </span>
-              </p>
+            {/* LAYER 3: Vision & Mission text on top */}
+            <div
+              id="about"
+              className="absolute inset-0 flex flex-col justify-start items-center h-full z-20 px-4 sm:px-6 lg:px-10"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 w-full p-4 sm:p-6 lg:p-10 max-w-7xl">
+                {/* Vision */}
+                <div
+                  id="vision"
+                  className="text-center p-4 sm:p-6 bg-white/80 sm:bg-transparent rounded-lg sm:rounded-none"
+                >
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#163869] mb-2 sm:mb-4">
+                    Vision
+                  </h2>
+                  <p className="mt-2 text-sm sm:text-base lg:text-lg text-[#003363] font-SFPro leading-relaxed">
+                    The institution that ensures
+                    <span className="text-[#E68B00] font-semibold">
+                      {" "}
+                      quality learning{" "}
+                    </span>
+                    and <br className="hidden sm:block" />
+                    <span className="text-[#E68B00] font-semibold">
+                      {" "}
+                      biblical moral standards.
+                    </span>
+                  </p>
+                </div>
+                {/* Mission */}
+                <div
+                  id="mission"
+                  className="text-center p-4 sm:p-6 bg-white/80 sm:bg-transparent rounded-lg sm:rounded-none"
+                >
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#163869] mb-2 sm:mb-4">
+                    Mission
+                  </h2>
+                  <p className="mt-2 text-sm sm:text-base lg:text-lg text-[#003363] font-SFPro leading-relaxed">
+                    To be the frontrunner in providing
+                    <span className="text-[#E68B00] font-semibold">
+                      {" "}
+                      academic <br className="hidden sm:block" /> excellence{" "}
+                    </span>
+                    and
+                    <span className="text-[#E68B00] font-semibold">
+                      {" "}
+                      morally upright principles.
+                    </span>
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="w-full min-h-screen flex flex-col items-center justify-center bg-[#fefefe] py-10">
-        {/* Main content: Card and Info */}
-        <div className="w-full max-w-6xl flex flex-col md:flex-row justify-center items-center gap-16 px-4">
-          {/* LEFT: Contact Card - vertically centered */}
-          <div className="bg-[#f9f9fa] rounded-2xl shadow-xl p-10 max-w-md w-full flex flex-col border border-gray-100">
-            <h3 className="text-2xl font-bold mb-8">
-              <span className="text-[#163869]">Get </span>
-              <span className="text-[#E68B00]">in Touch</span>
-            </h3>
-            <label className="text-sm font-bold text-[#163869] mb-0.5">
-              Name
-            </label>
-            <input
-              className="mb-5 text-[15px] border-none border-b border-[#62759d] bg-transparent focus:outline-none"
-              type="text"
-              placeholder="Enter your name"
-            />
-
-            <label className="text-sm font-bold text-[#163869] mb-0.5">
-              E-mail
-            </label>
-            <input
-              className="mb-5 text-[15px] border-none border-b border-[#62759d] bg-transparent focus:outline-none"
-              type="email"
-              placeholder="Enter your e-mail"
-            />
-
-            <label className="text-sm font-bold text-[#163869] mb-0.5">
-              Message
-            </label>
-            <textarea
-              className="mb-7 text-[15px] border-none border-b border-[#62759d] bg-transparent focus:outline-none resize-none"
-              rows={3}
-              placeholder="Write your message here"
-            />
-
-            <button className="bg-[#163869] text-white px-6 py-2 text-sm rounded-lg font-bold self-end -mt-2 mb-4 shadow">
-              Send Message
-            </button>
-            {/* Bottom image */}
-            <div
-              className="w-full relative overflow-hidden flex rounded-lg"
-              style={{ height: "200px" }}
-            >
-              <img
-                src="../../public/assets/image/Untitled%20design.png"
-                alt="Campus"
-                className="w-full h-full"
-              />
-            </div>
+      {/* Contact Section */}
+      <div
+        id="contact"
+        className="w-full min-h-screen flex flex-col items-center justify-center bg-[#fefefe] py-8 sm:py-12 lg:py-16"
+      >
+        <div className="w-full max-w-6xl flex flex-col lg:flex-row justify-center items-start gap-8 lg:gap-16 px-4 sm:px-6 lg:px-8">
+          {/* LEFT: Contact Form with Image */}
+          <div className="w-full lg:w-1/2">
+            <ContactForm />
           </div>
 
-          {/* RIGHT: Contact Info - left-aligned text */}
-          <div className="flex-1 flex flex-col justify-start items-start mb-28">
-            {/* Contact Us heading */}
-            <h3 className="text-xl font-semibold text-[#163869] mb-2">
+          {/* RIGHT: Contact Info */}
+          <div className="w-full lg:w-1/2 flex flex-col justify-start items-start">
+            <h3 className="text-lg sm:text-xl font-semibold text-[#163869] mb-2">
               Contact <span className="text-[#E68B00]">Us</span>
             </h3>
-            {/* Large heading */}
-            <div className="text-[2.7rem] md:text-5xl font-bold text-[#163869] mb-2 leading-snug ">
-              We are here to <br />{" "}
+            <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-[#163869] mb-4 leading-tight">
+              We are here to <br />
               <span className="text-[#E68B00]">assist</span> you
             </div>
-            {/* Subtext */}
-            <p className="text-[#163869] text-base mb-8 max-w-xl">
-              If you have any inquiries, require assistance, or wish to <br />{" "}
-              provide feedback, we are here to assist you.
+            <p className="text-[#163869] text-sm sm:text-base mb-6 lg:mb-8 max-w-xl leading-relaxed">
+              If you have any inquiries, require assistance, or wish to provide
+              feedback, we are here to assist you.
             </p>
-            {/* Contact information block */}
-            <h4 className="mt-2 text-xl font-bold text-[#163869]">
-              Contact <span className="text-[#E68B00]">information</span>
-            </h4>
-            {/* Address */}
-            <div className="mt-5 flex flex-row items-start gap-2">
-              <span className="text-[#163869] text-lg mt-0.5">📍</span>
-              <div>
-                <span className="font-bold text-[#163869]">Address</span>
-                <br />
-                <span className="text-[#163869] text-base">
-                  Mac Arthur High-way, Sampaloc, Apalit, <br />
-                  Pampanga
+
+            {/* Contact Information */}
+            <div className="w-full space-y-4 sm:space-y-6">
+              <h4 className="text-base sm:text-lg lg:text-xl font-bold text-[#163869]">
+                Contact <span className="text-[#E68B00]">information</span>
+              </h4>
+
+              {/* Address */}
+              <div className="flex items-start gap-3 min-h-[44px]">
+                <span className="text-[#163869] text-lg sm:text-xl flex-shrink-0">
+                  📍
                 </span>
+                <div>
+                  <span className="font-bold text-[#163869] block text-sm sm:text-base">
+                    Address
+                  </span>
+                  <span className="text-[#163869] text-sm sm:text-base leading-relaxed">
+                    Mac Arthur High-way, Sampaloc, Apalit,
+                    <br />
+                    Pampanga
+                  </span>
+                </div>
               </div>
-            </div>
-            {/* Contact details */}
-            <div className="mt-6 flex flex-row items-start gap-2">
-              <span className="text-[#163869] text-lg mt-0.5">✉</span>
-              <div>
-                <span className="font-bold text-[#163869]">Contact</span>
-                <br />
-                <span className="text-[#163869] text-base">
-                  +639479998499
-                  <br />
-                  support@laverdad.edu.ph
+
+              {/* Contact Details */}
+              <div className="flex items-start gap-3 min-h-[44px]">
+                <span className="text-[#163869] text-lg sm:text-xl flex-shrink-0">
+                  ✉
                 </span>
+                <div>
+                  <span className="font-bold text-[#163869] block text-sm sm:text-base">
+                    Contact
+                  </span>
+                  <span className="text-[#163869] text-sm sm:text-base leading-relaxed">
+                    +639479998499
+                    <br />
+                    support@laverdad.edu.ph
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* BOTTOM SECTION: Google Maps */}
-        <div className="w-full flex flex-col items-center mt-24">
-          <div className="text-[1.26rem] font-bold text-[#163869]">
+        <div className="w-full flex flex-col items-center mt-12 sm:mt-16 lg:mt-24 px-4 sm:px-6 lg:px-8">
+          <div className="text-lg sm:text-xl lg:text-2xl text-center font-bold text-[#163869] mb-3">
             Find Us on <span className="text-[#E68B00]">Google Maps</span>
           </div>
-          <p className="mt-3 text-[#163869] text-base text-center max-w-xl">
+          <p className="mt-2 sm:mt-3 text-[#163869] text-sm sm:text-base text-center max-w-xl mb-6 sm:mb-8 leading-relaxed px-4">
             If you have any inquiries, require assistance, or wish to provide
             feedback, we are here to assist you
           </p>
+          <div className="w-full max-w-7xl">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d123347.40710675181!2d120.61418624335936!3d14.959002300000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33965634a341dc6f%3A0x17091aa8b0043f89!2sLa%20Verdad%20Christian%20College!5e0!3m2!1sen!2sph!4v1737910779201!5m2!1sen!2sph"
+              className="w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] rounded-lg shadow-lg"
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              title="Google Map"
+            ></iframe>
+          </div>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { useAuth } from '../../context/AuthContext';
-import { LogOut, User, Settings, ChevronDown } from 'lucide-react';
+import React, { useState } from "react";
+import { useAuth } from "../../context/AuthContext";
+import { LogOut, User, Settings, ChevronDown } from "lucide-react";
 
 const UserProfile = () => {
   const { user, userRole, logout } = useAuth();
@@ -10,30 +10,24 @@ const UserProfile = () => {
     try {
       await logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
 
   const getRoleDisplayName = (role) => {
     const roleNames = {
-      student: 'Student',
-      finance: 'Finance Department',
-      psas: 'PSAS Department',
-      student_org: 'Student Organization',
-      admin: 'Administrator'
+      student: "Student",
+      admin: "Administrator",
     };
-    return roleNames[role] || 'User';
+    return roleNames[role] || "User";
   };
 
   const getRoleBadgeColor = (role) => {
     const colors = {
-      student: 'bg-blue-100 text-blue-800',
-      finance: 'bg-green-100 text-green-800',
-      psas: 'bg-purple-100 text-purple-800',
-      student_org: 'bg-orange-100 text-orange-800',
-      admin: 'bg-red-100 text-red-800'
+      student: "bg-blue-100 text-blue-800",
+      admin: "bg-red-100 text-red-800",
     };
-    return colors[role] || 'bg-gray-100 text-gray-800';
+    return colors[role] || "bg-gray-100 text-gray-800";
   };
 
   return (
@@ -43,13 +37,13 @@ const UserProfile = () => {
         className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors"
       >
         <img
-          src={user?.photoURL || '/default-avatar.png'}
-          alt={user?.displayName || 'User'}
+          src={user?.photoURL || "/default-avatar.png"}
+          alt={user?.displayName || "User"}
           className="h-8 w-8 rounded-full"
         />
         <div className="hidden md:block text-left">
           <p className="text-sm font-medium text-gray-900">
-            {user?.displayName || 'User'}
+            {user?.displayName || "User"}
           </p>
           <p className="text-xs text-gray-500">
             {getRoleDisplayName(userRole)}
@@ -68,18 +62,20 @@ const UserProfile = () => {
             <div className="p-4 border-b border-gray-200">
               <div className="flex items-center space-x-3">
                 <img
-                  src={user?.photoURL || '/default-avatar.png'}
-                  alt={user?.displayName || 'User'}
+                  src={user?.photoURL || "/default-avatar.png"}
+                  alt={user?.displayName || "User"}
                   className="h-12 w-12 rounded-full"
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">
-                    {user?.displayName || 'User'}
+                    {user?.displayName || "User"}
                   </p>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {user?.email}
-                  </p>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(userRole)}`}>
+                  <p className="text-xs text-gray-500 mb-2">{user?.email}</p>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(
+                      userRole
+                    )}`}
+                  >
                     {getRoleDisplayName(userRole)}
                   </span>
                 </div>
