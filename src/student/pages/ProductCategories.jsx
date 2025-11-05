@@ -1,6 +1,6 @@
 import React from "react";
-import { useProductCategories } from "../hooks/useProductCategories";
-import { useProductPagination } from "../hooks/useProductPagination";
+import { useProductCategories } from "../../hooks/useProductCategories";
+import { useProductPagination } from "../../hooks/useProductPagination";
 
 const ProductCategories = () => {
   // Extract business logic into hooks

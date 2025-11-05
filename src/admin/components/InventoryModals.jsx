@@ -223,10 +223,12 @@ const InventoryModals = ({
                   </label>
                   <span
                     className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                      selectedItem?.status === "In Stock"
+                      selectedItem?.status === "Above Threshold"
                         ? "bg-green-100 text-green-800"
-                        : selectedItem?.status === "Low Stock"
+                        : selectedItem?.status === "At Reorder Point"
                         ? "bg-yellow-100 text-yellow-800"
+                        : selectedItem?.status === "Critical"
+                        ? "bg-orange-100 text-orange-800"
                         : "bg-red-100 text-red-800"
                     }`}
                   >
@@ -410,7 +412,7 @@ const InventoryModals = ({
                     {/* Category */}
                     <div className="flex items-start gap-4">
                       <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Category
+                        Item Category
                       </label>
                       <div className="flex-1">
                         <select

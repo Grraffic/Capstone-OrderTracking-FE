@@ -1,5 +1,5 @@
 import React from "react";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 import {
   ShoppingCart,
   Package,
@@ -9,8 +9,8 @@ import {
   Plus,
   QrCode,
 } from "lucide-react";
-import { useDashboardData } from "../hooks/useDashboardData";
-import { useOrderStatus } from "../hooks/useOrderStatus";
+import { useDashboardData } from "../../hooks/useDashboardData";
+import { useOrderStatus } from "../../hooks/useOrderStatus";
 
 const StudentDashboard = () => {
   const { user } = useAuth();

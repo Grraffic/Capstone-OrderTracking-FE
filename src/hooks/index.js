@@ -28,3 +28,9 @@ export { useProductPagination } from "./useProductPagination";
 // UI Hooks
 export { useScrollOnState } from "./useScrollOnState";
 export { useNavigateToSection } from "./useNavigateToSection";
+
+// Student Hooks (now in /student module)
+export { useProducts } from "../student/hooks/useProducts";
+export { useSearchDebounce } from "../student/hooks/useSearchDebounce";
+export { useProductFilter } from "../student/hooks/useProductFilter";
+export { useProductPagination as useStudentProductPagination } from "../student/hooks/useProductPagination";

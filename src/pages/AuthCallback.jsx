@@ -53,7 +53,7 @@ const AuthCallback = () => {
       if (role === "admin") {
         navigate("/admin", { replace: true });
       } else if (role === "student") {
-        navigate("/product-categories", { replace: true });
+        navigate("/all-products", { replace: true });
       } else {
         // fallback
         navigate("/", { replace: true });

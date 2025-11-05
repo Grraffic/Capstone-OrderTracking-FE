@@ -51,10 +51,12 @@ const InventoryTable = ({
    */
   const getStatusColor = (status) => {
     switch (status) {
-      case "In Stock":
+      case "Above Threshold":
         return "bg-green-100 text-green-800";
-      case "Low Stock":
+      case "At Reorder Point":
         return "bg-yellow-100 text-yellow-800";
+      case "Critical":
+        return "bg-orange-100 text-orange-800";
       case "Out of Stock":
         return "bg-red-100 text-red-800";
       default:
@@ -184,10 +186,10 @@ const InventoryTable = ({
                     {item.stock} in stocks
                   </td>
 
-                  {/* Status */}
+                  {/* Status - Editable dropdown */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
-                      className={`px-3 py-1.5 rounded-md text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-offset-1 ${getStatusColor(
+                      className={`px-3 py-1.5 rounded-md text-xs font-medium border-0 focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer ${getStatusColor(
                         item.status
                       )}`}
                       value={item.status}
@@ -196,9 +198,10 @@ const InventoryTable = ({
                         console.log("Status changed:", e.target.value);
                       }}
                     >
-                      <option value="In Stock">Above Threshold</option>
-                      <option value="Low Stock">At Reorder Point</option>
-                      <option value="Out of Stock">Critical</option>
+                      <option value="Above Threshold">Above Threshold</option>
+                      <option value="At Reorder Point">At Reorder Point</option>
+                      <option value="Critical">Critical</option>
+                      <option value="Out of Stock">Out of Stock</option>
                     </select>
                   </td>
 

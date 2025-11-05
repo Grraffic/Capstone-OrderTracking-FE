@@ -5,24 +5,25 @@ import React from "react";
  *
  * Displays inventory statistics in a responsive grid of cards:
  * - Total Items
- * - In Stock
- * - Low Stock
- * - Out of Stock
+ * - Above Threshold (stock >= 50)
+ * - At Reorder Point (stock 20-49)
+ * - Critical (stock 1-19)
+ * - Out of Stock (stock = 0)
  *
  * Responsive Layout:
  * - Mobile (<640px): 1 column (stacked)
  * - Tablet (640px-1023px): 2 columns
- * - Desktop (≥1024px): 4 columns (single row)
+ * - Desktop (≥1024px): 5 columns (single row)
  *
  * Props:
- * - stats: Object containing { totalItems, inStock, lowStock, outOfStock }
+ * - stats: Object containing { totalItems, aboveThreshold, atReorderPoint, critical, outOfStock }
  */
 const InventoryStatsCards = ({ stats }) => {
   const cards = [
     {
       id: 1,
       title: "Total Items",
-      value: stats.totalItems,
+      value: stats.totalItems || 0,
       color: "text-[#0C2340]",
       bgColor: "bg-blue-100",
       iconColor: "text-blue-600",
@@ -44,8 +45,8 @@ const InventoryStatsCards = ({ stats }) => {
     },
     {
       id: 2,
-      title: "In Stock",
-      value: stats.inStock,
+      title: "Above Threshold",
+      value: stats.aboveThreshold || 0,
       color: "text-green-600",
       bgColor: "bg-green-100",
       iconColor: "text-green-600",
@@ -67,8 +68,8 @@ const InventoryStatsCards = ({ stats }) => {
     },
     {
       id: 3,
-      title: "Low Stock",
-      value: stats.lowStock,
+      title: "At Reorder Point",
+      value: stats.atReorderPoint || 0,
       color: "text-yellow-600",
       bgColor: "bg-yellow-100",
       iconColor: "text-yellow-600",
@@ -90,8 +91,31 @@ const InventoryStatsCards = ({ stats }) => {
     },
     {
       id: 4,
+      title: "Critical",
+      value: stats.critical || 0,
+      color: "text-orange-600",
+      bgColor: "bg-orange-100",
+      iconColor: "text-orange-600",
+      icon: (
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+      ),
+    },
+    {
+      id: 5,
       title: "Out of Stock",
-      value: stats.outOfStock,
+      value: stats.outOfStock || 0,
       color: "text-red-600",
       bgColor: "bg-red-100",
       iconColor: "text-red-600",
@@ -114,7 +138,7 @@ const InventoryStatsCards = ({ stats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((card) => (
         <div
           key={card.id}
@@ -123,9 +147,7 @@ const InventoryStatsCards = ({ stats }) => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600 mb-1">{card.title}</p>
-              <p className={`text-2xl font-bold ${card.color}`}>
-                {card.value}
-              </p>
+              <p className={`text-2xl font-bold ${card.color}`}>{card.value}</p>
             </div>
             <div
               className={`w-12 h-12 ${card.bgColor} rounded-lg flex items-center justify-center ${card.iconColor}`}
@@ -140,4 +162,3 @@ const InventoryStatsCards = ({ stats }) => {
 };
 
 export default InventoryStatsCards;
-

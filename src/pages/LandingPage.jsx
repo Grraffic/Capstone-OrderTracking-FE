@@ -156,73 +156,64 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* About Section - Vision & Mission */}
-      <section className="relative w-full min-h-[60vh] sm:min-h-[70vh] lg:min-h-[80vh] my-6 sm:my-8 lg:my-10 overflow-hidden">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="relative w-full min-h-[60vh] sm:min-h-[70vh] lg:min-h-[80vh] overflow-hidden rounded-lg">
-            {/* LAYER 1: Solid background */}
-            <div className="absolute inset-0 w-full h-full bg-[#fefefe] z-0 opacity-95" />
+      {/* About Section - Vision & Mission - FIXED: Proper spacing and image containment */}
+      <section className="relative w-full py-8 sm:py-12 lg:py-16 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+          {/* Vision & Mission Grid - Text on Top */}
+          <div
+            id="about"
+            className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 lg:gap-16 mb-8 sm:mb-12 lg:mb-16"
+          >
+            {/* Vision */}
+            <div id="vision" className="text-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#163869] mb-3 sm:mb-4">
+                Vision
+              </h2>
+              {/* Orange underline */}
+              <div className="w-16 sm:w-20 h-1 bg-[#E68B00] mx-auto mb-4 sm:mb-6"></div>
+              <p className="text-sm sm:text-base lg:text-lg text-[#003363] font-SFPro leading-relaxed max-w-md mx-auto">
+                The institution that ensures
+                <span className="text-[#E68B00] font-semibold">
+                  {" "}
+                  quality learning{" "}
+                </span>
+                and{" "}
+                <span className="text-[#E68B00] font-semibold">
+                  biblical moral standards.
+                </span>
+              </p>
+            </div>
 
-            {/* LAYER 2: Background image, half-height or custom */}
-            <div
-              className="absolute inset-x-0 bottom-0 w-full h-[40vh] sm:h-[45vh] lg:h-[50vh] bg-center bg-cover bg-no-repeat z-10"
-              style={{
-                backgroundImage:
-                  "url('../../assets/image/Untitled design.png')",
-                backgroundSize: "contain",
-                backgroundPosition: "center bottom",
-              }}
-            />
+            {/* Mission */}
+            <div id="mission" className="text-center">
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#163869] mb-3 sm:mb-4">
+                Mission
+              </h2>
+              {/* Orange underline */}
+              <div className="w-16 sm:w-20 h-1 bg-[#E68B00] mx-auto mb-4 sm:mb-6"></div>
+              <p className="text-sm sm:text-base lg:text-lg text-[#003363] font-SFPro leading-relaxed max-w-md mx-auto">
+                To be the frontrunner in providing
+                <span className="text-[#E68B00] font-semibold">
+                  {" "}
+                  academic excellence{" "}
+                </span>
+                and
+                <span className="text-[#E68B00] font-semibold">
+                  {" "}
+                  morally upright principles.
+                </span>
+              </p>
+            </div>
+          </div>
 
-            {/* LAYER 3: Vision & Mission text on top */}
-            <div
-              id="about"
-              className="absolute inset-0 flex flex-col justify-start items-center h-full z-20 px-4 sm:px-6 lg:px-10"
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 w-full p-4 sm:p-6 lg:p-10 max-w-7xl">
-                {/* Vision */}
-                <div
-                  id="vision"
-                  className="text-center p-4 sm:p-6 bg-white/80 sm:bg-transparent rounded-lg sm:rounded-none"
-                >
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#163869] mb-2 sm:mb-4">
-                    Vision
-                  </h2>
-                  <p className="mt-2 text-sm sm:text-base lg:text-lg text-[#003363] font-SFPro leading-relaxed">
-                    The institution that ensures
-                    <span className="text-[#E68B00] font-semibold">
-                      {" "}
-                      quality learning{" "}
-                    </span>
-                    and <br className="hidden sm:block" />
-                    <span className="text-[#E68B00] font-semibold">
-                      {" "}
-                      biblical moral standards.
-                    </span>
-                  </p>
-                </div>
-                {/* Mission */}
-                <div
-                  id="mission"
-                  className="text-center p-4 sm:p-6 bg-white/80 sm:bg-transparent rounded-lg sm:rounded-none"
-                >
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#163869] mb-2 sm:mb-4">
-                    Mission
-                  </h2>
-                  <p className="mt-2 text-sm sm:text-base lg:text-lg text-[#003363] font-SFPro leading-relaxed">
-                    To be the frontrunner in providing
-                    <span className="text-[#E68B00] font-semibold">
-                      {" "}
-                      academic <br className="hidden sm:block" /> excellence{" "}
-                    </span>
-                    and
-                    <span className="text-[#E68B00] font-semibold">
-                      {" "}
-                      morally upright principles.
-                    </span>
-                  </p>
-                </div>
-              </div>
+          {/* Background Image - FIXED: Contained with proper spacing */}
+          <div className="relative w-full">
+            <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-8 lg:px-12">
+              <img
+                src="../../assets/image/Untitled design.png"
+                alt="La Verdad Christian College Building"
+                className="w-full h-auto object-contain rounded-lg shadow-md"
+              />
             </div>
           </div>
         </div>

@@ -2,13 +2,14 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
-import ProductCategories from "./pages/ProductCategories";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import Inventory from "./admin/pages/Inventory";
 import Orders from "./admin/pages/Orders";
 import AuthCallback from "./pages/AuthCallback";
-import StudentDashboard from "./pages/StudentDashboard";
+import ProductCategories from "./student/pages/ProductCategories";
+import StudentDashboard from "./student/pages/StudentDashboard";
+import AllProducts from "./student/pages/AllProducts";
 
 export default function App() {
   return (
@@ -62,6 +63,16 @@ export default function App() {
               element={
                 <ProtectedRoute requiredRoles={["student"]}>
                   <StudentDashboard />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* All Products page - protected for students */}
+            <Route
+              path="/all-products"
+              element={
+                <ProtectedRoute requiredRoles={["student"]}>
+                  <AllProducts />
                 </ProtectedRoute>
               }
             />

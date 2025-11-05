@@ -78,23 +78,26 @@ function FeatureCarousel() {
     });
   };
 
-  // Uniform Cards with main carousel's border/shadow styling
-  // On mobile: show only the first card (idx === 0)
-  // On tablet+: show all cards
+  // Uniform Cards - BORDERLESS design with shadow only
+  // Mobile (375px, 425px): show 1 card
+  // Tablet (768px - md): show 2 cards
+  // Desktop (1024px+ - lg/xl): show all 3 cards
   const renderUniformCards = () => (
-    <div className="flex gap-2 sm:gap-3 md:gap-4 lg:gap-8 justify-center items-end mt-2 sm:mt-4 flex-nowrap">
+    <div className="flex gap-2 sm:gap-3 md:gap-3 lg:gap-5 xl:gap-6 justify-end items-end mt-2 sm:mt-3 md:mt-3 lg:mt-4 flex-nowrap">
       {displayedUniforms.map((uniform, idx) => (
         <div
           key={uniform.id}
           className={`relative flex flex-col items-center justify-center
-            border-2 border-[#E5E7EB] rounded-lg sm:rounded-xl shadow-md bg-white transition-all duration-500 ease-in-out
-            w-[120px] sm:w-[140px] md:w-[200px] lg:w-[250px]
-            h-[160px] sm:h-[200px] md:h-[280px] lg:h-[320px]
+            rounded-lg sm:rounded-xl shadow-lg bg-white transition-all duration-500 ease-in-out
+            w-[90px] sm:w-[110px] md:w-[130px] lg:w-[160px] xl:w-[220px]
+            h-[130px] sm:h-[150px] md:h-[180px] lg:h-[220px] xl:h-[290px]
             transform
             ${
               idx === 0
-                ? "bg-gradient-to-b from-[#fef3e2]/80 via-white/90 to-[#e8f4f8]/80 scale-105 sm:scale-105"
-                : "scale-95 sm:scale-100 hidden sm:flex"
+                ? "bg-gradient-to-b from-[#fef3e2]/80 via-white/90 to-[#e8f4f8]/80 scale-105"
+                : idx === 1
+                ? "scale-100 hidden md:flex lg:flex xl:flex"
+                : "scale-95 lg:scale-100 hidden lg:flex xl:flex"
             }
           `}
           style={{ zIndex: idx === 0 ? 2 : 1 }}
@@ -102,7 +105,7 @@ function FeatureCarousel() {
           <img
             src={uniform.src}
             alt={uniform.alt}
-            className="w-full h-[110px] sm:h-[140px] md:h-[200px] lg:h-[240px] object-contain transition-all duration-500 ease-in-out"
+            className="w-full h-[95px] sm:h-[110px] md:h-[135px] lg:h-[165px] xl:h-[220px] object-contain transition-all duration-500 ease-in-out"
           />
         </div>
       ))}
@@ -150,40 +153,40 @@ function FeatureCarousel() {
                   </div>
                 </div>
 
-                {/* RIGHT: Carousel - positioned in TOP-RIGHT corner like original design */}
-                <div className="absolute right-4 sm:right-6 md:right-8 lg:right-12 xl:right-16 top-4 sm:top-6 md:top-8 lg:top-10 z-40">
-                  <div className="flex flex-col gap-2 sm:gap-3 md:gap-4 items-end">
-                    {/* Top section: Text label, line, and buttons in a row */}
-                    <div className="flex flex-row items-center gap-2 md:gap-3">
-                      {/* Text label */}
-                      <span className="text-[#00396E] font-medium text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap">
+                {/* RIGHT: Carousel - RIGHT-ALIGNED with borderless design */}
+                <div className="absolute right-2 sm:right-3 md:right-4 lg:right-6 xl:right-8 top-4 sm:top-5 md:top-6 lg:top-8 xl:top-10 z-40">
+                  <div className="flex flex-col gap-1.5 sm:gap-2 md:gap-2 lg:gap-3 xl:gap-3 items-end">
+                    {/* Top section: Back and Next buttons */}
+                    <div className="flex gap-1.5 sm:gap-2 items-center justify-end">
+                      <button
+                        className="px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-1.5 md:py-2 border border-[#00396E] sm:border-2 text-[#00396E] bg-white rounded-full font-bold shadow hover:bg-orange-50 hover:text-orange-600 transition text-[10px] sm:text-xs md:text-sm lg:text-base min-h-[44px] min-w-[55px] sm:min-w-[60px] md:min-w-[65px] lg:min-w-[70px] flex items-center justify-center"
+                        onClick={handleBack}
+                        aria-label="Back"
+                      >
+                        Back
+                      </button>
+                      <button
+                        className="px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-1.5 md:py-2 border border-[#00396E] sm:border-2 text-[#00396E] bg-white rounded-full font-bold shadow hover:bg-orange-50 hover:text-orange-600 transition text-[10px] sm:text-xs md:text-sm lg:text-base min-h-[44px] min-w-[55px] sm:min-w-[60px] md:min-w-[65px] lg:min-w-[70px] flex items-center justify-center"
+                        onClick={handleNext}
+                        aria-label="Next"
+                      >
+                        Next
+                      </button>
+                    </div>
+
+                    {/* Middle section: Text label and decorative line (line hidden on tablet) */}
+                    <div className="flex flex-row items-center gap-2 md:gap-2 lg:gap-3 justify-end">
+                      {/* Text label - positioned below buttons */}
+                      <span className="text-[#00396E] font-medium text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg whitespace-nowrap">
                         {displayedUniforms[0].text}
                       </span>
 
-                      {/* Decorative line */}
-                      <span className="h-0.5 sm:h-1 w-16 sm:w-24 md:w-32 lg:w-40 bg-[#f59301]"></span>
-
-                      {/* Back and Next buttons */}
-                      <div className="flex gap-1.5 sm:gap-2">
-                        <button
-                          className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 border-2 border-[#00396E] text-[#00396E] bg-white rounded-full font-bold shadow hover:bg-orange-50 hover:text-orange-600 transition text-xs sm:text-sm md:text-base min-h-[44px] min-w-[60px] sm:min-w-[70px] flex items-center justify-center"
-                          onClick={handleBack}
-                          aria-label="Back"
-                        >
-                          Back
-                        </button>
-                        <button
-                          className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 border-2 border-[#00396E] text-[#00396E] bg-white rounded-full font-bold shadow hover:bg-orange-50 hover:text-orange-600 transition text-xs sm:text-sm md:text-base min-h-[44px] min-w-[60px] sm:min-w-[70px] flex items-center justify-center"
-                          onClick={handleNext}
-                          aria-label="Next"
-                        >
-                          Next
-                        </button>
-                      </div>
+                      {/* Decorative line - HIDDEN on tablet (md), shown on mobile and desktop */}
+                      <span className="h-0.5 sm:h-0.5 md:hidden lg:inline-block lg:h-1 w-10 sm:w-14 lg:w-24 xl:w-32 bg-[#f59301]"></span>
                     </div>
 
-                    {/* Bottom section: Uniform cards */}
-                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4 justify-end">
+                    {/* Bottom section: Uniform cards - right-aligned */}
+                    <div className="flex items-center gap-2 sm:gap-2 md:gap-3 lg:gap-4 justify-end">
                       {renderUniformCards()}
                     </div>
                   </div>

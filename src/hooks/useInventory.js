@@ -84,7 +84,29 @@ export const useInventory = () => {
       const result = await response.json();
 
       if (result.success && result.data) {
-        setItems(result.data);
+        // Transform snake_case from backend to camelCase for frontend
+        const transformedData = result.data.map((item) => ({
+          id: item.id,
+          name: item.name,
+          educationLevel: item.education_level,
+          category: item.category,
+          itemType: item.item_type,
+          description: item.description,
+          descriptionText: item.description_text,
+          material: item.material,
+          stock: item.stock,
+          price: item.price,
+          image: item.image,
+          physicalCount: item.physical_count,
+          available: item.available,
+          reorderPoint: item.reorder_point,
+          note: item.note,
+          status: item.status,
+          isActive: item.is_active,
+          createdAt: item.created_at,
+          updatedAt: item.updated_at,
+        }));
+        setItems(transformedData);
       } else {
         throw new Error(result.message || "Failed to fetch inventory items");
       }
@@ -106,13 +128,21 @@ export const useInventory = () => {
 
   /**
    * Calculate stock status based on quantity
+   * NOTE: This is now handled by the backend automatically.
+   * Status is calculated based on stock levels:
+   * - "Out of Stock": stock = 0
+   * - "Critical": stock 1-19
+   * - "At Reorder Point": stock 20-49
+   * - "Above Threshold": stock >= 50
+   *
    * @param {number} stock - Stock quantity
    * @returns {string} - Status label
    */
   const getStockStatus = useCallback((stock) => {
     if (stock === 0) return "Out of Stock";
-    if (stock < 50) return "Low Stock";
-    return "In Stock";
+    if (stock >= 1 && stock < 20) return "Critical";
+    if (stock >= 20 && stock < 50) return "At Reorder Point";
+    return "Above Threshold";
   }, []);
 
   /**
@@ -202,12 +232,30 @@ export const useInventory = () => {
         setLoading(true);
         setError(null);
 
+        // Transform camelCase to snake_case for backend
+        const transformedItem = {
+          name: newItem.name,
+          education_level: newItem.educationLevel,
+          category: newItem.category,
+          item_type: newItem.itemType,
+          description: newItem.description,
+          description_text: newItem.descriptionText,
+          material: newItem.material,
+          stock: Number(newItem.stock) || 0,
+          price: Number(newItem.price) || 0,
+          image: newItem.image || "/assets/image/card1.png",
+          physical_count: Number(newItem.physicalCount) || 0,
+          available: Number(newItem.available) || 0,
+          reorder_point: Number(newItem.reorderPoint) || 0,
+          note: newItem.note || "",
+        };
+
         const response = await fetch(`${API_BASE_URL}/inventory`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(newItem),
+          body: JSON.stringify(transformedItem),
         });
 
         if (!response.ok) {
@@ -218,8 +266,31 @@ export const useInventory = () => {
         const result = await response.json();
 
         if (result.success && result.data) {
+          // Transform snake_case back to camelCase for frontend state
+          const transformedData = {
+            id: result.data.id,
+            name: result.data.name,
+            educationLevel: result.data.education_level,
+            category: result.data.category,
+            itemType: result.data.item_type,
+            description: result.data.description,
+            descriptionText: result.data.description_text,
+            material: result.data.material,
+            stock: result.data.stock,
+            price: result.data.price,
+            image: result.data.image,
+            physicalCount: result.data.physical_count,
+            available: result.data.available,
+            reorderPoint: result.data.reorder_point,
+            note: result.data.note,
+            status: result.data.status,
+            isActive: result.data.is_active,
+            createdAt: result.data.created_at,
+            updatedAt: result.data.updated_at,
+          };
+
           // Add the new item to the local state
-          setItems((prev) => [result.data, ...prev]);
+          setItems((prev) => [transformedData, ...prev]);
           closeModal();
         } else {
           throw new Error(result.message || "Failed to add inventory item");
@@ -245,6 +316,24 @@ export const useInventory = () => {
         setLoading(true);
         setError(null);
 
+        // Transform camelCase to snake_case for backend
+        const transformedItem = {
+          name: updatedItem.name,
+          education_level: updatedItem.educationLevel,
+          category: updatedItem.category,
+          item_type: updatedItem.itemType,
+          description: updatedItem.description,
+          description_text: updatedItem.descriptionText,
+          material: updatedItem.material,
+          stock: Number(updatedItem.stock) || 0,
+          price: Number(updatedItem.price) || 0,
+          image: updatedItem.image,
+          physical_count: Number(updatedItem.physicalCount) || 0,
+          available: Number(updatedItem.available) || 0,
+          reorder_point: Number(updatedItem.reorderPoint) || 0,
+          note: updatedItem.note || "",
+        };
+
         const response = await fetch(
           `${API_BASE_URL}/inventory/${updatedItem.id}`,
           {
@@ -252,7 +341,7 @@ export const useInventory = () => {
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify(updatedItem),
+            body: JSON.stringify(transformedItem),
           }
         );
 
@@ -266,10 +355,33 @@ export const useInventory = () => {
         const result = await response.json();
 
         if (result.success && result.data) {
+          // Transform snake_case back to camelCase for frontend state
+          const transformedData = {
+            id: result.data.id,
+            name: result.data.name,
+            educationLevel: result.data.education_level,
+            category: result.data.category,
+            itemType: result.data.item_type,
+            description: result.data.description,
+            descriptionText: result.data.description_text,
+            material: result.data.material,
+            stock: result.data.stock,
+            price: result.data.price,
+            image: result.data.image,
+            physicalCount: result.data.physical_count,
+            available: result.data.available,
+            reorderPoint: result.data.reorder_point,
+            note: result.data.note,
+            status: result.data.status,
+            isActive: result.data.is_active,
+            createdAt: result.data.created_at,
+            updatedAt: result.data.updated_at,
+          };
+
           // Update the item in local state
           setItems((prev) =>
             prev.map((item) =>
-              item.id === updatedItem.id ? result.data : item
+              item.id === updatedItem.id ? transformedData : item
             )
           );
           closeModal();
