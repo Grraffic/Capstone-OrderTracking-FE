@@ -16,6 +16,8 @@ export { useInventoryModalForm } from "./useInventoryModalForm";
 // Orders Hooks
 export { default as useOrdersStats } from "./useOrdersStats";
 export { default as useOrdersFilters } from "./useOrdersFilters";
+export { useOrders } from "./useOrders";
+export { useOrderQRScanner } from "./useOrderQRScanner";
 
 // UI State Hooks
 export { useAdminSidebar } from "./useAdminSidebar";

@@ -22,8 +22,14 @@ import QrScanner from "qr-scanner";
  * - isOpen: Boolean indicating if modal is open
  * - onClose: Function to close modal
  * - onScan: Function called when QR code is scanned (receives scanned data)
+ * - processing: Boolean indicating if the scanned data is being processed
  */
-const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
+const QRCodeScannerModal = ({
+  isOpen,
+  onClose,
+  onScan,
+  processing = false,
+}) => {
   const videoRef = useRef(null);
   const [scanner, setScanner] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
@@ -31,6 +37,7 @@ const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
   const [error, setError] = useState(null);
   const [scannedData, setScannedData] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
+  const [manualTestData, setManualTestData] = useState("");
 
   // Parse QR code data to check if it's an order receipt
   const parseQRData = (data) => {
@@ -55,27 +62,61 @@ const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
         setScannedData(null);
         setOrderDetails(null);
 
+        console.log("🎥 Initializing QR Scanner...");
+        console.log("📍 Location:", window.location.href);
+        console.log("🔒 Protocol:", window.location.protocol);
+
+        // Check camera permissions
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          console.log("✅ Camera access granted");
+          stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
+        } catch (permError) {
+          console.error("❌ Camera permission denied:", permError);
+          throw new Error(
+            "Camera access denied. Please grant camera permissions and try again."
+          );
+        }
+
         const qrScanner = new QrScanner(
           videoRef.current,
-          (result) => {
+          async (result) => {
             // QR code scanned successfully
             const data = result.data;
+            console.log("📷 QR Scanner detected code!");
+            console.log("📦 Raw QR data:", data);
+            console.log("📏 Data length:", data.length);
             setScannedData(data);
 
             // Check if it's an order receipt QR code
             const orderData = parseQRData(data);
             if (orderData) {
+              console.log("✅ Valid order receipt detected!");
+              console.log("📋 Order Number:", orderData.orderNumber);
+              console.log("👤 Student:", orderData.studentName);
+              console.log("📦 Items:", orderData.items?.length || 0);
               setOrderDetails(orderData);
+            } else {
+              console.log("⚠️ Not an order receipt QR code");
+              console.log("🔍 Parsed data:", orderData);
             }
 
+            // Call onScan callback if provided (this triggers order processing)
             if (onScan) {
-              onScan(data);
+              console.log("🔄 Calling onScan callback...");
+              try {
+                await onScan(data);
+                console.log("✅ onScan callback completed successfully!");
+              } catch (error) {
+                console.error("❌ onScan callback error:", error);
+                console.error("❌ Error details:", error.message);
+              }
             }
 
-            // Auto-close after 2.5 seconds on successful scan
-            setTimeout(() => {
-              handleClose();
-            }, 2500);
+            // Don't auto-close - let the parent component handle closing
+            // The parent will close after processing is complete
           },
           {
             onDecodeError: (error) => {
@@ -89,12 +130,20 @@ const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
           }
         );
 
+        console.log("🔧 QR Scanner instance created");
         setScanner(qrScanner);
+
+        console.log("▶️ Starting QR Scanner...");
         await qrScanner.start();
+        console.log("✅ QR Scanner started successfully!");
+        console.log("👁️ Scanner is now actively looking for QR codes...");
+
         setIsScanning(true);
         setIsInitializing(false);
       } catch (err) {
-        console.error("Scanner initialization error:", err);
+        console.error("❌ Scanner initialization error:", err);
+        console.error("❌ Error name:", err.name);
+        console.error("❌ Error message:", err.message);
         setError(
           err.message || "Failed to access camera. Please check permissions."
         );
@@ -122,7 +171,50 @@ const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
     }
     setScannedData(null);
     setError(null);
+    setManualTestData("");
     onClose();
+  };
+
+  // Manual test function to simulate QR code scan
+  const handleManualTest = async () => {
+    if (!manualTestData.trim()) {
+      alert("Please paste the QR code data first!");
+      return;
+    }
+
+    console.log("🧪 Manual Test - Simulating QR scan with pasted data");
+
+    // Simulate the scanner detecting the QR code
+    const data = manualTestData.trim();
+    console.log("📷 QR Scanner detected code!");
+    console.log("📦 Raw QR data:", data);
+    console.log("📏 Data length:", data.length);
+    setScannedData(data);
+
+    // Check if it's an order receipt QR code
+    const orderData = parseQRData(data);
+    if (orderData) {
+      console.log("✅ Valid order receipt detected!");
+      console.log("📋 Order Number:", orderData.orderNumber);
+      console.log("👤 Student:", orderData.studentName);
+      console.log("📦 Items:", orderData.items?.length || 0);
+      setOrderDetails(orderData);
+    } else {
+      console.log("⚠️ Not an order receipt QR code");
+      console.log("🔍 Parsed data:", orderData);
+    }
+
+    // Call onScan callback if provided (this triggers order processing)
+    if (onScan) {
+      console.log("🔄 Calling onScan callback...");
+      try {
+        await onScan(data);
+        console.log("✅ onScan callback completed successfully!");
+      } catch (error) {
+        console.error("❌ onScan callback error:", error);
+        console.error("❌ Error details:", error.message);
+      }
+    }
   };
 
   if (!isOpen) return null;
@@ -310,7 +402,7 @@ const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
 
           {/* Status Indicator */}
           <div className="mt-4 text-center">
-            {isScanning && !scannedData && (
+            {isScanning && !scannedData && !processing && (
               <div className="flex items-center justify-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                 <p className="text-sm text-gray-600 font-medium">
@@ -318,6 +410,45 @@ const QRCodeScannerModal = ({ isOpen, onClose, onScan }) => {
                 </p>
               </div>
             )}
+            {processing && (
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 text-[#e68b00] animate-spin" />
+                <p className="text-sm text-gray-600 font-medium">
+                  Processing order...
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Manual Test Section */}
+          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-semibold text-yellow-900 text-sm">
+                  Manual Test Mode
+                </h4>
+                <p className="text-xs text-yellow-700 mt-1">
+                  If the camera can't detect the QR code, paste the QR data here
+                  to test the processing flow.
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={manualTestData}
+              onChange={(e) => setManualTestData(e.target.value)}
+              placeholder='Paste QR code data here (JSON format: {"type":"order_receipt",...})'
+              className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500"
+              rows={3}
+            />
+            <button
+              onClick={handleManualTest}
+              disabled={!manualTestData.trim() || processing}
+              className="mt-2 w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium text-sm flex items-center justify-center gap-2"
+            >
+              <CheckCircle size={16} />
+              Test with Pasted Data
+            </button>
           </div>
         </div>
 

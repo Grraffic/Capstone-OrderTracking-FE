@@ -1,7 +1,12 @@
 import React from "react";
 import ProductCard from "./ProductCard";
 
-const ProductGrid = ({ products, onOrderClick, onPreOrderClick }) => {
+const ProductGrid = ({
+  products,
+  onOrderClick,
+  onPreOrderClick,
+  onProductClick,
+}) => {
   if (products.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -31,13 +36,14 @@ const ProductGrid = ({ products, onOrderClick, onPreOrderClick }) => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => (
         <ProductCard
           key={product.id}
           product={product}
           onOrderClick={onOrderClick}
           onPreOrderClick={onPreOrderClick}
+          onProductClick={onProductClick}
         />
       ))}
     </div>

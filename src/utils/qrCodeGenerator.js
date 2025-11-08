@@ -1,6 +1,6 @@
 /**
  * QR Code Generator Utility
- * 
+ *
  * Provides functions to generate QR code data for student orders
  * The QR code contains order information that can be scanned by admins
  */
@@ -18,9 +18,12 @@ export const generateOrderReceiptQRData = (orderData) => {
     studentName: orderData.studentName || orderData.student_name,
     studentEmail: orderData.studentEmail || orderData.student_email,
     educationLevel: orderData.educationLevel || orderData.education_level,
-    orderDate: orderData.orderDate || orderData.order_date || new Date().toISOString(),
-    totalAmount: parseFloat(orderData.totalAmount || orderData.total_amount || 0),
-    items: (orderData.items || []).map(item => ({
+    orderDate:
+      orderData.orderDate || orderData.order_date || new Date().toISOString(),
+    totalAmount: parseFloat(
+      orderData.totalAmount || orderData.total_amount || 0
+    ),
+    items: (orderData.items || []).map((item) => ({
       name: item.name,
       quantity: item.quantity,
       price: parseFloat(item.price),
@@ -41,12 +44,12 @@ export const generateOrderReceiptQRData = (orderData) => {
 export const parseOrderReceiptQRData = (qrString) => {
   try {
     const data = JSON.parse(qrString);
-    
+
     // Validate that it's an order receipt QR code
     if (data.type !== "order_receipt" || !data.orderNumber) {
       return null;
     }
-    
+
     return data;
   } catch (error) {
     console.error("Failed to parse QR code data:", error);
@@ -62,10 +65,10 @@ export const parseOrderReceiptQRData = (qrString) => {
 export const generateOrderNumber = () => {
   const date = new Date();
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const random = String(Math.floor(Math.random() * 100000)).padStart(5, '0');
-  
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const random = String(Math.floor(Math.random() * 100000)).padStart(5, "0");
+
   return `ORD-${year}${month}${day}-${random}`;
 };
 
@@ -76,26 +79,28 @@ export const generateOrderNumber = () => {
  */
 export const validateOrderData = (orderData) => {
   const errors = [];
-  
+
   if (!orderData.orderNumber && !orderData.order_number) {
     errors.push("Order number is required");
   }
-  
+
   if (!orderData.studentName && !orderData.student_name) {
     errors.push("Student name is required");
   }
-  
+
   if (!orderData.items || orderData.items.length === 0) {
     errors.push("Order must contain at least one item");
   }
-  
-  if (!orderData.totalAmount && !orderData.total_amount) {
+
+  if (
+    orderData.totalAmount === undefined &&
+    orderData.total_amount === undefined
+  ) {
     errors.push("Total amount is required");
   }
-  
+
   return {
     valid: errors.length === 0,
     errors,
   };
 };
-

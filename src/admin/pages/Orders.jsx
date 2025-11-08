@@ -4,11 +4,11 @@ import AdminHeader from "../components/AdminHeader";
 import OrdersStatsCards from "../components/OrdersStatsCards";
 import OrdersTable from "../components/OrdersTable";
 import QRCodeScannerModal from "../components/QRCodeScannerModal";
-import { useAdminSidebar, useQRScanner } from "../hooks";
+import { useAdminSidebar, useOrderQRScanner, useOrders } from "../hooks";
 import useOrdersStats from "../hooks/useOrdersStats";
 import useOrdersFilters from "../hooks/useOrdersFilters";
 import { EDUCATION_LEVELS, ORDER_STATUS } from "../constants/ordersOptions";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 /**
  * Orders Page Component
@@ -51,15 +51,89 @@ const Orders = () => {
     filteredClassAndYearOptions,
   } = useOrdersFilters();
 
-  // QR Scanner functionality
-  const { qrScannerOpen, openQRScanner, closeQRScanner, handleQRCodeScanned } =
-    useQRScanner(setSearchTerm);
+  // QR Scanner functionality with order processing
+  const {
+    qrScannerOpen,
+    openQRScanner,
+    closeQRScanner,
+    handleQRCodeScanned,
+    processing: qrProcessing,
+    error: qrError,
+    success: qrSuccess,
+  } = useOrderQRScanner();
 
   // Active status tab (Processing or Claimed)
   const [activeStatusTab, setActiveStatusTab] = useState("Processing");
 
-  // Mock orders data (TODO: Replace with API call)
-  const mockOrders = [
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Fetch orders from API with filters
+  const {
+    orders: apiOrders,
+    loading: ordersLoading,
+    error: ordersError,
+    pagination: apiPagination,
+    refetch: refetchOrders,
+  } = useOrders({
+    page: currentPage,
+    limit: itemsPerPage,
+    status:
+      activeStatusTab === "Processing"
+        ? "pending"
+        : activeStatusTab === "Claimed"
+        ? "completed"
+        : null,
+    educationLevel:
+      educationLevelFilter !== "All Education Levels"
+        ? educationLevelFilter
+        : null,
+    search: searchTerm || null,
+  });
+
+  // Transform API orders to match the expected format for the table
+  const transformedOrders = useMemo(() => {
+    return apiOrders.map((order) => {
+      // Get first item for display
+      const firstItem =
+        order.items && order.items.length > 0 ? order.items[0] : {};
+      const hasMoreItems = order.items && order.items.length > 1;
+
+      return {
+        id: order.id,
+        transactionNo: order.order_number || order.id,
+        itemOrdered: firstItem.name || "N/A",
+        moreItems: hasMoreItems
+          ? `more ${order.items.length - 1} item${
+              order.items.length - 1 > 1 ? "s" : ""
+            }`
+          : "",
+        description: firstItem.size || "N/A",
+        size: firstItem.size || "N/A",
+        name: order.student_name || "N/A",
+        gradeOrProgram: order.education_level || "N/A",
+        transactionDate: order.order_date
+          ? new Date(order.order_date).toLocaleDateString()
+          : new Date(order.created_at).toLocaleDateString(),
+        status:
+          order.status === "pending"
+            ? "Processing"
+            : order.status === "completed"
+            ? "Claimed"
+            : order.status,
+        totalAmount: order.total_amount || 0,
+        // Keep original data for reference
+        originalOrder: order,
+      };
+    });
+  }, [apiOrders]);
+
+  // For backward compatibility, use transformedOrders as mockOrders
+  const mockOrders = transformedOrders;
+
+  // Mock orders data for fallback (if API fails or no data)
+  const fallbackMockOrders = [
     {
       id: 1562,
       transactionNo: "1562",
@@ -153,61 +227,23 @@ const Orders = () => {
     },
   ];
 
-  // Filter orders based on search term, filters, and active status tab
+  // API already handles filtering, so we use the orders directly
+  // For local filtering (class and year), we still need to filter
   const filteredOrders = useMemo(() => {
+    if (classAndYearFilter === "All Class & Year") {
+      return mockOrders;
+    }
     return mockOrders.filter((order) => {
-      // Search filter
-      const matchesSearch =
-        !searchTerm ||
-        order.transactionNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.itemOrdered.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.gradeOrProgram.toLowerCase().includes(searchTerm.toLowerCase());
-
-      // Education level filter
-      const matchesEducationLevel =
-        educationLevelFilter === "All Education Levels" ||
-        (educationLevelFilter === "Higher Education" &&
-          order.gradeOrProgram.includes("BSIS")) ||
-        (educationLevelFilter === "Basic Education" &&
-          order.gradeOrProgram.includes("Grade"));
-
-      // Class and year filter
-      const matchesClassAndYear =
-        classAndYearFilter === "All Class & Year" ||
-        order.gradeOrProgram === classAndYearFilter;
-
-      // Status tab filter (Processing or Claimed)
-      const matchesStatusTab =
-        order.status.toLowerCase() === activeStatusTab.toLowerCase();
-
-      return (
-        matchesSearch &&
-        matchesEducationLevel &&
-        matchesClassAndYear &&
-        matchesStatusTab
-      );
+      return order.gradeOrProgram === classAndYearFilter;
     });
-  }, [
-    mockOrders,
-    searchTerm,
-    educationLevelFilter,
-    classAndYearFilter,
-    activeStatusTab,
-  ]);
+  }, [mockOrders, classAndYearFilter]);
 
-  // Calculate statistics
+  // Calculate statistics from all orders (not just current page)
   const stats = useOrdersStats(mockOrders);
 
-  // Pagination state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+  // Use API pagination
+  const totalPages = apiPagination.totalPages || 1;
+  const paginatedOrders = filteredOrders;
 
   // Pagination handlers
   const goToPage = (page) => {
@@ -227,6 +263,35 @@ const Orders = () => {
       setCurrentPage(currentPage - 1);
     }
   };
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, educationLevelFilter, classAndYearFilter, activeStatusTab]);
+
+  // Refetch orders after successful QR scan and close scanner
+  useEffect(() => {
+    if (qrSuccess) {
+      console.log("✅ Order claimed successfully, refreshing orders...");
+      // Refetch orders to show updated status
+      refetchOrders();
+
+      // Close scanner after 3 seconds to show success message
+      setTimeout(() => {
+        closeQRScanner();
+      }, 3000);
+    }
+  }, [qrSuccess, refetchOrders, closeQRScanner]);
+
+  // Close scanner on error after 5 seconds
+  useEffect(() => {
+    if (qrError) {
+      console.log("❌ QR scan error, will close scanner in 5 seconds");
+      setTimeout(() => {
+        closeQRScanner();
+      }, 5000);
+    }
+  }, [qrError, closeQRScanner]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -325,15 +390,53 @@ const Orders = () => {
             </button>
           </div>
 
+          {/* Loading State */}
+          {ordersLoading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0C2340] mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading orders...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Error State */}
+          {ordersError && !ordersLoading && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-800 font-medium">Error loading orders</p>
+              <p className="text-red-600 text-sm mt-1">{ordersError}</p>
+              <button
+                onClick={refetchOrders}
+                className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+              >
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!ordersLoading && !ordersError && paginatedOrders.length === 0 && (
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+              <p className="text-gray-500 text-lg mb-2">No orders found</p>
+              <p className="text-gray-400 text-sm">
+                {searchTerm
+                  ? `No orders match your search "${searchTerm}"`
+                  : "There are no orders to display"}
+              </p>
+            </div>
+          )}
+
           {/* Orders Table */}
-          <OrdersTable
-            orders={paginatedOrders}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPrevPage={prevPage}
-            onNextPage={nextPage}
-            onGoToPage={goToPage}
-          />
+          {!ordersLoading && !ordersError && paginatedOrders.length > 0 && (
+            <OrdersTable
+              orders={paginatedOrders}
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPrevPage={prevPage}
+              onNextPage={nextPage}
+              onGoToPage={goToPage}
+            />
+          )}
 
           {/* Results Info */}
           {searchTerm && (
@@ -350,10 +453,152 @@ const Orders = () => {
         isOpen={qrScannerOpen}
         onClose={closeQRScanner}
         onScan={handleQRCodeScanned}
+        processing={qrProcessing}
       />
+
+      {/* Success Notification */}
+      {qrSuccess && (
+        <div className="fixed bottom-8 right-8 z-50 max-w-md animate-slide-up">
+          <div className="bg-green-50 border-2 border-green-500 rounded-xl shadow-2xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-bold text-green-800 mb-1">
+                  Order Claimed Successfully!
+                </h4>
+                <p className="text-sm text-green-700 mb-2">
+                  {qrSuccess.message}
+                </p>
+                <div className="text-xs text-green-600 space-y-1">
+                  <p>
+                    <strong>Order:</strong> {qrSuccess.orderNumber}
+                  </p>
+                  <p>
+                    <strong>Student:</strong> {qrSuccess.studentName}
+                  </p>
+                  {qrSuccess.items && qrSuccess.items.length > 0 && (
+                    <div className="mt-2">
+                      <strong>Items Updated:</strong>
+                      <ul className="ml-4 mt-1">
+                        {qrSuccess.items.map((item, idx) => (
+                          <li key={idx}>
+                            {item.success ? "✓" : "✗"} {item.item} (
+                            {item.quantity})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={closeQRScanner}
+                className="flex-shrink-0 text-green-600 hover:text-green-800"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error Notification */}
+      {qrError && (
+        <div className="fixed bottom-8 right-8 z-50 max-w-md animate-slide-up">
+          <div className="bg-red-50 border-2 border-red-500 rounded-xl shadow-2xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
+                  <svg
+                    className="w-6 h-6 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="flex-1">
+                <h4 className="text-lg font-bold text-red-800 mb-1">
+                  QR Scan Failed
+                </h4>
+                <p className="text-sm text-red-700">{qrError}</p>
+              </div>
+              <button
+                onClick={closeQRScanner}
+                className="flex-shrink-0 text-red-600 hover:text-red-800"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Processing Overlay */}
+      {qrProcessing && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0C2340] mx-auto mb-4"></div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Processing Order...
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Updating order status and inventory
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default Orders;
-

@@ -9,8 +9,6 @@ const TopPicks = ({ products, onProductClick }) => {
 
   return (
     <div className="sticky top-20 space-y-4">
-      <h2 className="text-xl font-bold text-[#003363]">Top Picks for You</h2>
-
       {/* Scrollable container with fixed height and custom scrollbar */}
       <div
         className="space-y-4 max-h-[calc(100vh-10rem)] overflow-y-auto pr-2 custom-scrollbar"

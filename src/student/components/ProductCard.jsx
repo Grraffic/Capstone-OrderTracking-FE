@@ -1,26 +1,50 @@
 import React from "react";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Bell } from "lucide-react";
 import { PRODUCT_STATUS } from "../constants/studentProducts";
 
-const ProductCard = ({ product, onOrderClick, onPreOrderClick }) => {
+const ProductCard = ({
+  product,
+  onOrderClick,
+  onPreOrderClick,
+  onProductClick,
+}) => {
   const statusInfo = PRODUCT_STATUS[product.status] || PRODUCT_STATUS.in_stock;
   const isOutOfStock = product.status === "out_of_stock";
   const isPreOrder = product.status === "pre_order";
 
-  const handleActionClick = () => {
+  const handleOrderClick = (e) => {
+    e.stopPropagation(); // Prevent triggering product click
     if (isOutOfStock) return;
 
-    if (isPreOrder) {
-      onPreOrderClick(product);
-    } else {
-      onOrderClick(product);
+    // Open product details modal for all products
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
+
+  const handleAddToCart = (e) => {
+    e.stopPropagation(); // Prevent triggering product click
+    if (isOutOfStock) return;
+    // Open product details modal
+    if (onProductClick) {
+      onProductClick(product);
+    }
+  };
+
+  const handleProductClick = () => {
+    // Open product details modal when clicking on the card
+    if (onProductClick) {
+      onProductClick(product);
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl hover:scale-105 transition-all duration-300 flex flex-col h-full">
+    <div
+      className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full cursor-pointer"
+      onClick={handleProductClick}
+    >
       {/* Product Image */}
-      <div className="relative aspect-square bg-gray-100">
+      <div className="relative aspect-square bg-gray-50">
         <img
           src={product.image}
           alt={product.name}
@@ -31,49 +55,68 @@ const ProductCard = ({ product, onOrderClick, onPreOrderClick }) => {
           }}
         />
 
-        {/* Status Badge */}
-        <div className="absolute top-2 right-2">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.color}`}
-          >
-            {statusInfo.label}
-          </span>
-        </div>
+        {/* Status Badge - Top Left for Pre-Order */}
+        {isPreOrder && (
+          <div className="absolute top-3 left-3">
+            <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-[#F28C28] text-white shadow-md">
+              Pre-Order
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
       <div className="p-4 flex flex-col flex-grow">
-        <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2">
+        {/* Product Name */}
+        <h3 className="text-base font-bold text-[#003363] mb-1 line-clamp-2 min-h-[3rem]">
           {product.name}
         </h3>
 
-        {product.description && (
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2 flex-grow">
-            {product.description}
+        {/* Education Level */}
+        {product.educationLevel && (
+          <p className="text-sm text-[#F28C28] font-semibold mb-3">
+            ({product.educationLevel})
           </p>
         )}
 
-        {/* Action Button - Larger and more prominent */}
-        <button
-          onClick={handleActionClick}
-          disabled={isOutOfStock}
-          className={`mt-4 w-full py-3.5 px-6 rounded-lg font-bold text-base transition-all duration-200 flex items-center justify-center space-x-2 ${
-            isOutOfStock
-              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-              : isPreOrder
-              ? "bg-white border-2 border-[#F28C28] text-[#F28C28] hover:bg-orange-50"
-              : "bg-[#F28C28] text-white hover:bg-[#d97a1f] hover:shadow-lg"
-          }`}
-        >
-          <ShoppingCart className="w-5 h-5" />
-          <span>
-            {isOutOfStock
-              ? "Out of Stock"
-              : isPreOrder
-              ? "Pre-Order"
-              : "Order Now"}
-          </span>
-        </button>
+        {/* Spacer to push buttons to bottom */}
+        <div className="flex-grow"></div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between gap-2 mt-3">
+          {/* Left side - Out of Stock status or Add to Cart icon */}
+          <div className="flex items-center gap-2">
+            {isOutOfStock ? (
+              <div className="flex flex-col">
+                <span className="text-xs text-red-600 font-semibold">
+                  Out of Stock
+                </span>
+                <button className="flex items-center gap-1 text-xs text-[#003363] hover:text-[#F28C28] transition-colors mt-1">
+                  <Bell size={12} />
+                  <span>Remind me</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                className="p-2 rounded-lg border border-gray-300 hover:border-[#F28C28] hover:bg-orange-50 transition-all duration-200"
+                title="Add to Cart"
+              >
+                <ShoppingCart className="w-5 h-5 text-gray-600 hover:text-[#F28C28]" />
+              </button>
+            )}
+          </div>
+
+          {/* Right side - Order Now button */}
+          {!isOutOfStock && (
+            <button
+              onClick={handleOrderClick}
+              className="px-5 py-2 bg-[#F28C28] text-white text-sm font-semibold rounded-full hover:bg-[#d97a1f] transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              Order Now
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
