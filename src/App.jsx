@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
@@ -6,6 +7,7 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import Inventory from "./admin/pages/Inventory";
 import Orders from "./admin/pages/Orders";
+import Settings from "./admin/pages/Settings";
 import AuthCallback from "./pages/AuthCallback";
 import ProductCategories from "./student/pages/ProductCategories";
 import StudentDashboard from "./student/pages/StudentDashboard";
@@ -16,6 +18,30 @@ export default function App() {
     <div className="min-h-screen bg-white">
       <AuthProvider>
         <BrowserRouter>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 3000,
+              style: {
+                background: "#363636",
+                color: "#fff",
+              },
+              success: {
+                duration: 3000,
+                iconTheme: {
+                  primary: "#e68b00",
+                  secondary: "#fff",
+                },
+              },
+              error: {
+                duration: 4000,
+                iconTheme: {
+                  primary: "#ef4444",
+                  secondary: "#fff",
+                },
+              },
+            }}
+          />
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<LoginPage />} />
@@ -53,6 +79,14 @@ export default function App() {
               element={
                 <ProtectedRoute requiredRoles={["admin"]}>
                   <Orders />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/settings"
+              element={
+                <ProtectedRoute requiredRoles={["admin"]}>
+                  <Settings />
                 </ProtectedRoute>
               }
             />

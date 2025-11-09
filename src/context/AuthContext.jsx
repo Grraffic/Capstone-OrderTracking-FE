@@ -119,6 +119,13 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedUserData) => {
+    setUser((prevUser) => ({
+      ...prevUser,
+      ...updatedUserData,
+    }));
+  };
+
   const hasRole = (role) => {
     return userRole === role;
   };
@@ -134,6 +141,7 @@ export const AuthProvider = ({ children }) => {
     USER_ROLES,
     signInWithGoogle,
     logout,
+    updateUser,
     hasRole,
     hasAnyRole,
   };

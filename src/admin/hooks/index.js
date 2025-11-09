@@ -5,7 +5,7 @@
  * This file provides easy access to admin business logic hooks.
  *
  * Usage:
- * import { useInventoryStats, useAdminSidebar, useQRScanner, useItemAdjustmentForm, useInventoryModalForm, useOrdersStats, useOrdersFilters } from '../hooks';
+ * import { useInventoryStats, useAdminSidebar, useQRScanner, useItemAdjustmentForm, useInventoryModalForm, useOrdersStats, useOrdersFilters, useAdminProfile } from '../hooks';
  */
 
 // Inventory Hooks
@@ -18,6 +18,9 @@ export { default as useOrdersStats } from "./useOrdersStats";
 export { default as useOrdersFilters } from "./useOrdersFilters";
 export { useOrders } from "./useOrders";
 export { useOrderQRScanner } from "./useOrderQRScanner";
+
+// Profile Hooks
+export { useAdminProfile } from "./useAdminProfile";
 
 // UI State Hooks
 export { useAdminSidebar } from "./useAdminSidebar";
