@@ -10,7 +10,7 @@ import { ShoppingCart, Bell } from "lucide-react";
 const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
   if (!products || products.length === 0) {
     return null;
-  }
+  }``
 
   // Limit to 9 products maximum
   const displayProducts = products.slice(0, 9);
