@@ -20,7 +20,8 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
 
   const displayName = user?.displayName || user?.name || "Admin";
   const userEmail = user?.email || "";
-  const userAvatar = user?.photoURL || "https://via.placeholder.com/40";
+  // Use Cloudinary URL from user profile, fallback to placeholder
+  const userAvatar = user?.photoURL || "/default-avatar.png";
 
   return (
     <header

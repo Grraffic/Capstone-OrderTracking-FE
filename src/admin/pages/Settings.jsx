@@ -108,10 +108,14 @@ const Settings = () => {
                         src={
                           imagePreview ||
                           profile?.photoURL ||
-                          "https://via.placeholder.com/160"
+                          "/default-avatar.png"
                         }
                         alt={formData.name || "Admin"}
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          // Fallback if image fails to load
+                          e.target.src = "/default-avatar.png";
+                        }}
                       />
                       {/* Hover Overlay */}
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 cursor-pointer">

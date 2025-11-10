@@ -40,6 +40,9 @@ const UserProfile = () => {
           src={user?.photoURL || "/default-avatar.png"}
           alt={user?.displayName || "User"}
           className="h-8 w-8 rounded-full"
+          onError={(e) => {
+            e.target.src = "/default-avatar.png";
+          }}
         />
         <div className="hidden md:block text-left">
           <p className="text-sm font-medium text-gray-900">
@@ -65,6 +68,9 @@ const UserProfile = () => {
                   src={user?.photoURL || "/default-avatar.png"}
                   alt={user?.displayName || "User"}
                   className="h-12 w-12 rounded-full"
+                  onError={(e) => {
+                    e.target.src = "/default-avatar.png";
+                  }}
                 />
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900">
