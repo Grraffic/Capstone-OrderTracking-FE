@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { MOCK_PRODUCTS } from "../constants/studentProducts";
+import { MOCK_PRODUCTS } from "../../constants/studentProducts";
 
 /**
  * Custom hook to fetch and manage product data

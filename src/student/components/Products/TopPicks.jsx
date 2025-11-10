@@ -1,6 +1,6 @@
 import React from "react";
 import { Star } from "lucide-react";
-import { PRODUCT_STATUS } from "../constants/studentProducts";
+import { PRODUCT_STATUS } from "../../constants/studentProducts";
 
 const TopPicks = ({ products, onProductClick }) => {
   if (!products || products.length === 0) {

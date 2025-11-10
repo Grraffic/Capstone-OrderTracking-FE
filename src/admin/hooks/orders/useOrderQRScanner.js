@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { parseOrderReceiptQRData } from "../../utils/qrCodeGenerator";
+import { parseOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";

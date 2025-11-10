@@ -1,6 +1,6 @@
 import React from "react";
 import { Menu, Bell, ChevronDown } from "lucide-react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 
 /**
  * AdminHeader Component

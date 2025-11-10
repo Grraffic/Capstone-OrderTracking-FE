@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { isCategoryValidForEducationLevel } from "../constants/inventoryOptions";
+import { isCategoryValidForEducationLevel } from "../../constants/inventoryOptions";
 
 /**
  * useInventoryModalForm Hook

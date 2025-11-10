@@ -1,5 +1,5 @@
 import { Pencil, Plus } from "lucide-react";
-import { useItemAdjustmentForm } from "../hooks";
+import { useItemAdjustmentForm } from "../../hooks";
 
 const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
   const {

@@ -1,9 +1,9 @@
-import Sidebar from "../components/Sidebar";
-import AdminHeader from "../components/AdminHeader";
-import OverviewCards from "../components/OverviewCards";
-import StockLevelsChart from "../components/StockLevelsChart";
-import RecentOrdersTable from "../components/RecentOrdersTable";
-import { useAdminDashboardData } from "../../hooks";
+import Sidebar from "../components/common/Sidebar";
+import AdminHeader from "../components/common/AdminHeader";
+import OverviewCards from "../components/Dashboard/OverviewCards";
+import StockLevelsChart from "../components/Inventory/StockLevelsChart";
+import RecentOrdersTable from "../components/Dashboard/RecentOrdersTable";
+import { useAdminDashboardData } from "../hooks";
 
 const AdminDashboard = () => {
   const {

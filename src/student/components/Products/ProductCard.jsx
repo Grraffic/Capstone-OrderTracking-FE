@@ -1,6 +1,6 @@
 import React from "react";
 import { ShoppingCart, Bell } from "lucide-react";
-import { PRODUCT_STATUS } from "../constants/studentProducts";
+import { PRODUCT_STATUS } from "../../constants/studentProducts";
 
 const ProductCard = ({
   product,

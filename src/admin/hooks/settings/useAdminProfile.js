@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { useAuth } from "../../context/AuthContext";
-import { profileService } from "../../services/profile.service";
+import { useAuth } from "../../../context/AuthContext";
+import { profileService } from "../../../services/profile.service";
 import { toast } from "react-hot-toast";
 
 /**
@@ -108,9 +108,12 @@ export const useAdminProfile = () => {
       ...prev,
       [name]: value,
       // Update full name when first or last name changes
-      name: name === "firstName" || name === "lastName"
-        ? `${name === "firstName" ? value : prev.firstName} ${name === "lastName" ? value : prev.lastName}`.trim()
-        : prev.name,
+      name:
+        name === "firstName" || name === "lastName"
+          ? `${name === "firstName" ? value : prev.firstName} ${
+              name === "lastName" ? value : prev.lastName
+            }`.trim()
+          : prev.name,
     }));
 
     // Clear error for this field
@@ -277,4 +280,3 @@ export const useAdminProfile = () => {
     handleDiscardChanges,
   };
 };
-

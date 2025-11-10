@@ -1,10 +1,10 @@
 import { useState, useCallback } from "react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 import {
   generateOrderNumber,
   generateOrderReceiptQRData,
   validateOrderData,
-} from "../../utils/qrCodeGenerator";
+} from "../../../utils/qrCodeGenerator";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";

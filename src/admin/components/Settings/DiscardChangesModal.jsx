@@ -23,21 +23,9 @@ const DiscardChangesModal = ({ isOpen, onConfirm, onCancel }) => {
 
       {/* Modal Content */}
       <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 transform transition-all">
-        {/* Icon */}
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
-            <AlertTriangle className="w-8 h-8 text-[#e68b00]" />
-          </div>
-        </div>
-
-        {/* Title */}
-        <h2 className="text-2xl font-bold text-[#0C2340] text-center mb-2">
-          Discard Changes?
-        </h2>
-
         {/* Message */}
         <p className="text-gray-600 text-center mb-8">
-          Are you sure you want to discard your changes? All unsaved modifications will be lost.
+          Are you sure you want to discard changes?{" "}
         </p>
 
         {/* Buttons */}
@@ -47,7 +35,7 @@ const DiscardChangesModal = ({ isOpen, onConfirm, onCancel }) => {
             onClick={onCancel}
             className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all duration-200"
           >
-            No, Keep Editing
+            No
           </button>
 
           {/* Confirm Button */}
@@ -55,7 +43,7 @@ const DiscardChangesModal = ({ isOpen, onConfirm, onCancel }) => {
             onClick={onConfirm}
             className="flex-1 px-6 py-3 bg-[#e68b00] text-white font-semibold rounded-lg hover:bg-[#d97a1f] transition-all duration-200 shadow-md hover:shadow-lg"
           >
-            Yes, Discard
+            Yes
           </button>
         </div>
       </div>
@@ -64,4 +52,3 @@ const DiscardChangesModal = ({ isOpen, onConfirm, onCancel }) => {
 };
 
 export default DiscardChangesModal;
-

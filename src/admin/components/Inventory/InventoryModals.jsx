@@ -1,12 +1,12 @@
 import { X, AlertTriangle, Pencil, Plus } from "lucide-react";
-import { useInventoryModalForm } from "../hooks";
+import { useInventoryModalForm } from "../../hooks";
 import { useState, useMemo } from "react";
 import {
   EDUCATION_LEVELS,
   ITEM_TYPES,
   MATERIAL_TYPES,
   getFilteredCategories,
-} from "../constants/inventoryOptions";
+} from "../../constants/inventoryOptions";
 
 /**
  * InventoryModals Component

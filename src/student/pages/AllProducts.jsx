@@ -1,18 +1,20 @@
 import React, { useState, useMemo } from "react";
 import { Search } from "lucide-react";
-import Navbar from "../components/Navbar";
-import HeroSection from "../components/HeroSection";
-import CategorySidebar from "../components/CategorySidebar";
-import ProductGrid from "../components/ProductGrid";
-import Pagination from "../components/Pagination";
+import Navbar from "../components/common/Navbar";
+import HeroSection from "../components/common/HeroSection";
+import CategorySidebar from "../components/Products/CategorySidebar";
+import ProductGrid from "../components/Products/ProductGrid";
+import Pagination from "../components/common/Pagination";
 import Footer from "../../components/common/Footer";
-import OrderReceiptQRCode from "../components/OrderReceiptQRCode";
-import { ProductDetailsModal } from "../components/ProductDetails";
-import { useInventory } from "../../hooks/useInventory";
-import { useSearchDebounce } from "../hooks/useSearchDebounce";
-import { useProductPagination } from "../hooks/useProductPagination";
-import { useOrderSubmission } from "../hooks/useOrderSubmission";
-import { useProductDetails } from "../hooks/useProductDetails";
+import OrderReceiptQRCode from "../components/Orders/OrderReceiptQRCode";
+import { ProductDetailsModal } from "../components/Products/ProductDetails";
+import { useInventory } from "../../admin/hooks/inventory/useInventory";
+import {
+  useSearchDebounce,
+  useProductPagination,
+  useOrderSubmission,
+  useProductDetails,
+} from "../hooks";
 
 /**
  * AllProducts Component

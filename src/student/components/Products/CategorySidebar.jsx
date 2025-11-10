@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import { PRODUCT_CATEGORIES } from "../constants/studentProducts";
+import { PRODUCT_CATEGORIES } from "../../constants/studentProducts";
 
 const CategorySidebar = ({ selectedCategory, onCategoryChange }) => {
   const [expandedCategories, setExpandedCategories] = useState(["uniform"]);

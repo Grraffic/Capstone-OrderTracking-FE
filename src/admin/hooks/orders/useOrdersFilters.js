@@ -2,18 +2,18 @@ import { useState, useCallback, useMemo } from "react";
 import {
   getFilteredClassAndYear,
   isClassAndYearValidForEducationLevel,
-} from "../constants/ordersOptions";
+} from "../../constants/ordersOptions";
 
 /**
  * Custom hook for managing Orders page filters
- * 
+ *
  * Handles:
  * - Education Level filter (with cascading logic)
  * - Class and Year filter (cascades based on Education Level)
  * - Status filter
  * - Search term
  * - Auto-reset of Class and Year when Education Level changes
- * 
+ *
  * @returns {Object} Filter state and handlers
  */
 const useOrdersFilters = () => {
@@ -21,9 +21,8 @@ const useOrdersFilters = () => {
   const [educationLevelFilter, setEducationLevelFilter] = useState(
     "All Education Levels"
   );
-  const [classAndYearFilter, setClassAndYearFilter] = useState(
-    "All Class & Year"
-  );
+  const [classAndYearFilter, setClassAndYearFilter] =
+    useState("All Class & Year");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -89,4 +88,3 @@ const useOrdersFilters = () => {
 };
 
 export default useOrdersFilters;
-

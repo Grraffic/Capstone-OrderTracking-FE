@@ -1,12 +1,12 @@
 import { QrCode, Search } from "lucide-react";
-import Sidebar from "../components/Sidebar";
-import AdminHeader from "../components/AdminHeader";
-import OrdersStatsCards from "../components/OrdersStatsCards";
-import OrdersTable from "../components/OrdersTable";
-import QRCodeScannerModal from "../components/QRCodeScannerModal";
+import Sidebar from "../components/common/Sidebar";
+import AdminHeader from "../components/common/AdminHeader";
+import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
+import OrdersTable from "../components/Orders/OrdersTable";
+import QRCodeScannerModal from "../components/Inventory/QRCodeScannerModal";
 import { useAdminSidebar, useOrderQRScanner, useOrders } from "../hooks";
-import useOrdersStats from "../hooks/useOrdersStats";
-import useOrdersFilters from "../hooks/useOrdersFilters";
+import useOrdersStats from "../hooks/orders/useOrdersStats";
+import useOrdersFilters from "../hooks/orders/useOrdersFilters";
 import { EDUCATION_LEVELS, ORDER_STATUS } from "../constants/ordersOptions";
 import { useState, useMemo, useEffect } from "react";
 

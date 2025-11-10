@@ -1,6 +1,6 @@
 import QRCode from "react-qr-code";
 import { Download, Printer, CheckCircle, Package } from "lucide-react";
-import { generateOrderReceiptQRData } from "../../utils/qrCodeGenerator";
+import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 
 /**
  * OrderReceiptQRCode Component

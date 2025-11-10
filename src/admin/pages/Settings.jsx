@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import { Camera, Save, X } from "lucide-react";
-import Sidebar from "../components/Sidebar";
-import AdminHeader from "../components/AdminHeader";
+import Sidebar from "../components/common/Sidebar";
+import AdminHeader from "../components/common/AdminHeader";
 import { useAdminSidebar } from "../hooks";
-import { useAdminProfile } from "../hooks/useAdminProfile";
-import DiscardChangesModal from "../components/DiscardChangesModal";
+import { useAdminProfile } from "../hooks/settings/useAdminProfile";
+import DiscardChangesModal from "../components/Settings/DiscardChangesModal";
 
 /**
  * Admin Settings Page Component
@@ -105,7 +105,11 @@ const Settings = () => {
                   <div className="relative group">
                     <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-[#e68b00] shadow-lg">
                       <img
-                        src={imagePreview || profile?.photoURL || "https://via.placeholder.com/160"}
+                        src={
+                          imagePreview ||
+                          profile?.photoURL ||
+                          "https://via.placeholder.com/160"
+                        }
                         alt={formData.name || "Admin"}
                         className="w-full h-full object-cover"
                       />
@@ -117,7 +121,9 @@ const Settings = () => {
 
                     {/* Camera Icon Badge */}
                     <button
-                      onClick={() => document.getElementById("profile-image-input").click()}
+                      onClick={() =>
+                        document.getElementById("profile-image-input").click()
+                      }
                       className="absolute bottom-2 right-2 w-10 h-10 bg-[#e68b00] rounded-full flex items-center justify-center shadow-lg hover:bg-[#d97a1f] transition-colors cursor-pointer"
                       title="Change profile picture"
                     >
@@ -141,16 +147,10 @@ const Settings = () => {
 
                   {/* Image Upload Error */}
                   {errors.image && (
-                    <p className="mt-2 text-sm text-red-600 text-center">{errors.image}</p>
+                    <p className="mt-2 text-sm text-red-600 text-center">
+                      {errors.image}
+                    </p>
                   )}
-
-                  {/* Image Upload Instructions */}
-                  <p className="mt-2 text-sm text-gray-500 text-center">
-                    Click the camera icon to change your profile picture
-                  </p>
-                  <p className="mt-1 text-xs text-gray-400 text-center">
-                    Accepted formats: JPG, PNG, GIF (Max 5MB)
-                  </p>
                 </div>
 
                 {/* Navigation Tabs (Optional - for future expansion) */}
@@ -168,19 +168,30 @@ const Settings = () => {
               <div className="bg-white rounded-2xl shadow-sm p-8 border border-gray-200">
                 {/* Section Header */}
                 <div className="mb-6">
-                  <h2 className="text-xl font-bold text-[#e68b00]">Personal Information</h2>
+                  <h2 className="text-xl font-bold text-[#e68b00]">
+                    Personal Information
+                  </h2>
                   <p className="text-sm text-gray-500 mt-1">
                     Update your profile information
                   </p>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={(e) => { e.preventDefault(); handleSaveChanges(); }} className="space-y-6">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSaveChanges();
+                  }}
+                  className="space-y-6"
+                >
                   {/* Name Fields - Two Columns */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* First Name */}
                     <div>
-                      <label htmlFor="firstName" className="block text-sm font-semibold text-[#0C2340] mb-2">
+                      <label
+                        htmlFor="firstName"
+                        className="block text-sm font-semibold text-[#0C2340] mb-2"
+                      >
                         First Name
                       </label>
                       <input
@@ -190,18 +201,25 @@ const Settings = () => {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         className={`w-full px-4 py-3 border-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] transition-colors ${
-                          errors.firstName ? "border-red-500" : "border-gray-300"
+                          errors.firstName
+                            ? "border-red-500"
+                            : "border-gray-300"
                         }`}
                         placeholder="Enter first name"
                       />
                       {errors.firstName && (
-                        <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.firstName}
+                        </p>
                       )}
                     </div>
 
                     {/* Last Name */}
                     <div>
-                      <label htmlFor="lastName" className="block text-sm font-semibold text-[#0C2340] mb-2">
+                      <label
+                        htmlFor="lastName"
+                        className="block text-sm font-semibold text-[#0C2340] mb-2"
+                      >
                         Last Name
                       </label>
                       <input
@@ -216,14 +234,19 @@ const Settings = () => {
                         placeholder="Enter last name"
                       />
                       {errors.lastName && (
-                        <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                        <p className="mt-1 text-sm text-red-600">
+                          {errors.lastName}
+                        </p>
                       )}
                     </div>
                   </div>
 
                   {/* Email Address - Read Only */}
                   <div>
-                    <label htmlFor="email" className="block text-sm font-semibold text-[#0C2340] mb-2">
+                    <label
+                      htmlFor="email"
+                      className="block text-sm font-semibold text-[#0C2340] mb-2"
+                    >
                       Email Address
                     </label>
                     <input
@@ -234,9 +257,6 @@ const Settings = () => {
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600 cursor-not-allowed"
                       placeholder="Email from Google Account"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Email is managed through your Google Account and cannot be changed here
-                    </p>
                   </div>
 
                   {/* Action Buttons */}
@@ -289,4 +309,3 @@ const Settings = () => {
 };
 
 export default Settings;
-

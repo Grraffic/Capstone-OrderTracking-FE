@@ -1,13 +1,17 @@
 import { Plus, Search, QrCode } from "lucide-react";
-import Sidebar from "../components/Sidebar";
-import AdminHeader from "../components/AdminHeader";
-import InventoryTable from "../components/InventoryTable";
-import InventoryModals from "../components/InventoryModals";
-import ItemAdjustmentModal from "../components/ItemAdjustmentModal";
-import QRCodeScannerModal from "../components/QRCodeScannerModal";
-import InventoryStatsCards from "../components/InventoryStatsCards";
-import { useInventory } from "../../hooks/useInventory";
-import { useAdminSidebar, useQRScanner, useInventoryStats } from "../hooks";
+import Sidebar from "../components/common/Sidebar";
+import AdminHeader from "../components/common/AdminHeader";
+import InventoryTable from "../components/Inventory/InventoryTable";
+import InventoryModals from "../components/Inventory/InventoryModals";
+import ItemAdjustmentModal from "../components/Inventory/ItemAdjustmentModal";
+import QRCodeScannerModal from "../components/Inventory/QRCodeScannerModal";
+import InventoryStatsCards from "../components/Inventory/InventoryStatsCards";
+import {
+  useAdminSidebar,
+  useQRScanner,
+  useInventoryStats,
+  useInventory,
+} from "../hooks";
 
 /**
  * Inventory Page Component
