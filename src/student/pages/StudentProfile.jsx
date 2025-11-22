@@ -7,6 +7,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import Navbar from "../components/common/Navbar";
+import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
 import { useStudentProfile, useActivityFeed } from "../hooks";
 
@@ -97,12 +98,16 @@ const StudentProfile = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <Navbar />
 
-      {/* Main Content */}
-      <main className="pt-24 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
+      {/* Hero Section - Fixed background */}
+      <HeroSection />
+
+      {/* Main Content - Scrollable content that overlaps hero */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
+        {/* Main Container - Solid white background */}
+        <div className="bg-white rounded-3xl shadow-gray-800 shadow-md p-6 md:p-8 lg:p-10">
           {/* Page Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold">
@@ -151,10 +156,15 @@ const StudentProfile = () => {
                       <h2 className="text-2xl font-bold text-[#003363] mb-1">
                         {profileData?.name || "Student"}
                       </h2>
-                      <p className="text-gray-600 text-sm mb-4">
-                        {profileData?.course || "N/A"} -{" "}
-                        {profileData?.yearLevel || "N/A"}
+                      <p className="text-gray-600 text-sm mb-2">
+                        {profileData?.courseYearLevel ||
+                          "Course & Year Level not set"}
                       </p>
+                      {profileData?.educationLevel && (
+                        <p className="text-xs text-[#C5A572] font-semibold">
+                          {profileData.educationLevel}
+                        </p>
+                      )}
                     </div>
 
                     {/* Student Details */}
@@ -164,7 +174,7 @@ const StudentProfile = () => {
                           Student Number:
                         </p>
                         <p className="text-gray-800">
-                          {profileData?.studentNumber || "N/A"}
+                          {profileData?.studentNumber || "Not set"}
                         </p>
                       </div>
 

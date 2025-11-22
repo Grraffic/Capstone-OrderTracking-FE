@@ -21,9 +21,10 @@ const Navbar = () => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-  // Get user display name and email
+  // Get user display name, email, and photo
   const userName = user?.displayName || user?.name || "Student";
   const userEmail = user?.email || "";
+  const userPhoto = user?.photoURL || user?.photo_url || null;
 
   // Determine if user is a student based on email
   const isStudent = userEmail.endsWith("@student.laverdad.edu.ph");
@@ -108,9 +109,17 @@ const Navbar = () => {
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
                 className="flex items-center space-x-3 hover:bg-gray-50 rounded-full pl-1 pr-3 py-1 transition-colors"
               >
-                <div className="w-10 h-10 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
+                {userPhoto ? (
+                  <img
+                    src={userPhoto}
+                    alt={userName}
+                    className="w-10 h-10 rounded-full object-cover border-2 border-[#C5A572]"
+                  />
+                ) : (
+                  <div className="w-10 h-10 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex flex-col items-start">
                   <span className="text-sm font-semibold text-gray-800">
                     {userName}
@@ -165,7 +174,7 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
-                      // Navigate to settings page
+                      navigate("/student/settings");
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
@@ -207,9 +216,17 @@ const Navbar = () => {
             <div className="flex flex-col space-y-2">
               {/* User Info - Mobile */}
               <div className="flex items-center space-x-3 px-4 py-3 bg-gray-50 rounded-lg">
-                <div className="w-12 h-12 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
+                {userPhoto ? (
+                  <img
+                    src={userPhoto}
+                    alt={userName}
+                    className="w-12 h-12 rounded-full object-cover border-2 border-[#C5A572]"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold">
+                    {userName.charAt(0).toUpperCase()}
+                  </div>
+                )}
                 <div className="flex flex-col">
                   <span className="text-sm font-semibold text-gray-800">
                     {userName}
@@ -278,7 +295,13 @@ const Navbar = () => {
               </button>
 
               {/* Settings - Mobile */}
-              <button className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <button
+                onClick={() => {
+                  navigate("/student/settings");
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+              >
                 <Settings className="w-5 h-5 text-gray-700" />
                 <span className="text-sm font-medium text-gray-700">
                   Settings

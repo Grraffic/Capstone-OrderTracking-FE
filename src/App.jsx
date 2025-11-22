@@ -17,6 +17,7 @@ import ProductDetailsPage from "./student/pages/ProductDetailsPage";
 import MyCart from "./student/pages/MyCart";
 import CheckoutPage from "./student/pages/CheckoutPage";
 import StudentProfile from "./student/pages/StudentProfile";
+import StudentSettings from "./student/pages/StudentSettings";
 
 export default function App() {
   return (
@@ -153,6 +154,16 @@ export default function App() {
                 element={
                   <ProtectedRoute requiredRoles={["student"]}>
                     <StudentProfile />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Student Settings page - protected for students */}
+              <Route
+                path="/student/settings"
+                element={
+                  <ProtectedRoute requiredRoles={["student"]}>
+                    <StudentSettings />
                   </ProtectedRoute>
                 }
               />

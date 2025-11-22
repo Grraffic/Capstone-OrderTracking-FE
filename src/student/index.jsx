@@ -8,6 +8,7 @@ export { default as StudentDashboard } from "./pages/StudentDashboard";
 export { default as ProductDetailsPage } from "./pages/ProductDetailsPage";
 export { default as MyCart } from "./pages/MyCart";
 export { default as StudentProfile } from "./pages/StudentProfile";
+export { default as StudentSettings } from "./pages/StudentSettings";
 
 // Components
 export { default as Navbar } from "./components/Navbar";

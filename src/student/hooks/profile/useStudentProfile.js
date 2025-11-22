@@ -36,19 +36,23 @@ export const useStudentProfile = () => {
         id: userData.id || user?.id,
         name: userData.name || user?.displayName || user?.name || "Student",
         email: userData.email || user?.email || "",
-        photoURL: userData.photoURL || userData.photo_url || user?.photoURL || null,
+        photoURL:
+          userData.photoURL || userData.photo_url || user?.photoURL || null,
         role: userData.role || user?.role || "student",
-        // Additional fields that might come from backend
-        studentNumber: userData.studentNumber || userData.student_number || "N/A",
-        course: userData.course || "N/A",
-        yearLevel: userData.yearLevel || userData.year_level || "N/A",
+        // New combined fields
+        courseYearLevel:
+          userData.courseYearLevel || userData.course_year_level || null,
+        studentNumber:
+          userData.studentNumber || userData.student_number || null,
+        educationLevel:
+          userData.educationLevel || userData.education_level || null,
       };
 
       setProfileData(profile);
     } catch (err) {
       console.error("Error fetching profile:", err);
       setError(err.message || "Failed to load profile data");
-      
+
       // Fallback to user context data if API fails
       if (user) {
         setProfileData({
@@ -57,9 +61,9 @@ export const useStudentProfile = () => {
           email: user.email || "",
           photoURL: user.photoURL || null,
           role: user.role || "student",
-          studentNumber: "N/A",
-          course: "N/A",
-          yearLevel: "N/A",
+          courseYearLevel: null,
+          studentNumber: null,
+          educationLevel: null,
         });
       }
     } finally {
@@ -78,4 +82,3 @@ export const useStudentProfile = () => {
     refetch,
   };
 };
-

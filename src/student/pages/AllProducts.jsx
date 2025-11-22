@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import React, { useState, useMemo, useEffect } from "react";
+import { Search, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
@@ -9,6 +9,8 @@ import Pagination from "../components/common/Pagination";
 import Footer from "../../components/common/Footer";
 import { useInventory } from "../../admin/hooks/inventory/useInventory";
 import { useSearchDebounce, useProductPagination } from "../hooks";
+import { useAuth } from "../../context/AuthContext";
+import { authAPI } from "../../services/api";
 
 /**
  * AllProducts Component
@@ -31,6 +33,34 @@ const AllProducts = () => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar toggle
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Desktop sidebar collapse to icons
+  const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Get user from auth context
+  const { user } = useAuth();
+
+  // Fetch user profile to get education level
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setProfileLoading(true);
+        const response = await authAPI.getProfile();
+        const userData = response.data;
+        setUserEducationLevel(userData.educationLevel || null);
+      } catch (err) {
+        console.error("Error fetching user profile:", err);
+        setUserEducationLevel(null);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchUserProfile();
+    } else {
+      setProfileLoading(false);
+    }
+  }, [user]);
 
   // Fetch inventory data using existing hook
   const { items, loading, error } = useInventory();
@@ -71,9 +101,21 @@ const AllProducts = () => {
     });
   }, [items]);
 
-  // Filter products by category and search
+  // Filter products by education level, category, and search
   const filteredProducts = useMemo(() => {
     let filtered = [...transformedProducts];
+
+    // Filter by education level (if user has set their year level)
+    if (userEducationLevel) {
+      filtered = filtered.filter((product) => {
+        // Always show "General" products (available to all students)
+        if (product.educationLevel === "General" || !product.educationLevel) {
+          return true;
+        }
+        // Show products matching the user's education level
+        return product.educationLevel === userEducationLevel;
+      });
+    }
 
     // Filter by category
     if (selectedCategory !== "all") {
@@ -109,7 +151,12 @@ const AllProducts = () => {
     }
 
     return filtered;
-  }, [transformedProducts, selectedCategory, debouncedSearch]);
+  }, [
+    transformedProducts,
+    selectedCategory,
+    debouncedSearch,
+    userEducationLevel,
+  ]);
 
   // Pagination
   const {
@@ -241,6 +288,37 @@ const AllProducts = () => {
                 </button>
               </div>
             </div>
+
+            {/* Education Level Notice Badge */}
+            {userEducationLevel && (
+              <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-blue-800 font-semibold">
+                    Showing products for: {userEducationLevel}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Products are filtered based on your year level. General
+                    items are always visible.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!userEducationLevel && !profileLoading && (
+              <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-800 font-semibold">
+                    Complete your profile to see relevant products
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-0.5">
+                    Set your year level in Settings to filter products for your
+                    education level.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Content Grid */}

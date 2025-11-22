@@ -32,3 +32,4 @@ export { useCart } from "./cart/useCart";
 // Profile Hooks
 export { useStudentProfile } from "./profile/useStudentProfile";
 export { useActivityFeed } from "./profile/useActivityFeed";
+export { useStudentSettings } from "./profile/useStudentSettings";
