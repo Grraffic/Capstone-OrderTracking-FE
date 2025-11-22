@@ -3,7 +3,6 @@ import { ArrowLeft, ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import Navbar from "../components/common/Navbar";
-import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
 import toast from "react-hot-toast";
 
@@ -20,8 +19,7 @@ import toast from "react-hot-toast";
  */
 const MyCart = () => {
   const navigate = useNavigate();
-  const { items, loading, updateCartItem, removeFromCart, clearCart } =
-    useCart();
+  const { items, loading, updateCartItem, removeFromCart, clearCart } = useCart();
   const [editMode, setEditMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
 
@@ -94,18 +92,19 @@ const MyCart = () => {
       return;
     }
 
-    // Navigate to checkout page
-    navigate("/student/checkout");
+    // Navigate to order confirmation or checkout page
+    // For now, we'll show a toast
+    toast.success("Order functionality coming soon!");
+    // TODO: Implement order submission from cart
   };
 
   // Empty cart state
   if (!loading && items.length === 0) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <HeroSection />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
-          <div className="max-w-4xl mx-auto">
+        <div className="pt-20 pb-8">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="bg-white rounded-xl shadow-lg p-8 md:p-12 text-center">
               <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h2 className="text-2xl font-bold text-gray-800 mb-2">
@@ -129,11 +128,10 @@ const MyCart = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <HeroSection />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
-        <div className="max-w-6xl mx-auto">
+      <div className="pt-20 pb-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Cart Container */}
           <div className="bg-white rounded-xl shadow-lg overflow-hidden">
             {/* Header */}
@@ -217,10 +215,7 @@ const MyCart = () => {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {items.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
+                    <tr key={item.id} className="hover:bg-gray-50 transition-colors">
                       {/* Checkbox */}
                       {editMode && (
                         <td className="px-6 py-4">
@@ -237,9 +232,7 @@ const MyCart = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-4">
                           <img
-                            src={
-                              item.inventory?.image || "/assets/image/card1.png"
-                            }
+                            src={item.inventory?.image || "/assets/image/card1.png"}
                             alt={item.inventory?.name}
                             className="w-16 h-16 object-cover rounded-lg"
                             onError={(e) => {
@@ -294,9 +287,7 @@ const MyCart = () => {
 
                       {/* Price */}
                       <td className="px-6 py-4">
-                        <span className="font-semibold text-green-600">
-                          Free
-                        </span>
+                        <span className="font-semibold text-green-600">Free</span>
                       </td>
                     </tr>
                   ))}
@@ -341,9 +332,7 @@ const MyCart = () => {
                         <div className="text-sm text-gray-600">
                           <span className="font-medium">Size:</span> {item.size}
                         </div>
-                        <span className="font-semibold text-green-600">
-                          Free
-                        </span>
+                        <span className="font-semibold text-green-600">Free</span>
                       </div>
 
                       {/* Quantity Controls */}
@@ -372,8 +361,7 @@ const MyCart = () => {
                         </div>
                       ) : (
                         <div className="text-sm text-gray-600 mt-2">
-                          <span className="font-medium">Qty:</span>{" "}
-                          {item.quantity}
+                          <span className="font-medium">Qty:</span> {item.quantity}
                         </div>
                       )}
                     </div>
@@ -401,3 +389,4 @@ const MyCart = () => {
 };
 
 export default MyCart;
+

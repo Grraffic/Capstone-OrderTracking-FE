@@ -143,7 +143,7 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
-                      // Navigate to profile page
+                      navigate("/student/profile");
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
@@ -256,7 +256,13 @@ const Navbar = () => {
               <hr className="my-2" />
 
               {/* Profile - Mobile */}
-              <button className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <button
+                onClick={() => {
+                  navigate("/student/profile");
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+              >
                 <User className="w-5 h-5 text-gray-700" />
                 <span className="text-sm font-medium text-gray-700">
                   My Profile
