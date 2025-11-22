@@ -5,13 +5,13 @@ const HeroSection = () => {
     <div className="pointer-events-none">
       {/* Fixed Background Image - Fills entire area including behind navbar */}
       <div
-        className="fixed top-0 left-0 right-0 -z-10"
+        className="fixed top-0 left-0 right-0 z-0"
         style={{
           height: "calc(16rem + 4rem)", // Hero height + navbar height
         }}
       >
         <img
-          src="/assets/image/LandingPage.png"
+          src="/assets/image/Untitled design.png"
           alt="La Verdad Campus"
           className="w-full h-full object-cover"
           style={{

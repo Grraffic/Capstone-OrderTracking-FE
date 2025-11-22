@@ -133,16 +133,23 @@ const ProductDetailsPage = () => {
     }
   };
 
-  const handleOrderNow = () => {
+  const handleOrderNow = async () => {
     if (isOrderDisabled) return;
-    console.log("Order now:", {
-      product: product.name,
-      size: selectedSize,
-      quantity,
-    });
-    alert(
-      `Ordering ${quantity}x ${product.name} (Size: ${selectedSize || "N/A"})`
-    );
+
+    try {
+      // Add item to cart first
+      await addToCart({
+        inventoryId: product.id,
+        size: selectedSize || "N/A",
+        quantity: quantity,
+      });
+
+      // Navigate to checkout page
+      navigate("/student/checkout");
+    } catch (error) {
+      console.error("Failed to add to cart:", error);
+      // Error toast is handled by CartContext
+    }
   };
 
   const handleSearchSubmit = (e) => {

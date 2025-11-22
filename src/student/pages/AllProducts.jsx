@@ -161,7 +161,7 @@ const AllProducts = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       {/* Navigation */}
       <Navbar />
 
@@ -246,7 +246,11 @@ const AllProducts = () => {
           {/* Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
             {/* Category Sidebar - Desktop (always visible, collapses to icons) */}
-            <div className={`hidden lg:block ${isSidebarCollapsed ? 'lg:col-span-1' : 'lg:col-span-3'}`}>
+            <div
+              className={`hidden lg:block ${
+                isSidebarCollapsed ? "lg:col-span-1" : "lg:col-span-3"
+              }`}
+            >
               <CategorySidebar
                 selectedCategory={selectedCategory}
                 onCategoryChange={handleCategoryChange}
@@ -265,10 +269,12 @@ const AllProducts = () => {
             )}
 
             {/* Product Grid - Smooth width transition */}
-            <div 
-              className={`${isSidebarCollapsed ? 'lg:col-span-11' : 'lg:col-span-9'}`}
+            <div
+              className={`${
+                isSidebarCollapsed ? "lg:col-span-11" : "lg:col-span-9"
+              }`}
               style={{
-                transition: 'all 0.3s ease-in-out'
+                transition: "all 0.3s ease-in-out",
               }}
             >
               {/* Results Info */}

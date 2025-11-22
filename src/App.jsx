@@ -15,6 +15,7 @@ import StudentDashboard from "./student/pages/StudentDashboard";
 import AllProducts from "./student/pages/AllProducts";
 import ProductDetailsPage from "./student/pages/ProductDetailsPage";
 import MyCart from "./student/pages/MyCart";
+import CheckoutPage from "./student/pages/CheckoutPage";
 
 export default function App() {
   return (
@@ -131,6 +132,16 @@ export default function App() {
                 element={
                   <ProtectedRoute requiredRoles={["student"]}>
                     <MyCart />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Checkout page - protected for students */}
+              <Route
+                path="/student/checkout"
+                element={
+                  <ProtectedRoute requiredRoles={["student"]}>
+                    <CheckoutPage />
                   </ProtectedRoute>
                 }
               />
