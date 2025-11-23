@@ -1,17 +1,22 @@
 import React from "react";
 
 const HeroSection = () => {
+  const heroHeight = "calc(16rem + 4rem)"; // 16rem image + 4rem navbar
+
   return (
-    <div className="pointer-events-none">
-      {/* Fixed Background Image - Fills entire area including behind navbar */}
+    <div
+      className="pointer-events-none"
+      style={{ "--hero-height": heroHeight }}
+    >
+      {/* Fixed Background */}
       <div
         className="fixed top-0 left-0 right-0 z-0"
         style={{
-          height: "calc(16rem + 4rem)", // Hero height + navbar height
+          height: "var(--hero-height)",
         }}
       >
         <img
-          src="/assets/image/Untitled design.png"
+          src="/assets/image/LandingPage.png"
           alt="La Verdad Campus"
           className="w-full h-full object-cover"
           style={{
@@ -20,35 +25,33 @@ const HeroSection = () => {
             left: 0,
             right: 0,
             width: "100%",
-            height: "calc(16rem + 4rem)",
+            height: "var(--hero-height)",
             objectFit: "cover",
           }}
           onError={(e) => {
-            // Fallback gradient if image fails to load
             e.target.style.display = "none";
             e.target.parentElement.style.background =
               "linear-gradient(135deg, #003363 0%, #0C2340 100%)";
           }}
         />
+
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-r from-[#003363]/40 to-transparent"></div>
       </div>
 
-      {/* Fixed Content - Order Yours text stays in place */}
+      {/* Fixed Content */}
       <div
         className="fixed px-4 sm:px-8 md:px-16"
         style={{
-          top: "calc(4rem + 2rem)", // Navbar height + padding
-          zIndex: -5, // Behind content but above background
+          top: "calc(4rem + 2rem)", // Navbar + small offset
+          zIndex: -5,
         }}
       >
-        <div className="text-left">
-          <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-2xl leading-tight">
-            Order
-            <br />
-            Yours
-          </h1>
-        </div>
+        <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-bold text-white drop-shadow-2xl leading-tight">
+          Order
+          <br />
+          Yours
+        </h1>
       </div>
     </div>
   );

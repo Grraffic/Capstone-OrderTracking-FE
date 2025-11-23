@@ -215,12 +215,15 @@ const AllProducts = () => {
       {/* Hero Section - Fixed background, stays in place */}
       <HeroSection />
 
-      {/* Main Content - Scrollable content that overlaps hero */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
-        {/* Main Container - Solid white background */}
-        <div className="bg-white rounded-3xl shadow-gray-800 shadow-md p-6 md:p-8 lg:p-10">
-          {/* Header Section - Sticky */}
-          <div className="sticky top-16 z-20 bg-white rounded-t-3xl pb-6 mb-2 -mx-6 -mt-6 px-6 pt-6 md:-mx-8 md:-mt-8 md:px-8 md:pt-8 lg:-mx-10 lg:-mt-10 lg:px-10 lg:pt-10 border-b border-gray-100">
+      {/* Main Content - Starts exactly where hero ends (20rem = 320px) */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pb-8" style={{ paddingTop: 'calc(16rem + 4rem)' }}>
+        {/* Main Container - Sticky white card that maintains gap from navbar */}
+        <div
+          className="bg-white rounded-3xl shadow-gray-800 shadow-md p-6 md:p-8 lg:p-10 sticky top-32"
+          style={{ marginTop: '6rem' }}
+        >
+          {/* Header Section */}
+          <div className="pb-6 mb-2 border-b border-gray-100">
             <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
               {/* Left: Hamburger + Title */}
               <div className="flex items-center gap-4">
