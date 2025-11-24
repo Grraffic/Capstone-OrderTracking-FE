@@ -38,30 +38,47 @@ export const ActivityProvider = ({ children }) => {
 
   // Listen for Socket.IO events when admin claims student's order
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.id) {
+      console.log("⚠️ ActivityContext: No user.id, skipping Socket.IO setup");
+      return;
+    }
+
+    console.log("🔌 ActivityContext: Setting up Socket.IO for user:", user.id);
 
     // Connect to Socket.IO server
     socketClient.connect();
+    console.log("🔌 ActivityContext: Socket.IO connection initiated");
 
     // Listen for order claimed events
     const handleOrderClaimed = (data) => {
       console.log("📡 Received order claimed event:", data);
+      console.log("🔍 Current user.id:", user.id);
+      console.log("🔍 Event userId:", data.userId);
+      console.log("🔍 Match?", data.userId === user.id);
 
       // Only track activity if this order belongs to the current user
-      if (data.userId === user.uid) {
+      if (data.userId === user.id) {
+        // Calculate total items count
+        const itemCount = data.items?.length || 0;
+
         const newActivity = {
           id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userId: user.uid,
+          userId: user.id,
           timestamp: new Date().toISOString(),
           type: "claimed",
-          description: `Claimed order #${data.orderNumber}`,
+          description: `Claimed ${itemCount} item(s) from order #${data.orderNumber}`,
           orderId: data.orderId,
           orderNumber: data.orderNumber,
           items: data.items,
+          itemCount: itemCount,
         };
 
         setActivities((prev) => [newActivity, ...prev]);
         console.log("✅ Activity tracked: Order claimed");
+      } else {
+        console.log("⚠️ Order claimed event received but userId doesn't match current user");
+        console.log("⚠️ Expected:", user.id);
+        console.log("⚠️ Received:", data.userId);
       }
     };
 
@@ -71,7 +88,7 @@ export const ActivityProvider = ({ children }) => {
     return () => {
       socketClient.off("order:claimed", handleOrderClaimed);
     };
-  }, [user?.uid]);
+  }, [user?.id]);
 
   /**
    * Load activities from localStorage
@@ -89,12 +106,26 @@ export const ActivityProvider = ({ children }) => {
 
   /**
    * Save activities to localStorage
+   * Limit to 50 most recent activities to prevent quota exceeded errors
    */
   const saveActivities = () => {
     try {
-      localStorage.setItem(`activities_${user.id}`, JSON.stringify(activities));
+      // Keep only the 50 most recent activities
+      const limitedActivities = activities.slice(0, 50);
+      localStorage.setItem(`activities_${user.id}`, JSON.stringify(limitedActivities));
+      console.log(`💾 Saved ${limitedActivities.length} activities to localStorage`);
     } catch (error) {
       console.error("Error saving activities:", error);
+      // If still quota exceeded, try clearing old activities
+      if (error.name === 'QuotaExceededError') {
+        try {
+          const emergencyLimit = activities.slice(0, 20);
+          localStorage.setItem(`activities_${user.id}`, JSON.stringify(emergencyLimit));
+          console.log(`💾 Emergency save: Reduced to ${emergencyLimit.length} activities`);
+        } catch (e) {
+          console.error("Emergency save also failed:", e);
+        }
+      }
     }
   };
 

@@ -99,7 +99,7 @@ const StudentProfile = () => {
 
   // Enhanced helper function to render activity title and description with highlights
   const renderActivityContent = (activity) => {
-    const { type, description, productName, educationLevel, orderId } =
+    const { type, description, productName, educationLevel, orderId, itemCount } =
       activity;
 
     // Parse the description to create title and detail parts
@@ -113,7 +113,7 @@ const StudentProfile = () => {
       title = "Product added to cart";
       details = description;
     } else if (type === "claimed") {
-      title = "Claimed Order";
+      title = "Order Claimed Successfully";
       details = description;
     } else {
       title = description;
