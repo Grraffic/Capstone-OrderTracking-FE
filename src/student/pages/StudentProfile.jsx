@@ -21,6 +21,11 @@ const StudentProfile = () => {
   // State for hamburger menu toggle
   const [isProfileVisible, setIsProfileVisible] = React.useState(true);
 
+  // Refs and state for dynamic underline widths
+  const tabRefs = React.useRef({});
+  const [underlineWidths, setUnderlineWidths] = React.useState({});
+  const [hoveredTab, setHoveredTab] = React.useState(null);
+
   // Fetch profile data
   const {
     profileData,
@@ -43,6 +48,18 @@ const StudentProfile = () => {
     canGoNext,
     canGoPrev,
   } = useActivityFeed();
+
+  // Update underline widths when tabs change
+  React.useEffect(() => {
+    const tabs = ['activities', 'orders', 'history'];
+    const newWidths = {};
+    tabs.forEach((tab) => {
+      if (tabRefs.current[tab]) {
+        newWidths[tab] = tabRefs.current[tab].offsetWidth;
+      }
+    });
+    setUnderlineWidths(newWidths);
+  }, [activeTab]);
 
   // Toggle profile visibility
   const toggleProfileVisibility = () => {
@@ -189,7 +206,7 @@ const StudentProfile = () => {
       <HeroSection />
 
       {/* Profile Card - Overlapping Hero Section (Left Side) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-80 relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Side - Profile Card Component */}
           <ProfileCard
@@ -203,7 +220,7 @@ const StudentProfile = () => {
           {/* Right Side - Activity Feed */}
           <div className="lg:col-span-3">
             {/* Single Background Container for Tabs + Activities - Sticky at hero bottom */}
-            <div className="sticky top-80 bg-gray-500 rounded-xl p-6 min-h-[500px]">
+            <div className="sticky top-80 bg-gray-50 rounded-xl pl-8 min-h-[500px]">
               {/* Tabs Bar - Scrolls with content */}
               <div className="pb-4 mb-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -212,24 +229,43 @@ const StudentProfile = () => {
                       { key: "activities", label: "Activities", icon: Bell },
                       { key: "orders", label: "Orders", icon: ShoppingCart },
                       { key: "history", label: "History", icon: Package },
-                    ].map((tab) => (
-                      <button
-                        key={tab.key}
-                        onClick={() => handleTabChange(tab.key)}
-                        className={`relative flex items-center space-x-2 px-6 py-3 font-semibold text-sm transition-all rounded-lg overflow-hidden ${
-                          activeTab === tab.key
-                            ? "bg-[#003363] text-white"
-                            : "bg-transparent text-gray-600 hover:text-[#003363] hover:bg-gray-100"
-                        }`}
-                      >
-                        <tab.icon className="w-4 h-4" />
-                        <span>{tab.label}</span>
-                        {/* Orange underline for active tab - contained within button */}
-                        {activeTab === tab.key && (
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#FF6B35]"></div>
-                        )}
-                      </button>
-                    ))}
+                    ].map((tab) => {
+                      const isActive = activeTab === tab.key;
+                      const isHovered = hoveredTab === tab.key;
+                      const showUnderline = isActive || isHovered;
+                      
+                      return (
+                        <button
+                          key={tab.key}
+                          onClick={() => handleTabChange(tab.key)}
+                          onMouseEnter={() => setHoveredTab(tab.key)}
+                          onMouseLeave={() => setHoveredTab(null)}
+                          className={`relative flex flex-col items-center justify-center px-10 py-6 font-semibold text-sm transition-all ${
+                            isActive
+                              ? "bg-[#003363] text-white"
+                              : "bg-transparent text-gray-600 hover:bg-[#0C2340] hover:text-white"
+                          }`}
+                        >
+                          <div 
+                            ref={(el) => (tabRefs.current[tab.key] = el)}
+                            className="flex items-center space-x-2"
+                            style={{ pointerEvents: "none" }}
+                          >
+                            <tab.icon className="w-4 h-4" />
+                            <span className="inline-block">
+                              {tab.label}
+                            </span>
+                          </div>
+                          {/* Orange underline for active/hovered tab - based on content width */}
+                          {showUnderline && (
+                            <span
+                              className="block mt-1.5 h-1 bg-[#E68B00] rounded-full transition-all"
+                              style={{ width: underlineWidths[tab.key] || 0 }}
+                            />
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Filter Dropdown */}

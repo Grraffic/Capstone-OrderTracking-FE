@@ -212,186 +212,175 @@ const AllProducts = () => {
       {/* Navigation */}
       <Navbar />
 
-      {/* Hero Section - Fixed background, stays in place */}
+      {/* Hero Section - Scrolls naturally with page */}
       <HeroSection />
 
-      {/* Main Content - Starts exactly where hero ends (20rem = 320px) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 pb-8" style={{ paddingTop: 'calc(16rem + 4rem)' }}>
-        {/* Main Container - Sticky white card that maintains gap from navbar */}
-        <div
-          className="bg-white rounded-3xl shadow-gray-800 shadow-md p-6 md:p-8 lg:p-10 sticky top-32"
-          style={{ marginTop: '6rem' }}
-        >
-          {/* Header Section */}
-          <div className="pb-6 mb-2 border-b border-gray-100">
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-              {/* Left: Hamburger + Title */}
-              <div className="flex items-center gap-4">
-                {/* Hamburger Menu Button - Visible on all screen sizes */}
-                <button
-                  onClick={() => {
-                    // On mobile: toggle sidebar visibility
-                    // On desktop: toggle sidebar collapse (icon-only mode)
-                    if (window.innerWidth < 1024) {
-                      setIsSidebarOpen(!isSidebarOpen);
-                    } else {
-                      setIsSidebarCollapsed(!isSidebarCollapsed);
-                    }
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300"
-                  aria-label="Toggle sidebar"
-                >
-                  {/* Hamburger Icon */}
-                  <svg
-                    className="w-6 h-6 text-gray-700"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-16">
+        
+          {/* Main Container - White card */}
+          <div className="bg-white rounded-3xl shadow-gray-800 shadow-md mb-8">
+            {/* Sticky Header (unchanged) */}
+            <div className=" z-20 rounded-t-3xl px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-6 border-b border-gray-100 shadow-sm">
+              {/* Header Content */}
+              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+                {/* Left: Hamburger + Title */}
+                <div className="flex items-center gap-4">
+                  {/* Hamburger Button */}
+                  <button
+                    onClick={() => {
+                      if (window.innerWidth < 1024) {
+                        setIsSidebarOpen(!isSidebarOpen);
+                      } else {
+                        setIsSidebarCollapsed(!isSidebarCollapsed);
+                      }
+                    }}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300"
+                    aria-label="Toggle sidebar"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 6h16M4 12h16M4 18h16"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      className="w-6 h-6 text-gray-700"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M4 6h16M4 12h16M4 18h16"
+                      />
+                    </svg>
+                  </button>
 
-                {/* Page Title */}
-                <h1 className="text-3xl md:text-4xl font-bold">
-                  <span className="text-[#003363]">All </span>
-                  <span className="text-[#F28C28]">Products</span>
-                </h1>
-              </div>
+                  {/* Page Title */}
+                  <h1 className="text-3xl md:text-4xl font-bold">
+                    <span className="text-[#003363]">All </span>
+                    <span className="text-[#F28C28]">Products</span>
+                  </h1>
+                </div>
 
-              {/* Right: Search Bar */}
-              <div className="relative w-full lg:w-96">
-                <input
-                  type="text"
-                  placeholder="Search for items"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#003363] focus:border-transparent text-sm"
-                />
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#003363] text-white p-2 rounded-full hover:bg-[#002347] transition-colors">
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Education Level Notice Badge */}
-            {userEducationLevel && (
-              <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-blue-800 font-semibold">
-                    Showing products for: {userEducationLevel}
-                  </p>
-                  <p className="text-xs text-blue-700 mt-0.5">
-                    Products are filtered based on your year level. General
-                    items are always visible.
-                  </p>
+                {/* Search Bar */}
+                <div className="relative w-full lg:w-96">
+                  <input
+                    type="text"
+                    placeholder="Search for items"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#003363] focus:border-transparent text-sm"
+                  />
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#003363] text-white p-2 rounded-full hover:bg-[#002347] transition-colors">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </button>
                 </div>
               </div>
-            )}
 
-            {!userEducationLevel && !profileLoading && (
-              <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
-                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-yellow-800 font-semibold">
-                    Complete your profile to see relevant products
-                  </p>
-                  <p className="text-xs text-yellow-700 mt-0.5">
-                    Set your year level in Settings to filter products for your
-                    education level.
-                  </p>
+              {/* Education Level Alerts */}
+              {userEducationLevel && (
+                <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-blue-800 font-semibold">
+                      Showing products for: {userEducationLevel}
+                    </p>
+                    <p className="text-xs text-blue-700 mt-0.5">
+                      Products are filtered based on your year level. General
+                      items are always visible.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
 
-          {/* Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Category Sidebar - Desktop (always visible, collapses to icons) */}
-            <div
-              className={`hidden lg:block ${
-                isSidebarCollapsed ? "lg:col-span-1" : "lg:col-span-3"
-              }`}
-            >
-              <CategorySidebar
-                selectedCategory={selectedCategory}
-                onCategoryChange={handleCategoryChange}
-                isCollapsed={isSidebarCollapsed}
-              />
+              {!userEducationLevel && !profileLoading && (
+                <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+                  <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-sm text-yellow-800 font-semibold">
+                      Complete your profile to see relevant products
+                    </p>
+                    <p className="text-xs text-yellow-700 mt-0.5">
+                      Set your year level in Settings to filter products for
+                      your education level.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Category Sidebar - Mobile (Collapsible) */}
-            {isSidebarOpen && (
-              <div className="lg:hidden col-span-1 mb-6">
+            {/* Content Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
+              {/* Sidebar (Desktop) */}
+              <div
+                className={`hidden lg:block ${
+                  isSidebarCollapsed ? "lg:col-span-1" : "lg:col-span-3"
+                }`}
+              >
                 <CategorySidebar
                   selectedCategory={selectedCategory}
                   onCategoryChange={handleCategoryChange}
+                  isCollapsed={isSidebarCollapsed}
                 />
               </div>
-            )}
 
-            {/* Product Grid - Smooth width transition */}
-            <div
-              className={`${
-                isSidebarCollapsed ? "lg:col-span-11" : "lg:col-span-9"
-              }`}
-              style={{
-                transition: "all 0.3s ease-in-out",
-              }}
-            >
-              {/* Results Info */}
-              <div className="mb-6">
-                <p className="text-sm text-gray-600">
-                  Showing {paginatedItems.length} of {filteredProducts.length}{" "}
-                  products
-                  {debouncedSearch && ` for "${debouncedSearch}"`}
-                </p>
-                <p className="text-xs text-[#F28C28] font-semibold mt-1">
-                  ✨ All items are FREE for students
-                </p>
-              </div>
+              {/* Sidebar (Mobile) */}
+              {isSidebarOpen && (
+                <div className="lg:hidden col-span-1 mb-6">
+                  <CategorySidebar
+                    selectedCategory={selectedCategory}
+                    onCategoryChange={handleCategoryChange}
+                  />
+                </div>
+              )}
 
               {/* Product Grid */}
-              <ProductGrid products={paginatedItems} />
+              <div
+                className={`${
+                  isSidebarCollapsed ? "lg:col-span-11" : "lg:col-span-9"
+                }`}
+                style={{ transition: "all 0.3s ease-in-out" }}
+              >
+                <div className="mb-6">
+                  <p className="text-sm text-gray-600">
+                    Showing {paginatedItems.length} of {filteredProducts.length}{" "}
+                    products
+                    {debouncedSearch && ` for "${debouncedSearch}"`}
+                  </p>
+                  <p className="text-xs text-[#F28C28] font-semibold mt-1">
+                    ✨ All items are FREE for students
+                  </p>
+                </div>
 
-              {/* Pagination */}
-              {filteredProducts.length > 0 && (
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={goToPage}
-                  onPrevious={prevPage}
-                  onNext={nextPage}
-                  canGoPrev={canGoPrev}
-                  canGoNext={canGoNext}
-                />
-              )}
+                <ProductGrid products={paginatedItems} />
+
+                {filteredProducts.length > 0 && (
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={goToPage}
+                    onPrevious={prevPage}
+                    onNext={nextPage}
+                    canGoPrev={canGoPrev}
+                    canGoNext={canGoNext}
+                  />
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        
       </div>
-
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

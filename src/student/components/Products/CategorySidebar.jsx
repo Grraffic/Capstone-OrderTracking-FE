@@ -1,8 +1,19 @@
 import React, { useState } from "react";
-import { ChevronDown, ChevronRight, Grid, Shirt, Trophy, Package } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronRight,
+  Grid,
+  Shirt,
+  Trophy,
+  Package,
+} from "lucide-react";
 import { PRODUCT_CATEGORIES } from "../../constants/studentProducts";
 
-const CategorySidebar = ({ selectedCategory, onCategoryChange, isCollapsed = false }) => {
+const CategorySidebar = ({
+  selectedCategory,
+  onCategoryChange,
+  isCollapsed = false,
+}) => {
   const [expandedCategories, setExpandedCategories] = useState(["uniform"]);
 
   const toggleCategory = (categoryId) => {
@@ -32,7 +43,7 @@ const CategorySidebar = ({ selectedCategory, onCategoryChange, isCollapsed = fal
   if (isCollapsed) {
     return (
       <div
-        className="sticky top-20 space-y-3 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar transition-all duration-300"
+        className="space-y-3 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar transition-all duration-300"
         style={{
           scrollbarWidth: "thin",
           scrollbarColor: "#d1d5db #f3f4f6",
@@ -53,7 +64,7 @@ const CategorySidebar = ({ selectedCategory, onCategoryChange, isCollapsed = fal
               >
                 {getCategoryIcon(category.id)}
               </button>
-              
+
               {/* Tooltip */}
               <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                 {category.label}
@@ -68,7 +79,7 @@ const CategorySidebar = ({ selectedCategory, onCategoryChange, isCollapsed = fal
   // Expanded view (full sidebar)
   return (
     <div
-      className="sticky top-20 space-y-3 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar pr-2"
+      className="space-y-3 max-h-[calc(100vh-6rem)] overflow-y-auto custom-scrollbar pr-2"
       style={{
         scrollbarWidth: "thin",
         scrollbarColor: "#d1d5db #f3f4f6",
