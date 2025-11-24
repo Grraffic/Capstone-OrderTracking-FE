@@ -220,8 +220,8 @@ const StudentProfile = () => {
 
           {/* Right Side - Activity Feed */}
           <div className="lg:col-span-3">
-            {/* Single Background Container for Tabs + Activities - Sticky at hero bottom */}
-            <div className="sticky top-80 bg-gray-50 rounded-xl pl-8 min-h-[500px]">
+            {/* Single Background Container for Tabs + Activities */}
+            <div className="bg-gray-50 rounded-xl pl-8 min-h-[500px]">
               {/* Tabs Bar - Scrolls with content */}
               <div className="pb-4 mb-4 border-b border-gray-200">
                 <div className="flex items-center justify-between">
