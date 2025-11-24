@@ -1,6 +1,5 @@
 import { useState, useCallback } from "react";
 import { parseOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
-import socketClient from "../../../utils/socketClient";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -204,13 +203,9 @@ export const useOrderQRScanner = () => {
         message: `Order ${order.order_number} successfully claimed!`,
       };
 
-      // Emit Socket.IO event to notify the student that their order was claimed
-      socketClient.emit("order:claimed", {
-        orderId: order.id,
-        orderNumber: order.order_number,
-        userId: order.user_id,
-        items: order.items,
-      });
+      // Note: Socket.IO events are emitted by the backend when the order status is updated
+      // No need to emit from frontend - the backend already emits "order:updated" and "order:claimed"
+      console.log("✅ Order claimed successfully! Backend will emit Socket.IO events.");
 
       setSuccess(successMessage);
       setProcessing(false);

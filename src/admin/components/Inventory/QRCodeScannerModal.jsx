@@ -53,7 +53,12 @@ const QRCodeScannerModal = ({
   };
 
   useEffect(() => {
-    if (!isOpen || !videoRef.current) return;
+    if (!isOpen || !videoRef.current) {
+      return;
+    }
+
+    let qrScannerInstance = null;
+    let isMounted = true;
 
     const initScanner = async () => {
       try {
@@ -69,7 +74,7 @@ const QRCodeScannerModal = ({
         // Check camera permissions
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: { facingMode: "environment" },
           });
           console.log("✅ Camera access granted");
           stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
@@ -80,7 +85,9 @@ const QRCodeScannerModal = ({
           );
         }
 
-        const qrScanner = new QrScanner(
+        if (!isMounted) return;
+
+        qrScannerInstance = new QrScanner(
           videoRef.current,
           async (result) => {
             // QR code scanned successfully
@@ -120,8 +127,8 @@ const QRCodeScannerModal = ({
           },
           {
             onDecodeError: (error) => {
-              // Silently ignore decode errors
-              console.debug("QR decode error:", error);
+              // Silently ignore decode errors - this is normal when scanning
+              console.debug("QR decode error:", error.message);
             },
             preferredCamera: "environment",
             maxScansPerSecond: 5,
@@ -131,10 +138,22 @@ const QRCodeScannerModal = ({
         );
 
         console.log("🔧 QR Scanner instance created");
-        setScanner(qrScanner);
+
+        if (!isMounted) {
+          qrScannerInstance.destroy();
+          return;
+        }
+
+        setScanner(qrScannerInstance);
 
         console.log("▶️ Starting QR Scanner...");
-        await qrScanner.start();
+        await qrScannerInstance.start();
+
+        if (!isMounted) {
+          qrScannerInstance.destroy();
+          return;
+        }
+
         console.log("✅ QR Scanner started successfully!");
         console.log("👁️ Scanner is now actively looking for QR codes...");
 
@@ -144,6 +163,9 @@ const QRCodeScannerModal = ({
         console.error("❌ Scanner initialization error:", err);
         console.error("❌ Error name:", err.name);
         console.error("❌ Error message:", err.message);
+
+        if (!isMounted) return;
+
         setError(
           err.message || "Failed to access camera. Please check permissions."
         );
@@ -155,13 +177,16 @@ const QRCodeScannerModal = ({
     initScanner();
 
     return () => {
-      if (scanner) {
-        scanner.destroy();
-        setScanner(null);
-        setIsScanning(false);
+      console.log("🧹 Cleaning up QR Scanner...");
+      isMounted = false;
+      if (qrScannerInstance) {
+        qrScannerInstance.destroy();
+        console.log("✅ QR Scanner destroyed");
       }
+      setScanner(null);
+      setIsScanning(false);
     };
-  }, [isOpen]);
+  }, [isOpen, onScan]);
 
   const handleClose = () => {
     if (scanner) {
@@ -346,18 +371,20 @@ const QRCodeScannerModal = ({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="w-4 h-4 text-gray-600" />
-                  <span className="font-semibold text-gray-700">Total:</span>
-                  <span className="text-gray-900 font-semibold">
-                    ₱{orderDetails.totalAmount.toFixed(2)}
-                  </span>
-                </div>
+                {orderDetails.totalAmount && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign className="w-4 h-4 text-gray-600" />
+                    <span className="font-semibold text-gray-700">Total:</span>
+                    <span className="text-gray-900 font-semibold">
+                      ₱{orderDetails.totalAmount.toFixed(2)}
+                    </span>
+                  </div>
+                )}
 
                 {orderDetails.items && orderDetails.items.length > 0 && (
                   <div className="pt-2 border-t border-gray-200">
                     <p className="text-xs font-semibold text-gray-700 mb-2">
-                      Items:
+                      Items ({orderDetails.items.length}):
                     </p>
                     <ul className="space-y-1">
                       {orderDetails.items.map((item, index) => (
@@ -367,10 +394,17 @@ const QRCodeScannerModal = ({
                         >
                           <span>
                             {item.quantity}x {item.name}
+                            {item.size && item.size !== "N/A" && (
+                              <span className="text-gray-500 ml-1">
+                                ({item.size})
+                              </span>
+                            )}
                           </span>
-                          <span className="font-medium">
-                            ₱{item.price.toFixed(2)}
-                          </span>
+                          {item.price && (
+                            <span className="font-medium">
+                              ₱{item.price.toFixed(2)}
+                            </span>
+                          )}
                         </li>
                       ))}
                     </ul>
