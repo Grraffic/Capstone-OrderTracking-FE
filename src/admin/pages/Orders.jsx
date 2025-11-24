@@ -4,11 +4,16 @@ import AdminHeader from "../components/common/AdminHeader";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
 import OrdersTable from "../components/Orders/OrdersTable";
 import QRCodeScannerModal from "../components/Inventory/QRCodeScannerModal";
-import { useAdminSidebar, useOrderQRScanner, useOrders } from "../hooks";
+import {
+  useAdminSidebar,
+  useOrderQRScanner,
+  useOrders,
+  useSocketOrderUpdates,
+} from "../hooks";
 import useOrdersStats from "../hooks/orders/useOrdersStats";
 import useOrdersFilters from "../hooks/orders/useOrdersFilters";
 import { EDUCATION_LEVELS, ORDER_STATUS } from "../constants/ordersOptions";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 
 /**
  * Orders Page Component
@@ -269,6 +274,19 @@ const Orders = () => {
     setCurrentPage(1);
   }, [searchTerm, educationLevelFilter, classAndYearFilter, activeStatusTab]);
 
+  // Handle Socket.IO real-time order updates
+  const handleOrderUpdate = useCallback(
+    (data) => {
+      console.log("📡 Real-time order update received:", data);
+      // Refetch orders to show the updated data
+      refetchOrders();
+    },
+    [refetchOrders]
+  );
+
+  // Connect to Socket.IO for real-time updates
+  useSocketOrderUpdates(handleOrderUpdate);
+
   // Refetch orders after successful QR scan and close scanner
   useEffect(() => {
     if (qrSuccess) {
@@ -276,10 +294,12 @@ const Orders = () => {
       // Refetch orders to show updated status
       refetchOrders();
 
-      // Close scanner after 3 seconds to show success message
-      setTimeout(() => {
+      // Close scanner after 2 seconds to show success message
+      const timer = setTimeout(() => {
         closeQRScanner();
-      }, 3000);
+      }, 2000);
+
+      return () => clearTimeout(timer);
     }
   }, [qrSuccess, refetchOrders, closeQRScanner]);
 
@@ -287,9 +307,11 @@ const Orders = () => {
   useEffect(() => {
     if (qrError) {
       console.log("❌ QR scan error, will close scanner in 5 seconds");
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         closeQRScanner();
       }, 5000);
+
+      return () => clearTimeout(timer);
     }
   }, [qrError, closeQRScanner]);
 
@@ -347,55 +369,61 @@ const Orders = () => {
             </div>
           </div>
 
-          {/* Statistics Cards - Multiple Sections */}
-          <div className="mb-8">
-            <OrdersStatsCards
-              stats={stats}
-              educationLevelFilter={educationLevelFilter}
-              classAndYearFilter={classAndYearFilter}
-              onEducationLevelChange={setEducationLevelFilter}
-              onClassAndYearChange={setClassAndYearFilter}
-              educationLevelOptions={EDUCATION_LEVELS}
-              classAndYearOptions={filteredClassAndYearOptions}
-            />
-          </div>
+          {/* Statistics Cards - Multiple Sections - Only show when not loading and no error */}
+          {!ordersLoading && !ordersError && (
+            <div className="mb-8">
+              <OrdersStatsCards
+                stats={stats}
+                educationLevelFilter={educationLevelFilter}
+                classAndYearFilter={classAndYearFilter}
+                onEducationLevelChange={setEducationLevelFilter}
+                onClassAndYearChange={setClassAndYearFilter}
+                educationLevelOptions={EDUCATION_LEVELS}
+                classAndYearOptions={filteredClassAndYearOptions}
+              />
+            </div>
+          )}
 
-          {/* Status Tabs - Processing and Claimed */}
-          <div className="mb-6 flex items-center gap-6 border-b border-gray-200">
-            <button
-              onClick={() => setActiveStatusTab("Processing")}
-              className={`pb-3 font-medium transition-colors relative ${
-                activeStatusTab === "Processing"
-                  ? "text-[#0C2340]"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Processing
-              {activeStatusTab === "Processing" && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveStatusTab("Claimed")}
-              className={`pb-3 font-medium transition-colors relative ${
-                activeStatusTab === "Claimed"
-                  ? "text-[#0C2340]"
-                  : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              Claimed
-              {activeStatusTab === "Claimed" && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
-              )}
-            </button>
-          </div>
+          {/* Status Tabs - Processing and Claimed - Only show when not loading and no error */}
+          {!ordersLoading && !ordersError && (
+            <div className="mb-6 flex items-center gap-6 border-b border-gray-200">
+              <button
+                onClick={() => setActiveStatusTab("Processing")}
+                className={`pb-3 font-medium transition-colors relative ${
+                  activeStatusTab === "Processing"
+                    ? "text-[#0C2340]"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Processing
+                {activeStatusTab === "Processing" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveStatusTab("Claimed")}
+                className={`pb-3 font-medium transition-colors relative ${
+                  activeStatusTab === "Claimed"
+                    ? "text-[#0C2340]"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                Claimed
+                {activeStatusTab === "Claimed" && (
+                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
+                )}
+              </button>
+            </div>
+          )}
 
-          {/* Loading State */}
+          {/* Loading State - Show loading overlay on top of existing content */}
           {ordersLoading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0C2340] mx-auto mb-4"></div>
-                <p className="text-gray-600">Loading orders...</p>
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center relative">
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#0C2340] mx-auto mb-4"></div>
+                  <p className="text-gray-600">Loading orders...</p>
+                </div>
               </div>
             </div>
           )}

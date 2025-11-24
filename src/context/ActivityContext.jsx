@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import socketClient from "../utils/socketClient";
 
 const ActivityContext = createContext();
 
@@ -34,6 +35,43 @@ export const ActivityProvider = ({ children }) => {
       saveActivities();
     }
   }, [activities, user?.id]);
+
+  // Listen for Socket.IO events when admin claims student's order
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    // Connect to Socket.IO server
+    socketClient.connect();
+
+    // Listen for order claimed events
+    const handleOrderClaimed = (data) => {
+      console.log("📡 Received order claimed event:", data);
+
+      // Only track activity if this order belongs to the current user
+      if (data.userId === user.uid) {
+        const newActivity = {
+          id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          userId: user.uid,
+          timestamp: new Date().toISOString(),
+          type: "claimed",
+          description: `Claimed order #${data.orderNumber}`,
+          orderId: data.orderId,
+          orderNumber: data.orderNumber,
+          items: data.items,
+        };
+
+        setActivities((prev) => [newActivity, ...prev]);
+        console.log("✅ Activity tracked: Order claimed");
+      }
+    };
+
+    socketClient.on("order:claimed", handleOrderClaimed);
+
+    // Cleanup on unmount
+    return () => {
+      socketClient.off("order:claimed", handleOrderClaimed);
+    };
+  }, [user?.uid]);
 
   /**
    * Load activities from localStorage

@@ -16,20 +16,15 @@ export const generateOrderReceiptQRData = (orderData) => {
     orderNumber: orderData.orderNumber || orderData.order_number,
     studentId: orderData.studentId || orderData.student_id,
     studentName: orderData.studentName || orderData.student_name,
-    studentEmail: orderData.studentEmail || orderData.student_email,
-    educationLevel: orderData.educationLevel || orderData.education_level,
-    orderDate:
-      orderData.orderDate || orderData.order_date || new Date().toISOString(),
-    totalAmount: parseFloat(
-      orderData.totalAmount || orderData.total_amount || 0
-    ),
     items: (orderData.items || []).map((item) => ({
       name: item.name,
       quantity: item.quantity,
-      price: parseFloat(item.price),
-      size: item.size || null,
-      category: item.category || null,
+      size: item.size || "N/A",
     })),
+    totalItems: orderData.quantity || (orderData.items || []).length,
+    orderDate:
+      orderData.orderDate || orderData.order_date || new Date().toISOString(),
+    educationLevel: orderData.educationLevel || orderData.education_level || orderData.type || "General",
     status: orderData.status || "pending",
   };
 
@@ -90,13 +85,6 @@ export const validateOrderData = (orderData) => {
 
   if (!orderData.items || orderData.items.length === 0) {
     errors.push("Order must contain at least one item");
-  }
-
-  if (
-    orderData.totalAmount === undefined &&
-    orderData.total_amount === undefined
-  ) {
-    errors.push("Total amount is required");
   }
 
   return {

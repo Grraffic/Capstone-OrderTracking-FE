@@ -1,119 +1,157 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { FileText, ShoppingCart, CheckCircle, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useOrder } from "../../../context/OrderContext";
+import { useAuth } from "../../../context/AuthContext";
 import QRCode from "react-qr-code";
+import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
+import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
 
 /**
  * QR Code Modal Component
  */
-const QRCodeModal = ({ order, onClose }) => {
+const QRCodeModal = ({ order, onClose, profileData }) => {
   const [qrError, setQrError] = React.useState(null);
 
   if (!order) return null;
-
-  // Create MINIMAL QR data (to avoid size overflow)
-  // QR codes have a max capacity of ~23KB, so we only include essential info
+  
+  // Create structured order data for QR generation
   const minimalQRData = {
+    type: "order_receipt",
     orderNumber: order.orderNumber || order.order_number || order.id || "N/A",
     studentName: order.studentName || order.student_name || "Student",
     studentId: order.studentId || order.student_id || "N/A",
-    // Only include item names and quantities, not images or full data
     items: (order.items || []).map(item => ({
       name: item.name || "Item",
       quantity: item.quantity || 1,
       size: item.size || "N/A"
     })),
-    totalItems: order.quantity || (order.items || []).length,
+    quantity: order.quantity || (order.items || []).length,
     orderDate: order.orderDate || order.created_at || new Date().toISOString(),
     educationLevel: order.educationLevel || order.education_level || order.type || "General",
     status: order.status || "pending"
   };
 
   let qrData;
-  let dataSize = 0;
   
   try {
-    qrData = order.qrCodeData || JSON.stringify(minimalQRData);
-    dataSize = new Blob([qrData]).size;
-    
-    // Debug logging
-    console.log("QR Code Modal - Order data:", order);
-    console.log("QR Code Modal - Minimal QR Data Object:", minimalQRData);
-    console.log("QR Code Modal - QR Data Size:", dataSize, "bytes");
-    console.log("QR Code Modal - Generated QR data:", qrData.substring(0, 200) + "...");
-    
-    // Check if data is too large (QR code limit is ~23KB)
-    if (dataSize > 23000) {
-      console.warn("QR data is too large:", dataSize, "bytes. Using order number only.");
-      // Fallback to just order number if still too large
-      qrData = JSON.stringify({
-        orderNumber: minimalQRData.orderNumber,
-        studentId: minimalQRData.studentId,
-        totalItems: minimalQRData.totalItems,
-        orderDate: minimalQRData.orderDate
-      });
-      dataSize = new Blob([qrData]).size;
-      console.log("QR Code Modal - Reduced QR Data Size:", dataSize, "bytes");
-    }
+    // Use the utility function to generate QR data
+    qrData = generateOrderReceiptQRData(minimalQRData);
+    console.log("QR Code Generated:", qrData);
   } catch (error) {
     console.error("Error generating QR data:", error);
     setQrError("Failed to generate QR code data: " + error.message);
     qrData = JSON.stringify({
+      type: "order_receipt",
       orderNumber: order.orderNumber || order.order_number || order.id,
-      error: "Data too large"
+      error: "Data generation failed"
     });
   }
 
+  // Get item names for display
+  const itemNames = (order.items || [])
+    .map(item => item.name || "Item")
+    .join(", ") || "No items";
+
+  // Get course and year level from profile data
+  const getCourseYearLevel = () => {
+    if (profileData?.courseYearLevel) {
+      return profileData.courseYearLevel;
+    }
+    // Fallback to education level if course info not available
+    return minimalQRData.educationLevel
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  };
+  
+  const courseYearLevel = getCourseYearLevel();
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 relative">
-        <div className="text-center mb-6">
-          <h3 className="text-2xl font-bold text-[#003363] mb-2">Order QR Code</h3>
-          <p className="text-sm text-gray-600">
-            Order #: <span className="font-semibold text-[#F28C28]">{minimalQRData.orderNumber}</span>
-          </p>
-          {dataSize > 0 && (
-            <p className="text-xs text-gray-400 mt-1">
-              QR Size: {(dataSize / 1024).toFixed(2)} KB
-            </p>
-          )}
-        </div>
-
-        <div className="flex justify-center mb-6 bg-white p-6 rounded-lg border-2 border-gray-200">
-          {qrError ? (
-            <div className="text-center p-4">
-              <p className="text-red-500 font-semibold mb-2">QR Code Error</p>
-              <p className="text-sm text-gray-600">{qrError}</p>
-            </div>
-          ) : (
-            <QRCode
-              value={qrData}
-              size={200}
-              style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-              level="M"
-            />
-          )}
-        </div>
-
-        <div className="text-center space-y-2 mb-6">
-          <p className="text-sm text-gray-600">
-            <span className="font-semibold">Student:</span> {minimalQRData.studentName}
-          </p>
-          <p className="text-sm text-gray-600">
-            <span className="font-semibold">Items:</span> {order.quantity || minimalQRData.totalItems} item(s)
-          </p>
-          <p className="text-xs text-gray-500 mt-4">
-            Present this QR code at the claiming area
-          </p>
-        </div>
-
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-2 sm:p-4 pt-20 sm:pt-24" onClick={onClose}>
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 md:p-8 relative mt-4 sm:mt-6 md:mt-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {/* Close button */}
         <button
           onClick={onClose}
-          className="w-full py-3 bg-[#F28C28] text-white font-semibold rounded-lg hover:bg-[#d97a1f] transition-colors"
+          className="absolute top-2 right-2 sm:top-4 sm:right-4 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center transition-colors z-10"
+          aria-label="Close"
         >
-          Close
+          ✕
         </button>
+
+        {/* Header */}
+        <div className="text-center mb-4 sm:mb-6 pr-8">
+          <h3 className="text-base sm:text-lg md:text-xl font-bold">
+            <span className="text-[#003363]">{itemNames}</span>
+            {" "}
+            <span className="text-xs sm:text-sm font-semibold">
+              <span className="text-[#F28C28]">({courseYearLevel}</span>
+              <span className="text-gray-400"> | </span>
+              <span className="text-[#F28C28]">Student)</span>
+            </span>
+          </h3>
+        </div>
+
+        {/* QR Code Container */}
+        <div className="flex justify-center mb-4 sm:mb-6">
+          <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border-4 sm:border-6 md:border-8 border-[#003363] shadow-lg">
+            {qrError ? (
+              <div className="text-center p-4 w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[256px] md:h-[256px] flex items-center justify-center">
+                <div>
+                  <p className="text-red-500 font-semibold mb-2 text-sm sm:text-base">QR Code Error</p>
+                  <p className="text-xs sm:text-sm text-gray-600">{qrError}</p>
+                </div>
+              </div>
+            ) : (
+              <QRCode
+                value={qrData}
+                size={window.innerWidth < 640 ? 180 : window.innerWidth < 768 ? 220 : 256}
+                style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                level="M"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
+          <button
+            onClick={() => window.print()}
+            className="flex-1 py-2 px-3 sm:px-4 text-xs sm:text-sm bg-white border-2 border-[#003363] text-[#003363] rounded-full font-semibold hover:bg-gray-50 transition-colors"
+          >
+            Print QR
+          </button>
+          <button
+            onClick={() => {
+              // Create a download link for the QR code
+              const canvas = document.querySelector('canvas');
+              if (canvas) {
+                const url = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.download = `QR-${minimalQRData.orderNumber}.png`;
+                link.href = url;
+                link.click();
+              }
+            }}
+            className="flex-1 py-2 px-3 sm:px-4 text-xs sm:text-sm bg-white border-2 border-[#003363] text-[#003363] rounded-full font-semibold hover:bg-gray-50 transition-colors"
+          >
+            Download QR
+          </button>
+        </div>
+
+        {/* Disclaimer */}
+        <div className="bg-red-50 border-l-4 border-red-500 p-3 sm:p-4 rounded">
+          <p className="text-red-600 font-bold text-xs sm:text-sm mb-2">Disclaimer:</p>
+          <p className="text-[10px] sm:text-xs text-gray-700 leading-relaxed">
+            This QR code is valid only for claiming{" "}
+            <span className="font-semibold text-[#003363]">
+              Order #{minimalQRData.orderNumber} — {itemNames} ({courseYearLevel})
+            </span>
+            , issued to student{" "}
+            <span className="font-semibold text-[#003363]">{minimalQRData.studentId}-{minimalQRData.studentName}</span>. 
+            Any attempt to use this code for other orders, items, or by other individuals will be considered invalid.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -127,6 +165,7 @@ const QRCodeModal = ({ order, onClose }) => {
 const MyOrders = () => {
   const navigate = useNavigate();
   const { orders, loading, error } = useOrder();
+  const { user } = useAuth();
   const [viewMode, setViewMode] = useState("overview"); // "overview" or "detail"
   const [activeCategory, setActiveCategory] = useState("orders");
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -144,6 +183,20 @@ const MyOrders = () => {
   };
 
   const counts = getOrderCounts();
+
+  // Handle Socket.IO real-time order updates
+  const handleOrderUpdate = useCallback(
+    (data) => {
+      console.log("📡 Student - Real-time order update received:", data);
+      // The OrderContext should handle refetching
+      // If you need manual refetch, uncomment below
+      // refetchOrders();
+    },
+    []
+  );
+
+  // Connect to Socket.IO for real-time updates
+  useSocketOrderUpdates(handleOrderUpdate);
 
   // Get unique products from orders for "Suggested For You"
   const getSuggestedProducts = () => {
@@ -656,6 +709,7 @@ const MyOrders = () => {
       {showQRModal && (
         <QRCodeModal
           order={selectedOrder}
+          profileData={user}
           onClose={() => {
             setShowQRModal(false);
             setSelectedOrder(null);

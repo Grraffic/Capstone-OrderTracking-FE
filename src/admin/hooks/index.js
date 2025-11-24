@@ -32,6 +32,7 @@ export { default as useOrdersStats } from "./orders/useOrdersStats";
 export { default as useOrdersFilters } from "./orders/useOrdersFilters";
 export { useOrders } from "./orders/useOrders";
 export { useOrderQRScanner } from "./orders/useOrderQRScanner";
+export { useSocketOrderUpdates } from "./orders/useSocketOrderUpdates";
 
 // Settings Hooks
 export { useAdminProfile } from "./settings/useAdminProfile";

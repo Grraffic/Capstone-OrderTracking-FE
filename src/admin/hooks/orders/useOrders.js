@@ -86,7 +86,18 @@ export const useOrders = (options = {}) => {
       }
     } catch (err) {
       console.error("Error fetching orders:", err);
-      setError(err.message);
+
+      // Provide more helpful error messages
+      let errorMessage = err.message;
+
+      // Check if it's a timeout error
+      if (err.message.includes("timeout") || err.message.includes("57014")) {
+        errorMessage = "Database query timeout. The query is taking too long to execute. Please try again or contact support.";
+      } else if (err.message.includes("Failed to fetch")) {
+        errorMessage = "Unable to connect to the server. Please check your internet connection.";
+      }
+
+      setError(errorMessage);
       setOrders([]);
     } finally {
       setLoading(false);

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useOrder } from "../../context/OrderContext";
 import { useAuth } from "../../context/AuthContext";
+import { useActivity } from "../../context/ActivityContext";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -23,6 +24,7 @@ const CheckoutPage = () => {
   const { items, loading, clearCart } = useCart();
   const { createOrder } = useOrder();
   const { user } = useAuth();
+  const { trackCheckout } = useActivity();
   const [submitting, setSubmitting] = useState(false);
 
   // Handle back navigation
@@ -81,11 +83,19 @@ const CheckoutPage = () => {
       // Submit order to backend
       const createdOrder = await createOrder(orderData);
 
+      // Track checkout activity
+      trackCheckout({
+        orderId: createdOrder?.id,
+        orderNumber: orderNumber,
+        itemCount: items.length,
+        items: orderItems,
+      });
+
       // Clear cart after successful order
       await clearCart(user.uid);
 
       toast.success("Order submitted successfully!");
-      
+
       // Navigate to profile page to view the order
       setTimeout(() => {
         navigate("/student/profile");

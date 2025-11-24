@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { parseOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
+import socketClient from "../../../utils/socketClient";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -90,7 +91,7 @@ export const useOrderQRScanner = () => {
         );
       }
 
-      // Step 3: Update order status to "completed"
+      // Step 3: Update order status to "claimed"
       const statusResponse = await fetch(
         `${API_BASE_URL}/orders/${order.id}/status`,
         {
@@ -98,7 +99,7 @@ export const useOrderQRScanner = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status: "completed" }),
+          body: JSON.stringify({ status: "claimed" }),
         }
       );
 
@@ -115,7 +116,7 @@ export const useOrderQRScanner = () => {
         );
       }
 
-      console.log("Order status updated to completed:", statusResult.data);
+      console.log("Order status updated to claimed:", statusResult.data);
 
       // Step 4: Reduce inventory for all items in the order
       const inventoryUpdates = [];
@@ -202,6 +203,14 @@ export const useOrderQRScanner = () => {
         items: inventoryUpdates,
         message: `Order ${order.order_number} successfully claimed!`,
       };
+
+      // Emit Socket.IO event to notify the student that their order was claimed
+      socketClient.emit("order:claimed", {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        userId: order.user_id,
+        items: order.items,
+      });
 
       setSuccess(successMessage);
       setProcessing(false);
