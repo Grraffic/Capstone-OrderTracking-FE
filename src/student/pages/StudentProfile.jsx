@@ -4,7 +4,7 @@ import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
 import ProfileCard from "../components/common/ProfileCard";
-import MyOrders from "../components/orders/MyOrders";
+import MyOrders from "../components/Orders/MyOrders";
 import { useStudentProfile, useActivityFeed } from "../hooks";
 
 /**
