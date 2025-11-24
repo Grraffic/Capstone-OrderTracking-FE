@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../context/AuthContext";
+import { useActivity } from "../../../context/ActivityContext";
 import api from "../../../services/api";
 
 /**
@@ -15,8 +16,9 @@ import api from "../../../services/api";
  */
 export const useActivityFeed = () => {
   const { user } = useAuth();
+  const { activities: allActivities, getActivities } = useActivity();
   const [activities, setActivities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
   // Tab state: 'activities', 'orders', 'history'
@@ -33,21 +35,25 @@ export const useActivityFeed = () => {
     if (user?.id) {
       fetchActivities();
     }
-  }, [user, activeTab]);
+  }, [user, activeTab, allActivities]);
 
-  const fetchActivities = async () => {
+  const fetchActivities = () => {
     try {
       setLoading(true);
       setError(null);
 
-      // For now, we'll use mock data since the backend endpoint might not exist yet
-      // In production, replace with actual API call based on activeTab
-      // const response = await api.get(`/activities/${user.id}?type=${activeTab}`);
+      // Get activities from ActivityContext
+      const userActivities = getActivities();
       
-      // Mock activity data
-      const mockActivities = generateMockActivities();
+      // Filter based on active tab
+      let filtered = userActivities;
+      if (activeTab === 'orders') {
+        filtered = userActivities.filter(a => a.type === 'checkout' || a.type === 'order_placed');
+      } else if (activeTab === 'history') {
+        filtered = userActivities.filter(a => a.type === 'claimed');
+      }
       
-      setActivities(mockActivities);
+      setActivities(filtered);
     } catch (err) {
       console.error("Error fetching activities:", err);
       setError(err.message || "Failed to load activities");
@@ -55,45 +61,6 @@ export const useActivityFeed = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Generate mock activities for demonstration
-  const generateMockActivities = () => {
-    const now = new Date();
-    const activities = [
-      {
-        id: "1",
-        type: "cart_add",
-        description: "Added Basic Education Uniform (Senior High School) to cart",
-        productName: "Basic Education Uniform",
-        educationLevel: "Senior High School",
-        timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
-      },
-      {
-        id: "2",
-        type: "checkout",
-        description: "Checked out order #ORD-2024-001",
-        orderNumber: "ORD-2024-001",
-        timestamp: new Date(now - 5 * 60 * 60 * 1000).toISOString(), // 5 hours ago
-      },
-      {
-        id: "3",
-        type: "claimed",
-        description: "Claimed order #ORD-2024-002",
-        orderNumber: "ORD-2024-002",
-        timestamp: new Date(now - 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-      },
-      {
-        id: "4",
-        type: "cart_add",
-        description: "Added PE Uniform (College) to cart",
-        productName: "PE Uniform",
-        educationLevel: "College",
-        timestamp: new Date(now - 48 * 60 * 60 * 1000).toISOString(), // 2 days ago
-      },
-    ];
-
-    return activities;
   };
 
   // Filter and sort activities

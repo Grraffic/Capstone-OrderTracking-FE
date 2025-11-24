@@ -8,15 +8,62 @@ import QRCode from "react-qr-code";
  * QR Code Modal Component
  */
 const QRCodeModal = ({ order, onClose }) => {
+  const [qrError, setQrError] = React.useState(null);
+
   if (!order) return null;
 
-  const qrData = order.qrCodeData || JSON.stringify({
-    orderNumber: order.orderNumber || order.id,
-    studentName: order.studentName,
-    studentId: order.studentId,
-    items: order.items,
-    orderDate: order.orderDate,
-  });
+  // Create MINIMAL QR data (to avoid size overflow)
+  // QR codes have a max capacity of ~23KB, so we only include essential info
+  const minimalQRData = {
+    orderNumber: order.orderNumber || order.order_number || order.id || "N/A",
+    studentName: order.studentName || order.student_name || "Student",
+    studentId: order.studentId || order.student_id || "N/A",
+    // Only include item names and quantities, not images or full data
+    items: (order.items || []).map(item => ({
+      name: item.name || "Item",
+      quantity: item.quantity || 1,
+      size: item.size || "N/A"
+    })),
+    totalItems: order.quantity || (order.items || []).length,
+    orderDate: order.orderDate || order.created_at || new Date().toISOString(),
+    educationLevel: order.educationLevel || order.education_level || order.type || "General",
+    status: order.status || "pending"
+  };
+
+  let qrData;
+  let dataSize = 0;
+  
+  try {
+    qrData = order.qrCodeData || JSON.stringify(minimalQRData);
+    dataSize = new Blob([qrData]).size;
+    
+    // Debug logging
+    console.log("QR Code Modal - Order data:", order);
+    console.log("QR Code Modal - Minimal QR Data Object:", minimalQRData);
+    console.log("QR Code Modal - QR Data Size:", dataSize, "bytes");
+    console.log("QR Code Modal - Generated QR data:", qrData.substring(0, 200) + "...");
+    
+    // Check if data is too large (QR code limit is ~23KB)
+    if (dataSize > 23000) {
+      console.warn("QR data is too large:", dataSize, "bytes. Using order number only.");
+      // Fallback to just order number if still too large
+      qrData = JSON.stringify({
+        orderNumber: minimalQRData.orderNumber,
+        studentId: minimalQRData.studentId,
+        totalItems: minimalQRData.totalItems,
+        orderDate: minimalQRData.orderDate
+      });
+      dataSize = new Blob([qrData]).size;
+      console.log("QR Code Modal - Reduced QR Data Size:", dataSize, "bytes");
+    }
+  } catch (error) {
+    console.error("Error generating QR data:", error);
+    setQrError("Failed to generate QR code data: " + error.message);
+    qrData = JSON.stringify({
+      orderNumber: order.orderNumber || order.order_number || order.id,
+      error: "Data too large"
+    });
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -24,24 +71,37 @@ const QRCodeModal = ({ order, onClose }) => {
         <div className="text-center mb-6">
           <h3 className="text-2xl font-bold text-[#003363] mb-2">Order QR Code</h3>
           <p className="text-sm text-gray-600">
-            Order #: <span className="font-semibold text-[#F28C28]">{order.orderNumber || order.id}</span>
+            Order #: <span className="font-semibold text-[#F28C28]">{minimalQRData.orderNumber}</span>
           </p>
+          {dataSize > 0 && (
+            <p className="text-xs text-gray-400 mt-1">
+              QR Size: {(dataSize / 1024).toFixed(2)} KB
+            </p>
+          )}
         </div>
 
         <div className="flex justify-center mb-6 bg-white p-6 rounded-lg border-2 border-gray-200">
-          <QRCode
-            value={qrData}
-            size={200}
-            style={{ height: "auto", maxWidth: "100%", width: "100%" }}
-          />
+          {qrError ? (
+            <div className="text-center p-4">
+              <p className="text-red-500 font-semibold mb-2">QR Code Error</p>
+              <p className="text-sm text-gray-600">{qrError}</p>
+            </div>
+          ) : (
+            <QRCode
+              value={qrData}
+              size={200}
+              style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+              level="M"
+            />
+          )}
         </div>
 
         <div className="text-center space-y-2 mb-6">
           <p className="text-sm text-gray-600">
-            <span className="font-semibold">Student:</span> {order.studentName}
+            <span className="font-semibold">Student:</span> {minimalQRData.studentName}
           </p>
           <p className="text-sm text-gray-600">
-            <span className="font-semibold">Items:</span> {order.quantity} item(s)
+            <span className="font-semibold">Items:</span> {order.quantity || minimalQRData.totalItems} item(s)
           </p>
           <p className="text-xs text-gray-500 mt-4">
             Present this QR code at the claiming area
@@ -71,6 +131,8 @@ const MyOrders = () => {
   const [activeCategory, setActiveCategory] = useState("orders");
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Count orders by category
   const getOrderCounts = () => {
@@ -121,19 +183,110 @@ const MyOrders = () => {
     }
   }, [orders, activeCategory]);
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
   // Handle category click - switch to detail view
   const handleCategoryClick = (category) => {
     setActiveCategory(category);
     setViewMode("detail");
+    setCurrentPage(1); // Reset to first page when switching categories
   };
 
   // Handle back to overview
   const handleBackToOverview = () => {
     setViewMode("overview");
+    setCurrentPage(1); // Reset pagination
+  };
+
+  // Pagination handlers
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  // Get dynamic title based on active category
+  const getCategoryTitle = () => {
+    switch (activeCategory) {
+      case "preOrders":
+        return { first: "Pre", second: "Orders" };
+      case "orders":
+        return { first: "Order", second: "Items" };
+      case "claimed":
+        return { first: "Claimed", second: "Orders" };
+      default:
+        return { first: "Order", second: "Items" };
+    }
+  };
+
+  const titleParts = getCategoryTitle();
+
+  // Helper function to determine education level based on grade or type
+  const getEducationLevel = (item, order) => {
+    // Check if education_level exists in item or order
+    const educationLevel = item?.education_level || order?.type || order?.education_level;
+    
+    if (educationLevel) {
+      const levelLower = educationLevel.toLowerCase();
+      
+      // Map education levels
+      if (levelLower.includes('college') || levelLower.includes('higher')) {
+        return 'College';
+      }
+      if (levelLower.includes('senior') || levelLower.includes('shs')) {
+        return 'Senior High School';
+      }
+      if (levelLower.includes('junior') || levelLower.includes('jhs')) {
+        return 'Junior High School';
+      }
+      if (levelLower.includes('elementary') || levelLower.includes('basic')) {
+        return 'Elementary';
+      }
+      
+      // Return as-is if it's already formatted
+      return educationLevel;
+    }
+    
+    // Check grade level
+    const grade = item?.grade || order?.grade;
+    if (grade) {
+      const gradeNum = parseInt(grade);
+      if (gradeNum >= 1 && gradeNum <= 6) {
+        return 'Elementary';
+      }
+      if (gradeNum >= 7 && gradeNum <= 10) {
+        return 'Junior High School';
+      }
+      if (gradeNum >= 11 && gradeNum <= 12) {
+        return 'Senior High School';
+      }
+    }
+    
+    return 'General';
   };
 
   // Handle Show QR
   const handleShowQR = (order) => {
+    console.log("handleShowQR called with order:", order);
+    console.log("Order properties:", {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      order_number: order.order_number,
+      studentName: order.studentName,
+      student_name: order.student_name,
+      items: order.items,
+      quantity: order.quantity,
+    });
     setSelectedOrder(order);
     setShowQRModal(true);
   };
@@ -325,11 +478,11 @@ const MyOrders = () => {
           </div>
         </div>
 
-        {/* Title Row with Order Items and Info Icon */}
+        {/* Title Row with Dynamic Title and Info Icon */}
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-4xl font-bold">
-            <span className="text-[#003363]">Order </span>
-            <span className="text-[#F28C28]">Items</span>
+            <span className="text-[#003363]">{titleParts.first} </span>
+            <span className="text-[#F28C28]">{titleParts.second}</span>
           </h1>
           <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <span className="text-2xl text-[#003363]">ⓘ</span>
@@ -338,54 +491,114 @@ const MyOrders = () => {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <div className="bg-white rounded-lg border-2 border-gray-200 p-12 text-center">
             <p className="text-gray-500">No orders found in this category</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredOrders.map((order) => (
-              <div key={order.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-6">
-                <div className="flex items-center gap-6">
-                  {/* Quantity */}
-                  <div className="flex-shrink-0 text-sm font-bold text-[#003363]">
-                    {order.quantity}PC
-                  </div>
+          <>
+            {/* Single Border Container */}
+            <div className="bg-white rounded-lg border-2 border-gray-200 divide-y divide-gray-200">
+              {paginatedOrders.map((order, orderIndex) => (
+                <div key={order.id} className="p-6">
+                  {/* Order Items List */}
+                  <div className="space-y-4 mb-4">
+                    {order.items && order.items.length > 0 ? (
+                      order.items.map((item, itemIndex) => (
+                        <div key={itemIndex} className="space-y-2">
+                          <div className="flex items-center gap-6">
+                            {/* Quantity - Left Side (No background) */}
+                            <div className="flex-shrink-0 w-12 flex items-start justify-center">
+                              <span className="text-[#003363] font-bold text-sm">{item.quantity || 1}PC</span>
+                            </div>
 
-                  {/* Image */}
-                  <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-lg overflow-hidden">
-                    {order.items && order.items.length > 0 && order.items[0].image ? (
-                      <img
-                        src={order.items[0].image}
-                        alt={order.item}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                        }}
-                      />
+                            {/* Item Image */}
+                            <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.name || order.item}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                  }}
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">No Image</div>
+                              )}
+                            </div>
+
+                            {/* Item Details - Reorganized */}
+                            <div className="flex-1">
+                              {/* Size */}
+                              <p className="text-sm text-gray-600 mb-1">
+                                {item.size || order.size || "Standard"}
+                              </p>
+                              {/* Item Name */}
+                              <h4 className="text-lg font-bold text-[#003363] mb-1">
+                                {item.name || order.item}
+                              </h4>
+                              {/* Education Level */}
+                              <p className="text-sm text-[#F28C28] font-semibold">
+                                {getEducationLevel(item, order)}
+                              </p>
+                              
+                              {/* Available for Claiming - Inline (only for Orders tab) */}
+                              {activeCategory === "orders" && (order.status === "ready" || order.status === "completed") && (
+                                <p className="text-sm text-[#F28C28] font-semibold mt-2">
+                                  Available for Claiming
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Price */}
+                            <div className="flex-shrink-0 text-right">
+                              <div className="text-xl font-bold text-[#003363]">FREE</div>
+                            </div>
+                          </div>
+                          
+                          {/* Claiming Message - Below item (only for Orders tab) */}
+                          {activeCategory === "orders" && (order.status === "ready" || order.status === "completed") && (
+                            <div className="ml-[84px]">
+                              <p className="text-xs text-[#F28C28]">
+                                Your order is now available. Please proceed to the designated claiming area and present your QR code to receive your item.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ))
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
+                      <div className="flex items-center gap-6">
+                        {/* Quantity - Left Side (No background) */}
+                        <div className="flex-shrink-0 w-12 flex items-start justify-center">
+                          <span className="text-[#003363] font-bold text-sm">{order.quantity || 1}PC</span>
+                        </div>
+
+                        <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
+                          No Image
+                        </div>
+                        <div className="flex-1">
+                          {/* Size */}
+                          <p className="text-sm text-gray-600 mb-1">
+                            {order.size || "Standard"}
+                          </p>
+                          {/* Item Name */}
+                          <h4 className="text-lg font-bold text-[#003363] mb-1">
+                            {order.item}
+                          </h4>
+                          {/* Education Level */}
+                          <p className="text-sm text-[#F28C28] font-semibold">
+                            {getEducationLevel({}, order)}
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0 text-right">
+                          <div className="text-xl font-bold text-[#003363]">FREE</div>
+                        </div>
+                      </div>
                     )}
                   </div>
 
-                  {/* Details */}
-                  <div className="flex-1">
-                    <p className="text-sm text-gray-600 mb-1">{order.size || "Standard"} Size</p>
-                    <h3 className="text-xl font-bold text-[#003363] mb-1">{order.item}</h3>
-                    <p className="text-base text-[#F28C28] font-semibold mb-2">({order.type || "Basic Education"})</p>
-                    
-                    {(order.status === "ready" || order.status === "completed") && (
-                      <>
-                        <p className="text-sm text-[#F28C28] font-semibold mb-1">Available for Claiming</p>
-                        <p className="text-xs text-[#F28C28]">
-                          Your order is now available. Please proceed to the designated claiming area and present your QR code to receive your item.
-                        </p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Price and QR */}
-                  <div className="flex-shrink-0 text-right space-y-3">
-                    <div className="text-2xl font-bold text-[#003363]">FREE</div>
+                  {/* Show QR Button */}
+                  <div className="flex justify-end">
                     <button
                       onClick={() => handleShowQR(order)}
                       className="px-6 py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-sm hover:bg-[#003363] hover:text-white transition-colors"
@@ -394,9 +607,48 @@ const MyOrders = () => {
                     </button>
                   </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Pagination Controls */}
+            {filteredOrders.length > itemsPerPage && (
+              <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
+                <div className="flex items-center space-x-4">
+                  {/* Page Info */}
+                  <span className="text-sm text-gray-600">
+                    Page {currentPage} of {totalPages}
+                  </span>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={currentPage === 1}
+                      className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                        currentPage === 1
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                      }`}
+                    >
+                      Back
+                    </button>
+
+                    <button
+                      onClick={handleNextPage}
+                      disabled={currentPage === totalPages}
+                      className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                        currentPage === totalPages
+                          ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          : "bg-[#003363] text-white hover:bg-[#002347] shadow-md"
+                      }`}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
 

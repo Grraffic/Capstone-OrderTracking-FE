@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { OrderProvider } from "./context/OrderContext";
+import { ActivityProvider } from "./context/ActivityContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -24,8 +25,9 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       <AuthProvider>
-        <CartProvider>
-          <OrderProvider>
+        <ActivityProvider>
+          <CartProvider>
+            <OrderProvider>
             <BrowserRouter>
               <Toaster
                 position="top-right"
@@ -171,8 +173,9 @@ export default function App() {
                 />
               </Routes>
             </BrowserRouter>
-          </OrderProvider>
-        </CartProvider>
+            </OrderProvider>
+          </CartProvider>
+        </ActivityProvider>
       </AuthProvider>
     </div>
   );

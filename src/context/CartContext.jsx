@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from "react";
 import { useAuth } from "./AuthContext";
+import { useActivity } from "./ActivityContext";
 import { cartAPI } from "../services/api";
 import toast from "react-hot-toast";
 
@@ -74,6 +75,7 @@ const initialState = {
 export const CartProvider = ({ children }) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
   const { user } = useAuth();
+  const { trackAddToCart, trackRemoveFromCart } = useActivity();
 
   // Fetch cart items when user logs in
   useEffect(() => {
@@ -126,6 +128,15 @@ export const CartProvider = ({ children }) => {
       const response = await cartAPI.addToCart(cartData);
 
       if (response.data.success) {
+        // Track activity
+        trackAddToCart({
+          id: item.inventoryId,
+          name: item.name || item.productName || "Product",
+          education_level: item.educationLevel || item.education_level,
+          size: item.size,
+          quantity: item.quantity || 1,
+        });
+        
         // Refresh cart items to get updated data
         await fetchCartItems();
         toast.success(response.data.message || "Item added to cart");
@@ -189,6 +200,16 @@ export const CartProvider = ({ children }) => {
       const response = await cartAPI.removeFromCart(cartItemId, user.id);
 
       if (response.data.success) {
+        // Find the item being removed to track it
+        const removedItem = state.items.find(item => item.id === cartItemId);
+        if (removedItem) {
+          trackRemoveFromCart({
+            id: removedItem.inventory_id || removedItem.id,
+            name: removedItem.name || removedItem.item || "Product",
+            education_level: removedItem.education_level || removedItem.type,
+          });
+        }
+        
         dispatch({ type: "REMOVE_ITEM", payload: cartItemId });
         toast.success("Item removed from cart");
       }

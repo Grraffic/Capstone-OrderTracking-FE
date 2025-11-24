@@ -23,10 +23,10 @@ const ProfileCard = ({
 }) => {
   return (
     <div className="lg:col-span-1">
-      {/* Sticky container - Profile card sticks to top when scrolling */}
-      <div className="sticky top-24 -mt-12 lg:-mt-16">
+      {/* Profile card container */}
+      <div className="-mt-12 lg:-mt-16">
         {/* Hamburger Menu Icon - Positioned to the left with no gap */}
-        <div className="absolute -left-10 top-24 z-40">
+        <div className="absolute -left-1 top-12 z-40">
           <button
             onClick={toggleProfileVisibility}
             className="p-3 bg-white hover:bg-gray-50 rounded-lg transition-colors shadow-md border-2 border-gray-200"
