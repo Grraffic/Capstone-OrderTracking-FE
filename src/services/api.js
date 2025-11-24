@@ -79,4 +79,38 @@ export const cartAPI = {
   },
 };
 
+// Order related API calls
+export const orderAPI = {
+  getOrders: async (filters = {}, page = 1, limit = 10) => {
+    return api.get("/orders", {
+      params: {
+        ...filters,
+        page,
+        limit,
+      },
+    });
+  },
+  getOrderById: async (id) => {
+    return api.get(`/orders/${id}`);
+  },
+  getOrderByNumber: async (orderNumber) => {
+    return api.get(`/orders/number/${orderNumber}`);
+  },
+  createOrder: async (orderData) => {
+    return api.post("/orders", orderData);
+  },
+  updateOrderStatus: async (id, status) => {
+    return api.patch(`/orders/${id}/status`, { status });
+  },
+  updateOrder: async (id, orderData) => {
+    return api.put(`/orders/${id}`, orderData);
+  },
+  deleteOrder: async (id) => {
+    return api.delete(`/orders/${id}`);
+  },
+  getOrderStats: async () => {
+    return api.get("/orders/stats");
+  },
+};
+
 export default api;

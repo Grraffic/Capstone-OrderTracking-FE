@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useOrder } from "../../context/OrderContext";
+import { useAuth } from "../../context/AuthContext";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -18,7 +20,10 @@ import toast from "react-hot-toast";
  */
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { items, loading } = useCart();
+  const { items, loading, clearCart } = useCart();
+  const { createOrder } = useOrder();
+  const { user } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
 
   // Handle back navigation
   const handleBack = () => {
@@ -26,15 +31,72 @@ const CheckoutPage = () => {
   };
 
   // Handle checkout submission
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (items.length === 0) {
       toast.error("Your cart is empty");
       return;
     }
 
-    // TODO: Implement order submission and QR code generation
-    toast.success("Order submitted! Generating QR code...");
-    console.log("Checkout items:", items);
+    if (!user) {
+      toast.error("Please log in to place an order");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+
+      // Get student education level from first item (assuming all items are for the same level)
+      const educationLevel = items[0]?.inventory?.educationLevel || "General";
+
+      // Generate order number
+      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+
+      // Transform cart items to order items format
+      const orderItems = items.map(item => ({
+        name: item.inventory?.name || "Unknown Item",
+        size: item.size || "N/A",
+        quantity: item.quantity || 1,
+        item_type: item.inventory?.itemType || "Uniform",
+        education_level: item.inventory?.educationLevel || "General",
+        image: item.inventory?.image || null, // Include product image
+      }));
+
+      // Calculate total (all items are FREE, so total is 0)
+      const totalAmount = 0;
+
+      // Create order data
+      const orderData = {
+        order_number: orderNumber,
+        student_id: user.uid,
+        student_name: user.displayName || user.email,
+        student_email: user.email,
+        education_level: educationLevel,
+        items: orderItems,
+        total_amount: totalAmount,
+        status: "pending",
+        notes: `Order placed via checkout. ${items.length} item(s) ordered.`,
+      };
+
+      // Submit order to backend
+      const createdOrder = await createOrder(orderData);
+
+      // Clear cart after successful order
+      await clearCart(user.uid);
+
+      toast.success("Order submitted successfully!");
+      
+      // Navigate to profile page to view the order
+      setTimeout(() => {
+        navigate("/student/profile");
+      }, 1000);
+
+    } catch (error) {
+      console.error("Checkout error:", error);
+      toast.error(error.message || "Failed to submit order. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   // Loading state
@@ -151,10 +213,10 @@ const CheckoutPage = () => {
             <div className="p-6 sm:p-8 pt-0">
               <button
                 onClick={handleCheckout}
-                disabled={loading}
+                disabled={loading || submitting}
                 className="w-full py-4 bg-[#F28C28] text-white font-bold text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? "Processing..." : "Checkout"}
+                {submitting ? "Submitting Order..." : loading ? "Processing..." : "Checkout"}
               </button>
             </div>
           )}

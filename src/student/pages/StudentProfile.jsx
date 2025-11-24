@@ -4,6 +4,7 @@ import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
 import ProfileCard from "../components/common/ProfileCard";
+import MyOrders from "../components/orders/MyOrders";
 import { useStudentProfile, useActivityFeed } from "../hooks";
 
 /**
@@ -284,61 +285,81 @@ const StudentProfile = () => {
               </div>
 
               {/* Activity List */}
-              <div className="space-y-4">
-                  {activitiesLoading ? (
-                    <div className="flex justify-center items-center h-64">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003363]"></div>
-                    </div>
-                  ) : activities.length === 0 ? (
-                    <div className="text-center text-gray-500 py-16">
-                      <p>No activities found</p>
-                    </div>
-                  ) : (
-                    activities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-start space-x-5 pb-4 border-b border-gray-200 last:border-b-0"
-                      >
-                        {/* Activity Icon - Larger */}
-                        <div className="flex-shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
-                          {getActivityIcon(activity.type)}
-                        </div>
-
-                        {/* Activity Details */}
-                        {renderActivityContent(activity)}
+              {activeTab === "activities" && (
+                <>
+                  <div className="space-y-4">
+                    {activitiesLoading ? (
+                      <div className="flex justify-center items-center h-64">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003363]"></div>
                       </div>
-                    ))
-                  )}
-                </div>
+                    ) : activities.length === 0 ? (
+                      <div className="text-center text-gray-500 py-16">
+                        <p>No activities found</p>
+                      </div>
+                    ) : (
+                      activities.map((activity) => (
+                        <div
+                          key={activity.id}
+                          className="flex items-start space-x-5 pb-4 border-b border-gray-200 last:border-b-0"
+                        >
+                          {/* Activity Icon - Larger */}
+                          <div className="flex-shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+                            {getActivityIcon(activity.type)}
+                          </div>
 
-              {/* Pagination Controls - Back/Next Buttons Only, Right Aligned */}
-              {!activitiesLoading && activities.length > 0 && (
-                <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={prevPage}
-                      disabled={!canGoPrev}
-                      className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                        canGoPrev
-                          ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      Back
-                    </button>
-
-                    <button
-                      onClick={nextPage}
-                      disabled={!canGoNext}
-                      className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
-                        canGoNext
-                          ? "bg-[#003363] text-white hover:bg-[#002347] shadow-md"
-                          : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      Next
-                    </button>
+                          {/* Activity Details */}
+                          {renderActivityContent(activity)}
+                        </div>
+                      ))
+                    )}
                   </div>
+
+                  {/* Pagination Controls - Back/Next Buttons Only, Right Aligned */}
+                  {!activitiesLoading && activities.length > 0 && (
+                    <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={prevPage}
+                          disabled={!canGoPrev}
+                          className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                            canGoPrev
+                              ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
+                        >
+                          Back
+                        </button>
+
+                        <button
+                          onClick={nextPage}
+                          disabled={!canGoNext}
+                          className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                            canGoNext
+                              ? "bg-[#003363] text-white hover:bg-[#002347] shadow-md"
+                              : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          }`}
+                        >
+                          Next
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* My Orders View */}
+              {activeTab === "orders" && (
+                <div className="py-4">
+                  <MyOrders />
+                </div>
+              )}
+
+              {/* History View - Placeholder */}
+              {activeTab === "history" && (
+                <div className="text-center text-gray-500 py-16">
+                  <Package className="mx-auto h-24 w-24 text-gray-300 mb-4" />
+                  <p className="text-lg font-semibold">Order History</p>
+                  <p className="text-sm mt-2">Coming soon...</p>
                 </div>
               )}
             </div>

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { orderAPI } from '../services/api';
 
 const OrderContext = createContext();
 
@@ -78,64 +79,48 @@ export const OrderProvider = ({ children }) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      // Mock API call - replace with actual API
-      const mockOrders = [
-        {
-          id: 'ORD-001',
-          studentId: 'STU-2024-001',
-          studentName: 'Juan Dela Cruz',
-          type: 'School Uniform',
-          item: 'PE Uniform - Size M',
-          size: 'M',
-          quantity: 1,
-          status: 'pending',
-          orderDate: '2024-01-15T10:30:00Z',
-          expectedDate: '2024-01-20T10:30:00Z',
-          eligibility: 'eligible',
-          statusHistory: [
-            {
-              status: 'submitted',
-              message: 'Order submitted successfully',
-              timestamp: '2024-01-15T10:30:00Z'
-            }
-          ]
-        },
-        {
-          id: 'ORD-002',
-          studentId: 'STU-2024-001',
-          studentName: 'Juan Dela Cruz',
-          type: 'Event Merchandise',
-          item: 'Foundation Week Shirt - Size L',
-          size: 'L',
-          quantity: 1,
-          status: 'payment_pending',
-          orderDate: '2024-01-10T14:15:00Z',
-          expectedDate: '2024-01-18T14:15:00Z',
-          amount: 350,
-          statusHistory: [
-            {
-              status: 'submitted',
-              message: 'Order submitted successfully',
-              timestamp: '2024-01-10T14:15:00Z'
-            },
-            {
-              status: 'payment_pending',
-              message: 'Waiting for payment verification',
-              timestamp: '2024-01-10T14:20:00Z'
-            }
-          ]
-        }
-      ];
-
-      // Filter orders based on user role
-      let filteredOrders = mockOrders;
-      if (userRole === 'student') {
-        filteredOrders = mockOrders.filter(order => order.studentId === user?.uid);
+      // Build filters based on user role
+      const filters = {};
+      if (userRole === 'student' && user?.uid) {
+        filters.student_id = user.uid;
       }
 
-      dispatch({ type: 'SET_ORDERS', payload: filteredOrders });
+      // Fetch orders from backend API
+      const response = await orderAPI.getOrders(filters, 1, 100); // Fetch up to 100 orders
+      
+      if (response.data.success) {
+        // Transform backend data to match frontend format
+        const transformedOrders = response.data.data.map(order => ({
+          id: order.order_number || order.id,
+          studentId: order.student_id,
+          studentName: order.student_name,
+          type: order.education_level || 'School Uniform',
+          item: order.items?.[0]?.name || 'Order Items',
+          size: order.items?.[0]?.size || 'N/A',
+          quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 1,
+          status: order.status,
+          orderDate: order.created_at,
+          expectedDate: order.expected_delivery_date,
+          eligibility: order.eligibility || 'eligible',
+          orderNumber: order.order_number,
+          items: order.items || [],
+          totalAmount: order.total_amount || 0,
+          qrCodeData: order.qr_code_data,
+          notes: order.notes,
+          paymentDate: order.payment_date,
+          claimedDate: order.claimed_date,
+          statusHistory: []
+        }));
+
+        dispatch({ type: 'SET_ORDERS', payload: transformedOrders });
+      } else {
+        throw new Error(response.data.message || 'Failed to fetch orders');
+      }
     } catch (error) {
+      console.error('Fetch orders error:', error);
       dispatch({ type: 'SET_ERROR', payload: error.message });
+      // Set empty array on error so UI doesn't break
+      dispatch({ type: 'SET_ORDERS', payload: [] });
     }
   };
 
@@ -143,27 +128,43 @@ export const OrderProvider = ({ children }) => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
-      // Mock API call - replace with actual API
-      const newOrder = {
-        id: `ORD-${Date.now()}`,
-        ...orderData,
-        status: orderData.orderType === 'uniform' ? 'pending' : 'payment_pending',
-        orderDate: new Date().toISOString(),
-        statusHistory: [
-          {
-            status: 'submitted',
-            message: 'Order submitted successfully',
-            timestamp: new Date().toISOString()
-          }
-        ]
-      };
-
-      dispatch({ type: 'ADD_ORDER', payload: newOrder });
-      dispatch({ type: 'SET_LOADING', payload: false });
+      // Call backend API to create order
+      const response = await orderAPI.createOrder(orderData);
       
-      return newOrder;
+      if (response.data.success) {
+        const newOrder = response.data.data;
+        
+        // Transform to frontend format
+        const transformedOrder = {
+          id: newOrder.order_number || newOrder.id,
+          studentId: newOrder.student_id,
+          studentName: newOrder.student_name,
+          type: newOrder.education_level || 'School Uniform',
+          item: newOrder.items?.[0]?.name || 'Order Items',
+          size: newOrder.items?.[0]?.size || 'N/A',
+          quantity: newOrder.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 1,
+          status: newOrder.status,
+          orderDate: newOrder.created_at,
+          expectedDate: newOrder.expected_delivery_date,
+          orderNumber: newOrder.order_number,
+          items: newOrder.items || [],
+          totalAmount: newOrder.total_amount || 0,
+          qrCodeData: newOrder.qr_code_data,
+          notes: newOrder.notes,
+          statusHistory: []
+        };
+
+        dispatch({ type: 'ADD_ORDER', payload: transformedOrder });
+        dispatch({ type: 'SET_LOADING', payload: false });
+        
+        return transformedOrder;
+      } else {
+        throw new Error(response.data.message || 'Failed to create order');
+      }
     } catch (error) {
+      console.error('Create order error:', error);
       dispatch({ type: 'SET_ERROR', payload: error.message });
+      dispatch({ type: 'SET_LOADING', payload: false });
       throw error;
     }
   };
