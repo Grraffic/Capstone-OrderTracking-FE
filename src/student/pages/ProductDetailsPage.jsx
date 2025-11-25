@@ -11,6 +11,7 @@ import SizeSelector from "../components/Products/ProductDetails/SizeSelector";
 import ProductCarousel from "../components/Products/ProductDetails/ProductCarousel";
 import { useInventory } from "../../admin/hooks/inventory/useInventory";
 import { useCart } from "../../context/CartContext";
+import { useCheckout } from "../../context/CheckoutContext";
 
 /**
  * ProductDetailsPage Component
@@ -23,6 +24,7 @@ const ProductDetailsPage = () => {
   const navigate = useNavigate();
   const { items: allProducts } = useInventory();
   const { addToCart } = useCart();
+  const { setDirectCheckoutItems } = useCheckout();
 
   const [product, setProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState("");
@@ -66,7 +68,11 @@ const ProductDetailsPage = () => {
     );
   }
 
-  const isOutOfStock = product.status === "out_of_stock";
+  const isOutOfStock = 
+    product.stock === 0 || 
+    product.status === "Out of Stock" || 
+    product.status === "out_of_stock" ||
+    product.status?.toLowerCase() === "out of stock";
 
   // Debug: Log product data to check itemType
   console.log("Product data:", {
@@ -89,7 +95,7 @@ const ProductDetailsPage = () => {
     ? ["XS", "S", "M", "L", "XL", "XXL"]
     : [];
   const isOrderDisabled =
-    isOutOfStock ||
+    // Only disable if size is required but not selected/confirmed
     (requiresSizeSelection && (!selectedSize || !sizeConfirmed));
 
   // Get related products (same education level or item type)
@@ -137,18 +143,24 @@ const ProductDetailsPage = () => {
     if (isOrderDisabled) return;
 
     try {
-      // Add item to cart first
-      await addToCart({
-        inventoryId: product.id,
+      // Don't add to cart - go directly to checkout with this item only
+      // Create a temporary checkout item (not added to cart)
+      const checkoutItem = {
+        inventory: product,
         size: selectedSize || "N/A",
         quantity: quantity,
-      });
+        // Add temporary ID for display purposes
+        id: `temp-${product.id}`,
+      };
+
+      // Set this as the direct checkout item
+      setDirectCheckoutItems([checkoutItem]);
 
       // Navigate to checkout page
       navigate("/student/checkout");
     } catch (error) {
-      console.error("Failed to add to cart:", error);
-      // Error toast is handled by CartContext
+      console.error("Failed to proceed to checkout:", error);
+      toast.error("Failed to proceed to checkout");
     }
   };
 
@@ -279,33 +291,31 @@ const ProductDetailsPage = () => {
                 )}
 
                 {/* Quantity Selector */}
-                {!isOutOfStock && (
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-semibold text-gray-700">
-                      Quantity:
-                    </h3>
-                    <div className="flex items-center gap-4">
-                      <button
-                        onClick={() => handleQuantityChange(quantity - 1)}
-                        disabled={quantity <= 1}
-                        className="p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
-                      >
-                        <Minus className="w-4 h-4 text-gray-700" />
-                      </button>
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700">
+                    Quantity:
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={() => handleQuantityChange(quantity - 1)}
+                      disabled={quantity <= 1}
+                      className="p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                    >
+                      <Minus className="w-4 h-4 text-gray-700" />
+                    </button>
 
-                      <span className="text-xl font-bold text-[#003363] min-w-[3rem] text-center">
-                        {quantity}
-                      </span>
+                    <span className="text-xl font-bold text-[#003363] min-w-[3rem] text-center">
+                      {quantity}
+                    </span>
 
-                      <button
-                        onClick={() => handleQuantityChange(quantity + 1)}
-                        className="p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
-                      >
-                        <Plus className="w-4 h-4 text-gray-700" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleQuantityChange(quantity + 1)}
+                      className="p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                    >
+                      <Plus className="w-4 h-4 text-gray-700" />
+                    </button>
                   </div>
-                )}
+                </div>
 
                 {/* Action Buttons - Right Aligned */}
                 <div className="flex justify-end gap-3 pt-2">
@@ -322,7 +332,7 @@ const ProductDetailsPage = () => {
                     disabled={isOrderDisabled}
                     className="px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
                   >
-                    Order Now
+                    {isOutOfStock ? "Pre-Order" : "Order Now"}
                   </button>
                 </div>
 

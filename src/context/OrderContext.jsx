@@ -99,6 +99,7 @@ export const OrderProvider = ({ children }) => {
           size: order.items?.[0]?.size || 'N/A',
           quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 1,
           status: order.status,
+          order_type: order.order_type || 'regular', // Add order type
           orderDate: order.created_at,
           expectedDate: order.expected_delivery_date,
           eligibility: order.eligibility || 'eligible',
@@ -144,6 +145,7 @@ export const OrderProvider = ({ children }) => {
           size: newOrder.items?.[0]?.size || 'N/A',
           quantity: newOrder.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 1,
           status: newOrder.status,
+          order_type: newOrder.order_type || 'regular', // Add order type
           orderDate: newOrder.created_at,
           expectedDate: newOrder.expected_delivery_date,
           orderNumber: newOrder.order_number,
@@ -163,7 +165,11 @@ export const OrderProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Create order error:', error);
-      dispatch({ type: 'SET_ERROR', payload: error.message });
+      console.error('Error response:', error.response?.data);
+      console.error('Error message:', error.message);
+      
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create order';
+      dispatch({ type: 'SET_ERROR', payload: errorMessage });
       dispatch({ type: 'SET_LOADING', payload: false });
       throw error;
     }

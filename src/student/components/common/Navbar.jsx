@@ -8,18 +8,24 @@ import {
   User,
   Settings,
   LogOut,
+  Check,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useCart } from "../../../context/CartContext";
+import { useNotification } from "../../../context/NotificationContext";
 import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const { user, logout } = useAuth();
   const { getCartCount } = useCart();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotification();
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  const notificationRef = useRef(null);
 
   // Get user display name, email, and photo
   const userName = user?.displayName || user?.name || "Student";
@@ -32,22 +38,25 @@ const Navbar = () => {
   // Get cart item count
   const cartCount = getCartCount();
 
-  // Close dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsNotificationOpen(false);
+      }
     };
 
-    if (isProfileOpen) {
+    if (isProfileOpen || isNotificationOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isProfileOpen]);
+  }, [isProfileOpen, isNotificationOpen]);
 
   const handleLogout = async () => {
     try {
@@ -56,6 +65,41 @@ const Navbar = () => {
     } catch (error) {
       console.error("Logout failed:", error);
     }
+  };
+
+  const handleNotificationClick = async (notification) => {
+    if (!notification.is_read) {
+      await markAsRead(notification.id);
+    }
+    // Navigate to orders page if it's a restock notification
+    if (notification.type === "restock") {
+      navigate("/student/profile");
+      setIsNotificationOpen(false);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    await markAllAsRead();
+  };
+
+  const handleDeleteNotification = async (e, notificationId) => {
+    e.stopPropagation();
+    await deleteNotification(notificationId);
+  };
+
+  const formatNotificationTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInMs = now - date;
+    const diffInMins = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMs / 3600000);
+    const diffInDays = Math.floor(diffInMs / 86400000);
+
+    if (diffInMins < 1) return "Just now";
+    if (diffInMins < 60) return `${diffInMins}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    if (diffInDays < 7) return `${diffInDays}d ago`;
+    return date.toLocaleDateString();
   };
 
   return (
@@ -82,12 +126,100 @@ const Navbar = () => {
           {/* Right Section */}
           <div className="flex items-center space-x-3 md:space-x-4">
             {/* Notification Icon - Desktop */}
-            <button
-              className="hidden md:flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200"
-              aria-label="Notifications"
-            >
-              <Bell className="w-5 h-5 text-gray-700" />
-            </button>
+            <div className="hidden md:block relative" ref={notificationRef}>
+              <button
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-all duration-200 relative"
+                aria-label="Notifications"
+              >
+                <Bell className="w-5 h-5 text-gray-700" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Dropdown */}
+              {isNotificationOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-96 overflow-hidden flex flex-col">
+                  {/* Header */}
+                  <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-gray-900">
+                      Notifications {unreadCount > 0 && `(${unreadCount})`}
+                    </h3>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Notification List */}
+                  <div className="overflow-y-auto flex-1">
+                    {notifications.length === 0 ? (
+                      <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                        No notifications yet
+                      </div>
+                    ) : (
+                      notifications.slice(0, 10).map((notification) => (
+                        <div
+                          key={notification.id}
+                          onClick={() => handleNotificationClick(notification)}
+                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
+                            !notification.is_read ? "bg-blue-50" : ""
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 mb-1">
+                                {notification.title}
+                              </p>
+                              <p className="text-xs text-gray-600 line-clamp-2">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {formatNotificationTime(notification.created_at)}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {!notification.is_read && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                              )}
+                              <button
+                                onClick={(e) => handleDeleteNotification(e, notification.id)}
+                                className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                aria-label="Delete notification"
+                              >
+                                <Trash2 className="w-3 h-3 text-gray-400" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  {notifications.length > 0 && (
+                    <div className="px-4 py-2 border-t border-gray-200 text-center">
+                      <button
+                        onClick={() => {
+                          navigate("/student/profile");
+                          setIsNotificationOpen(false);
+                        }}
+                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        View all notifications
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* Cart Icon - Desktop */}
             <button
@@ -240,12 +372,23 @@ const Navbar = () => {
               </div>
 
               {/* Notifications - Mobile */}
-              <button className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors">
-                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+              <button
+                onClick={() => {
+                  navigate("/student/profile");
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+              >
+                <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center relative">
                   <Bell className="w-5 h-5 text-gray-700" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount > 9 ? "9+" : unreadCount}
+                    </span>
+                  )}
                 </div>
                 <span className="text-sm font-medium text-gray-700">
-                  Notifications
+                  Notifications {unreadCount > 0 && `(${unreadCount})`}
                 </span>
               </button>
 

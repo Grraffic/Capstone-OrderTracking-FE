@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useCheckout } from "../../context/CheckoutContext";
 import { useOrder } from "../../context/OrderContext";
 import { useAuth } from "../../context/AuthContext";
 import { useActivity } from "../../context/ActivityContext";
@@ -18,14 +19,23 @@ import toast from "react-hot-toast";
  * - List of cart items with image, size, name, education level, and FREE badge
  * - Orange "Checkout" button at bottom
  * - Clean, minimal design
+ * 
+ * Supports two modes:
+ * 1. Direct checkout (Order Now) - shows only the selected item, doesn't add to cart
+ * 2. Cart checkout - shows all items from cart
  */
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { items, loading, clearCart } = useCart();
+  const { items: cartItems, loading: cartLoading, clearCart } = useCart();
+  const { checkoutItems, isDirectCheckout, clearCheckoutItems } = useCheckout();
   const { createOrder } = useOrder();
   const { user } = useAuth();
   const { trackCheckout } = useActivity();
   const [submitting, setSubmitting] = useState(false);
+
+  // Determine which items to display: direct checkout items or cart items
+  const items = isDirectCheckout ? checkoutItems : cartItems;
+  const loading = isDirectCheckout ? false : cartLoading;
 
   // Handle back navigation
   const handleBack = () => {
@@ -54,6 +64,21 @@ const CheckoutPage = () => {
       // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
+      // Check if any item is out of stock to determine order type
+      const hasOutOfStockItems = items.some(item => {
+        const status = item.inventory?.status;
+        const stock = item.inventory?.stock ?? 0;
+        return (
+          stock === 0 || 
+          status === "Out of Stock" || 
+          status === "out_of_stock" ||
+          status?.toLowerCase() === "out of stock"
+        );
+      });
+
+      // Determine order type based on stock availability
+      const orderType = hasOutOfStockItems ? "pre-order" : "regular";
+
       // Transform cart items to order items format
       const orderItems = items.map(item => ({
         name: item.inventory?.name || "Unknown Item",
@@ -77,7 +102,8 @@ const CheckoutPage = () => {
         items: orderItems,
         total_amount: totalAmount,
         status: "pending",
-        notes: `Order placed via checkout. ${items.length} item(s) ordered.`,
+        order_type: orderType, // Track if this is a pre-order or regular order
+        notes: `${orderType === 'pre-order' ? 'Pre-order' : 'Order'} placed via ${isDirectCheckout ? 'direct' : 'cart'} checkout. ${items.length} item(s) ordered.`,
       };
 
       // Submit order to backend
@@ -91,8 +117,14 @@ const CheckoutPage = () => {
         items: orderItems,
       });
 
-      // Clear cart after successful order
-      await clearCart(user.uid);
+      // Clear appropriate items after successful order
+      if (isDirectCheckout) {
+        // For direct checkout, just clear the checkout items (don't touch cart)
+        clearCheckoutItems();
+      } else {
+        // For cart checkout, clear the cart
+        await clearCart(user.uid);
+      }
 
       toast.success("Order submitted successfully!");
 
@@ -103,7 +135,11 @@ const CheckoutPage = () => {
 
     } catch (error) {
       console.error("Checkout error:", error);
-      toast.error(error.message || "Failed to submit order. Please try again.");
+      console.error("Error response:", error.response?.data);
+      console.error("Error details:", error.response);
+      
+      const errorMessage = error.response?.data?.message || error.message || "Failed to submit order. Please try again.";
+      toast.error(errorMessage);
     } finally {
       setSubmitting(false);
     }

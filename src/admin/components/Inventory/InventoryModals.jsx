@@ -1,12 +1,13 @@
-import { X, AlertTriangle, Pencil, Plus } from "lucide-react";
+import { X, AlertTriangle, Pencil, Plus, Users } from "lucide-react";
 import { useInventoryModalForm } from "../../hooks";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   EDUCATION_LEVELS,
   ITEM_TYPES,
   MATERIAL_TYPES,
   getFilteredCategories,
 } from "../../constants/inventoryOptions";
+import { orderAPI } from "../../../services/api";
 
 /**
  * InventoryModals Component
@@ -34,6 +35,8 @@ const InventoryModals = ({
   onDelete,
 }) => {
   const [focusedSection, setFocusedSection] = useState(null);
+  const [preOrderCount, setPreOrderCount] = useState(0);
+  const [checkingPreOrders, setCheckingPreOrders] = useState(false);
 
   const {
     formData,
@@ -66,6 +69,50 @@ const InventoryModals = ({
   const filteredCategories = useMemo(() => {
     return getFilteredCategories(formData.educationLevel);
   }, [formData.educationLevel]);
+
+  // Check for pre-orders when adding a new item with stock > 0
+  useEffect(() => {
+    const checkPreOrders = async () => {
+      // Only check when adding new items with stock > 0
+      if (modalState.mode !== "add" || !formData.name || !formData.educationLevel || parseInt(formData.stock || 0) <= 0) {
+        setPreOrderCount(0);
+        return;
+      }
+
+      try {
+        setCheckingPreOrders(true);
+
+        // Query orders for pre-orders matching this item
+        const response = await orderAPI.getOrders({
+          order_type: "pre-order",
+          status: "pending",
+        });
+
+        if (response.data.success) {
+          // Count students who have pre-ordered this specific item
+          const matchingOrders = response.data.data.filter(order => {
+            return order.items.some(item => {
+              const nameMatch = item.name.toLowerCase() === formData.name.toLowerCase();
+              const levelMatch = item.education_level === formData.educationLevel;
+              const sizeMatch = !formData.size || item.size === formData.size;
+              return nameMatch && levelMatch && sizeMatch;
+            });
+          });
+
+          setPreOrderCount(matchingOrders.length);
+        }
+      } catch (error) {
+        console.error("Failed to check pre-orders:", error);
+        setPreOrderCount(0);
+      } finally {
+        setCheckingPreOrders(false);
+      }
+    };
+
+    // Debounce the check
+    const timeoutId = setTimeout(checkPreOrders, 500);
+    return () => clearTimeout(timeoutId);
+  }, [modalState.mode, formData.name, formData.educationLevel, formData.size, formData.stock]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -257,6 +304,24 @@ const InventoryModals = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Pre-Order Notification Banner - Only for Add mode */}
+        {modalState.mode === "add" && preOrderCount > 0 && parseInt(formData.stock || 0) > 0 && (
+          <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Users size={18} />
+              <p className="text-sm font-medium">
+                {checkingPreOrders ? (
+                  "Checking for pre-orders..."
+                ) : (
+                  <>
+                    {preOrderCount} {preOrderCount === 1 ? 'student' : 'students'} will be notified when you add this item
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Content - 2 Column Layout */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 h-full">

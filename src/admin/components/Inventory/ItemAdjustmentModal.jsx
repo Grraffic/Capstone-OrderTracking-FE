@@ -1,5 +1,7 @@
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, Plus, Users } from "lucide-react";
 import { useItemAdjustmentForm } from "../../hooks";
+import { useState, useEffect } from "react";
+import { inventoryAPI } from "../../../services/api";
 
 const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
   const {
@@ -17,7 +19,47 @@ const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
     handleSubmit,
   } = useItemAdjustmentForm(selectedItem, onSubmit, onClose);
 
+  const [preOrderCount, setPreOrderCount] = useState(0);
+  const [loadingPreOrders, setLoadingPreOrders] = useState(false);
+
+  // Fetch pre-order count when modal opens and item is out of stock
+  useEffect(() => {
+    const fetchPreOrderCount = async () => {
+      if (!isOpen || !selectedItem?.id) {
+        setPreOrderCount(0);
+        return;
+      }
+
+      // Only fetch if item is out of stock
+      if (selectedItem.stock > 0) {
+        setPreOrderCount(0);
+        return;
+      }
+
+      try {
+        setLoadingPreOrders(true);
+        const response = await inventoryAPI.getPreOrderCount(selectedItem.id);
+        if (response.data.success) {
+          setPreOrderCount(response.data.count);
+        }
+      } catch (error) {
+        console.error("Failed to fetch pre-order count:", error);
+        setPreOrderCount(0);
+      } finally {
+        setLoadingPreOrders(false);
+      }
+    };
+
+    fetchPreOrderCount();
+  }, [isOpen, selectedItem]);
+
   if (!isOpen) return null;
+
+  // Check if adding stock will trigger notifications
+  const willNotifyStudents = selectedItem?.stock === 0 &&
+                             adjustmentType === "Inventory Threshold" &&
+                             parseInt(formData.stock || 0) > 0 &&
+                             preOrderCount > 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -62,6 +104,30 @@ const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
             </button>
           </div>
         </div>
+
+        {/* Pre-Order Notification Banner */}
+        {willNotifyStudents && (
+          <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+            <div className="flex items-center gap-2 text-blue-800">
+              <Users size={18} />
+              <p className="text-sm font-medium">
+                {preOrderCount} {preOrderCount === 1 ? 'student' : 'students'} will be notified when you add stock to this item
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Out of Stock Info */}
+        {selectedItem?.stock === 0 && preOrderCount > 0 && !willNotifyStudents && (
+          <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-200">
+            <div className="flex items-center gap-2 text-yellow-800">
+              <Users size={18} />
+              <p className="text-sm font-medium">
+                {loadingPreOrders ? 'Checking pre-orders...' : `${preOrderCount} ${preOrderCount === 1 ? 'student has' : 'students have'} pre-ordered this item`}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">

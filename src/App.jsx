@@ -4,6 +4,8 @@ import { AuthProvider } from "./context/AuthContext";
 import { CartProvider } from "./context/CartContext";
 import { OrderProvider } from "./context/OrderContext";
 import { ActivityProvider } from "./context/ActivityContext";
+import { CheckoutProvider } from "./context/CheckoutContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
@@ -25,10 +27,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white">
       <AuthProvider>
-        <ActivityProvider>
-          <CartProvider>
-            <OrderProvider>
-            <BrowserRouter>
+        <NotificationProvider>
+          <ActivityProvider>
+            <CartProvider>
+              <CheckoutProvider>
+                <OrderProvider>
+              <BrowserRouter>
               <Toaster
                 position="top-right"
                 toastOptions={{
@@ -174,8 +178,10 @@ export default function App() {
               </Routes>
             </BrowserRouter>
             </OrderProvider>
+            </CheckoutProvider>
           </CartProvider>
         </ActivityProvider>
+        </NotificationProvider>
       </AuthProvider>
     </div>
   );

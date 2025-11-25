@@ -176,9 +176,15 @@ const MyOrders = () => {
   // Count orders by category
   const getOrderCounts = () => {
     return {
-      preOrders: orders.filter((order) => order.status === "pre_order").length,
-      orders: orders.filter((order) => order.status === "pending" || order.status === "processing" || order.status === "ready" || order.status === "payment_pending").length,
-      claimed: orders.filter((order) => order.status === "completed" || order.status === "claimed").length,
+      preOrders: orders.filter((order) => order.order_type === "pre-order").length,
+      orders: orders.filter((order) => 
+        order.order_type !== "pre-order" && 
+        (order.status === "pending" || order.status === "processing" || order.status === "ready" || order.status === "payment_pending")
+      ).length,
+      claimed: orders.filter((order) => 
+        order.order_type !== "pre-order" && 
+        (order.status === "completed" || order.status === "claimed")
+      ).length,
     };
   };
 
@@ -226,11 +232,17 @@ const MyOrders = () => {
   const filteredOrders = React.useMemo(() => {
     switch (activeCategory) {
       case "preOrders":
-        return orders.filter((order) => order.status === "pre_order");
+        return orders.filter((order) => order.order_type === "pre-order");
       case "orders":
-        return orders.filter((order) => order.status === "pending" || order.status === "processing" || order.status === "ready" || order.status === "payment_pending");
+        return orders.filter((order) => 
+          order.order_type !== "pre-order" && 
+          (order.status === "pending" || order.status === "processing" || order.status === "ready" || order.status === "payment_pending")
+        );
       case "claimed":
-        return orders.filter((order) => order.status === "completed" || order.status === "claimed");
+        return orders.filter((order) => 
+          order.order_type !== "pre-order" && 
+          (order.status === "completed" || order.status === "claimed")
+        );
       default:
         return orders;
     }
@@ -654,7 +666,13 @@ const MyOrders = () => {
                   <div className="flex justify-end">
                     <button
                       onClick={() => handleShowQR(order)}
-                      className="px-6 py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-sm hover:bg-[#003363] hover:text-white transition-colors"
+                      disabled={activeCategory === "preOrders"}
+                      className={`px-6 py-2 border-2 rounded-full font-semibold text-sm transition-colors ${
+                        activeCategory === "preOrders"
+                          ? "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                          : "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
+                      }`}
+                      title={activeCategory === "preOrders" ? "QR code not available for pre-orders" : "Show QR code"}
                     >
                       Show QR
                     </button>

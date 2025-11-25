@@ -291,6 +291,13 @@ export const useInventory = () => {
 
           // Add the new item to the local state
           setItems((prev) => [transformedData, ...prev]);
+
+          // Show notification info if students were notified
+          if (result.notificationInfo && result.notificationInfo.notified > 0) {
+            console.log(`✅ ${result.notificationInfo.notified} students notified about new item availability`);
+            // You can add a toast notification here if you have a toast system
+          }
+
           closeModal();
         } else {
           throw new Error(result.message || "Failed to add inventory item");

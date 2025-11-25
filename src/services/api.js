@@ -113,4 +113,11 @@ export const orderAPI = {
   },
 };
 
+// Inventory related API calls
+export const inventoryAPI = {
+  getPreOrderCount: async (itemId) => {
+    return api.get(`/inventory/${itemId}/pre-order-count`);
+  },
+};
+
 export default api;

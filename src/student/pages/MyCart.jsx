@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ArrowLeft, ShoppingCart, Plus, Minus, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
+import { useCheckout } from "../../context/CheckoutContext";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -22,6 +23,7 @@ const MyCart = () => {
   const navigate = useNavigate();
   const { items, loading, updateCartItem, removeFromCart, clearCart } =
     useCart();
+  const { useCartCheckout } = useCheckout();
   const [editMode, setEditMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
 
@@ -93,6 +95,9 @@ const MyCart = () => {
       toast.error("Your cart is empty");
       return;
     }
+
+    // Set to cart checkout mode (all items from cart)
+    useCartCheckout();
 
     // Navigate to checkout page
     navigate("/student/checkout");
