@@ -25,13 +25,17 @@ const getDefaultRoute = (user) => {
 
   const email = user.email.toLowerCase();
 
+  const SPECIAL_ADMIN_EMAIL = "ramosraf278@gmail.com";
+
   // Student domain
   if (email.endsWith("@student.laverdad.edu.ph")) {
     return "/all-products";
   }
 
-  // Admin domain
-  if (email.endsWith("@laverdad.edu.ph")) {
+  // Admin users:
+  // - Admin domain
+  // - Or specific approved personal admin email
+  if (email.endsWith("@laverdad.edu.ph") || email === SPECIAL_ADMIN_EMAIL) {
     return "/admin";
   }
 

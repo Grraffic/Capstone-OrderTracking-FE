@@ -86,7 +86,8 @@ export const OrderProvider = ({ children }) => {
       }
 
       // Fetch orders from backend API
-      const response = await orderAPI.getOrders(filters, 1, 100); // Fetch up to 100 orders
+      // Use a reasonable page size to avoid pulling excessive data (helps reduce Supabase egress)
+      const response = await orderAPI.getOrders(filters, 1, 20);
       
       if (response.data.success) {
         // Transform backend data to match frontend format

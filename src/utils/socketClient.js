@@ -3,25 +3,39 @@ import { io } from "socket.io-client";
 const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
 
 /**
- * Socket.IO Client Instance
- * Manages real-time connection to the backend server
+ * Socket.IO Client Instance (Singleton)
+ * Manages a single real-time connection to the backend server
+ *
+ * This class ensures only ONE Socket.IO connection exists across the entire application.
+ * It should be used via the SocketContext provider, not directly in components.
  */
 class SocketClient {
   constructor() {
     this.socket = null;
     this.listeners = new Map();
+    this.connectionCount = 0; // Track connection attempts for debugging
   }
 
   /**
    * Connect to the Socket.IO server
+   * Note: This should only be called once by the SocketProvider
    */
   connect() {
+    // Prevent multiple connections
     if (this.socket?.connected) {
-      console.log("🔌 Socket already connected");
+      console.log("🔌 Socket already connected (ID:", this.socket.id + ")");
       return this.socket;
     }
 
-    console.log("🔌 Connecting to Socket.IO server...", SOCKET_URL);
+    // If socket exists but is disconnected, try to reconnect
+    if (this.socket && !this.socket.connected) {
+      console.log("🔌 Socket exists but disconnected, attempting to reconnect...");
+      this.socket.connect();
+      return this.socket;
+    }
+
+    this.connectionCount++;
+    console.log(`🔌 Connecting to Socket.IO server... (Attempt #${this.connectionCount})`, SOCKET_URL);
 
     this.socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
@@ -47,13 +61,15 @@ class SocketClient {
 
   /**
    * Disconnect from the Socket.IO server
+   * Note: This should only be called by the SocketProvider on cleanup
    */
   disconnect() {
     if (this.socket) {
+      console.log("🔌 Disconnecting Socket.IO...");
       this.socket.disconnect();
       this.socket = null;
       this.listeners.clear();
-      console.log("🔌 Socket.IO disconnected");
+      console.log("✅ Socket.IO disconnected and cleaned up");
     }
   }
 
@@ -64,7 +80,8 @@ class SocketClient {
    */
   on(event, callback) {
     if (!this.socket) {
-      this.connect();
+      console.warn(`⚠️ Cannot listen to "${event}" - socket not initialized. Use SocketProvider.`);
+      return;
     }
 
     // Store the callback for cleanup later
@@ -111,7 +128,8 @@ class SocketClient {
    */
   emit(event, data) {
     if (!this.socket) {
-      this.connect();
+      console.warn(`⚠️ Cannot emit "${event}" - socket not initialized. Use SocketProvider.`);
+      return;
     }
 
     this.socket.emit(event, data);
@@ -126,6 +144,11 @@ class SocketClient {
   }
 }
 
-// Export a singleton instance
+/**
+ * Export a singleton instance
+ *
+ * IMPORTANT: This should only be used by the SocketProvider.
+ * Components should use the useSocket() hook from SocketContext instead.
+ */
 const socketClient = new SocketClient();
 export default socketClient;

@@ -1,0 +1,159 @@
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { useAuth } from "./AuthContext";
+import socketClient from "../utils/socketClient";
+
+const SocketContext = createContext();
+
+/**
+ * useSocket Hook
+ * Access the shared Socket.IO connection
+ * 
+ * @returns {Object} Socket context with connection, status, and helper methods
+ */
+export const useSocket = () => {
+  const context = useContext(SocketContext);
+  if (!context) {
+    throw new Error("useSocket must be used within SocketProvider");
+  }
+  return context;
+};
+
+/**
+ * SocketProvider - Manages the single shared Socket.IO connection
+ * 
+ * This provider:
+ * - Creates a single Socket.IO connection when a user is authenticated
+ * - Provides the connection to all child components via context
+ * - Handles connection lifecycle (connect/disconnect)
+ * - Tracks connection status
+ * - Automatically disconnects when user logs out
+ * 
+ * Usage:
+ * - Wrap your app with <SocketProvider>
+ * - Use the useSocket() hook in any component to access the connection
+ */
+export const SocketProvider = ({ children }) => {
+  const { user } = useAuth();
+  const [isConnected, setIsConnected] = useState(false);
+  const [connectionError, setConnectionError] = useState(null);
+
+  /**
+   * Initialize Socket.IO connection when user is authenticated
+   */
+  useEffect(() => {
+    if (!user?.uid) {
+      console.log("⚠️ SocketProvider: No authenticated user, skipping connection");
+      
+      // Disconnect if user logs out
+      if (socketClient.isConnected()) {
+        console.log("🔌 SocketProvider: User logged out, disconnecting socket");
+        socketClient.disconnect();
+        setIsConnected(false);
+      }
+      return;
+    }
+
+    console.log("🔌 SocketProvider: User authenticated, establishing connection for user:", user.uid);
+
+    // Connect to Socket.IO server
+    const socket = socketClient.connect();
+
+    // Set up connection event handlers
+    const handleConnect = () => {
+      console.log("✅ SocketProvider: Socket connected successfully");
+      setIsConnected(true);
+      setConnectionError(null);
+    };
+
+    const handleDisconnect = (reason) => {
+      console.log("❌ SocketProvider: Socket disconnected:", reason);
+      setIsConnected(false);
+    };
+
+    const handleConnectError = (error) => {
+      console.error("❌ SocketProvider: Connection error:", error.message);
+      setConnectionError(error.message);
+      setIsConnected(false);
+    };
+
+    // Add event listeners
+    socket.on("connect", handleConnect);
+    socket.on("disconnect", handleDisconnect);
+    socket.on("connect_error", handleConnectError);
+
+    // Set initial connection state
+    setIsConnected(socket.connected);
+
+    // Cleanup on unmount or user change
+    return () => {
+      console.log("🔌 SocketProvider: Cleaning up socket event listeners");
+      socket.off("connect", handleConnect);
+      socket.off("disconnect", handleDisconnect);
+      socket.off("connect_error", handleConnectError);
+    };
+  }, [user?.uid]);
+
+  /**
+   * Subscribe to a Socket.IO event
+   * @param {string} event - Event name
+   * @param {function} callback - Callback function
+   */
+  const on = useCallback((event, callback) => {
+    if (!socketClient.socket) {
+      console.warn(`⚠️ SocketProvider: Cannot subscribe to "${event}" - socket not initialized`);
+      return;
+    }
+    socketClient.on(event, callback);
+  }, []);
+
+  /**
+   * Unsubscribe from a Socket.IO event
+   * @param {string} event - Event name
+   * @param {function} callback - Callback function (optional)
+   */
+  const off = useCallback((event, callback) => {
+    if (!socketClient.socket) {
+      return;
+    }
+    socketClient.off(event, callback);
+  }, []);
+
+  /**
+   * Emit a Socket.IO event
+   * @param {string} event - Event name
+   * @param {any} data - Data to send
+   */
+  const emit = useCallback((event, data) => {
+    if (!socketClient.socket) {
+      console.warn(`⚠️ SocketProvider: Cannot emit "${event}" - socket not initialized`);
+      return;
+    }
+    socketClient.emit(event, data);
+  }, []);
+
+  /**
+   * Get the raw socket instance (use sparingly)
+   */
+  const getSocket = useCallback(() => {
+    return socketClient.socket;
+  }, []);
+
+  const value = {
+    socket: socketClient.socket,
+    isConnected,
+    connectionError,
+    on,
+    off,
+    emit,
+    getSocket,
+  };
+
+  return (
+    <SocketContext.Provider value={value}>
+      {children}
+    </SocketContext.Provider>
+  );
+};
+
+export default SocketContext;
+

@@ -1,7 +1,7 @@
 import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
 import OverviewCards from "../components/Dashboard/OverviewCards";
-import StockLevelsChart from "../components/Inventory/StockLevelsChart";
+import StockLevelsChart from "../components/Items/StockLevelsChart";
 import RecentOrdersTable from "../components/Dashboard/RecentOrdersTable";
 import { useAdminDashboardData } from "../hooks";
 

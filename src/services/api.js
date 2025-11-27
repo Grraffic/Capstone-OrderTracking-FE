@@ -22,6 +22,24 @@ api.interceptors.request.use(
   }
 );
 
+// Add a response interceptor to handle quota / billing errors (e.g., Supabase 402)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+
+    // 402 Payment Required - often returned when the backend/Supabase hits plan limits
+    if (status === 402) {
+      // Replace this with your own UI (toast, modal, redirect) as needed
+      alert(
+        "The service has temporarily hit its plan limits (Supabase quota). Please try again later or contact support."
+      );
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 // Auth related API calls
 export const authAPI = {
   loginWithGoogle: async (token) => {
@@ -117,6 +135,12 @@ export const orderAPI = {
 export const inventoryAPI = {
   getPreOrderCount: async (itemId) => {
     return api.get(`/inventory/${itemId}/pre-order-count`);
+  },
+  getAvailableSizes: async (name, educationLevel) => {
+    // URL encode the parameters to handle special characters and spaces
+    const encodedName = encodeURIComponent(name);
+    const encodedEducationLevel = encodeURIComponent(educationLevel);
+    return api.get(`/inventory/sizes/${encodedName}/${encodedEducationLevel}`);
   },
 };
 

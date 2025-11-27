@@ -23,8 +23,8 @@ const ProfileCard = ({
 }) => {
   return (
     <div className="lg:col-span-1">
-      {/* Profile card container */}
-      <div className="-mt-12 lg:-mt-16">
+      {/* Profile card container - overlaps hero section slightly */}
+      <div className="-mt-8 lg:-mt-10">
         {/* Hamburger Menu Icon - Positioned to the left with no gap */}
         <div className="absolute -left-1 top-12 z-40">
           <button

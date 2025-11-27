@@ -5,10 +5,10 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 /**
- * useInventory Hook
+ * useItems Hook
  *
- * Manages inventory state and operations including:
- * - Inventory items data
+ * Manages items state and operations including:
+ * - Items data
  * - CRUD operations (Create, Read, Update, Delete)
  * - Search and filter functionality
  * - Modal state management
@@ -30,10 +30,10 @@ const API_BASE_URL =
  *   addItem,
  *   updateItem,
  *   deleteItem,
- * } = useInventory();
+ * } = useItems();
  */
-export const useInventory = () => {
-  // State for inventory items (fetched from API)
+export const useItems = () => {
+  // State for items (fetched from API)
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,6 +94,7 @@ export const useInventory = () => {
           description: item.description,
           descriptionText: item.description_text,
           material: item.material,
+          size: item.size,
           stock: item.stock,
           price: item.price,
           image: item.image,
@@ -238,6 +239,7 @@ export const useInventory = () => {
           education_level: newItem.educationLevel,
           category: newItem.category,
           item_type: newItem.itemType,
+          size: newItem.size || "N/A",
           description: newItem.description,
           description_text: newItem.descriptionText,
           material: newItem.material,
@@ -294,7 +296,9 @@ export const useInventory = () => {
 
           // Show notification info if students were notified
           if (result.notificationInfo && result.notificationInfo.notified > 0) {
-            console.log(`✅ ${result.notificationInfo.notified} students notified about new item availability`);
+            console.log(
+              `✅ ${result.notificationInfo.notified} students notified about new item availability`
+            );
             // You can add a toast notification here if you have a toast system
           }
 
@@ -329,6 +333,7 @@ export const useInventory = () => {
           education_level: updatedItem.educationLevel,
           category: updatedItem.category,
           item_type: updatedItem.itemType,
+          size: updatedItem.size || "N/A",
           description: updatedItem.description,
           description_text: updatedItem.descriptionText,
           material: updatedItem.material,

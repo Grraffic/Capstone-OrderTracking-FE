@@ -6,13 +6,16 @@ import { Check } from "lucide-react";
  *
  * Displays size selection buttons with measurements
  * Handles size selection and confirmation
+ * Shows availability status for each size
  */
 const SizeSelector = ({
   availableSizes,
+  availableSizesData = [],
   selectedSize,
   onSizeSelect,
   sizeConfirmed,
   onSizeConfirm,
+  loadingSizes = false,
 }) => {
   // Size measurement guide
   const sizeMeasurements = {
@@ -43,31 +46,50 @@ const SizeSelector = ({
 
         {/* Size Buttons */}
         <div className="flex flex-wrap gap-2">
-          {availableSizes.map((size) => {
-            const isSelected = selectedSize === size;
-            return (
-              <button
-                key={size}
-                onClick={() => onSizeSelect(size)}
-                className={`relative px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
-                  isSelected
-                    ? "bg-gray-100 text-[#003363] border-2 border-gray-300"
-                    : "bg-white text-gray-700 border-2 border-gray-300 hover:border-[#F28C28]"
-                } ${
-                  sizeConfirmed && isSelected ? "ring-2 ring-green-500" : ""
-                }`}
-              >
-                {size}
-                {sizeConfirmed && isSelected && (
-                  <Check className="inline-block ml-1 w-4 h-4" />
-                )}
-                {/* Orange/Yellow left border for selected size (vertical) */}
-                {isSelected && (
-                  <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#CB7B00] rounded-l-lg"></div>
-                )}
-              </button>
-            );
-          })}
+          {loadingSizes ? (
+            <div className="text-sm text-gray-500">Loading sizes...</div>
+          ) : (
+            availableSizes.map((size) => {
+              const isSelected = selectedSize === size;
+              const sizeData = availableSizesData.find((s) => s.size === size);
+              // If no data exists for this size, it means stock = 0 (not in inventory)
+              const isInStock = sizeData ? sizeData.stock > 0 : false;
+
+              return (
+                <div key={size} className="relative">
+                  <button
+                    onClick={() => onSizeSelect(size)}
+                    className={`relative px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                      isSelected
+                        ? "bg-gray-100 text-[#003363] border-2 border-gray-300"
+                        : "bg-white text-gray-700 border-2 border-gray-300 hover:border-[#F28C28]"
+                    } ${
+                      sizeConfirmed && isSelected ? "ring-2 ring-green-500" : ""
+                    } ${!isInStock ? "opacity-75" : ""}`}
+                  >
+                    {size}
+                    {sizeConfirmed && isSelected && (
+                      <Check className="inline-block ml-1 w-4 h-4" />
+                    )}
+                    {/* Orange/Yellow left border for selected size (vertical) */}
+                    {isSelected && (
+                      <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#CB7B00] rounded-l-lg"></div>
+                    )}
+                  </button>
+                  {/* Stock status badge - always show */}
+                  <div
+                    className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
+                      isInStock
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {isInStock ? "✓" : "⏱"}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 

@@ -79,15 +79,20 @@ export const AuthProvider = ({ children }) => {
 
     const email = (emailString || "").toLowerCase();
 
+    const SPECIAL_ADMIN_EMAIL = "ramosraf278@gmail.com";
+
     // Enforce domain-based roles per project rules
     if (email.endsWith("@student.laverdad.edu.ph")) {
       return USER_ROLES.STUDENT;
     }
 
-    // Exact admin domain (no student subdomain)
+    // Admin users:
+    // - Exact admin domain (no student subdomain)
+    // - Or specific approved personal admin email
     if (
-      email.endsWith("@laverdad.edu.ph") &&
-      !email.endsWith("@student.laverdad.edu.ph")
+      (email.endsWith("@laverdad.edu.ph") &&
+        !email.endsWith("@student.laverdad.edu.ph")) ||
+      email === SPECIAL_ADMIN_EMAIL
     ) {
       return USER_ROLES.ADMIN;
     }

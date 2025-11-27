@@ -7,7 +7,7 @@ import CategorySidebar from "../components/Products/CategorySidebar";
 import ProductGrid from "../components/Products/ProductGrid";
 import Pagination from "../components/common/Pagination";
 import Footer from "../../components/common/Footer";
-import { useInventory } from "../../admin/hooks/inventory/useInventory";
+import { useItems } from "../../admin/hooks/items/useItems";
 import { useSearchDebounce, useProductPagination } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { authAPI } from "../../services/api";
@@ -62,41 +62,63 @@ const AllProducts = () => {
     }
   }, [user]);
 
-  // Fetch inventory data using existing hook
-  const { items, loading, error } = useInventory();
+  // Fetch items data using existing hook
+  const { items, loading, error } = useItems();
 
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);
 
   // Transform inventory items to match product format expected by components
+  // Group by (name, educationLevel) to remove duplicates caused by different sizes
   const transformedProducts = useMemo(() => {
-    return items.map((item) => {
-      // Map inventory status to product status
-      let status = "in_stock";
-      const stock = item.stock || 0;
+    // Group items by name and education level
+    const groupedItems = items.reduce((acc, item) => {
+      const key = `${item.name}-${item.educationLevel}`;
 
-      if (stock === 0) {
+      if (!acc[key]) {
+        acc[key] = {
+          items: [],
+          totalStock: 0,
+        };
+      }
+
+      acc[key].items.push(item);
+      acc[key].totalStock += item.stock || 0;
+
+      return acc;
+    }, {});
+
+    // Convert grouped items to product format
+    return Object.values(groupedItems).map((group) => {
+      // Use the first item as the base (they all have the same name and education level)
+      const baseItem = group.items[0];
+      const totalStock = group.totalStock;
+
+      // Map inventory status to product status based on total stock
+      let status = "in_stock";
+      if (totalStock === 0) {
         status = "out_of_stock";
-      } else if (stock < 20) {
+      } else if (totalStock < 20) {
         status = "limited_stock";
       }
 
       return {
-        id: item.id,
-        name: item.name,
-        type: item.itemType?.toLowerCase() || "other",
+        id: baseItem.id,
+        name: baseItem.name,
+        type: baseItem.itemType?.toLowerCase() || "other",
         category:
-          item.category?.toLowerCase().replace(/\s+/g, "_") || "other_items",
+          baseItem.category?.toLowerCase().replace(/\s+/g, "_") ||
+          "other_items",
         status: status,
-        image: item.image || "/images/products/placeholder.jpg",
+        image: baseItem.image || "/images/products/placeholder.jpg",
         price: 0, // FREE for students - price hidden
-        description: item.description || item.descriptionText || "",
-        educationLevel: item.educationLevel,
-        itemType: item.itemType,
-        stock: item.stock,
-        sizes: item.sizes,
+        description: baseItem.description || baseItem.descriptionText || "",
+        educationLevel: baseItem.educationLevel,
+        itemType: baseItem.itemType,
+        stock: totalStock, // Use total stock across all sizes
+        sizes: group.items.map((i) => i.size).filter((s) => s !== "N/A"), // Collect all sizes
         // Keep original item data for order submission
-        _originalItem: item,
+        _originalItem: baseItem,
       };
     });
   }, [items]);
@@ -217,169 +239,167 @@ const AllProducts = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-16">
-        
-          {/* Main Container - White card */}
-          <div className="bg-white rounded-3xl shadow-gray-800 shadow-md mb-8">
-            {/* Sticky Header (unchanged) */}
-            <div className=" z-20 rounded-t-3xl px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-6 border-b border-gray-100 shadow-sm">
-              {/* Header Content */}
-              <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
-                {/* Left: Hamburger + Title */}
-                <div className="flex items-center gap-4">
-                  {/* Hamburger Button */}
-                  <button
-                    onClick={() => {
-                      if (window.innerWidth < 1024) {
-                        setIsSidebarOpen(!isSidebarOpen);
-                      } else {
-                        setIsSidebarCollapsed(!isSidebarCollapsed);
-                      }
-                    }}
-                    className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300"
-                    aria-label="Toggle sidebar"
+        {/* Main Container - White card */}
+        <div className="bg-white rounded-3xl shadow-gray-800 shadow-md mb-8">
+          {/* Sticky Header (unchanged) */}
+          <div className=" z-20 rounded-t-3xl px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-6 border-b border-gray-100 shadow-sm">
+            {/* Header Content */}
+            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+              {/* Left: Hamburger + Title */}
+              <div className="flex items-center gap-4">
+                {/* Hamburger Button */}
+                <button
+                  onClick={() => {
+                    if (window.innerWidth < 1024) {
+                      setIsSidebarOpen(!isSidebarOpen);
+                    } else {
+                      setIsSidebarCollapsed(!isSidebarCollapsed);
+                    }
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-all duration-300"
+                  aria-label="Toggle sidebar"
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-700"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    <svg
-                      className="w-6 h-6 text-gray-700"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 6h16M4 12h16M4 18h16"
-                      />
-                    </svg>
-                  </button>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M4 6h16M4 12h16M4 18h16"
+                    />
+                  </svg>
+                </button>
 
-                  {/* Page Title */}
-                  <h1 className="text-3xl md:text-4xl font-bold">
-                    <span className="text-[#003363]">All </span>
-                    <span className="text-[#F28C28]">Products</span>
-                  </h1>
-                </div>
-
-                {/* Search Bar */}
-                <div className="relative w-full lg:w-96">
-                  <input
-                    type="text"
-                    placeholder="Search for items"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#003363] focus:border-transparent text-sm"
-                  />
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#003363] text-white p-2 rounded-full hover:bg-[#002347] transition-colors">
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </button>
-                </div>
+                {/* Page Title */}
+                <h1 className="text-3xl md:text-4xl font-bold">
+                  <span className="text-[#003363]">All </span>
+                  <span className="text-[#F28C28]">Products</span>
+                </h1>
               </div>
 
-              {/* Education Level Alerts */}
-              {userEducationLevel && (
-                <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                  <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm text-blue-800 font-semibold">
-                      Showing products for: {userEducationLevel}
-                    </p>
-                    <p className="text-xs text-blue-700 mt-0.5">
-                      Products are filtered based on your year level. General
-                      items are always visible.
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {!userEducationLevel && !profileLoading && (
-                <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
-                  <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-sm text-yellow-800 font-semibold">
-                      Complete your profile to see relevant products
-                    </p>
-                    <p className="text-xs text-yellow-700 mt-0.5">
-                      Set your year level in Settings to filter products for
-                      your education level.
-                    </p>
-                  </div>
-                </div>
-              )}
+              {/* Search Bar */}
+              <div className="relative w-full lg:w-96">
+                <input
+                  type="text"
+                  placeholder="Search for items"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-12 pr-12 py-3 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-[#003363] focus:border-transparent text-sm"
+                />
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <button className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#003363] text-white p-2 rounded-full hover:bg-[#002347] transition-colors">
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </button>
+              </div>
             </div>
 
-            {/* Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
-              {/* Sidebar (Desktop) */}
-              <div
-                className={`hidden lg:block ${
-                  isSidebarCollapsed ? "lg:col-span-1" : "lg:col-span-3"
-                }`}
-              >
+            {/* Education Level Alerts */}
+            {userEducationLevel && (
+              <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-blue-800 font-semibold">
+                    Showing products for: {userEducationLevel}
+                  </p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    Products are filtered based on your year level. General
+                    items are always visible.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {!userEducationLevel && !profileLoading && (
+              <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-yellow-800 font-semibold">
+                    Complete your profile to see relevant products
+                  </p>
+                  <p className="text-xs text-yellow-700 mt-0.5">
+                    Set your year level in Settings to filter products for your
+                    education level.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
+            {/* Sidebar (Desktop) */}
+            <div
+              className={`hidden lg:block ${
+                isSidebarCollapsed ? "lg:col-span-1" : "lg:col-span-3"
+              }`}
+            >
+              <CategorySidebar
+                selectedCategory={selectedCategory}
+                onCategoryChange={handleCategoryChange}
+                isCollapsed={isSidebarCollapsed}
+              />
+            </div>
+
+            {/* Sidebar (Mobile) */}
+            {isSidebarOpen && (
+              <div className="lg:hidden col-span-1 mb-6">
                 <CategorySidebar
                   selectedCategory={selectedCategory}
                   onCategoryChange={handleCategoryChange}
-                  isCollapsed={isSidebarCollapsed}
                 />
               </div>
+            )}
 
-              {/* Sidebar (Mobile) */}
-              {isSidebarOpen && (
-                <div className="lg:hidden col-span-1 mb-6">
-                  <CategorySidebar
-                    selectedCategory={selectedCategory}
-                    onCategoryChange={handleCategoryChange}
-                  />
-                </div>
-              )}
-
-              {/* Product Grid */}
-              <div
-                className={`${
-                  isSidebarCollapsed ? "lg:col-span-11" : "lg:col-span-9"
-                }`}
-                style={{ transition: "all 0.3s ease-in-out" }}
-              >
-                <div className="mb-6">
-                  <p className="text-sm text-gray-600">
-                    Showing {paginatedItems.length} of {filteredProducts.length}{" "}
-                    products
-                    {debouncedSearch && ` for "${debouncedSearch}"`}
-                  </p>
-                  <p className="text-xs text-[#F28C28] font-semibold mt-1">
-                    ✨ All items are FREE for students
-                  </p>
-                </div>
-
-                <ProductGrid products={paginatedItems} />
-
-                {filteredProducts.length > 0 && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={goToPage}
-                    onPrevious={prevPage}
-                    onNext={nextPage}
-                    canGoPrev={canGoPrev}
-                    canGoNext={canGoNext}
-                  />
-                )}
+            {/* Product Grid */}
+            <div
+              className={`${
+                isSidebarCollapsed ? "lg:col-span-11" : "lg:col-span-9"
+              }`}
+              style={{ transition: "all 0.3s ease-in-out" }}
+            >
+              <div className="mb-6">
+                <p className="text-sm text-gray-600">
+                  Showing {paginatedItems.length} of {filteredProducts.length}{" "}
+                  products
+                  {debouncedSearch && ` for "${debouncedSearch}"`}
+                </p>
+                <p className="text-xs text-[#F28C28] font-semibold mt-1">
+                  ✨ All items are FREE for students
+                </p>
               </div>
+
+              <ProductGrid products={paginatedItems} />
+
+              {filteredProducts.length > 0 && (
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={goToPage}
+                  onPrevious={prevPage}
+                  onNext={nextPage}
+                  canGoPrev={canGoPrev}
+                  canGoNext={canGoNext}
+                />
+              )}
             </div>
           </div>
-        
+        </div>
       </div>
     </div>
   );

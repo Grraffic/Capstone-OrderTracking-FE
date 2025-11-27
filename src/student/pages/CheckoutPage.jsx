@@ -5,6 +5,7 @@ import { useCheckout } from "../../context/CheckoutContext";
 import { useOrder } from "../../context/OrderContext";
 import { useAuth } from "../../context/AuthContext";
 import { useActivity } from "../../context/ActivityContext";
+import { inventoryAPI } from "../../services/api";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -64,19 +65,58 @@ const CheckoutPage = () => {
       // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
 
-      // Check if any item is out of stock to determine order type
-      const hasOutOfStockItems = items.some(item => {
-        const status = item.inventory?.status;
-        const stock = item.inventory?.stock ?? 0;
-        return (
-          stock === 0 || 
-          status === "Out of Stock" || 
-          status === "out_of_stock" ||
-          status?.toLowerCase() === "out of stock"
-        );
-      });
+      // Check if any item is out of stock OR if selected size is not available
+      // We need to check size-specific availability for uniform items
+      const sizeAvailabilityChecks = await Promise.all(
+        items.map(async (item) => {
+          const selectedSize = item.size;
+          const productName = item.inventory?.name;
+          const productEducationLevel = item.inventory?.educationLevel;
+
+          // Check if this is a uniform item that requires size selection
+          const requiresSize =
+            item.inventory?.itemType === "Uniform" ||
+            item.inventory?.itemType === "PE Uniform" ||
+            item.inventory?.itemType?.toLowerCase().includes("uniform") ||
+            item.inventory?.category?.toLowerCase().includes("uniform");
+
+          if (!requiresSize || selectedSize === "N/A") {
+            // For non-uniform items, check overall stock
+            const stock = item.inventory?.stock ?? 0;
+            const status = item.inventory?.status;
+            return (
+              stock === 0 ||
+              status === "Out of Stock" ||
+              status === "out_of_stock" ||
+              status?.toLowerCase() === "out of stock"
+            );
+          }
+
+          // For uniform items, check if the specific size is available
+          try {
+            const response = await inventoryAPI.getAvailableSizes(
+              productName,
+              productEducationLevel
+            );
+
+            if (response.data.success && response.data.data) {
+              const sizeData = response.data.data.find(s => s.size === selectedSize);
+              // If size doesn't exist in inventory or has stock = 0, it's a pre-order
+              return !sizeData || sizeData.stock === 0;
+            }
+
+            // If API call fails, assume it's out of stock to be safe
+            return true;
+          } catch (error) {
+            console.error("Failed to check size availability:", error);
+            // If API call fails, assume it's out of stock to be safe
+            return true;
+          }
+        })
+      );
 
       // Determine order type based on stock availability
+      const hasOutOfStockItems = sizeAvailabilityChecks.some(isOutOfStock => isOutOfStock);
       const orderType = hasOutOfStockItems ? "pre-order" : "regular";
 
       // Transform cart items to order items format

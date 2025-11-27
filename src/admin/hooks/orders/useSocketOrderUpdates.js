@@ -1,38 +1,42 @@
 import { useEffect } from "react";
-import socketClient from "../../../utils/socketClient";
+import { useSocket } from "../../../context/SocketContext";
 
 /**
  * useSocketOrderUpdates Hook
- * 
- * Connects to Socket.IO and listens for real-time order updates
- * 
+ *
+ * Listens for real-time order updates via the shared Socket.IO connection
+ *
  * @param {function} onOrderUpdated - Callback function when an order is updated
  * @returns {Object} - Socket connection status
  */
 export const useSocketOrderUpdates = (onOrderUpdated) => {
+  const { on, off, isConnected } = useSocket();
+
   useEffect(() => {
-    // Connect to Socket.IO server
-    socketClient.connect();
+    if (!isConnected) {
+      console.log("⚠️ useSocketOrderUpdates: Socket not connected, skipping event setup");
+      return;
+    }
 
     // Listen for order updates
     const handleOrderUpdate = (data) => {
       console.log("📡 Received order update:", data);
-      
+
       if (onOrderUpdated) {
         onOrderUpdated(data);
       }
     };
 
-    socketClient.on("order:updated", handleOrderUpdate);
+    on("order:updated", handleOrderUpdate);
 
     // Cleanup on unmount
     return () => {
-      socketClient.off("order:updated", handleOrderUpdate);
+      off("order:updated", handleOrderUpdate);
     };
-  }, [onOrderUpdated]);
+  }, [onOrderUpdated, isConnected, on, off]);
 
   return {
-    isConnected: socketClient.isConnected(),
+    isConnected,
   };
 };
 

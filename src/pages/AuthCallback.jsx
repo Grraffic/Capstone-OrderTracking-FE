@@ -31,7 +31,7 @@ const AuthCallback = () => {
               typeof email === "object"
                 ? email.email || email.value || JSON.stringify(email)
                 : email || ""
-            } is not allowed.\nStudents must use @student.laverdad.edu.ph and admins must use @laverdad.edu.ph.`
+            } is not allowed.\nStudents must use @student.laverdad.edu.ph and admins must use @laverdad.edu.ph (or the approved admin email on file).`
           : "Authentication error";
       // Use alert for now; app can replace with modal/toast
       window.alert(message);

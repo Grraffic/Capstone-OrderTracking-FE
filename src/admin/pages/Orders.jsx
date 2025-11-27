@@ -3,7 +3,7 @@ import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
 import OrdersTable from "../components/Orders/OrdersTable";
-import QRCodeScannerModal from "../components/Inventory/QRCodeScannerModal";
+import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
 import {
   useAdminSidebar,
   useOrderQRScanner,

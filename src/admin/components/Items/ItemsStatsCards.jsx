@@ -1,9 +1,9 @@
 import React from "react";
 
 /**
- * InventoryStatsCards Component
+ * ItemsStatsCards Component
  *
- * Displays inventory statistics in a responsive grid of cards:
+ * Displays items statistics in a responsive grid of cards:
  * - Total Items
  * - Above Threshold (stock >= 50)
  * - At Reorder Point (stock 20-49)
@@ -18,7 +18,7 @@ import React from "react";
  * Props:
  * - stats: Object containing { totalItems, aboveThreshold, atReorderPoint, critical, outOfStock }
  */
-const InventoryStatsCards = ({ stats }) => {
+const ItemsStatsCards = ({ stats }) => {
   const cards = [
     {
       id: 1,
@@ -161,4 +161,4 @@ const InventoryStatsCards = ({ stats }) => {
   );
 };
 
-export default InventoryStatsCards;
+export default ItemsStatsCards;

@@ -1,5 +1,5 @@
 import { X, AlertTriangle, Pencil, Plus, Users } from "lucide-react";
-import { useInventoryModalForm } from "../../hooks";
+import { useItemsModalForm } from "../../hooks";
 import { useState, useMemo, useEffect } from "react";
 import {
   EDUCATION_LEVELS,
@@ -10,9 +10,9 @@ import {
 import { orderAPI } from "../../../services/api";
 
 /**
- * InventoryModals Component
+ * ItemsModals Component
  *
- * Handles all modal dialogs for inventory management:
+ * Handles all modal dialogs for items management:
  * - Add Item Modal (form to add new item with 2-column layout)
  * - Edit Item Modal (form to edit existing item)
  * - View Item Modal (read-only view of item details)
@@ -26,7 +26,7 @@ import { orderAPI } from "../../../services/api";
  * - onUpdate: Function to update item
  * - onDelete: Function to delete item
  */
-const InventoryModals = ({
+const ItemsModals = ({
   modalState,
   selectedItem,
   onClose,
@@ -52,7 +52,7 @@ const InventoryModals = ({
     handleDrop,
     handleBrowseClick,
     handleSubmit: handleFormSubmit,
-  } = useInventoryModalForm(
+  } = useItemsModalForm(
     modalState.mode === "edit" ? selectedItem : null,
     (data) => {
       if (modalState.mode === "add") {
@@ -74,7 +74,12 @@ const InventoryModals = ({
   useEffect(() => {
     const checkPreOrders = async () => {
       // Only check when adding new items with stock > 0
-      if (modalState.mode !== "add" || !formData.name || !formData.educationLevel || parseInt(formData.stock || 0) <= 0) {
+      if (
+        modalState.mode !== "add" ||
+        !formData.name ||
+        !formData.educationLevel ||
+        parseInt(formData.stock || 0) <= 0
+      ) {
         setPreOrderCount(0);
         return;
       }
@@ -90,10 +95,12 @@ const InventoryModals = ({
 
         if (response.data.success) {
           // Count students who have pre-ordered this specific item
-          const matchingOrders = response.data.data.filter(order => {
-            return order.items.some(item => {
-              const nameMatch = item.name.toLowerCase() === formData.name.toLowerCase();
-              const levelMatch = item.education_level === formData.educationLevel;
+          const matchingOrders = response.data.data.filter((order) => {
+            return order.items.some((item) => {
+              const nameMatch =
+                item.name.toLowerCase() === formData.name.toLowerCase();
+              const levelMatch =
+                item.education_level === formData.educationLevel;
               const sizeMatch = !formData.size || item.size === formData.size;
               return nameMatch && levelMatch && sizeMatch;
             });
@@ -112,7 +119,13 @@ const InventoryModals = ({
     // Debounce the check
     const timeoutId = setTimeout(checkPreOrders, 500);
     return () => clearTimeout(timeoutId);
-  }, [modalState.mode, formData.name, formData.educationLevel, formData.size, formData.stock]);
+  }, [
+    modalState.mode,
+    formData.name,
+    formData.educationLevel,
+    formData.size,
+    formData.stock,
+  ]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -305,22 +318,26 @@ const InventoryModals = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Pre-Order Notification Banner - Only for Add mode */}
-        {modalState.mode === "add" && preOrderCount > 0 && parseInt(formData.stock || 0) > 0 && (
-          <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
-            <div className="flex items-center gap-2 text-blue-800">
-              <Users size={18} />
-              <p className="text-sm font-medium">
-                {checkingPreOrders ? (
-                  "Checking for pre-orders..."
-                ) : (
-                  <>
-                    {preOrderCount} {preOrderCount === 1 ? 'student' : 'students'} will be notified when you add this item
-                  </>
-                )}
-              </p>
+        {modalState.mode === "add" &&
+          preOrderCount > 0 &&
+          parseInt(formData.stock || 0) > 0 && (
+            <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
+              <div className="flex items-center gap-2 text-blue-800">
+                <Users size={18} />
+                <p className="text-sm font-medium">
+                  {checkingPreOrders ? (
+                    "Checking for pre-orders..."
+                  ) : (
+                    <>
+                      {preOrderCount}{" "}
+                      {preOrderCount === 1 ? "student" : "students"} will be
+                      notified when you add this item
+                    </>
+                  )}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Content - 2 Column Layout */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
@@ -510,11 +527,11 @@ const InventoryModals = ({
                       <div className="flex-1">
                         <input
                           type="text"
-                          name="description"
-                          value={formData.description}
+                          name="size"
+                          value={formData.size}
                           onChange={handleInputChange}
                           className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="e.g., Small, Medium, Large"
+                          placeholder="e.g., Small, Medium, Large, XSmall, XLarge"
                         />
                       </div>
                     </div>
@@ -830,9 +847,7 @@ const InventoryModals = ({
                   </div>
                   <div>
                     <p className="text-gray-600 font-medium">Size</p>
-                    <p className="text-gray-900">
-                      {formData.description || "—"}
-                    </p>
+                    <p className="text-gray-900">{formData.size || "—"}</p>
                   </div>
                   <div>
                     <p className="text-gray-600 font-medium">Item Type</p>
@@ -882,4 +897,4 @@ const InventoryModals = ({
   );
 };
 
-export default InventoryModals;
+export default ItemsModals;

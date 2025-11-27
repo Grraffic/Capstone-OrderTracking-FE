@@ -1,10 +1,14 @@
 import { useState, useCallback, useEffect } from "react";
 import { isCategoryValidForEducationLevel } from "../../constants/inventoryOptions";
 
+// API base URL - reuse the same convention as other admin hooks
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 /**
- * useInventoryModalForm Hook
+ * useItemsModalForm Hook
  *
- * Manages form state and logic for the Inventory Modal (Add/Edit Item)
+ * Manages form state and logic for the Items Modal (Add/Edit Item)
  * Handles form data, validation, adjustment type selection, image upload, and submission
  *
  * @param {Object} selectedItem - The item being edited (null for add mode)
@@ -29,9 +33,9 @@ import { isCategoryValidForEducationLevel } from "../../constants/inventoryOptio
  *   handleBrowseClick,
  *   handleSubmit,
  *   validateForm,
- * } = useInventoryModalForm(selectedItem, onSubmit, onClose, modalState);
+ * } = useItemsModalForm(selectedItem, onSubmit, onClose, modalState);
  */
-export const useInventoryModalForm = (
+export const useItemsModalForm = (
   selectedItem,
   onSubmit,
   onClose,
@@ -45,8 +49,9 @@ export const useInventoryModalForm = (
     name: "",
     educationLevel: "",
     category: "",
-    description: "", // Size field
-    descriptionText: "", // Description field
+    size: "", // Size field (stored in database 'size' column)
+    description: "", // Description field (kept for backward compatibility)
+    descriptionText: "", // Additional description field
     material: "", // Material/Type field
     itemType: "",
     stock: 0,
@@ -75,6 +80,7 @@ export const useInventoryModalForm = (
           name: selectedItem.name || "",
           educationLevel: selectedItem.educationLevel || "",
           category: selectedItem.category || "",
+          size: selectedItem.size || "",
           description: selectedItem.description || "",
           descriptionText: selectedItem.descriptionText || "",
           material: selectedItem.material || "",
@@ -96,6 +102,7 @@ export const useInventoryModalForm = (
           name: "",
           educationLevel: "",
           category: "",
+          size: "",
           description: "",
           descriptionText: "",
           material: "",
@@ -201,19 +208,69 @@ export const useInventoryModalForm = (
       return;
     }
 
-    // Create preview URL
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-      setFormData((prev) => ({
-        ...prev,
-        image: reader.result,
-      }));
-      setErrors((prev) => ({
-        ...prev,
-        image: "",
-      }));
+    reader.onloadend = async () => {
+      const base64DataUrl = reader.result;
+
+      // Show local preview immediately for better UX
+      setImagePreview(base64DataUrl);
+
+      try {
+        // Upload the image to backend, which forwards to Cloudinary
+        const response = await fetch(`${API_BASE_URL}/inventory/upload-image`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            image: base64DataUrl,
+            fileName: file.name,
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.message || "Failed to upload image. Please try again."
+          );
+        }
+
+        const result = await response.json();
+
+        if (!result.success || !result.url) {
+          throw new Error(
+            result.message || "Failed to upload image. Please try again."
+          );
+        }
+
+        // Store only the Cloudinary URL in form data
+        setFormData((prev) => ({
+          ...prev,
+          image: result.url,
+        }));
+
+        setErrors((prev) => ({
+          ...prev,
+          image: "",
+        }));
+      } catch (error) {
+        console.error("Inventory image upload error:", error);
+
+        // Keep the preview but reset image field to default placeholder
+        setFormData((prev) => ({
+          ...prev,
+          image: "/assets/image/card1.png",
+        }));
+
+        setErrors((prev) => ({
+          ...prev,
+          image:
+            error.message ||
+            "Failed to upload image. Please try again or use a smaller file.",
+        }));
+      }
     };
+
     reader.readAsDataURL(file);
   }, []);
 

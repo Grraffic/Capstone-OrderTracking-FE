@@ -1,17 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Eye,
   Pencil,
   Trash2,
-  MoreVertical,
+  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
 /**
- * InventoryTable Component
+ * ItemsTable Component
  *
- * Displays inventory items in a responsive table with:
+ * Displays items in a responsive table with:
  * - Product image thumbnails
  * - Product details (name, category, stock, price, status)
  * - Action buttons (View, Edit, Delete)
@@ -19,7 +19,7 @@ import {
  * - Pagination controls
  *
  * Props:
- * - items: Array of inventory items
+ * - items: Array of items
  * - onView: Function to handle view action
  * - onEdit: Function to handle edit action
  * - onDelete: Function to handle delete action
@@ -30,7 +30,7 @@ import {
  * - onPrevPage: Function to go to previous page
  * - onGoToPage: Function to go to specific page
  */
-const InventoryTable = ({
+const ItemsTable = ({
   items = [],
   onView,
   onEdit,
@@ -43,6 +43,24 @@ const InventoryTable = ({
   onGoToPage,
 }) => {
   const [openMenuId, setOpenMenuId] = useState(null);
+  const menuRef = useRef(null);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    if (openMenuId !== null) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [openMenuId]);
 
   /**
    * Get status badge color based on status
@@ -239,7 +257,10 @@ const InventoryTable = ({
                       </button>
 
                       {/* More Options Dropdown */}
-                      <div className="relative">
+                      <div
+                        className="relative"
+                        ref={openMenuId === item.id ? menuRef : null}
+                      >
                         <button
                           onClick={() =>
                             setOpenMenuId(
@@ -250,7 +271,7 @@ const InventoryTable = ({
                           title="More options"
                           aria-label="More options"
                         >
-                          <MoreVertical size={18} />
+                          <MoreHorizontal size={18} />
                         </button>
 
                         {/* Dropdown Menu */}
@@ -273,7 +294,7 @@ const InventoryTable = ({
                               }}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-lg transition-colors flex items-center gap-2"
                             >
-                              <MoreVertical size={16} />
+                              <MoreHorizontal size={16} />
                               Item Adjustment
                             </button>
                           </div>
@@ -327,4 +348,4 @@ const InventoryTable = ({
   );
 };
 
-export default InventoryTable;
+export default ItemsTable;

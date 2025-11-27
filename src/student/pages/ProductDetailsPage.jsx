@@ -9,9 +9,10 @@ import ProductImageViewer from "../components/Products/ProductDetails/ProductIma
 import ProductInfo from "../components/Products/ProductDetails/ProductInfo";
 import SizeSelector from "../components/Products/ProductDetails/SizeSelector";
 import ProductCarousel from "../components/Products/ProductDetails/ProductCarousel";
-import { useInventory } from "../../admin/hooks/inventory/useInventory";
+import { useItems } from "../../admin/hooks/items/useItems";
 import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
+import { inventoryAPI } from "../../services/api";
 
 /**
  * ProductDetailsPage Component
@@ -22,7 +23,7 @@ import { useCheckout } from "../../context/CheckoutContext";
 const ProductDetailsPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { items: allProducts } = useInventory();
+  const { items: allProducts } = useItems();
   const { addToCart } = useCart();
   const { setDirectCheckoutItems } = useCheckout();
 
@@ -31,6 +32,24 @@ const ProductDetailsPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [sizeConfirmed, setSizeConfirmed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [availableSizesData, setAvailableSizesData] = useState([]);
+  const [loadingSizes, setLoadingSizes] = useState(false);
+
+  // Size mapping: Maps customer-facing sizes to database sizes
+  const sizeMapping = {
+    XS: "XSmall",
+    S: "Small",
+    M: "Medium",
+    L: "Large",
+    XL: "XLarge",
+    XXL: "2XLarge",
+    "3XL": "3XLarge",
+  };
+
+  // Reverse mapping: Database sizes to customer-facing sizes
+  const reverseSizeMapping = Object.fromEntries(
+    Object.entries(sizeMapping).map(([key, value]) => [value, key])
+  );
 
   // Load product data
   useEffect(() => {
@@ -57,6 +76,58 @@ const ProductDetailsPage = () => {
     }
   }, [productId, allProducts, navigate]);
 
+  // Fetch available sizes when product is loaded
+  useEffect(() => {
+    const fetchAvailableSizes = async () => {
+      if (!product) return;
+
+      // Check if product requires size selection
+      const requiresSize =
+        product.itemType === "Uniform" ||
+        product.itemType === "PE Uniform" ||
+        product.itemType?.toLowerCase().includes("uniform") ||
+        product.category?.toLowerCase().includes("uniform");
+
+      if (!requiresSize) {
+        setAvailableSizesData([]);
+        return;
+      }
+
+      try {
+        setLoadingSizes(true);
+        const response = await inventoryAPI.getAvailableSizes(
+          product.name,
+          product.educationLevel
+        );
+
+        if (response.data.success && response.data.data) {
+          // Transform database sizes to customer-facing sizes
+          const transformedSizes = response.data.data.map((sizeData) => ({
+            ...sizeData,
+            // Keep original database size for backend operations
+            dbSize: sizeData.size,
+            // Convert to customer-facing size for display
+            size: reverseSizeMapping[sizeData.size] || sizeData.size,
+          }));
+
+          setAvailableSizesData(transformedSizes);
+          console.log(
+            "Available sizes fetched and transformed:",
+            transformedSizes
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch available sizes:", error);
+        // Fallback to default sizes if API fails
+        setAvailableSizesData([]);
+      } finally {
+        setLoadingSizes(false);
+      }
+    };
+
+    fetchAvailableSizes();
+  }, [product]);
+
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -68,20 +139,6 @@ const ProductDetailsPage = () => {
     );
   }
 
-  const isOutOfStock = 
-    product.stock === 0 || 
-    product.status === "Out of Stock" || 
-    product.status === "out_of_stock" ||
-    product.status?.toLowerCase() === "out of stock";
-
-  // Debug: Log product data to check itemType
-  console.log("Product data:", {
-    name: product.name,
-    itemType: product.itemType,
-    category: product.category,
-    educationLevel: product.educationLevel,
-  });
-
   // Check if product requires size selection (case-insensitive check)
   const requiresSizeSelection =
     product.itemType === "Uniform" ||
@@ -91,12 +148,33 @@ const ProductDetailsPage = () => {
 
   console.log("Requires size selection:", requiresSizeSelection);
 
+  // Always show all standard sizes for uniform items
   const availableSizes = requiresSizeSelection
     ? ["XS", "S", "M", "L", "XL", "XXL"]
     : [];
+
+  // Find the selected size data to check its stock
+  const selectedSizeData = availableSizesData.find(
+    (s) => s.size === selectedSize
+  );
+
+  // Determine if the selected size is out of stock
+  const isSelectedSizeOutOfStock = selectedSizeData
+    ? selectedSizeData.stock === 0
+    : false;
+
+  // Determine if the entire product is out of stock (no sizes available)
+  const isOutOfStock = requiresSizeSelection
+    ? availableSizesData.length > 0 &&
+      availableSizesData.every((s) => s.stock === 0)
+    : product.stock === 0 ||
+      product.status === "Out of Stock" ||
+      product.status === "out_of_stock" ||
+      product.status?.toLowerCase() === "out of stock";
+
   const isOrderDisabled =
     // Only disable if size is required but not selected/confirmed
-    (requiresSizeSelection && (!selectedSize || !sizeConfirmed));
+    requiresSizeSelection && (!selectedSize || !sizeConfirmed);
 
   // Get related products (same education level or item type)
   const relatedProducts = allProducts
@@ -127,9 +205,14 @@ const ProductDetailsPage = () => {
     if (isOrderDisabled) return;
 
     try {
+      // Convert customer-facing size to database size
+      const dbSize = selectedSize
+        ? sizeMapping[selectedSize] || selectedSize
+        : "N/A";
+
       await addToCart({
         inventoryId: product.id,
-        size: selectedSize || "N/A",
+        size: dbSize,
         quantity: quantity,
       });
       // Success toast is handled by CartContext
@@ -143,11 +226,16 @@ const ProductDetailsPage = () => {
     if (isOrderDisabled) return;
 
     try {
+      // Convert customer-facing size to database size
+      const dbSize = selectedSize
+        ? sizeMapping[selectedSize] || selectedSize
+        : "N/A";
+
       // Don't add to cart - go directly to checkout with this item only
       // Create a temporary checkout item (not added to cart)
       const checkoutItem = {
         inventory: product,
-        size: selectedSize || "N/A",
+        size: dbSize,
         quantity: quantity,
         // Add temporary ID for display purposes
         id: `temp-${product.id}`,
@@ -283,10 +371,12 @@ const ProductDetailsPage = () => {
                 {requiresSizeSelection && (
                   <SizeSelector
                     availableSizes={availableSizes}
+                    availableSizesData={availableSizesData}
                     selectedSize={selectedSize}
                     onSizeSelect={handleSizeSelect}
                     sizeConfirmed={sizeConfirmed}
                     onSizeConfirm={handleSizeConfirm}
+                    loadingSizes={loadingSizes}
                   />
                 )}
 
@@ -332,7 +422,13 @@ const ProductDetailsPage = () => {
                     disabled={isOrderDisabled}
                     className="px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
                   >
-                    {isOutOfStock ? "Pre-Order" : "Order Now"}
+                    {requiresSizeSelection && selectedSize
+                      ? selectedSizeData && selectedSizeData.stock > 0
+                        ? "Order Now"
+                        : "Pre-Order"
+                      : isOutOfStock
+                      ? "Pre-Order"
+                      : "Order Now"}
                   </button>
                 </div>
 

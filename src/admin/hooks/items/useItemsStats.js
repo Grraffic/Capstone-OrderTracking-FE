@@ -1,22 +1,22 @@
 import { useMemo } from "react";
 
 /**
- * useInventoryStats Hook
+ * useItemsStats Hook
  *
- * Calculates inventory statistics from filtered items:
+ * Calculates items statistics from filtered items:
  * - Total Items count
  * - Above Threshold items count (stock >= 50)
  * - At Reorder Point items count (stock 20-49)
  * - Critical items count (stock 1-19)
  * - Out of Stock items count (stock = 0)
  *
- * @param {Array} filteredItems - Array of filtered inventory items
+ * @param {Array} filteredItems - Array of filtered items
  * @returns {Object} Statistics object with totalItems, aboveThreshold, atReorderPoint, critical, outOfStock
  *
  * Usage:
- * const stats = useInventoryStats(filteredItems);
+ * const stats = useItemsStats(filteredItems);
  */
-export const useInventoryStats = (filteredItems) => {
+export const useItemsStats = (filteredItems) => {
   const stats = useMemo(() => {
     const totalItems = filteredItems.length;
     const aboveThreshold = filteredItems.filter(

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import socketClient from "../utils/socketClient";
+import { useSocket } from "./SocketContext";
 
 const ActivityContext = createContext();
 
@@ -18,6 +18,7 @@ export const useActivity = () => {
  */
 export const ActivityProvider = ({ children }) => {
   const { user } = useAuth();
+  const { on, off, isConnected } = useSocket();
   const [activities, setActivities] = useState([]);
 
   // Load activities from localStorage when component mounts
@@ -38,16 +39,12 @@ export const ActivityProvider = ({ children }) => {
 
   // Listen for Socket.IO events when admin claims student's order
   useEffect(() => {
-    if (!user?.id) {
-      console.log("⚠️ ActivityContext: No user.id, skipping Socket.IO setup");
+    if (!user?.id || !isConnected) {
+      console.log("⚠️ ActivityContext: No user or socket not connected, skipping event setup");
       return;
     }
 
-    console.log("🔌 ActivityContext: Setting up Socket.IO for user:", user.id);
-
-    // Connect to Socket.IO server
-    socketClient.connect();
-    console.log("🔌 ActivityContext: Socket.IO connection initiated");
+    console.log("🔌 ActivityContext: Setting up Socket.IO listeners for user:", user.id);
 
     // Listen for order claimed events
     const handleOrderClaimed = (data) => {
@@ -82,13 +79,13 @@ export const ActivityProvider = ({ children }) => {
       }
     };
 
-    socketClient.on("order:claimed", handleOrderClaimed);
+    on("order:claimed", handleOrderClaimed);
 
     // Cleanup on unmount
     return () => {
-      socketClient.off("order:claimed", handleOrderClaimed);
+      off("order:claimed", handleOrderClaimed);
     };
-  }, [user?.id]);
+  }, [user?.id, isConnected, on, off]);
 
   /**
    * Load activities from localStorage

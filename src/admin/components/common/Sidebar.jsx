@@ -21,7 +21,6 @@ const Sidebar = ({ isOpen = true }) => {
   const { logout } = useAuth();
   const navItems = [
     { to: "/admin", label: "Home", icon: Home },
-    { to: "/admin/inventory", label: "Inventory", icon: Package },
     { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
     { to: "/admin/reports", label: "Reports", icon: BarChart3 },
     { to: "/admin/settings", label: "Settings", icon: Settings },
@@ -95,11 +94,23 @@ const Sidebar = ({ isOpen = true }) => {
 
       {/* Navigation */}
       <nav className="flex flex-col gap-2 flex-1">
-        {navItems.map((item) => (
-          <div key={item.to}>
-            {navItem(item.to, item.label, item.icon, item.to === "/admin")}
-          </div>
-        ))}
+        {/* Home */}
+        {navItem("/admin", "Home", Home, true)}
+
+        {/* Items */}
+        {navItem("/admin/items", "Items", Package, false)}
+
+        {/* Inventory */}
+        {navItem("/admin/inventory", "Inventory", Package, false)}
+
+        {/* Remaining nav items (Orders, Reports, Settings) */}
+        {navItems
+          .filter((item) => item.to !== "/admin")
+          .map((item) => (
+            <div key={item.to}>
+              {navItem(item.to, item.label, item.icon, false)}
+            </div>
+          ))}
       </nav>
 
       {/* Logout Button */}

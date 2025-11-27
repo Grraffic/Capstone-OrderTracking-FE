@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
-import socketClient from "../utils/socketClient";
+import { useSocket } from "./SocketContext";
 import axios from "axios";
 
 const NotificationContext = createContext();
@@ -27,6 +27,7 @@ export const useNotification = () => {
  */
 export const NotificationProvider = ({ children }) => {
   const { user } = useAuth();
+  const { on, off, isConnected } = useSocket();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -46,16 +47,12 @@ export const NotificationProvider = ({ children }) => {
 
   // Listen for Socket.IO restock notifications
   useEffect(() => {
-    if (!user?.uid) {
-      console.log("⚠️ NotificationContext: No user.uid, skipping Socket.IO setup");
+    if (!user?.uid || !isConnected) {
+      console.log("⚠️ NotificationContext: No user or socket not connected, skipping event setup");
       return;
     }
 
-    console.log("🔌 NotificationContext: Setting up Socket.IO for user:", user.uid);
-
-    // Connect to Socket.IO server
-    socketClient.connect();
-    console.log("🔌 NotificationContext: Socket.IO connection initiated");
+    console.log("🔌 NotificationContext: Setting up Socket.IO listeners for user:", user.uid);
 
     // Listen for inventory restock events
     const handleInventoryRestocked = (data) => {
@@ -90,7 +87,7 @@ export const NotificationProvider = ({ children }) => {
       }
     };
 
-    socketClient.on("inventory:restocked", handleInventoryRestocked);
+    on("inventory:restocked", handleInventoryRestocked);
 
     // Request notification permission
     if (Notification.permission === "default") {
@@ -99,9 +96,9 @@ export const NotificationProvider = ({ children }) => {
 
     // Cleanup on unmount
     return () => {
-      socketClient.off("inventory:restocked", handleInventoryRestocked);
+      off("inventory:restocked", handleInventoryRestocked);
     };
-  }, [user?.uid]);
+  }, [user?.uid, isConnected, on, off]);
 
   /**
    * Fetch all notifications for the current user

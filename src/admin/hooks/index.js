@@ -6,12 +6,12 @@
  *
  * Organized by feature domain:
  * - common: Shared hooks used across multiple features
- * - inventory: Inventory management hooks
+ * - items: Items management hooks
  * - orders: Order management hooks
  * - settings: Settings and profile hooks
  *
  * Usage:
- * import { useInventoryStats, useAdminSidebar, useQRScanner, useItemAdjustmentForm, useInventoryModalForm, useOrdersStats, useOrdersFilters, useAdminProfile } from '../hooks';
+ * import { useItemsStats, useAdminSidebar, useQRScanner, useItemAdjustmentForm, useItemsModalForm, useOrdersStats, useOrdersFilters, useAdminProfile } from '../hooks';
  */
 
 // Common Hooks
@@ -20,12 +20,13 @@ export { useAdminSidebar } from "./common/useAdminSidebar";
 // Dashboard Hooks
 export { useAdminDashboardData } from "./dashboard/useAdminDashboardData";
 
-// Inventory Hooks
-export { useInventoryStats } from "./inventory/useInventoryStats";
-export { useItemAdjustmentForm } from "./inventory/useItemAdjustmentForm";
-export { useInventoryModalForm } from "./inventory/useInventoryModalForm";
-export { useQRScanner } from "./inventory/useQRScanner";
-export { useInventory } from "./inventory/useInventory";
+// Items Hooks
+export { useItemsStats } from "./items/useItemsStats";
+export { useItemAdjustmentForm } from "./items/useItemAdjustmentForm";
+export { useItemsModalForm } from "./items/useItemsModalForm";
+export { useItemDetailsModal } from "./items/useItemDetailsModal";
+export { useQRScanner } from "./items/useQRScanner";
+export { useItems } from "./items/useItems";
 
 // Orders Hooks
 export { default as useOrdersStats } from "./orders/useOrdersStats";
