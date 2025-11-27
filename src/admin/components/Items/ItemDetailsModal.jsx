@@ -56,10 +56,16 @@ const ItemDetailsModal = ({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openMenuId]);
-
   if (!isOpen || !selectedItem) return null;
 
   const displayItem = selectedVariation || selectedItem;
+  const stockValue = displayItem.stock || 0;
+  const stockStatusColor =
+    stockValue === 0
+      ? "text-red-600"
+      : stockValue < 20
+      ? "text-orange-600"
+      : "text-green-600";
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
@@ -95,36 +101,43 @@ const ItemDetailsModal = ({
                   <img
                     src={displayItem.image}
                     alt={displayItem.name}
-                    className="w-full h-64 object-cover"
+                    className="w-full h-64 object-contain"
                     onError={(e) => {
                       e.target.src =
                         "https://via.placeholder.com/400x300?text=No+Image";
                     }}
                   />
 
-                  {/* Stock Information - Overlay on Image */}
-                  <div className="absolute top-3 right-3">
-                    <div className="flex items-center gap-1.5 px-3 py-1.5  rounded-lg shadow-sm">
-                      <span className="text-sm font-bold text-red-600">
-                        Stock: {displayItem.stock || 0}
+                  {/* Stock Information - Left Side */}
+                  <div className="absolute top-3 left-3">
+                    <div className="flex items-baseline gap-1 px-3 py-1.5 ">
+                      <span className="text-sm font-medium text-gray-700">
+                        Stock:
                       </span>
-                      <div className="relative">
-                        <button
-                          onMouseEnter={() => setShowTooltip(true)}
-                          onMouseLeave={() => setShowTooltip(false)}
-                          className="p-0.5 hover:bg-gray-100 rounded-full transition-colors"
-                          aria-label="Size information"
-                        >
-                          <Info size={14} className="text-gray-400" />
-                        </button>
-                        {showTooltip && (
-                          <div className="absolute right-0 top-full mt-2 bg-[#0C2340] text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10 shadow-lg">
-                            <p className="font-medium mb-1">Size Guide:</p>
-                            <p>S: 32-34" | M: 36-38"</p>
-                            <p>L: 40-42" | XL: 44-46"</p>
-                          </div>
-                        )}
-                      </div>
+                      <span className={`text-sm font-bold ${stockStatusColor}`}>
+                        {stockValue}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Size Guide Tooltip - Right Side */}
+                  <div className="absolute top-3 right-3">
+                    <div className="relative">
+                      <button
+                        onMouseEnter={() => setShowTooltip(true)}
+                        onMouseLeave={() => setShowTooltip(false)}
+                        className="p-1.5  hover:bg-gray-50 transition-colors"
+                        aria-label="Size information"
+                      >
+                        <Info size={14} className="text-gray-400" />
+                      </button>
+                      {showTooltip && (
+                        <div className="absolute right-0 top-full mt-2 bg-[#0C2340] text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10 shadow-lg">
+                          <p className="font-medium mb-1">Size Guide:</p>
+                          <p>S: 32-34" | M: 36-38"</p>
+                          <p>L: 40-42" | XL: 44-46"</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
