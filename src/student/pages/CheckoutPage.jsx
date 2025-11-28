@@ -70,6 +70,7 @@ const CheckoutPage = () => {
 
       // Check if any item is out of stock OR if selected size is not available
       // We need to check size-specific availability for uniform items
+      // Default to "regular" order type - only mark as pre-order if explicitly out of stock
       const sizeAvailabilityChecks = await Promise.all(
         items.map(async (item) => {
           const selectedSize = item.size;
@@ -85,14 +86,15 @@ const CheckoutPage = () => {
 
           if (!requiresSize || selectedSize === "N/A") {
             // For non-uniform items, check overall stock
+            // Only mark as out of stock if stock is explicitly 0 and status confirms it
             const stock = item.inventory?.stock ?? 0;
             const status = item.inventory?.status;
-            return (
-              stock === 0 ||
-              status === "Out of Stock" ||
-              status === "out_of_stock" ||
-              status?.toLowerCase() === "out of stock"
-            );
+            const isOutOfStock =
+              stock === 0 &&
+              (status === "Out of Stock" ||
+                status === "out_of_stock" ||
+                status?.toLowerCase() === "out of stock");
+            return isOutOfStock;
           }
 
           // For uniform items, check if the specific size is available
@@ -106,23 +108,29 @@ const CheckoutPage = () => {
               const sizeData = response.data.data.find(
                 (s) => s.size === selectedSize
               );
-              // If size doesn't exist in inventory or has stock = 0, it's a pre-order
+              // Only mark as pre-order if size doesn't exist OR explicitly has stock = 0
               return !sizeData || sizeData.stock === 0;
             }
 
-            // If API call fails, assume it's out of stock to be safe
-            return true;
+            // If API call fails, default to in stock (regular order)
+            // This prevents false pre-orders when API calls fail
+            console.warn(
+              "Failed to check size availability, defaulting to regular order"
+            );
+            return false;
           } catch (error) {
             console.error("Failed to check size availability:", error);
-            // If API call fails, assume it's out of stock to be safe
-            return true;
+            // If API call fails, default to in stock (regular order)
+            // This prevents false pre-orders when API calls fail
+            return false;
           }
         })
       );
 
       // Determine order type based on stock availability
+      // Only mark as pre-order if we're CERTAIN at least one item is out of stock
       const hasOutOfStockItems = sizeAvailabilityChecks.some(
-        (isOutOfStock) => isOutOfStock
+        (isOutOfStock) => isOutOfStock === true
       );
       const orderType = hasOutOfStockItems ? "pre-order" : "regular";
 
@@ -179,9 +187,15 @@ const CheckoutPage = () => {
 
       toast.success("Order submitted successfully!");
 
-      // Navigate to profile page to view the order
+      // Navigate to profile page with Orders category active
+      // Use location state to indicate which category to show
       setTimeout(() => {
-        navigate("/student/profile");
+        navigate("/student/profile", {
+          state: {
+            activeCategory: orderType === "pre-order" ? "preOrders" : "orders",
+            viewMode: "detail",
+          },
+        });
       }, 1000);
     } catch (error) {
       console.error("Checkout error:", error);
