@@ -19,28 +19,54 @@ const OrderReceiptQRCode = ({ orderData, showDetails = true, size = 256 }) => {
 
   // Download QR code as PNG
   const handleDownload = () => {
-    const svg = document.getElementById(`qr-code-${orderData.orderNumber}`);
-    const svgData = new XMLSerializer().serializeToString(svg);
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
+    try {
+      const svg = document.getElementById(`qr-code-${orderData.orderNumber}`);
+      if (!svg) {
+        console.error("QR code SVG element not found");
+        alert("QR code not found. Please try again.");
+        return;
+      }
 
-    canvas.width = size;
-    canvas.height = size;
+      // Clone the SVG to avoid modifying the original
+      const clonedSvg = svg.cloneNode(true);
+      const svgData = new XMLSerializer().serializeToString(clonedSvg);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
 
-    img.onload = () => {
-      ctx.fillStyle = "white";
-      ctx.fillRect(0, 0, size, size);
-      ctx.drawImage(img, 0, 0);
+      canvas.width = size;
+      canvas.height = size;
 
-      const pngFile = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `order-receipt-${orderData.orderNumber}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-    };
+      img.onload = () => {
+        // Set white background
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, 0, 0, size, size);
 
-    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+        const pngFile = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.download = `order-receipt-${orderData.orderNumber}.png`;
+        downloadLink.href = pngFile;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      };
+
+      img.onerror = () => {
+        console.error("Failed to load SVG image");
+        alert("Failed to download QR code. Please try again.");
+      };
+
+      // Convert SVG to data URL
+      const svgBlob = new Blob([svgData], {
+        type: "image/svg+xml;charset=utf-8",
+      });
+      const url = URL.createObjectURL(svgBlob);
+      img.src = url;
+    } catch (error) {
+      console.error("Error downloading QR code:", error);
+      alert("Failed to download QR code. Please try again.");
+    }
   };
 
   // Print QR code

@@ -21,14 +21,18 @@ export const CheckoutProvider = ({ children }) => {
   const [checkoutItems, setCheckoutItems] = useState([]);
   // Flag to indicate if we're in "Order Now" mode vs "Cart Checkout" mode
   const [isDirectCheckout, setIsDirectCheckout] = useState(false);
+  // Track the order intent: "orderNow" or "preOrder" - determines navigation destination
+  const [orderIntent, setOrderIntent] = useState(null);
 
   /**
    * Set items for direct checkout (Order Now)
    * @param {Array} items - Items to checkout directly
+   * @param {string} intent - "orderNow" or "preOrder" to determine navigation
    */
-  const setDirectCheckoutItems = (items) => {
+  const setDirectCheckoutItems = (items, intent = "orderNow") => {
     setCheckoutItems(items);
     setIsDirectCheckout(true);
+    setOrderIntent(intent);
   };
 
   /**
@@ -37,6 +41,7 @@ export const CheckoutProvider = ({ children }) => {
   const clearCheckoutItems = () => {
     setCheckoutItems([]);
     setIsDirectCheckout(false);
+    setOrderIntent(null);
   };
 
   /**
@@ -45,11 +50,13 @@ export const CheckoutProvider = ({ children }) => {
   const useCartCheckout = () => {
     setCheckoutItems([]);
     setIsDirectCheckout(false);
+    setOrderIntent(null);
   };
 
   const value = {
     checkoutItems,
     isDirectCheckout,
+    orderIntent,
     setDirectCheckoutItems,
     clearCheckoutItems,
     useCartCheckout,

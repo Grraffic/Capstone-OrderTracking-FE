@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -18,6 +18,7 @@ import ItemAdjustmentModal from "../components/Items/ItemAdjustmentModal";
 import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
 import ItemsStatsCards from "../components/Items/ItemsStatsCards";
 import { ItemsSkeleton } from "../components/Skeleton";
+import { groupItemsByVariations } from "../../utils/groupItems";
 import {
   useAdminSidebar,
   useQRScanner,
@@ -102,7 +103,31 @@ const Items = () => {
     closeAdjustmentModal,
     // API state
     loading,
+    // Pagination
+    currentPage,
+    totalPages: originalTotalPages,
+    goToPage,
+    nextPage,
+    prevPage,
   } = useItems();
+
+  // Group filtered items by name and item_type to avoid duplicates
+  const groupedItems = useMemo(() => {
+    return groupItemsByVariations(filteredItems);
+  }, [filteredItems]);
+
+  // Paginate grouped items
+  const itemsPerPage = 12; // Match the itemsPerPage from useItems hook
+  const paginatedGroupedItems = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return groupedItems.slice(startIndex, endIndex);
+  }, [groupedItems, currentPage, itemsPerPage]);
+
+  // Calculate total pages for grouped items
+  const totalPages = useMemo(() => {
+    return Math.ceil(groupedItems.length / itemsPerPage);
+  }, [groupedItems.length, itemsPerPage]);
 
   // Item Details Modal (new enhanced view modal)
   const {
@@ -122,7 +147,7 @@ const Items = () => {
   const { qrScannerOpen, closeQRScanner, handleQRCodeScanned } =
     useQRScanner(setSearchTerm);
 
-  // Calculate items statistics
+  // Calculate items statistics (use original filteredItems for stats)
   const stats = useItemsStats(filteredItems);
 
   // Sync tab state with filter (reverse mapping: database value → tab label)
@@ -397,101 +422,107 @@ const Items = () => {
                   </button>
                 </div>
               ) : (
-                paginatedItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="relative bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
-                  >
-                    {/* Three-dot menu (horizontal) */}
+                paginatedGroupedItems.map((group) => {
+                  // Use first variation as representative item for operations
+                  const representativeItem = group.variations[0];
+                  const hasMultipleSizes = group.variations.length > 1;
+                  
+                  return (
                     <div
-                      className="absolute top-3 right-3"
-                      ref={openMenuId === item.id ? menuRef : null}
+                      key={group.groupKey}
+                      className="relative bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
                     >
-                      <div className="relative inline-block">
+                      {/* Three-dot menu (horizontal) */}
+                      <div
+                        className="absolute top-3 right-3"
+                        ref={openMenuId === group.groupKey ? menuRef : null}
+                      >
+                        <div className="relative inline-block">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenMenuId(
+                                openMenuId === group.groupKey ? null : group.groupKey
+                              )
+                            }
+                            className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                            aria-label="More options"
+                          >
+                            <MoreHorizontal size={18} />
+                          </button>
+                          {openMenuId === group.groupKey && (
+                            <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                              <button
+                                onClick={() => {
+                                  openEditModal(representativeItem);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg transition-colors"
+                              >
+                                Edit Item
+                              </button>
+                              <button
+                                onClick={() => {
+                                  openDeleteModal(representativeItem);
+                                  setOpenMenuId(null);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 last:rounded-b-lg transition-colors"
+                              >
+                                Delete Item
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Product Image */}
+                      <div className="mb-4">
+                        <div className="w-full h-48 sm:h-56 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
+                          {group.image ? (
+                            <img
+                              src={group.image}
+                              alt={group.name}
+                              className="max-h-full w-auto object-contain"
+                              onError={(e) => {
+                                e.target.src =
+                                  "https://via.placeholder.com/400x300";
+                              }}
+                            />
+                          ) : (
+                            <div className="text-xs text-gray-400">
+                              No Image Available
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Product Content */}
+                      <div className="flex-1 flex flex-col gap-2">
+                        <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
+                          {group.name}
+                        </h3>
+
+                        {/* Item Type Label */}
+                        <p className="text-xs text-gray-500 font-medium">
+                          {group.itemType}
+                        </p>
+
+                        {/* Horizontal Divider */}
+                        <hr className="border-gray-200 my-1" />
+
+                        {/* View Details Link - Centered */}
                         <button
                           type="button"
-                          onClick={() =>
-                            setOpenMenuId(
-                              openMenuId === item.id ? null : item.id
-                            )
-                          }
-                          className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                          aria-label="More options"
+                          onClick={() => openItemDetailsModal(representativeItem)}
+                          className="mt-1 flex items-center justify-center gap-1 text-xs font-medium text-[#0C2340] hover:text-[#e68b00]"
                         >
-                          <MoreHorizontal size={18} />
+                          <span>View Details</span>
+                          <span aria-hidden="true">→</span>
                         </button>
-                        {openMenuId === item.id && (
-                          <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                            <button
-                              onClick={() => {
-                                openEditModal(item);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg transition-colors"
-                            >
-                              Edit Item
-                            </button>
-                            <button
-                              onClick={() => {
-                                openDeleteModal(item);
-                                setOpenMenuId(null);
-                              }}
-                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 last:rounded-b-lg transition-colors"
-                            >
-                              Delete Item
-                            </button>
-                          </div>
-                        )}
                       </div>
                     </div>
-
-                    {/* Product Image */}
-                    <div className="mb-4">
-                      <div className="w-full h-48 sm:h-56 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
-                        {item.image ? (
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="max-h-full w-auto object-contain"
-                            onError={(e) => {
-                              e.target.src =
-                                "https://via.placeholder.com/400x300";
-                            }}
-                          />
-                        ) : (
-                          <div className="text-xs text-gray-400">
-                            No Image Available
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Product Content */}
-                    <div className="flex-1 flex flex-col gap-2">
-                      <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
-                        {item.name}
-                      </h3>
-
-                      {/* Uniform Label */}
-                      <p className="text-xs text-gray-500 font-medium">
-                        Uniform
-                      </p>
-
-                      {/* Horizontal Divider */}
-                      <hr className="border-gray-200 my-1" />
-
-                      {/* View Details Link - Centered */}
-                      <button
-                        type="button"
-                        onClick={() => openItemDetailsModal(item)}
-                        className="mt-1 flex items-center justify-center gap-1 text-xs font-medium text-[#0C2340] hover:text-[#e68b00]"
-                      >
-                        <span>View Details</span>
-                        <span aria-hidden="true">→</span>
-                      </button>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           ) : (
@@ -513,7 +544,7 @@ const Items = () => {
 
                 {/* Table Body - Cream/Beige rows */}
                 <div>
-                  {paginatedItems.length === 0 ? (
+                  {paginatedGroupedItems.length === 0 ? (
                     <div className="px-6 py-12 text-center text-gray-500 bg-white">
                       <p className="text-sm font-medium">No items found</p>
                       <p className="text-xs mt-1">
@@ -521,81 +552,87 @@ const Items = () => {
                       </p>
                     </div>
                   ) : (
-                    paginatedItems.map((item, index) => (
-                      <div
-                        key={item.id}
-                        className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 hover:bg-[#FFF8E7] transition-colors ${
-                          index === 0 ? "bg-[#FFF5E0]" : "bg-white"
-                        }`}
-                      >
-                        {/* Image */}
-                        <div>
-                          <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-                            onError={(e) => {
-                              e.target.src = "https://via.placeholder.com/56";
-                            }}
-                          />
-                        </div>
+                    paginatedGroupedItems.map((group, index) => {
+                      // Use first variation as representative item for operations
+                      const representativeItem = group.variations[0];
+                      const hasMultipleSizes = group.variations.length > 1;
+                      
+                      return (
+                        <div
+                          key={group.groupKey}
+                          className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 hover:bg-[#FFF8E7] transition-colors ${
+                            index === 0 ? "bg-[#FFF5E0]" : "bg-white"
+                          }`}
+                        >
+                          {/* Image */}
+                          <div>
+                            <img
+                              src={group.image}
+                              alt={group.name}
+                              className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                              onError={(e) => {
+                                e.target.src = "https://via.placeholder.com/56";
+                              }}
+                            />
+                          </div>
 
-                        {/* Item Name */}
-                        <div className="text-[#0C2340] text-sm font-medium">
-                          {item.name}
-                        </div>
+                          {/* Item Name */}
+                          <div className="text-[#0C2340] text-sm font-medium">
+                            {group.name}
+                          </div>
 
-                        {/* Item Type */}
-                        <div className="text-[#e68b00] text-sm">
-                          {item.itemType || "Uniform"}
-                        </div>
+                          {/* Item Type */}
+                          <div className="text-[#e68b00] text-sm">
+                            {group.itemType}
+                          </div>
 
-                        {/* Grade Level */}
-                        <div className="text-[#0C2340] text-sm">
-                          {item.educationLevel}
-                        </div>
+                          {/* Grade Level */}
+                          <div className="text-[#0C2340] text-sm">
+                            {group.educationLevel}
+                          </div>
 
-                        {/* Cost Summary */}
-                        <div className="text-[#003363] text-sm font-semibold">
-                          ₱ {item.price?.toLocaleString() || "0.00"}
-                        </div>
+                          {/* Cost Summary */}
+                          <div className="text-[#003363] text-sm font-semibold">
+                            ₱ {representativeItem.price?.toLocaleString() || "0.00"}
+                          </div>
 
-                        {/* Action */}
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openItemDetailsModal(item)}
-                            className="p-2 rounded-lg hover:bg-[#0C2340]/10 text-[#0C2340] transition-colors"
-                            title="View Details"
-                            aria-label="View item details"
-                          >
-                            <Eye size={18} />
-                          </button>
-                          <button
-                            onClick={() => openEditModal(item)}
-                            className="p-2 rounded-lg hover:bg-blue-50 text-[#003363] transition-colors"
-                            title="Edit"
-                            aria-label="Edit item"
-                          >
-                            <Pencil size={18} />
-                          </button>
-                          <button
-                            onClick={() => openDeleteModal(item)}
-                            className="p-2 rounded-lg hover:bg-red-50 text-[#e68b00] transition-colors"
-                            title="Delete"
-                            aria-label="Delete item"
-                          >
-                            <Trash2 size={18} />
-                          </button>
+                          {/* Action */}
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => openItemDetailsModal(representativeItem)}
+                              className="p-2 rounded-lg hover:bg-[#0C2340]/10 text-[#0C2340] transition-colors"
+                              title="View Details"
+                              aria-label="View item details"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button
+                              onClick={() => openEditModal(representativeItem)}
+                              className="p-2 rounded-lg hover:bg-blue-50 text-[#003363] transition-colors"
+                              title="Edit"
+                              aria-label="Edit item"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(representativeItem)}
+                              className="p-2 rounded-lg hover:bg-red-50 text-[#e68b00] transition-colors"
+                              title="Delete"
+                              aria-label="Delete item"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
 
               {/* Mobile Card View */}
               <div className="md:hidden space-y-3">
-                {paginatedItems.length === 0 ? (
+                {paginatedGroupedItems.length === 0 ? (
                   <div className="px-4 py-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
                     <p className="text-sm font-medium">No items found</p>
                     <p className="text-xs mt-1">
@@ -603,62 +640,67 @@ const Items = () => {
                     </p>
                   </div>
                 ) : (
-                  paginatedItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-3"
-                    >
-                      {/* Image */}
-                      <div className="flex-shrink-0">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg border border-gray-200"
-                          onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/64";
-                          }}
-                        />
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 flex flex-col gap-1">
-                        <div className="flex justify-between items-start gap-2">
-                          <div>
-                            <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
-                              {item.name}
-                            </h3>
-                            <p className="text-xs text-[#e68b00]">
-                              {item.itemType || "Uniform"}
-                            </p>
-                          </div>
-                          <div className="text-xs font-semibold text-[#003363]">
-                            ₱ {item.price?.toLocaleString() || "0.00"}
-                          </div>
+                  paginatedGroupedItems.map((group) => {
+                    // Use first variation as representative item for operations
+                    const representativeItem = group.variations[0];
+                    const hasMultipleSizes = group.variations.length > 1;
+                    
+                    return (
+                      <div
+                        key={group.groupKey}
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-3"
+                      >
+                        {/* Image */}
+                        <div className="flex-shrink-0">
+                          <img
+                            src={group.image}
+                            alt={group.name}
+                            className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                            onError={(e) => {
+                              e.target.src = "https://via.placeholder.com/64";
+                            }}
+                          />
                         </div>
+
+                        {/* Content */}
+                        <div className="flex-1 flex flex-col gap-1">
+                          <div className="flex justify-between items-start gap-2">
+                            <div>
+                              <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
+                                {group.name}
+                              </h3>
+                              <p className="text-xs text-[#e68b00]">
+                                {group.itemType}
+                              </p>
+                            </div>
+                            <div className="text-xs font-semibold text-[#003363]">
+                              ₱ {representativeItem.price?.toLocaleString() || "0.00"}
+                            </div>
+                          </div>
 
                         <p className="text-xs text-gray-500">
                           Grade Level:{" "}
                           <span className="text-[#0C2340]">
-                            {item.educationLevel || "—"}
+                            {group.educationLevel || "—"}
                           </span>
                         </p>
 
                         {/* Actions */}
                         <div className="mt-2 flex justify-end gap-2">
                           <button
-                            onClick={() => openItemDetailsModal(item)}
+                            onClick={() => openItemDetailsModal(representativeItem)}
                             className="px-3 py-1.5 rounded-lg bg-[#0C2340]/10 text-xs font-medium text-[#0C2340] hover:bg-[#0C2340]/20 transition-colors"
                           >
                             View Details
                           </button>
                           <button
-                            onClick={() => openEditModal(item)}
+                            onClick={() => openEditModal(representativeItem)}
                             className="px-3 py-1.5 rounded-lg bg-blue-50 text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
                           >
                             Edit
                           </button>
                           <button
-                            onClick={() => openDeleteModal(item)}
+                            onClick={() => openDeleteModal(representativeItem)}
                             className="px-3 py-1.5 rounded-lg bg-red-50 text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
                           >
                             Delete
@@ -666,7 +708,8 @@ const Items = () => {
                         </div>
                       </div>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
@@ -675,8 +718,13 @@ const Items = () => {
           {/* Results Info */}
           {searchTerm && (
             <div className="mt-4 text-sm text-gray-600">
-              Showing {filteredItems.length} result
-              {filteredItems.length !== 1 ? "s" : ""} for "{searchTerm}"
+              Showing {groupedItems.length} result
+              {groupedItems.length !== 1 ? "s" : ""} for "{searchTerm}"
+              {groupedItems.length < filteredItems.length && (
+                <span className="ml-1 text-gray-500">
+                  ({filteredItems.length} total items)
+                </span>
+              )}
             </div>
           )}
         </div>

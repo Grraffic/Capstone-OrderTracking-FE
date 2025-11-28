@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useSocket } from "../../../context/SocketContext";
 
 // API base URL - adjust based on your environment
 const API_BASE_URL =
@@ -126,6 +127,41 @@ export const useItems = () => {
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  /**
+   * Listen for real-time item updates via Socket.IO
+   * This refreshes items when stock is reduced due to orders
+   */
+  const { on, off, isConnected } = useSocket();
+  
+  useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+
+    // Listen for item updates (when stock is reduced from orders)
+    const handleItemUpdate = (data) => {
+      console.log("📡 Received item update via Socket.IO:", data);
+      // Refresh items list to show updated stock
+      fetchItems();
+    };
+
+    // Listen for order created events (which may trigger item updates)
+    const handleOrderCreated = (data) => {
+      console.log("📡 Received order created event:", data);
+      // Refresh items list to show updated stock
+      fetchItems();
+    };
+
+    on("item:updated", handleItemUpdate);
+    on("order:created", handleOrderCreated);
+
+    // Cleanup on unmount
+    return () => {
+      off("item:updated", handleItemUpdate);
+      off("order:created", handleOrderCreated);
+    };
+  }, [isConnected, on, off, fetchItems]);
 
   /**
    * Calculate stock status based on quantity
@@ -303,6 +339,7 @@ export const useItems = () => {
             educationLevel: result.data.education_level,
             category: result.data.category,
             itemType: result.data.item_type,
+            size: result.data.size || "N/A",
             description: result.data.description,
             descriptionText: result.data.description_text,
             material: result.data.material,
@@ -400,6 +437,7 @@ export const useItems = () => {
             educationLevel: result.data.education_level,
             category: result.data.category,
             itemType: result.data.item_type,
+            size: result.data.size || "N/A",
             description: result.data.description,
             descriptionText: result.data.description_text,
             material: result.data.material,

@@ -231,6 +231,21 @@ const ProductDetailsPage = () => {
         ? sizeMapping[selectedSize] || selectedSize
         : "N/A";
 
+      // Determine order intent based on button state
+      // If button shows "Pre-Order", user clicked Pre-Order button
+      // If button shows "Order Now", user clicked Order Now button
+      let orderIntent = "orderNow"; // Default to Order Now
+      
+      if (requiresSizeSelection && selectedSize) {
+        // For items with size selection, check if selected size is out of stock
+        if (selectedSizeData && selectedSizeData.stock <= 0) {
+          orderIntent = "preOrder";
+        }
+      } else if (isOutOfStock) {
+        // For items without size selection, check overall stock
+        orderIntent = "preOrder";
+      }
+
       // Don't add to cart - go directly to checkout with this item only
       // Create a temporary checkout item (not added to cart)
       const checkoutItem = {
@@ -241,8 +256,8 @@ const ProductDetailsPage = () => {
         id: `temp-${product.id}`,
       };
 
-      // Set this as the direct checkout item
-      setDirectCheckoutItems([checkoutItem]);
+      // Set this as the direct checkout item with order intent
+      setDirectCheckoutItems([checkoutItem], orderIntent);
 
       // Navigate to checkout page
       navigate("/student/checkout");

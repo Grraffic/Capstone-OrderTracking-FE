@@ -13,6 +13,63 @@ import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
 
 /**
+ * Helper function to download SVG as PNG
+ */
+const downloadSVGAsPNG = (svgElement, filename) => {
+  try {
+    // Clone the SVG to avoid modifying the original
+    const clonedSvg = svgElement.cloneNode(true);
+    
+    // Get SVG dimensions
+    const svgRect = svgElement.getBoundingClientRect();
+    const width = svgRect.width || 256;
+    const height = svgRect.height || 256;
+    
+    // Serialize SVG to string
+    const svgData = new XMLSerializer().serializeToString(clonedSvg);
+    
+    // Create canvas
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Set white background
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Convert SVG to image and draw on canvas
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert canvas to PNG and download
+      const pngFile = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.download = filename;
+      downloadLink.href = pngFile;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+    };
+    
+    img.onerror = () => {
+      console.error("Failed to load SVG image");
+      alert("Failed to download QR code. Please try again.");
+    };
+    
+    // Convert SVG to data URL
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    img.src = url;
+  } catch (error) {
+    console.error("Error downloading QR code:", error);
+    alert("Failed to download QR code. Please try again.");
+  }
+};
+
+/**
  * QR Code Modal Component
  */
 const QRCodeModal = ({ order, onClose, profileData }) => {
@@ -127,6 +184,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
                 }
                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
                 level="M"
+                data-qr-code="true"
               />
             )}
           </div>
@@ -142,15 +200,22 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
           </button>
           <button
             onClick={() => {
-              // Create a download link for the QR code
-              const canvas = document.querySelector("canvas");
-              if (canvas) {
-                const url = canvas.toDataURL("image/png");
-                const link = document.createElement("a");
-                link.download = `QR-${minimalQRData.orderNumber}.png`;
-                link.href = url;
-                link.click();
+              // Find the SVG element (react-qr-code generates SVG)
+              const svgElement = document.querySelector('svg[data-qr-code="true"]');
+              if (!svgElement) {
+                // Fallback: try to find any SVG in the modal container
+                const modalContainer = document.querySelector('.bg-white.p-3\\ sm\\:p-4\\ md\\:p-6');
+                if (modalContainer) {
+                  const modalSvg = modalContainer.querySelector('svg');
+                  if (modalSvg) {
+                    downloadSVGAsPNG(modalSvg, `QR-${minimalQRData.orderNumber}.png`);
+                    return;
+                  }
+                }
+                alert("QR code not found. Please try again.");
+                return;
               }
+              downloadSVGAsPNG(svgElement, `QR-${minimalQRData.orderNumber}.png`);
             }}
             className="flex-1 py-2 px-3 sm:px-4 text-xs sm:text-sm bg-white border-2 border-[#003363] text-[#003363] rounded-full font-semibold hover:bg-gray-50 transition-colors"
           >

@@ -88,7 +88,7 @@ const Orders = () => {
       activeStatusTab === "Processing"
         ? "pending"
         : activeStatusTab === "Claimed"
-        ? "completed"
+        ? "claimed"
         : null,
     educationLevel:
       educationLevelFilter !== "All Education Levels"
@@ -124,7 +124,7 @@ const Orders = () => {
         status:
           order.status === "pending"
             ? "Processing"
-            : order.status === "completed"
+            : order.status === "completed" || order.status === "claimed"
             ? "Claimed"
             : order.status,
         totalAmount: order.total_amount || 0,
