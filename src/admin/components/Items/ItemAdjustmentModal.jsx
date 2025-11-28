@@ -1,7 +1,7 @@
 import { Pencil, Plus, Users } from "lucide-react";
 import { useItemAdjustmentForm } from "../../hooks";
 import { useState, useEffect } from "react";
-import { inventoryAPI } from "../../../services/api";
+import { itemsAPI } from "../../../services/api";
 
 const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
   const {
@@ -38,7 +38,7 @@ const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
 
       try {
         setLoadingPreOrders(true);
-        const response = await inventoryAPI.getPreOrderCount(selectedItem.id);
+        const response = await itemsAPI.getPreOrderCount(selectedItem.id);
         if (response.data.success) {
           setPreOrderCount(response.data.count);
         }
@@ -56,10 +56,11 @@ const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
   if (!isOpen) return null;
 
   // Check if adding stock will trigger notifications
-  const willNotifyStudents = selectedItem?.stock === 0 &&
-                             adjustmentType === "Inventory Threshold" &&
-                             parseInt(formData.stock || 0) > 0 &&
-                             preOrderCount > 0;
+  const willNotifyStudents =
+    selectedItem?.stock === 0 &&
+    adjustmentType === "Inventory Threshold" &&
+    parseInt(formData.stock || 0) > 0 &&
+    preOrderCount > 0;
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -111,23 +112,30 @@ const ItemAdjustmentModal = ({ isOpen, selectedItem, onClose, onSubmit }) => {
             <div className="flex items-center gap-2 text-blue-800">
               <Users size={18} />
               <p className="text-sm font-medium">
-                {preOrderCount} {preOrderCount === 1 ? 'student' : 'students'} will be notified when you add stock to this item
+                {preOrderCount} {preOrderCount === 1 ? "student" : "students"}{" "}
+                will be notified when you add stock to this item
               </p>
             </div>
           </div>
         )}
 
         {/* Out of Stock Info */}
-        {selectedItem?.stock === 0 && preOrderCount > 0 && !willNotifyStudents && (
-          <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-200">
-            <div className="flex items-center gap-2 text-yellow-800">
-              <Users size={18} />
-              <p className="text-sm font-medium">
-                {loadingPreOrders ? 'Checking pre-orders...' : `${preOrderCount} ${preOrderCount === 1 ? 'student has' : 'students have'} pre-ordered this item`}
-              </p>
+        {selectedItem?.stock === 0 &&
+          preOrderCount > 0 &&
+          !willNotifyStudents && (
+            <div className="px-6 py-3 bg-yellow-50 border-b border-yellow-200">
+              <div className="flex items-center gap-2 text-yellow-800">
+                <Users size={18} />
+                <p className="text-sm font-medium">
+                  {loadingPreOrders
+                    ? "Checking pre-orders..."
+                    : `${preOrderCount} ${
+                        preOrderCount === 1 ? "student has" : "students have"
+                      } pre-ordered this item`}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">

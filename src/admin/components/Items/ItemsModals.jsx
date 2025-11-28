@@ -1,13 +1,25 @@
-import { X, AlertTriangle, Pencil, Plus, Users } from "lucide-react";
-import { useItemsModalForm } from "../../hooks";
-import { useState, useMemo, useEffect } from "react";
 import {
-  EDUCATION_LEVELS,
-  ITEM_TYPES,
-  MATERIAL_TYPES,
-  getFilteredCategories,
-} from "../../constants/inventoryOptions";
+  X,
+  AlertTriangle,
+  Pencil,
+  Plus,
+  Users,
+  ChevronLeft,
+  Bold,
+  Italic,
+  List,
+  ListOrdered,
+  AlignLeft,
+  AlignRight,
+  Palette,
+  RemoveFormatting,
+  Trash2,
+} from "lucide-react";
+import { useItemsModalForm } from "../../hooks";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { EDUCATION_LEVELS, ITEM_TYPES } from "../../constants/inventoryOptions";
 import { orderAPI } from "../../../services/api";
+import { HexColorPicker, HexColorInput } from "react-colorful";
 
 /**
  * ItemsModals Component
@@ -37,16 +49,28 @@ const ItemsModals = ({
   const [focusedSection, setFocusedSection] = useState(null);
   const [preOrderCount, setPreOrderCount] = useState(0);
   const [checkingPreOrders, setCheckingPreOrders] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [selectedColor, setSelectedColor] = useState("#E68B00");
+  // Local-only UI state for variants
+  const [variants, setVariants] = useState([
+    {
+      name: "",
+      values: ["", ""],
+    },
+  ]);
+  const [variantPrices, setVariantPrices] = useState(["", ""]);
+  const [variantStocks, setVariantStocks] = useState(["", ""]); // Stock per variant
+  const [selectedVariantIndices, setSelectedVariantIndices] = useState([0]); // Multiple selection
+  const editorRef = useRef(null);
+  const isEditorInitialized = useRef(false);
+  const colorPickerRef = useRef(null);
 
   const {
     formData,
     errors,
-    adjustmentType,
     imagePreview,
     isDragging,
     handleInputChange,
-    handleAdjustmentTypeChange,
-    handleImageUpload,
     handleDragOver,
     handleDragLeave,
     handleDrop,
@@ -65,9 +89,55 @@ const ItemsModals = ({
     modalState
   );
 
-  // Get filtered categories based on selected education level
-  const filteredCategories = useMemo(() => {
-    return getFilteredCategories(formData.educationLevel);
+  // Grade level options override (use existing values, custom labels)
+  const gradeLevelOptions = useMemo(
+    () =>
+      EDUCATION_LEVELS.map((level) => {
+        if (level.value === "Kindergarten") {
+          return { ...level, label: "Preschool" };
+        }
+        return level;
+      }),
+    []
+  );
+
+  // Grade level category options mapping
+  const gradeLevelCategoryOptions = useMemo(() => {
+    const map = {
+      "All Education Levels": [
+        "All Levels",
+        "Prekindergarten",
+        "Kindergarten",
+        "Grade 1",
+        "Grade 2",
+        "Grade 3",
+        "Grade 4",
+        "Grade 5",
+        "Grade 6",
+        "Grade 7",
+        "Grade 8",
+        "Grade 9",
+        "Grade 10",
+        "Grade 11",
+        "Grade 12",
+        "College",
+      ],
+      Kindergarten: ["Prekindergarten", "Kindergarten"],
+      Elementary: [
+        "Grade 1",
+        "Grade 2",
+        "Grade 3",
+        "Grade 4",
+        "Grade 5",
+        "Grade 6",
+      ],
+      "Junior High School": ["Grade 7", "Grade 8", "Grade 9", "Grade 10"],
+      "Senior High School": ["Grade 11", "Grade 12"],
+      College: ["College"],
+    };
+
+    const key = formData.educationLevel || "All Education Levels";
+    return map[key] || [];
   }, [formData.educationLevel]);
 
   // Check for pre-orders when adding a new item with stock > 0
@@ -127,10 +197,149 @@ const ItemsModals = ({
     formData.stock,
   ]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    handleFormSubmit(e);
+
+    // If adding and multiple sizes are selected, create ONE item with comma-separated sizes
+    if (modalState.mode === "add" && selectedVariantIndices.length > 0) {
+      // Calculate total stock from all selected variants
+      const totalStock = selectedVariantIndices.reduce((sum, index) => {
+        return sum + (Number(variantStocks[index]) || 0);
+      }, 0);
+
+      // Use the first selected variant's price, or formData.price as fallback
+      const firstSelectedIndex = selectedVariantIndices[0];
+      const itemPrice =
+        variantPrices[firstSelectedIndex] || formData.price || 0;
+
+      // The size field is already set by the checkbox handler with comma-separated values
+      // But ensure it's properly formatted
+      const sizeValues = selectedVariantIndices
+        .map((index) => {
+          const val = variants[0].values[index];
+          return (
+            val || (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "")
+          );
+        })
+        .filter(Boolean);
+      const sizeString = sizeValues.join(", ");
+
+      // Store per-size stock and price information in note field as JSON
+      const sizeVariations = selectedVariantIndices.map((index) => {
+        const sizeValue =
+          variants[0].values[index] ||
+          (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "");
+        return {
+          size: sizeValue.trim(),
+          stock: Number(variantStocks[index]) || 0,
+          price: Number(variantPrices[index]) || Number(itemPrice) || 0,
+        };
+      });
+
+      // Create a single item with all selected sizes
+      const itemToAdd = {
+        ...formData,
+        size: sizeString || formData.size || "N/A",
+        stock: totalStock, // Total stock for backward compatibility
+        price: Number(itemPrice) || 0, // Default price for backward compatibility
+        note: JSON.stringify({
+          sizeVariations: sizeVariations,
+          _type: "sizeVariations", // Marker to identify this as size variation data
+        }),
+      };
+
+      // Add the single item
+      try {
+        onAdd(itemToAdd);
+        // Close modal after a short delay to allow item to be added
+        setTimeout(() => {
+          onClose();
+        }, 500);
+      } catch (error) {
+        console.error("Error adding item:", error);
+        // Don't close modal on error so user can see the issue
+      }
+    } else {
+      // For edit mode or single item, use normal submission
+      handleFormSubmit(e);
+    }
   };
+
+  // Initialize editor content only once when modal opens for add/edit modes
+  useEffect(() => {
+    // Small delay to ensure the editor ref is available after render
+    const timeoutId = setTimeout(() => {
+      if (
+        editorRef.current &&
+        !isEditorInitialized.current &&
+        modalState.isOpen &&
+        (modalState.mode === "add" || modalState.mode === "edit")
+      ) {
+        const initialContent =
+          formData.descriptionText ||
+          "Complete Set<br/>This uniform is for Senior High School students only.";
+        editorRef.current.innerHTML = initialContent;
+        isEditorInitialized.current = true;
+      }
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [formData.descriptionText, modalState.isOpen, modalState.mode]);
+
+  // Reset initialization flag when modal closes or mode changes
+  useEffect(() => {
+    if (!modalState.isOpen) {
+      isEditorInitialized.current = false;
+    }
+  }, [modalState.isOpen]);
+
+  // Initialize variant prices when editing an item
+  useEffect(() => {
+    if (
+      modalState.isOpen &&
+      modalState.mode === "edit" &&
+      selectedItem?.price
+    ) {
+      // Initialize first variant price with the item's price
+      setVariantPrices((prev) => {
+        if (prev[0] === "" && selectedItem.price) {
+          return [String(selectedItem.price), prev[1] || ""];
+        }
+        return prev;
+      });
+      // Initialize selected indices based on size field
+      if (selectedItem.size && selectedItem.size !== "N/A") {
+        const sizes = selectedItem.size.split(",").map((s) => s.trim());
+        const selectedIndices = variants[0].values
+          .map((val, idx) => {
+            const normalizedVal =
+              val || (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
+            return sizes.some(
+              (size) =>
+                normalizedVal.includes(size) || size.includes(normalizedVal)
+            )
+              ? idx
+              : null;
+          })
+          .filter((idx) => idx !== null);
+        setSelectedVariantIndices(
+          selectedIndices.length > 0 ? selectedIndices : [0]
+        );
+      } else {
+        setSelectedVariantIndices([0]);
+      }
+    } else if (modalState.isOpen && modalState.mode === "add") {
+      // Reset variant prices and stocks for add mode
+      setVariantPrices(["", ""]);
+      setVariantStocks(["", ""]);
+      setSelectedVariantIndices([0]);
+    }
+  }, [
+    modalState.isOpen,
+    modalState.mode,
+    selectedItem?.price,
+    selectedItem?.size,
+    variants,
+  ]);
 
   if (!modalState.isOpen) return null;
 
@@ -313,10 +522,141 @@ const ItemsModals = ({
     );
   }
 
+  // Helpers for Variants UI (local-only, not persisted yet)
+  const handleVariantNameChange = (index, value) => {
+    setVariants((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], name: value };
+      return next;
+    });
+  };
+
+  const handleVariantValueChange = (variantIndex, valueIndex, value) => {
+    setVariants((prev) => {
+      const next = [...prev];
+      const values = [...next[variantIndex].values];
+      values[valueIndex] = value;
+      next[variantIndex] = { ...next[variantIndex], values };
+      return next;
+    });
+
+    // Keep prices array length in sync with values
+    setVariantPrices((prev) => {
+      const next = [...prev];
+      while (next.length < next.length) {
+        next.push("");
+      }
+      return next;
+    });
+  };
+
+  const handleAddVariantValue = (variantIndex) => {
+    setVariants((prev) => {
+      const next = [...prev];
+      const values = [...next[variantIndex].values, ""];
+      next[variantIndex] = { ...next[variantIndex], values };
+      return next;
+    });
+
+    // Preserve existing prices and stocks when adding new values
+    setVariantPrices((prev) => {
+      const currentLength = variants[variantIndex].values.length;
+      const newPrices = [...prev];
+      // Only add empty string if we're actually adding a new value
+      if (newPrices.length <= currentLength) {
+        newPrices.push("");
+      }
+      return newPrices;
+    });
+
+    setVariantStocks((prev) => {
+      const currentLength = variants[variantIndex].values.length;
+      const newStocks = [...prev];
+      // Only add empty string if we're actually adding a new value
+      if (newStocks.length <= currentLength) {
+        newStocks.push("");
+      }
+      return newStocks;
+    });
+  };
+
+  const handleRemoveVariantValue = (variantIndex, valueIndex) => {
+    // Don't allow removing if there's only one value
+    if (variants[variantIndex].values.length <= 1) {
+      return;
+    }
+
+    setVariants((prev) => {
+      const next = [...prev];
+      const values = next[variantIndex].values.filter(
+        (_, idx) => idx !== valueIndex
+      );
+      next[variantIndex] = { ...next[variantIndex], values };
+      return next;
+    });
+
+    // Remove corresponding price and stock
+    setVariantPrices((prev) => {
+      const newPrices = prev.filter((_, idx) => idx !== valueIndex);
+      return newPrices;
+    });
+
+    setVariantStocks((prev) => {
+      const newStocks = prev.filter((_, idx) => idx !== valueIndex);
+      return newStocks;
+    });
+
+    // Update selected indices if the removed value was selected
+    setSelectedVariantIndices((prev) => {
+      const newIndices = prev
+        .filter((idx) => idx !== valueIndex)
+        .map((idx) => (idx > valueIndex ? idx - 1 : idx));
+      return newIndices.length > 0 ? newIndices : [0];
+    });
+  };
+
+  // Rich text editor helpers for Description / Note
+  const syncEditorToForm = () => {
+    if (!editorRef.current) return;
+    const html = editorRef.current.innerHTML;
+    handleInputChange({
+      target: { name: "descriptionText", value: html },
+    });
+  };
+
+  const handleRichTextInput = () => {
+    syncEditorToForm();
+  };
+
+  const applyEditorCommand = (command, value = null) => {
+    if (!editorRef.current || typeof document === "undefined") return;
+
+    // Save the current selection
+    const selection = window.getSelection();
+    const range =
+      selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    // Ensure editor has focus
+    editorRef.current.focus();
+
+    // Restore selection if it was lost
+    if (range) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+
+    try {
+      document.execCommand(command, false, value);
+    } catch {
+      // Silently ignore if execCommand is not available
+    }
+    syncEditorToForm();
+  };
+
   // Add/Edit Item Modal
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Pre-Order Notification Banner - Only for Add mode */}
         {modalState.mode === "add" &&
           preOrderCount > 0 &&
@@ -339,536 +679,585 @@ const ItemsModals = ({
             </div>
           )}
 
-        {/* Content - 2 Column Layout */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 h-full">
-            {/* Left Column - Add Inventory Item */}
-            <div className="bg-white p-6 border-r border-gray-200 space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Pencil size={18} />
-                  Add Inventory Item
-                </h3>
+        {/* Content - Single Column Centered Card */}
+        <form
+          onSubmit={handleSubmit}
+          className="flex-1 overflow-y-auto bg-gray-50 px-6 py-5"
+        >
+          {/* Breadcrumb (outside white card) */}
+          <div className="max-w-2xl mx-auto mb-4">
+            <div className="text-xs text-gray-500">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex items-center gap-1 hover:text-gray-700"
+              >
+                <ChevronLeft size={16} />
+                <span className="font-medium">Items</span>
+              </button>
+              <p className="mt-1 font-medium">Item Details</p>
+            </div>
+          </div>
 
-                {/* Adjustment Type - Radio Buttons */}
-                <div className="mb-6 pb-4 border-b border-gray-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">
-                    Adjustment Type
-                  </label>
-                  <div className="flex gap-3">
-                    <label
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                        adjustmentType === "Inventory Threshold"
-                          ? "bg-[#003363] border-blue-900"
-                          : "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="adjustmentType"
-                        value="Inventory Threshold"
-                        checked={adjustmentType === "Inventory Threshold"}
-                        onChange={() =>
-                          handleAdjustmentTypeChange("Inventory Threshold")
-                        }
-                        className="w-5 h-5 text-blue-900 border-gray-300 focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span
-                        className={`text-sm font-medium ${
-                          adjustmentType === "Inventory Threshold"
-                            ? "text-[#f3f3f3]"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        Inventory Threshold
-                      </span>
-                    </label>
-                    <label
-                      className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ${
-                        adjustmentType === "Item Details"
-                          ? "bg-[#003363] border-blue-900"
-                          : "bg-gray-50 border-gray-300 hover:bg-gray-100"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="adjustmentType"
-                        value="Item Details"
-                        checked={adjustmentType === "Item Details"}
-                        onChange={() =>
-                          handleAdjustmentTypeChange("Item Details")
-                        }
-                        className="w-5 h-5 text-blue-900 border-gray-300 focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span
-                        className={`text-sm font-medium ${
-                          adjustmentType === "Item Details"
-                            ? "text-[#f3f3f3]"
-                            : "text-gray-700"
-                        }`}
-                      >
-                        Item Details
-                      </span>
-                    </label>
-                  </div>
+          <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+            {/* Header: Title, Size Guide, and Centered Image Upload */}
+            <div className="space-y-4">
+              {/* Item name + item type with size info on the right */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-semibold text-[#0C2340] truncate">
+                    {formData.name || "Item Name"}
+                  </h3>
+                  <p className="mt-1 text-sm font-medium text-orange-500">
+                    {formData.itemType || "Item Type"}
+                  </p>
                 </div>
 
-                {/* Form Fields - Item Details */}
-                {adjustmentType === "Item Details" && (
-                  <div
-                    className={`space-y-5 p-4 rounded-lg transition-colors duration-200 ${
-                      focusedSection === "Item Details" ? "bg-blue-50" : ""
-                    }`}
-                    onFocus={() => setFocusedSection("Item Details")}
-                    onBlur={() => setFocusedSection(null)}
-                  >
-                    {/* Image Upload */}
-                    <div className="text-center">
-                      <div
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        onClick={handleBrowseClick}
-                        className={`border-2 border-dashed rounded-lg p-8 cursor-pointer transition ${
-                          isDragging
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-300 hover:border-gray-400"
-                        }`}
-                      >
-                        {imagePreview ? (
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="mx-auto max-h-40 rounded-lg"
-                          />
-                        ) : (
-                          <>
-                            <Plus
-                              size={28}
-                              className="mx-auto text-gray-400 mb-2"
-                            />
-                            <p className="text-sm text-gray-600">
-                              Drag image here or{" "}
-                              <span className="text-blue-600 font-medium">
-                                Browse image
-                              </span>
-                            </p>
-                          </>
-                        )}
-                      </div>
-                      {errors.image && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.image}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Education Level */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Education Level
-                      </label>
-                      <div className="flex-1">
-                        <select
-                          name="educationLevel"
-                          value={formData.educationLevel}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select Education Level</option>
-                          {EDUCATION_LEVELS.map((level) => (
-                            <option key={level.value} value={level.value}>
-                              {level.label}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.educationLevel && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.educationLevel}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Category */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Item Category
-                      </label>
-                      <div className="flex-1">
-                        <select
-                          name="category"
-                          value={formData.category}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Item Category</option>
-                          {filteredCategories.map((category) => (
-                            <option key={category.value} value={category.value}>
-                              {category.label}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.category && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.category}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Size */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Size
-                      </label>
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          name="size"
-                          value={formData.size}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="e.g., Small, Medium, Large, XSmall, XLarge"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Description */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Description
-                      </label>
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          name="descriptionText"
-                          value={formData.descriptionText}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="Optional"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Material/Type */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Material/Type
-                      </label>
-                      <div className="flex-1">
-                        <select
-                          name="material"
-                          value={formData.material}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Material/Type</option>
-                          {MATERIAL_TYPES.map((material) => (
-                            <option key={material.value} value={material.value}>
-                              {material.label}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.material && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.material}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Item Type */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Item Type
-                      </label>
-                      <div className="flex-1">
-                        <select
-                          name="itemType"
-                          value={formData.itemType}
-                          onChange={handleInputChange}
-                          required
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">Select Item Type</option>
-                          {ITEM_TYPES.map((type) => (
-                            <option key={type.value} value={type.value}>
-                              {type.label}
-                            </option>
-                          ))}
-                        </select>
-                        {errors.itemType && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.itemType}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Stock Quantity */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Stock Quantity
-                      </label>
-                      <div className="flex-1">
-                        <input
-                          type="number"
-                          name="stock"
-                          value={formData.stock}
-                          onChange={handleInputChange}
-                          required
-                          min="0"
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="0"
-                        />
-                        {errors.stock && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.stock}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Price */}
-                    <div className="flex items-start gap-4">
-                      <label className="text-sm font-medium text-gray-700 pt-2.5 w-32 flex-shrink-0">
-                        Unit Price (₱)
-                      </label>
-                      <div className="flex-1">
-                        <input
-                          type="number"
-                          name="price"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          required
-                          min="0"
-                          step="0.01"
-                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          placeholder="0.00"
-                        />
-                        {errors.price && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {errors.price}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Inventory Threshold Form */}
-                {adjustmentType === "Inventory Threshold" && (
-                  <div
-                    className={`space-y-5 p-4 rounded-lg transition-colors duration-200 ${
-                      focusedSection === "Inventory Threshold"
-                        ? "bg-blue-50"
-                        : ""
-                    }`}
-                    onFocus={() => setFocusedSection("Inventory Threshold")}
-                    onBlur={() => setFocusedSection(null)}
-                  >
-                    {/* Three Fields Row: Physical Count, Available, Reorder Point */}
-                    <div className="grid grid-cols-3 gap-4">
-                      {/* Physical Count */}
-                      <div>
-                        <label
-                          htmlFor="physicalCount"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Physical Count
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            id="physicalCount"
-                            name="physicalCount"
-                            value={formData.physicalCount || ""}
-                            onChange={handleInputChange}
-                            placeholder="0"
-                            min="0"
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              errors.physicalCount
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                            Unit
-                          </span>
-                        </div>
-                        {errors.physicalCount && (
-                          <p className="mt-1 text-sm text-red-600">
-                            {errors.physicalCount}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Available */}
-                      <div>
-                        <label
-                          htmlFor="available"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Available
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            id="available"
-                            name="available"
-                            value={formData.available || ""}
-                            onChange={handleInputChange}
-                            placeholder="0"
-                            min="0"
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              errors.available
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                            Unit
-                          </span>
-                        </div>
-                        {errors.available && (
-                          <p className="mt-1 text-sm text-red-600">
-                            {errors.available}
-                          </p>
-                        )}
-                      </div>
-
-                      {/* Reorder Point */}
-                      <div>
-                        <label
-                          htmlFor="reorderPoint"
-                          className="block text-sm font-medium text-gray-700 mb-2"
-                        >
-                          Reorder Point
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="number"
-                            id="reorderPoint"
-                            name="reorderPoint"
-                            value={formData.reorderPoint || ""}
-                            onChange={handleInputChange}
-                            placeholder="0"
-                            min="0"
-                            className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                              errors.reorderPoint
-                                ? "border-red-500"
-                                : "border-gray-300"
-                            }`}
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
-                            Unit
-                          </span>
-                        </div>
-                        {errors.reorderPoint && (
-                          <p className="mt-1 text-sm text-red-600">
-                            {errors.reorderPoint}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Note Section */}
-                    <div>
-                      <label
-                        htmlFor="note"
-                        className="block text-sm font-medium text-gray-700 mb-2"
-                      >
-                        Note
-                      </label>
-                      <textarea
-                        id="note"
-                        name="note"
-                        value={formData.note || ""}
-                        onChange={handleInputChange}
-                        placeholder="Add notes or comments about this inventory adjustment..."
-                        rows="6"
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none ${
-                          errors.note ? "border-red-500" : "border-gray-300"
-                        }`}
-                      />
-                      {errors.note && (
-                        <p className="mt-1 text-sm text-red-600">
-                          {errors.note}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  className="p-1.5 hover:bg-gray-50 rounded-full transition-colors"
+                  aria-label="Size information"
+                  title="Size information"
+                >
+                  <span className="text-[11px] font-semibold text-blue-600">
+                    i
+                  </span>
+                </button>
               </div>
-            </div>
 
-            {/* Right Column - Item Detail Preview */}
-            <div className="bg-gray-50 p-6 border-l border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                Item Detail
-              </h3>
-
-              {/* Item Preview Card */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
-                {/* Image Preview */}
-                <div className="mb-4">
+              {/* Centered upload image under item name/type */}
+              <div className="flex justify-center">
+                <div
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  onClick={handleBrowseClick}
+                  className={`w-24 h-24 rounded-2xl border-2 flex items-center justify-center cursor-pointer transition bg-gray-50 overflow-hidden ${
+                    isDragging
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-dashed border-gray-300 hover:border-gray-400"
+                  }`}
+                >
                   {imagePreview ? (
                     <img
                       src={imagePreview}
-                      alt="Item preview"
-                      className="w-full h-48 object-cover rounded-lg border border-gray-200"
-                      onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/300";
-                      }}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50">
-                      <div className="text-center">
-                        <Plus
-                          size={32}
-                          className="mx-auto text-gray-400 mb-2"
-                        />
-                        <span className="text-gray-400 text-sm">
-                          No image selected
-                        </span>
-                      </div>
+                    <div className="text-center px-2">
+                      <Plus size={20} className="mx-auto text-gray-400 mb-1" />
+                      <p className="text-[11px] leading-tight text-gray-600">
+                        Upload image
+                      </p>
                     </div>
                   )}
                 </div>
+              </div>
+              {errors.image && (
+                <p className="mt-1 text-[11px] text-red-500 text-center">
+                  {errors.image}
+                </p>
+              )}
+            </div>
 
-                {/* Item Details */}
-                <div className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-gray-600 font-medium">Item Category</p>
-                    <p className="text-gray-900">{formData.category || "—"}</p>
+            {/* Item Details Form */}
+            <div
+              className={`space-y-5 rounded-xl border border-gray-100 bg-gray-50/60 p-5 transition-colors duration-200 ${
+                focusedSection === "Item Details" ? "ring-1 ring-blue-200" : ""
+              }`}
+              onFocus={() => setFocusedSection("Item Details")}
+              onBlur={() => setFocusedSection(null)}
+            >
+              <div className="space-y-4">
+                {/* Row: Grade Level & Grade Level Category */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                      Grade Level
+                    </label>
+                    <select
+                      name="educationLevel"
+                      value={formData.educationLevel}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Grade Level</option>
+                      {gradeLevelOptions.map((level) => (
+                        <option key={level.value} value={level.value}>
+                          {level.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.educationLevel && (
+                      <p className="text-red-500 text-xs">
+                        {errors.educationLevel}
+                      </p>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-gray-600 font-medium">Size</p>
-                    <p className="text-gray-900">{formData.size || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium">Item Type</p>
-                    <p className="text-gray-900">{formData.itemType || "—"}</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-600 font-medium">Price</p>
-                    <p className="text-lg font-bold text-[#e68b00]">
-                      ₱{Number(formData.price).toFixed(2)}
-                    </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                      Grade Level Category
+                    </label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Grade Level Category</option>
+                      {gradeLevelCategoryOptions.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.category && (
+                      <p className="text-red-500 text-xs">{errors.category}</p>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Item Details History */}
-              <div className="border-t border-gray-300 pt-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                  Item Details History
-                </h4>
-                <div className="bg-white rounded-lg p-4 text-center text-gray-500 text-sm border border-gray-200">
-                  <p>No history records yet</p>
+                {/* Row: Item Name & Item Type */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                      Item Name
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      placeholder="Kinder Dress"
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                      Item Type
+                    </label>
+                    <select
+                      name="itemType"
+                      value={formData.itemType}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Select Item Type</option>
+                      {ITEM_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.itemType && (
+                      <p className="text-red-500 text-xs">{errors.itemType}</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Description / Note */}
+                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                      Description / Note
+                    </label>
+                    <div className="rounded-xl border border-gray-300 bg-white overflow-visible">
+                      {/* Rich text toolbar (Google Docs–style basic controls) */}
+                      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-gray-200 text-gray-600 relative">
+                        {/* Remove Formatting */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => applyEditorCommand("removeFormat")}
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Remove formatting"
+                        >
+                          <RemoveFormatting size={18} />
+                        </button>
+                        {/* Bold */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => applyEditorCommand("bold")}
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Bold"
+                        >
+                          <Bold size={18} />
+                        </button>
+                        {/* Italic */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => applyEditorCommand("italic")}
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Italic"
+                        >
+                          <Italic size={18} />
+                        </button>
+                        <div className="w-px h-5 bg-gray-300 mx-1" />
+                        {/* Numbered List */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() =>
+                            applyEditorCommand("insertOrderedList")
+                          }
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Numbered list"
+                        >
+                          <ListOrdered size={18} />
+                        </button>
+                        {/* Bulleted List */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() =>
+                            applyEditorCommand("insertUnorderedList")
+                          }
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Bulleted list"
+                        >
+                          <List size={18} />
+                        </button>
+                        <div className="w-px h-5 bg-gray-300 mx-1" />
+                        {/* Align Left */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => applyEditorCommand("justifyLeft")}
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Align left"
+                        >
+                          <AlignLeft size={18} />
+                        </button>
+                        {/* Align Right */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => applyEditorCommand("justifyRight")}
+                          className="p-1.5 hover:bg-gray-100 rounded transition"
+                          title="Align right"
+                        >
+                          <AlignRight size={18} />
+                        </button>
+                        <div className="w-px h-5 bg-gray-300 mx-1" />
+                        {/* Text Color */}
+                        <div className="relative" ref={colorPickerRef}>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => setShowColorPicker(!showColorPicker)}
+                            className="p-1.5 hover:bg-gray-100 rounded transition flex flex-col items-center"
+                            title="Text color"
+                          >
+                            <Palette size={18} />
+                            <div
+                              className="w-4 h-1 rounded-sm mt-0.5"
+                              style={{ backgroundColor: selectedColor }}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                      {/* Color Picker - Positioned outside overflow containers */}
+                      {showColorPicker && (
+                        <div
+                          className="fixed inset-0 z-[9999]"
+                          onClick={() => setShowColorPicker(false)}
+                        >
+                          <div
+                            className="absolute bg-white border border-gray-200 rounded-lg shadow-2xl p-3"
+                            style={{
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <div className="text-sm font-medium text-gray-700 mb-2">
+                              Select Color
+                            </div>
+                            <HexColorPicker
+                              color={selectedColor}
+                              onChange={setSelectedColor}
+                              className="!w-[200px] !h-[160px]"
+                            />
+                            <div className="mt-3 flex items-center gap-2">
+                              <span className="text-xs text-gray-500">
+                                Hex:
+                              </span>
+                              <HexColorInput
+                                color={selectedColor}
+                                onChange={setSelectedColor}
+                                prefixed
+                                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                              <div
+                                className="w-7 h-7 rounded border border-gray-300 flex-shrink-0"
+                                style={{ backgroundColor: selectedColor }}
+                              />
+                            </div>
+                            <div className="mt-3 flex justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setShowColorPicker(false)}
+                                className="px-4 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded transition border border-gray-300"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  applyEditorCommand(
+                                    "foreColor",
+                                    selectedColor
+                                  );
+                                  setShowColorPicker(false);
+                                }}
+                                className="px-4 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded transition"
+                              >
+                                OK
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div
+                        ref={editorRef}
+                        className="w-full px-3 py-2.5 text-sm min-h-[96px] outline-none rich-text-editor"
+                        contentEditable
+                        onInput={handleRichTextInput}
+                        suppressContentEditableWarning={true}
+                      />
+                    </div>
+                  </div>
+                </div>
+                {/* Variants */}
+                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Variants
+                  </p>
+
+                  {/* Top card: Option Name / Option Value */}
+                  <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 space-y-3">
+                    {variants.slice(0, 1).map((variant, vIndex) => (
+                      <div
+                        key={vIndex}
+                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                      >
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-gray-600">
+                            Option Name
+                          </label>
+                          <input
+                            type="text"
+                            value={variant.name}
+                            onChange={(e) =>
+                              handleVariantNameChange(vIndex, e.target.value)
+                            }
+                            placeholder="Size Choices"
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-gray-600">
+                            Option Value
+                          </label>
+                          <div className="space-y-2">
+                            {variant.values.map((value, valIndex) => (
+                              <div
+                                key={valIndex}
+                                className="flex items-center gap-2"
+                              >
+                                <input
+                                  type="text"
+                                  value={value}
+                                  onChange={(e) =>
+                                    handleVariantValueChange(
+                                      vIndex,
+                                      valIndex,
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder={
+                                    valIndex === 0 ? "Small (S)" : "Medium (M)"
+                                  }
+                                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                />
+                                {variant.values.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      handleRemoveVariantValue(vIndex, valIndex)
+                                    }
+                                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                    title="Remove this option value"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleAddVariantValue(vIndex)}
+                            className="mt-1 text-xs font-medium text-orange-500 hover:text-orange-600"
+                          >
+                            + Add another option value
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bottom card: Option Value / Stock / Unit Price */}
+                  <div className="rounded-xl border border-gray-200 bg-white">
+                    <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                      <span>Option Value</span>
+                      <span>Stock</span>
+                      <span>Unit Price</span>
+                    </div>
+                    <div className="px-4 py-3 space-y-2 text-sm">
+                      {variants[0].values.map((value, index) => (
+                        <div
+                          key={index}
+                          className="grid grid-cols-3 gap-4 items-center"
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedVariantIndices.includes(index)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  // Add to selected indices
+                                  setSelectedVariantIndices((prev) => {
+                                    const newIndices = [...prev, index];
+                                    // Update size field with selected sizes
+                                    const updatedSizes = newIndices
+                                      .map((idx) => {
+                                        const val = variants[0].values[idx];
+                                        return (
+                                          val ||
+                                          (idx === 0
+                                            ? "Small (S)"
+                                            : idx === 1
+                                            ? "Medium (M)"
+                                            : "")
+                                        );
+                                      })
+                                      .filter(Boolean)
+                                      .join(", ");
+                                    if (updatedSizes) {
+                                      handleInputChange({
+                                        target: {
+                                          name: "size",
+                                          value: updatedSizes,
+                                        },
+                                      });
+                                    }
+                                    // Sync this variant's price to the item's price field if it's the first selected
+                                    if (
+                                      variantPrices[index] &&
+                                      prev.length === 0
+                                    ) {
+                                      handleInputChange({
+                                        target: {
+                                          name: "price",
+                                          value: variantPrices[index],
+                                        },
+                                      });
+                                    }
+                                    return newIndices;
+                                  });
+                                } else {
+                                  // Remove from selected indices
+                                  setSelectedVariantIndices((prev) => {
+                                    const newIndices = prev.filter(
+                                      (i) => i !== index
+                                    );
+                                    // Update size field
+                                    const updatedSizes = newIndices
+                                      .map((idx) => {
+                                        const val = variants[0].values[idx];
+                                        return (
+                                          val ||
+                                          (idx === 0
+                                            ? "Small (S)"
+                                            : idx === 1
+                                            ? "Medium (M)"
+                                            : "")
+                                        );
+                                      })
+                                      .filter(Boolean)
+                                      .join(", ");
+                                    handleInputChange({
+                                      target: {
+                                        name: "size",
+                                        value: updatedSizes || "N/A",
+                                      },
+                                    });
+                                    return newIndices;
+                                  });
+                                }
+                              }}
+                              className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                            />
+                            <span className="text-gray-800">
+                              {value ||
+                                (index === 0 ? "Small (S)" : "Medium (M)")}
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={variantStocks[index] ?? ""}
+                            onChange={(e) => {
+                              const next = [...variantStocks];
+                              next[index] = e.target.value;
+                              setVariantStocks(next);
+                            }}
+                            placeholder="0"
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={variantPrices[index] ?? ""}
+                            onChange={(e) => {
+                              const next = [...variantPrices];
+                              next[index] = e.target.value;
+                              setVariantPrices(next);
+                              // If this is one of the selected variants and it's the first one, sync its price
+                              if (
+                                selectedVariantIndices.includes(index) &&
+                                selectedVariantIndices[0] === index &&
+                                e.target.value
+                              ) {
+                                handleInputChange({
+                                  target: {
+                                    name: "price",
+                                    value: e.target.value,
+                                  },
+                                });
+                              }
+                            }}
+                            placeholder="Php 0.00"
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -876,18 +1265,18 @@ const ItemsModals = ({
         </form>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 px-6 py-4 border-t bg-white">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-white">
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition font-medium"
+            className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium"
           >
             Back
           </button>
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-6 py-2.5 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition font-medium"
+            className="px-6 py-2.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 shadow-sm font-semibold transition"
           >
             Done
           </button>

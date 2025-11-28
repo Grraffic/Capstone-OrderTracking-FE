@@ -47,7 +47,14 @@ export const AuthProvider = ({ children }) => {
             role: userData.role,
             displayName:
               userData.name || (emailString ? emailString.split("@")[0] : ""),
-            photoURL: userData.photoURL || null,
+            // Try multiple possible fields for profile photo from backend/Supabase
+            photoURL:
+              userData.photoURL ||
+              userData.photo_url ||
+              userData.avatar_url ||
+              userData.picture ||
+              userData.image ||
+              null,
           };
 
           setUser(normalized);

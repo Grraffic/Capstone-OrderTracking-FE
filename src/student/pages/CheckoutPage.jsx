@@ -5,7 +5,7 @@ import { useCheckout } from "../../context/CheckoutContext";
 import { useOrder } from "../../context/OrderContext";
 import { useAuth } from "../../context/AuthContext";
 import { useActivity } from "../../context/ActivityContext";
-import { inventoryAPI } from "../../services/api";
+import { itemsAPI } from "../../services/api";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -20,7 +20,7 @@ import toast from "react-hot-toast";
  * - List of cart items with image, size, name, education level, and FREE badge
  * - Orange "Checkout" button at bottom
  * - Clean, minimal design
- * 
+ *
  * Supports two modes:
  * 1. Direct checkout (Order Now) - shows only the selected item, doesn't add to cart
  * 2. Cart checkout - shows all items from cart
@@ -63,7 +63,10 @@ const CheckoutPage = () => {
       const educationLevel = items[0]?.inventory?.educationLevel || "General";
 
       // Generate order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
+      const orderNumber = `ORD-${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2, 9)
+        .toUpperCase()}`;
 
       // Check if any item is out of stock OR if selected size is not available
       // We need to check size-specific availability for uniform items
@@ -94,13 +97,15 @@ const CheckoutPage = () => {
 
           // For uniform items, check if the specific size is available
           try {
-            const response = await inventoryAPI.getAvailableSizes(
+            const response = await itemsAPI.getAvailableSizes(
               productName,
               productEducationLevel
             );
 
             if (response.data.success && response.data.data) {
-              const sizeData = response.data.data.find(s => s.size === selectedSize);
+              const sizeData = response.data.data.find(
+                (s) => s.size === selectedSize
+              );
               // If size doesn't exist in inventory or has stock = 0, it's a pre-order
               return !sizeData || sizeData.stock === 0;
             }
@@ -116,11 +121,13 @@ const CheckoutPage = () => {
       );
 
       // Determine order type based on stock availability
-      const hasOutOfStockItems = sizeAvailabilityChecks.some(isOutOfStock => isOutOfStock);
+      const hasOutOfStockItems = sizeAvailabilityChecks.some(
+        (isOutOfStock) => isOutOfStock
+      );
       const orderType = hasOutOfStockItems ? "pre-order" : "regular";
 
       // Transform cart items to order items format
-      const orderItems = items.map(item => ({
+      const orderItems = items.map((item) => ({
         name: item.inventory?.name || "Unknown Item",
         size: item.size || "N/A",
         quantity: item.quantity || 1,
@@ -143,7 +150,11 @@ const CheckoutPage = () => {
         total_amount: totalAmount,
         status: "pending",
         order_type: orderType, // Track if this is a pre-order or regular order
-        notes: `${orderType === 'pre-order' ? 'Pre-order' : 'Order'} placed via ${isDirectCheckout ? 'direct' : 'cart'} checkout. ${items.length} item(s) ordered.`,
+        notes: `${
+          orderType === "pre-order" ? "Pre-order" : "Order"
+        } placed via ${isDirectCheckout ? "direct" : "cart"} checkout. ${
+          items.length
+        } item(s) ordered.`,
       };
 
       // Submit order to backend
@@ -172,13 +183,15 @@ const CheckoutPage = () => {
       setTimeout(() => {
         navigate("/student/profile");
       }, 1000);
-
     } catch (error) {
       console.error("Checkout error:", error);
       console.error("Error response:", error.response?.data);
       console.error("Error details:", error.response);
-      
-      const errorMessage = error.response?.data?.message || error.message || "Failed to submit order. Please try again.";
+
+      const errorMessage =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to submit order. Please try again.";
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -302,7 +315,11 @@ const CheckoutPage = () => {
                 disabled={loading || submitting}
                 className="w-full py-4 bg-[#F28C28] text-white font-bold text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? "Submitting Order..." : loading ? "Processing..." : "Checkout"}
+                {submitting
+                  ? "Submitting Order..."
+                  : loading
+                  ? "Processing..."
+                  : "Checkout"}
               </button>
             </div>
           )}

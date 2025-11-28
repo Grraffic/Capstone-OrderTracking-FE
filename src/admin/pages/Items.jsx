@@ -8,6 +8,7 @@ import {
   MoreHorizontal,
   Pencil,
   Trash2,
+  Eye,
 } from "lucide-react";
 import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
@@ -16,6 +17,7 @@ import ItemDetailsModal from "../components/Items/ItemDetailsModal";
 import ItemAdjustmentModal from "../components/Items/ItemAdjustmentModal";
 import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
 import ItemsStatsCards from "../components/Items/ItemsStatsCards";
+import { ItemsSkeleton } from "../components/Skeleton";
 import {
   useAdminSidebar,
   useQRScanner,
@@ -48,6 +50,8 @@ import {
  */
 const Items = () => {
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
+  const [statsRange, setStatsRange] = useState("Week"); // "Week", "Month", "Year"
+  // Local state for the horizontal education level tabs
   const [selectedLevel, setSelectedLevel] = useState("All Levels");
   const [showFilters, setShowFilters] = useState(true);
   const [openMenuId, setOpenMenuId] = useState(null); // Track which item's menu is open
@@ -96,6 +100,8 @@ const Items = () => {
     // Item Adjustment Modal
     adjustmentModalState,
     closeAdjustmentModal,
+    // API state
+    loading,
   } = useItems();
 
   // Item Details Modal (new enhanced view modal)
@@ -119,6 +125,27 @@ const Items = () => {
   // Calculate items statistics
   const stats = useItemsStats(filteredItems);
 
+  // Sync tab state with filter (reverse mapping: database value → tab label)
+  useEffect(() => {
+    const mapEducationLevelToTabLabel = (dbValue) => {
+      const reverseMapping = {
+        "All Levels": "All Levels",
+        "Kindergarten": "Preschool", // DB has "Kindergarten", tab shows "Preschool"
+        "Elementary": "Elementary",
+        "Junior High School": "Junior Highschool", // DB has space, tab has no space
+        "Senior High School": "Senior Highschool", // DB has space, tab has no space
+        "College": "College",
+      };
+      return reverseMapping[dbValue] || dbValue;
+    };
+
+    // Update tab state when filter changes (e.g., from dropdown)
+    const tabLabel = mapEducationLevelToTabLabel(educationLevelFilter);
+    if (tabLabel && ["All Levels", "Preschool", "Elementary", "Junior Highschool", "Senior Highschool", "College"].includes(tabLabel)) {
+      setSelectedLevel(tabLabel);
+    }
+  }, [educationLevelFilter]);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Fixed Sidebar */}
@@ -128,6 +155,15 @@ const Items = () => {
       <AdminHeader onMenuToggle={toggleSidebar} sidebarOpen={sidebarOpen} />
 
       {/* Main Content Area - Scrollable */}
+      {loading ? (
+        <main
+          className={`fixed top-16 bottom-0 right-0 bg-gray-50 overflow-y-auto transition-all duration-300 ${
+            sidebarOpen ? "left-64" : "left-20"
+          }`}
+        >
+          <ItemsSkeleton viewMode={viewMode} />
+        </main>
+      ) : (
       <main
         className={`fixed top-16 bottom-0 right-0 bg-gray-50 overflow-y-auto transition-all duration-300 ${
           sidebarOpen ? "left-64" : "left-20"
@@ -146,13 +182,44 @@ const Items = () => {
 
           {/* Statistics Cards Section */}
           <div className="mb-6">
+            {/* Time Range Selector: Week / Month / Year */}
+            <div className="flex justify-end mb-3">
+              <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm">
+                {["Week", "Month", "Year"].map((range) => {
+                  const isActive = statsRange === range;
+                  return (
+                    <button
+                      key={range}
+                      type="button"
+                      onClick={() => setStatsRange(range)}
+                      className={`relative pb-1 font-medium transition-colors ${
+                        isActive
+                          ? "text-[#e68b00]"
+                          : "text-[#0C2340] hover:text-[#e68b00]"
+                      }`}
+                    >
+                      <span>{range}</span>
+                      <span
+                        className={`absolute left-0 -bottom-px h-0.5 rounded-full transition-all duration-200 ${
+                          isActive
+                            ? "w-full bg-[#e68b00]"
+                            : "w-0 bg-transparent"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <ItemsStatsCards stats={stats} />
           </div>
 
           {/* Horizontal Level Selection Tabs */}
-          <div className="mb-6">
-            <div className="inline-flex flex-wrap gap-4 rounded-full bg-white p-2 shadow-sm border border-gray-100">
+          <div className="mb-8 border-b border-gray-200 pb-2">
+            <div className="flex flex-wrap gap-x-12 gap-y-4">
               {[
+                "All Levels",
                 "Preschool",
                 "Elementary",
                 "Junior Highschool",
@@ -164,14 +231,26 @@ const Items = () => {
                   <button
                     key={level}
                     type="button"
-                    onClick={() => setSelectedLevel(level)}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                    onClick={() => {
+                      // Update local tab state
+                      setSelectedLevel(level);
+                      // Sync with items filter so clicking a tab actually filters the list
+                      setEducationLevelFilter(level);
+                    }}
+                    className={`relative pb-3 text-sm md:text-base font-medium transition-colors ${
                       isActive
-                        ? "bg-[#0C2340] text-white shadow-sm"
-                        : "text-[#0C2340] hover:bg-gray-100"
+                        ? "text-[#e68b00]"
+                        : "text-[#0C2340] hover:text-[#e68b00]"
                     }`}
                   >
-                    {level}
+                    <span>{level}</span>
+                    <span
+                      className={`absolute left-0 -bottom-px h-0.5 rounded-full transition-all duration-200 ${
+                        isActive
+                          ? "w-full bg-[#e68b00]"
+                          : "w-0 bg-transparent"
+                      }`}
+                    />
                   </button>
                 );
               })}
@@ -368,12 +447,12 @@ const Items = () => {
 
                     {/* Product Image */}
                     <div className="mb-4">
-                      <div className="w-full h-40 bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center">
+                      <div className="w-full h-48 sm:h-56 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
                         {item.image ? (
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-full h-full object-cover"
+                            className="max-h-full w-auto object-contain"
                             onError={(e) => {
                               e.target.src =
                                 "https://via.placeholder.com/400x300";
@@ -416,87 +495,175 @@ const Items = () => {
               )}
             </div>
           ) : (
-            /* List View - Table with dark blue header and cream rows */
-            <div className="rounded-xl overflow-hidden shadow-sm">
-              {/* Table Header - Dark Blue */}
-              <div className="bg-[#003363] text-white">
-                <div className="grid grid-cols-6 gap-4 px-6 py-4 text-sm font-semibold">
-                  <div>Image</div>
-                  <div>Item Name</div>
-                  <div>Item Type</div>
-                  <div>Grade Level</div>
-                  <div>Cost Summary</div>
-                  <div className="text-center">Action</div>
+            /* List View - Desktop/table layout + mobile cards */
+            <div className="space-y-4">
+              {/* Desktop/Tablet Table View */}
+              <div className="hidden md:block rounded-xl overflow-hidden shadow-sm">
+                {/* Table Header - Dark Blue */}
+                <div className="bg-[#003363] text-white">
+                  <div className="grid grid-cols-6 gap-4 px-6 py-4 text-sm font-semibold">
+                    <div>Image</div>
+                    <div>Item Name</div>
+                    <div>Item Type</div>
+                    <div>Grade Level</div>
+                    <div>Cost Summary</div>
+                    <div className="text-center">Action</div>
+                  </div>
+                </div>
+
+                {/* Table Body - Cream/Beige rows */}
+                <div>
+                  {paginatedItems.length === 0 ? (
+                    <div className="px-6 py-12 text-center text-gray-500 bg-white">
+                      <p className="text-sm font-medium">No items found</p>
+                      <p className="text-xs mt-1">
+                        Try adjusting your filters or add a new item.
+                      </p>
+                    </div>
+                  ) : (
+                    paginatedItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 hover:bg-[#FFF8E7] transition-colors ${
+                          index === 0 ? "bg-[#FFF5E0]" : "bg-white"
+                        }`}
+                      >
+                        {/* Image */}
+                        <div>
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                            onError={(e) => {
+                              e.target.src = "https://via.placeholder.com/56";
+                            }}
+                          />
+                        </div>
+
+                        {/* Item Name */}
+                        <div className="text-[#0C2340] text-sm font-medium">
+                          {item.name}
+                        </div>
+
+                        {/* Item Type */}
+                        <div className="text-[#e68b00] text-sm">
+                          {item.itemType || "Uniform"}
+                        </div>
+
+                        {/* Grade Level */}
+                        <div className="text-[#0C2340] text-sm">
+                          {item.educationLevel}
+                        </div>
+
+                        {/* Cost Summary */}
+                        <div className="text-[#003363] text-sm font-semibold">
+                          ₱ {item.price?.toLocaleString() || "0.00"}
+                        </div>
+
+                        {/* Action */}
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openItemDetailsModal(item)}
+                            className="p-2 rounded-lg hover:bg-[#0C2340]/10 text-[#0C2340] transition-colors"
+                            title="View Details"
+                            aria-label="View item details"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="p-2 rounded-lg hover:bg-blue-50 text-[#003363] transition-colors"
+                            title="Edit"
+                            aria-label="Edit item"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(item)}
+                            className="p-2 rounded-lg hover:bg-red-50 text-[#e68b00] transition-colors"
+                            title="Delete"
+                            aria-label="Delete item"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
 
-              {/* Table Body - Cream/Beige rows */}
-              <div>
+              {/* Mobile Card View */}
+              <div className="md:hidden space-y-3">
                 {paginatedItems.length === 0 ? (
-                  <div className="px-6 py-12 text-center text-gray-500 bg-white">
+                  <div className="px-4 py-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
                     <p className="text-sm font-medium">No items found</p>
                     <p className="text-xs mt-1">
                       Try adjusting your filters or add a new item.
                     </p>
                   </div>
                 ) : (
-                  paginatedItems.map((item, index) => (
+                  paginatedItems.map((item) => (
                     <div
                       key={item.id}
-                      className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 hover:bg-[#FFF8E7] transition-colors ${
-                        index === 0 ? "bg-[#FFF5E0]" : "bg-white"
-                      }`}
+                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-3"
                     >
                       {/* Image */}
-                      <div>
+                      <div className="flex-shrink-0">
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-14 h-14 object-cover rounded-lg border border-gray-200"
+                          className="w-16 h-16 object-cover rounded-lg border border-gray-200"
                           onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/56";
+                            e.target.src = "https://via.placeholder.com/64";
                           }}
                         />
                       </div>
 
-                      {/* Item Name */}
-                      <div className="text-[#0C2340] text-sm font-medium">
-                        {item.name}
-                      </div>
+                      {/* Content */}
+                      <div className="flex-1 flex flex-col gap-1">
+                        <div className="flex justify-between items-start gap-2">
+                          <div>
+                            <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
+                              {item.name}
+                            </h3>
+                            <p className="text-xs text-[#e68b00]">
+                              {item.itemType || "Uniform"}
+                            </p>
+                          </div>
+                          <div className="text-xs font-semibold text-[#003363]">
+                            ₱ {item.price?.toLocaleString() || "0.00"}
+                          </div>
+                        </div>
 
-                      {/* Item Type */}
-                      <div className="text-[#e68b00] text-sm">
-                        {item.itemType || "Uniform"}
-                      </div>
+                        <p className="text-xs text-gray-500">
+                          Grade Level:{" "}
+                          <span className="text-[#0C2340]">
+                            {item.educationLevel || "—"}
+                          </span>
+                        </p>
 
-                      {/* Grade Level */}
-                      <div className="text-[#0C2340] text-sm">
-                        {item.educationLevel}
-                      </div>
-
-                      {/* Cost Summary */}
-                      <div className="text-[#003363] text-sm font-semibold">
-                        ₱ {item.price?.toLocaleString() || "0.00"}
-                      </div>
-
-                      {/* Action */}
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="p-2 rounded-lg hover:bg-blue-50 text-[#003363] transition-colors"
-                          title="Edit"
-                          aria-label="Edit item"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        <button
-                          onClick={() => openDeleteModal(item)}
-                          className="p-2 rounded-lg hover:bg-red-50 text-[#e68b00] transition-colors"
-                          title="Delete"
-                          aria-label="Delete item"
-                        >
-                          <Trash2 size={18} />
-                        </button>
+                        {/* Actions */}
+                        <div className="mt-2 flex justify-end gap-2">
+                          <button
+                            onClick={() => openItemDetailsModal(item)}
+                            className="px-3 py-1.5 rounded-lg bg-[#0C2340]/10 text-xs font-medium text-[#0C2340] hover:bg-[#0C2340]/20 transition-colors"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="px-3 py-1.5 rounded-lg bg-blue-50 text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(item)}
+                            className="px-3 py-1.5 rounded-lg bg-red-50 text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
@@ -514,6 +681,7 @@ const Items = () => {
           )}
         </div>
       </main>
+      )}
 
       {/* Modals */}
       <ItemsModals

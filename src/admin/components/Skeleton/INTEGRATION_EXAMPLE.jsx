@@ -1,9 +1,15 @@
+// Example: How to integrate DashboardSkeleton into AdminDashboard.jsx
+// This is a demonstration of how to add the skeleton loading state
+
+import { useState } from "react";
 import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
 import OverviewCards from "../components/Dashboard/OverviewCards";
 import StockLevelsChart from "../components/Items/StockLevelsChart";
 import RecentOrdersTable from "../components/Dashboard/RecentOrdersTable";
 import { useAdminDashboardData } from "../hooks";
+
+// Import the skeleton component
 import { DashboardSkeleton } from "../components/Skeleton";
 
 const AdminDashboard = () => {
@@ -15,7 +21,7 @@ const AdminDashboard = () => {
     overviewStats,
     stockLevelsData,
     recentOrders,
-    loading,
+    loading, // ← Make sure your hook returns a loading state
   } = useAdminDashboardData();
 
   const tabs = ["Week", "Month", "Year"];
@@ -34,11 +40,11 @@ const AdminDashboard = () => {
           sidebarOpen ? "left-64" : "left-20"
         }`}
       >
-        {/* Show skeleton while loading */}
+        {/* ADD THIS: Show skeleton while loading */}
         {loading ? (
           <DashboardSkeleton />
         ) : (
-          /* Dashboard Content */
+          /* Original Dashboard Content */
           <div className="p-8">
             {/* Page Title */}
             <div className="mb-6">

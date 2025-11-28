@@ -1,9 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
-import { inventoryAPI } from "../../../services/api";
-
-// API base URL - adjust based on your environment
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import { useState, useCallback, useMemo } from "react";
 
 /**
  * useItemDetailsModal Hook
@@ -37,6 +32,7 @@ export const useItemDetailsModal = (allItems = []) => {
 
   /**
    * Fetch variations (items with same name and education level but different sizes)
+   * Also handles items with comma-separated sizes by splitting them into virtual variations
    */
   const fetchVariations = useCallback(
     async (item) => {
@@ -51,7 +47,74 @@ export const useItemDetailsModal = (allItems = []) => {
             i.name === item.name && i.educationLevel === item.educationLevel
         );
 
-        if (matchingItems.length > 0) {
+        // Check if the current item has comma-separated sizes
+        const hasCommaSeparatedSizes =
+          item.size && item.size.includes(",") && item.size !== "N/A";
+
+        if (hasCommaSeparatedSizes) {
+          // Split comma-separated sizes and create virtual variations
+          const sizes = item.size
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+
+          // Try to parse per-size stock and price from note field
+          let sizeVariationsData = null;
+          try {
+            if (item.note) {
+              const parsedNote = JSON.parse(item.note);
+              if (
+                parsedNote._type === "sizeVariations" &&
+                parsedNote.sizeVariations
+              ) {
+                sizeVariationsData = parsedNote.sizeVariations;
+              }
+            }
+          } catch (e) {
+            // If note is not JSON or doesn't contain size variations, use defaults
+            console.log("Note field doesn't contain size variation data:", e);
+          }
+
+          const virtualVariations = sizes.map((size, index) => {
+            // Find matching size variation data (case-insensitive, trim whitespace)
+            const variationData = sizeVariationsData?.find((v) => {
+              const vSize = (v.size || "").trim().toLowerCase();
+              const currentSize = size.trim().toLowerCase();
+              return vSize === currentSize;
+            });
+
+            return {
+              ...item,
+              // Keep original ID for edit/delete operations
+              id: item.id,
+              size: size,
+              // Add a unique key for React rendering and selection
+              _variationKey: `${item.id}-${index}`,
+              // Use per-size stock and price if available, otherwise use item defaults
+              stock: variationData?.stock ?? item.stock,
+              price: variationData?.price ?? item.price,
+            };
+          });
+
+          // Also include other matching items that don't have comma-separated sizes
+          const otherItems = matchingItems.filter(
+            (i) =>
+              i.id !== item.id &&
+              (!i.size || !i.size.includes(",") || i.size === "N/A")
+          );
+
+          const allVariations = [...virtualVariations, ...otherItems];
+          setVariations(
+            allVariations.length > 0 ? allVariations : virtualVariations
+          );
+
+          // Set the first variation as selected (or match the item's current size if possible)
+          const firstSize = sizes[0];
+          const matchingVariation =
+            virtualVariations.find((v) => v.size === firstSize) ||
+            virtualVariations[0];
+          setSelectedVariation(matchingVariation);
+        } else if (matchingItems.length > 0) {
           setVariations(matchingItems);
           // Set the current item as selected variation
           setSelectedVariation(item);
@@ -107,7 +170,9 @@ export const useItemDetailsModal = (allItems = []) => {
   const totalCostSummary = useMemo(() => {
     if (!variations.length) return 0;
     return variations.reduce((total, v) => {
-      return total + (v.stock || 0) * (v.price || 0);
+      const stock = Number(v.stock) || 0;
+      const price = Number(v.price) || 0;
+      return total + stock * price;
     }, 0);
   }, [variations]);
 
@@ -132,4 +197,3 @@ export const useItemDetailsModal = (allItems = []) => {
     selectVariation,
   };
 };
-

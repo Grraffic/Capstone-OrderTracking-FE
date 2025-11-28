@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import ItemAdjustmentModal from "../Inventory/ItemAdjustmentModal";
+import ItemAdjustmentModal from "../Items/ItemAdjustmentModal";
 
 describe("ItemAdjustmentModal", () => {
   const mockOnClose = jest.fn();

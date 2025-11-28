@@ -139,6 +139,12 @@ export const useItemsModalForm = (
             educationLevel: value,
           };
 
+          // When "All Education Levels" is selected, auto-select "All Levels" for category
+          if (value === "All Education Levels") {
+            newData.category = "All Levels";
+            return newData;
+          }
+
           // Check if current category is valid for the new education level
           if (
             prev.category &&
@@ -217,7 +223,7 @@ export const useItemsModalForm = (
 
       try {
         // Upload the image to backend, which forwards to Cloudinary
-        const response = await fetch(`${API_BASE_URL}/inventory/upload-image`, {
+        const response = await fetch(`${API_BASE_URL}/items/upload-image`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

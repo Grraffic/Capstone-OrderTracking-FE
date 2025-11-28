@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 /**
  * useAdminDashboardData Hook
@@ -9,10 +9,21 @@ import { useState, useCallback } from "react";
  * - Recent orders data for table display
  * - Sidebar toggle state
  * - Active tab selection
+ * - Loading state for skeleton display
  */
 export const useAdminDashboardData = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState("Year");
+  const [loading, setLoading] = useState(true);
+
+  // Simulate loading state (replace this with actual API call)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1000); // 1 second delay to show skeleton
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Overview statistics
   const overviewStats = {
@@ -116,5 +127,6 @@ export const useAdminDashboardData = () => {
     overviewStats,
     stockLevelsData,
     recentOrders,
+    loading, // ← Added loading state
   };
 };

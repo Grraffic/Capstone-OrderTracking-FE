@@ -27,6 +27,23 @@ const SizeSelector = ({
     XXL: { chest: "50-52", length: "34-36" },
   };
 
+  // Map size abbreviations to full names (matching ItemDetailsModal format)
+  const sizeNameMapping = {
+    XS: "XSmall",
+    S: "Small",
+    M: "Medium",
+    L: "Large",
+    XL: "XLarge",
+    XXL: "2XLarge",
+    "3XL": "3XLarge",
+  };
+
+  // Format size display: "Small (S)" or "XSmall (XS)"
+  const formatSizeDisplay = (sizeAbbr) => {
+    const fullName = sizeNameMapping[sizeAbbr] || sizeAbbr;
+    return `${fullName} (${sizeAbbr})`;
+  };
+
   if (!availableSizes || availableSizes.length === 0) {
     return null;
   }
@@ -59,15 +76,17 @@ const SizeSelector = ({
                 <div key={size} className="relative">
                   <button
                     onClick={() => onSizeSelect(size)}
-                    className={`relative px-6 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                    className={`relative px-6 py-2 rounded-lg transition-all duration-200 ${
                       isSelected
-                        ? "bg-gray-100 text-[#003363] border-2 border-gray-300"
-                        : "bg-white text-gray-700 border-2 border-gray-300 hover:border-[#F28C28]"
+                        ? "bg-gray-100 border-2 border-gray-300"
+                        : "bg-white border-2 border-gray-300 hover:border-[#F28C28]"
                     } ${
                       sizeConfirmed && isSelected ? "ring-2 ring-green-500" : ""
                     } ${!isInStock ? "opacity-75" : ""}`}
                   >
-                    {size}
+                    <p className="text-xs font-medium text-[#e68b00]">
+                      {formatSizeDisplay(size)}
+                    </p>
                     {sizeConfirmed && isSelected && (
                       <Check className="inline-block ml-1 w-4 h-4" />
                     )}

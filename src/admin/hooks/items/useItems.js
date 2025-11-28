@@ -68,17 +68,17 @@ export const useItems = () => {
   });
 
   /**
-   * Fetch inventory items from API
+   * Fetch items from API
    */
-  const fetchInventoryItems = useCallback(async () => {
+  const fetchItems = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/inventory`);
+      const response = await fetch(`${API_BASE_URL}/items`);
 
       if (!response.ok) {
-        throw new Error("Failed to fetch inventory items");
+        throw new Error("Failed to fetch items");
       }
 
       const result = await response.json();
@@ -109,10 +109,10 @@ export const useItems = () => {
         }));
         setItems(transformedData);
       } else {
-        throw new Error(result.message || "Failed to fetch inventory items");
+        throw new Error(result.message || "Failed to fetch items");
       }
     } catch (err) {
-      console.error("Fetch inventory error:", err);
+      console.error("Fetch items error:", err);
       setError(err.message);
       setItems([]); // Set empty array on error
     } finally {
@@ -121,11 +121,11 @@ export const useItems = () => {
   }, []);
 
   /**
-   * Fetch inventory items on component mount
+   * Fetch items on component mount
    */
   useEffect(() => {
-    fetchInventoryItems();
-  }, [fetchInventoryItems]);
+    fetchItems();
+  }, [fetchItems]);
 
   /**
    * Calculate stock status based on quantity
@@ -147,6 +147,22 @@ export const useItems = () => {
   }, []);
 
   /**
+   * Map tab labels to database education level values
+   * This handles the mismatch between UI labels and stored values
+   */
+  const mapTabLabelToEducationLevel = useCallback((tabLabel) => {
+    const mapping = {
+      "All Levels": "All Levels",
+      Preschool: "Kindergarten", // UI says "Preschool" but DB stores "Kindergarten"
+      Elementary: "Elementary",
+      "Junior Highschool": "Junior High School", // UI has no space, DB has space
+      "Senior Highschool": "Senior High School", // UI has no space, DB has space
+      College: "College",
+    };
+    return mapping[tabLabel] || tabLabel; // Return mapped value or original if not found
+  }, []);
+
+  /**
    * Filter items based on search term and filters
    */
   const filteredItems = useMemo(() => {
@@ -154,9 +170,9 @@ export const useItems = () => {
 
     // Apply education level filter
     if (educationLevelFilter !== "All Levels") {
-      result = result.filter(
-        (item) => item.educationLevel === educationLevelFilter
-      );
+      // Map the filter value to the actual database value
+      const mappedFilter = mapTabLabelToEducationLevel(educationLevelFilter);
+      result = result.filter((item) => item.educationLevel === mappedFilter);
     }
 
     // Apply item type filter
@@ -178,7 +194,13 @@ export const useItems = () => {
     }
 
     return result;
-  }, [items, searchTerm, educationLevelFilter, itemTypeFilter]);
+  }, [
+    items,
+    searchTerm,
+    educationLevelFilter,
+    itemTypeFilter,
+    mapTabLabelToEducationLevel,
+  ]);
 
   /**
    * Open Add Item Modal
@@ -224,7 +246,7 @@ export const useItems = () => {
   }, []);
 
   /**
-   * Add new item to inventory
+   * Add new item
    * @param {Object} newItem - New item data
    */
   const addItem = useCallback(
@@ -239,7 +261,10 @@ export const useItems = () => {
           education_level: newItem.educationLevel,
           category: newItem.category,
           item_type: newItem.itemType,
-          size: newItem.size || "N/A",
+          size:
+            newItem.size && newItem.size.trim() !== ""
+              ? newItem.size.trim()
+              : "N/A",
           description: newItem.description,
           description_text: newItem.descriptionText,
           material: newItem.material,
@@ -252,7 +277,10 @@ export const useItems = () => {
           note: newItem.note || "",
         };
 
-        const response = await fetch(`${API_BASE_URL}/inventory`, {
+        // Debug log to verify size is being sent
+        console.log("Adding item with size:", transformedItem.size);
+
+        const response = await fetch(`${API_BASE_URL}/items`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -262,7 +290,7 @@ export const useItems = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.message || "Failed to add inventory item");
+          throw new Error(errorData.message || "Failed to add item");
         }
 
         const result = await response.json();
@@ -304,7 +332,7 @@ export const useItems = () => {
 
           closeModal();
         } else {
-          throw new Error(result.message || "Failed to add inventory item");
+          throw new Error(result.message || "Failed to add item");
         }
       } catch (err) {
         console.error("Add item error:", err);
@@ -347,7 +375,7 @@ export const useItems = () => {
         };
 
         const response = await fetch(
-          `${API_BASE_URL}/inventory/${updatedItem.id}`,
+          `${API_BASE_URL}/items/${updatedItem.id}`,
           {
             method: "PUT",
             headers: {
@@ -359,9 +387,7 @@ export const useItems = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(
-            errorData.message || "Failed to update inventory item"
-          );
+          throw new Error(errorData.message || "Failed to update item");
         }
 
         const result = await response.json();
@@ -398,7 +424,7 @@ export const useItems = () => {
           );
           closeModal();
         } else {
-          throw new Error(result.message || "Failed to update inventory item");
+          throw new Error(result.message || "Failed to update item");
         }
       } catch (err) {
         console.error("Update item error:", err);
@@ -412,7 +438,7 @@ export const useItems = () => {
   );
 
   /**
-   * Delete item from inventory
+   * Delete item
    * @param {string} itemId - ID of item to delete
    */
   const deleteItem = useCallback(
@@ -421,15 +447,13 @@ export const useItems = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_BASE_URL}/inventory/${itemId}`, {
+        const response = await fetch(`${API_BASE_URL}/items/${itemId}`, {
           method: "DELETE",
         });
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(
-            errorData.message || "Failed to delete inventory item"
-          );
+          throw new Error(errorData.message || "Failed to delete item");
         }
 
         const result = await response.json();
@@ -439,7 +463,7 @@ export const useItems = () => {
           setItems((prev) => prev.filter((item) => item.id !== itemId));
           closeModal();
         } else {
-          throw new Error(result.message || "Failed to delete inventory item");
+          throw new Error(result.message || "Failed to delete item");
         }
       } catch (err) {
         console.error("Delete item error:", err);
@@ -534,7 +558,7 @@ export const useItems = () => {
     // API state
     loading,
     error,
-    fetchInventoryItems,
+    fetchItems,
     // Pagination
     currentPage,
     totalPages,

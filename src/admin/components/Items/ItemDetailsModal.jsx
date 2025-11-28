@@ -33,7 +33,8 @@ const ItemDetailsModal = ({
   selectedVariation,
   loadingVariations,
   totalCostSummary = 0,
-  totalStock = 0,
+  // eslint-disable-next-line no-unused-vars
+  totalStock = 0, // Available but not currently used in UI
   onClose,
   onSelectVariation,
   onEdit,
@@ -165,7 +166,7 @@ const ItemDetailsModal = ({
                       Item Size:
                     </span>
                     <span className="text-sm text-[#0C2340]">
-                      {displayItem.size || displayItem.description || "N/A"}
+                      {displayItem.size || "N/A"}
                     </span>
                   </div>
                   <div className="flex">
@@ -190,7 +191,10 @@ const ItemDetailsModal = ({
                     </span>
                     <span className="text-sm font-bold text-[#003363]">
                       ₱
-                      {(displayItem.price || 0).toLocaleString("en-PH", {
+                      {(
+                        (Number(displayItem.stock) || 0) *
+                        (Number(displayItem.price) || 0)
+                      ).toLocaleString("en-PH", {
                         minimumFractionDigits: 2,
                       })}
                     </span>
@@ -228,10 +232,16 @@ const ItemDetailsModal = ({
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
                     {variations.map((variation) => {
-                      const isSelected = selectedVariation?.id === variation.id;
+                      // Use _variationKey for virtual variations, fallback to id
+                      const variationKey =
+                        variation._variationKey || variation.id;
+                      const selectedKey =
+                        selectedVariation?._variationKey ||
+                        selectedVariation?.id;
+                      const isSelected = selectedKey === variationKey;
                       return (
                         <div
-                          key={variation.id}
+                          key={variationKey}
                           onClick={() => onSelectVariation(variation)}
                           className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
                             isSelected
@@ -258,9 +268,7 @@ const ItemDetailsModal = ({
                               {variation.name}
                             </p>
                             <p className="text-xs font-medium text-[#e68b00]">
-                              {variation.size ||
-                                variation.description ||
-                                "Standard"}
+                              {variation.size || "Standard"}
                             </p>
                           </div>
 
@@ -285,15 +293,15 @@ const ItemDetailsModal = ({
                           {/* Actions Menu */}
                           <div
                             className="relative"
-                            ref={openMenuId === variation.id ? menuRef : null}
+                            ref={openMenuId === variationKey ? menuRef : null}
                           >
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenMenuId(
-                                  openMenuId === variation.id
+                                  openMenuId === variationKey
                                     ? null
-                                    : variation.id
+                                    : variationKey
                                 );
                               }}
                               className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
@@ -304,7 +312,7 @@ const ItemDetailsModal = ({
                                 className="text-gray-500"
                               />
                             </button>
-                            {openMenuId === variation.id && (
+                            {openMenuId === variationKey && (
                               <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-20 overflow-hidden">
                                 <button
                                   onClick={(e) => {

@@ -125,7 +125,7 @@ export const useOrderQRScanner = () => {
         try {
           // Find inventory item by name and education level
           const inventoryResponse = await fetch(
-            `${API_BASE_URL}/inventory?search=${encodeURIComponent(
+            `${API_BASE_URL}/items?search=${encodeURIComponent(
               item.name
             )}&education_level=${encodeURIComponent(order.education_level)}`
           );
@@ -151,7 +151,7 @@ export const useOrderQRScanner = () => {
           // Reduce stock by the ordered quantity
           const adjustment = -item.quantity; // Negative to reduce stock
           const adjustResponse = await fetch(
-            `${API_BASE_URL}/inventory/${inventoryItem.id}/adjust`,
+            `${API_BASE_URL}/items/${inventoryItem.id}/adjust`,
             {
               method: "PATCH",
               headers: {
@@ -205,7 +205,9 @@ export const useOrderQRScanner = () => {
 
       // Note: Socket.IO events are emitted by the backend when the order status is updated
       // No need to emit from frontend - the backend already emits "order:updated" and "order:claimed"
-      console.log("✅ Order claimed successfully! Backend will emit Socket.IO events.");
+      console.log(
+        "✅ Order claimed successfully! Backend will emit Socket.IO events."
+      );
 
       setSuccess(successMessage);
       setProcessing(false);

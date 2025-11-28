@@ -5,6 +5,7 @@ import AdminHeader from "../components/common/AdminHeader";
 import { useAdminSidebar } from "../hooks";
 import { useAdminProfile } from "../hooks/settings/useAdminProfile";
 import DiscardChangesModal from "../components/Settings/DiscardChangesModal";
+import { SettingsSkeleton } from "../components/Skeleton";
 
 /**
  * Admin Settings Page Component
@@ -61,12 +62,7 @@ const Settings = () => {
             sidebarOpen ? "left-64" : "left-20"
           }`}
         >
-          <div className="p-8 flex items-center justify-center h-full">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#e68b00] mx-auto"></div>
-              <p className="mt-4 text-gray-600">Loading profile...</p>
-            </div>
-          </div>
+          <SettingsSkeleton />
         </main>
       </div>
     );

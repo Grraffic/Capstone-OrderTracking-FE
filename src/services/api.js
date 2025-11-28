@@ -131,16 +131,16 @@ export const orderAPI = {
   },
 };
 
-// Inventory related API calls
-export const inventoryAPI = {
+// Items related API calls
+export const itemsAPI = {
   getPreOrderCount: async (itemId) => {
-    return api.get(`/inventory/${itemId}/pre-order-count`);
+    return api.get(`/items/${itemId}/pre-order-count`);
   },
   getAvailableSizes: async (name, educationLevel) => {
     // URL encode the parameters to handle special characters and spaces
     const encodedName = encodeURIComponent(name);
     const encodedEducationLevel = encodeURIComponent(educationLevel);
-    return api.get(`/inventory/sizes/${encodedName}/${encodedEducationLevel}`);
+    return api.get(`/items/sizes/${encodedName}/${encodedEducationLevel}`);
   },
 };
 

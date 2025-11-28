@@ -12,7 +12,7 @@ import ProductCarousel from "../components/Products/ProductDetails/ProductCarous
 import { useItems } from "../../admin/hooks/items/useItems";
 import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
-import { inventoryAPI } from "../../services/api";
+import { itemsAPI } from "../../services/api";
 
 /**
  * ProductDetailsPage Component
@@ -95,7 +95,7 @@ const ProductDetailsPage = () => {
 
       try {
         setLoadingSizes(true);
-        const response = await inventoryAPI.getAvailableSizes(
+        const response = await itemsAPI.getAvailableSizes(
           product.name,
           product.educationLevel
         );
