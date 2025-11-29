@@ -54,6 +54,9 @@ export const authAPI = {
   updateProfile: async (profileData) => {
     return api.put("/auth/profile", profileData);
   },
+  refreshProfilePicture: async () => {
+    return api.post("/auth/profile/refresh-picture");
+  },
 };
 
 // Contact form API calls

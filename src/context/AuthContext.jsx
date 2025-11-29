@@ -41,6 +41,14 @@ export const AuthProvider = ({ children }) => {
             emailString = userData.email.email || userData.email.value || "";
           }
 
+          // Debug logging to see what we're receiving from the API
+          console.log("🔍 AuthContext - Received profile data from API:", {
+            photoURL: userData.photoURL,
+            photo_url: userData.photo_url,
+            avatar_url: userData.avatar_url,
+            fullUserData: userData
+          });
+
           const normalized = {
             id: userData.id,
             email: emailString,
@@ -56,6 +64,26 @@ export const AuthProvider = ({ children }) => {
               userData.image ||
               null,
           };
+
+          console.log("✅ AuthContext - Normalized user object:", {
+            photoURL: normalized.photoURL,
+            displayName: normalized.displayName
+          });
+
+          // If no photo URL exists, try to refresh it (for existing users who logged in before the fix)
+          if (!normalized.photoURL) {
+            console.log("No profile picture found, attempting to refresh...");
+            try {
+              const refreshResponse = await authAPI.refreshProfilePicture();
+              if (refreshResponse.data?.photoURL) {
+                normalized.photoURL = refreshResponse.data.photoURL;
+                console.log("Profile picture refreshed:", normalized.photoURL);
+              }
+            } catch (refreshError) {
+              console.warn("Failed to refresh profile picture:", refreshError);
+              // Continue without photo - will use initials fallback in UI
+            }
+          }
 
           setUser(normalized);
           const role = userData.role || determineUserRole(userData);

@@ -7,6 +7,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useActivity } from "../../context/ActivityContext";
 import { itemsAPI } from "../../services/api";
 import { groupCartItemsByVariations } from "../../utils/groupCartItems";
+import { generateOrderReceiptQRData } from "../../utils/qrCodeGenerator";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -220,6 +221,20 @@ const CheckoutPage = () => {
           items.length
         } item(s) ordered.`,
       };
+
+      // Generate QR code data for the order
+      const qrCodeData = generateOrderReceiptQRData({
+        orderNumber: orderData.order_number,
+        studentId: orderData.student_id,
+        studentName: orderData.student_name,
+        studentEmail: orderData.student_email,
+        items: orderData.items,
+        educationLevel: orderData.education_level,
+        totalAmount: orderData.total_amount,
+        orderDate: new Date().toISOString(),
+        status: orderData.status,
+      });
+      orderData.qr_code_data = qrCodeData;
 
       // Submit order to backend
       const createdOrder = await createOrder(orderData);

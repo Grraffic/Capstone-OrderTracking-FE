@@ -246,6 +246,15 @@ const Navbar = () => {
                     src={userPhoto}
                     alt={userName}
                     className="w-10 h-10 rounded-full object-cover border-2 border-[#C5A572]"
+                    onError={(e) => {
+                      console.error("❌ Failed to load profile image:", userPhoto);
+                      console.error("Image error:", e);
+                      // Fallback to initials if image fails to load
+                      e.target.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log("✅ Profile image loaded successfully:", userPhoto);
+                    }}
                   />
                 ) : (
                   <div className="w-10 h-10 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold text-sm">
@@ -353,6 +362,13 @@ const Navbar = () => {
                     src={userPhoto}
                     alt={userName}
                     className="w-12 h-12 rounded-full object-cover border-2 border-[#C5A572]"
+                    onError={(e) => {
+                      console.error("❌ Failed to load profile image (mobile):", userPhoto);
+                      e.target.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log("✅ Profile image loaded successfully (mobile):", userPhoto);
+                    }}
                   />
                 ) : (
                   <div className="w-12 h-12 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold">
