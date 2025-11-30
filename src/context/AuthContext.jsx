@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
             photoURL: userData.photoURL,
             photo_url: userData.photo_url,
             avatar_url: userData.avatar_url,
-            fullUserData: userData
+            fullUserData: userData,
           });
 
           const normalized = {
@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }) => {
 
           console.log("✅ AuthContext - Normalized user object:", {
             photoURL: normalized.photoURL,
-            displayName: normalized.displayName
+            displayName: normalized.displayName,
           });
 
           // If no photo URL exists, try to refresh it (for existing users who logged in before the fix)
@@ -86,7 +86,9 @@ export const AuthProvider = ({ children }) => {
           }
 
           setUser(normalized);
-          const role = userData.role || determineUserRole(userData);
+          // Use role from backend (single source of truth)
+          // Backend determines role based on email domain and admin config
+          const role = userData.role || "student"; // Fallback to student if role not provided
           setUserRole(role);
         }
       } catch (error) {
@@ -103,37 +105,10 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
-  const determineUserRole = (userData) => {
-    // Extract email safely - handle both string and object cases
-    let emailString = "";
-    if (typeof userData.email === "string") {
-      emailString = userData.email;
-    } else if (userData.email && typeof userData.email === "object") {
-      emailString = userData.email.email || userData.email.value || "";
-    }
-
-    const email = (emailString || "").toLowerCase();
-
-    const SPECIAL_ADMIN_EMAIL = "ramosraf278@gmail.com";
-
-    // Enforce domain-based roles per project rules
-    if (email.endsWith("@student.laverdad.edu.ph")) {
-      return USER_ROLES.STUDENT;
-    }
-
-    // Admin users:
-    // - Exact admin domain (no student subdomain)
-    // - Or specific approved personal admin email
-    if (
-      (email.endsWith("@laverdad.edu.ph") &&
-        !email.endsWith("@student.laverdad.edu.ph")) ||
-      email === SPECIAL_ADMIN_EMAIL
-    ) {
-      return USER_ROLES.ADMIN;
-    }
-
-    return USER_ROLES.STUDENT; // default to student when in doubt
-  };
+  // Note: Role determination is now handled entirely by the backend
+  // The backend checks email domains and admin config, then returns the role
+  // in the JWT token and profile API response. This keeps admin emails secure
+  // and provides a single source of truth for role determination.
 
   const signInWithGoogle = async () => {
     try {

@@ -14,29 +14,21 @@ import { useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
 /**
- * Determines the default route based on user email domain
- * @param {Object} user - User object with email property
+ * Determines the default route based on user role
+ * @param {Object} user - User object with role property (from backend)
  * @returns {string} - Route path
  */
 const getDefaultRoute = (user) => {
-  if (!user || !user.email) {
+  if (!user) {
     return "/";
   }
 
-  const email = user.email.toLowerCase();
-
-  const SPECIAL_ADMIN_EMAIL = "ramosraf278@gmail.com";
-
-  // Student domain
-  if (email.endsWith("@student.laverdad.edu.ph")) {
-    return "/all-products";
-  }
-
-  // Admin users:
-  // - Admin domain
-  // - Or specific approved personal admin email
-  if (email.endsWith("@laverdad.edu.ph") || email === SPECIAL_ADMIN_EMAIL) {
+  // Use role from backend (single source of truth)
+  // Backend determines role based on email domain and admin config
+  if (user.role === "admin") {
     return "/admin";
+  } else if (user.role === "student") {
+    return "/all-products";
   }
 
   // Default fallback
