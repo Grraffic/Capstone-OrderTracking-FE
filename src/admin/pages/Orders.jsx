@@ -67,8 +67,8 @@ const Orders = () => {
     success: qrSuccess,
   } = useOrderQRScanner();
 
-  // Active status tab (Processing or Claimed)
-  const [activeStatusTab, setActiveStatusTab] = useState("Processing");
+  // Active status tab (Pre-orders, Orders, Claimed)
+  const [activeStatusTab, setActiveStatusTab] = useState("Orders");
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,7 +85,9 @@ const Orders = () => {
     page: currentPage,
     limit: itemsPerPage,
     status:
-      activeStatusTab === "Processing"
+      activeStatusTab === "Pre-orders"
+        ? "pending_pre_order"
+        : activeStatusTab === "Orders"
         ? "pending"
         : activeStatusTab === "Claimed"
         ? "claimed"
@@ -137,100 +139,7 @@ const Orders = () => {
   // For backward compatibility, use transformedOrders as mockOrders
   const mockOrders = transformedOrders;
 
-  // Mock orders data for fallback (if API fails or no data)
-  const fallbackMockOrders = [
-    {
-      id: 1562,
-      transactionNo: "1562",
-      itemOrdered: "Blouse",
-      moreItems: "more 1 item",
-      description: "Small",
-      size: "Small",
-      name: "Lenie Jane Tinapga",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Processing",
-      totalAmount: 450.0,
-    },
-    {
-      id: 1563,
-      transactionNo: "1563",
-      itemOrdered: "Skirt",
-      moreItems: "",
-      description: "Medium",
-      size: "Medium",
-      name: "Astrid Borja",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Processing",
-      totalAmount: 380.0,
-    },
-    {
-      id: 1564,
-      transactionNo: "1564",
-      itemOrdered: "Pants",
-      moreItems: "more 1 item",
-      description: "Large",
-      size: "Large",
-      name: "Rafael Ramos",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Claimed",
-      totalAmount: 520.0,
-    },
-    {
-      id: 1565,
-      transactionNo: "1565",
-      itemOrdered: "Necktie",
-      moreItems: "",
-      description: "None",
-      size: "None",
-      name: "Alicia Jane Medina",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Claimed",
-      totalAmount: 150.0,
-    },
-    {
-      id: 1566,
-      transactionNo: "1566",
-      itemOrdered: "Logo",
-      moreItems: "more 1 item",
-      description: "None",
-      size: "None",
-      name: "Lianor Bagaooro",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Processing",
-      totalAmount: 200.0,
-    },
-    {
-      id: 1567,
-      transactionNo: "1567",
-      itemOrdered: "ID Lace",
-      moreItems: "",
-      description: "None",
-      size: "None",
-      name: "Kristel Magpayo",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Processing",
-      totalAmount: 80.0,
-    },
-    {
-      id: 1568,
-      transactionNo: "1568",
-      itemOrdered: "PE Pants",
-      moreItems: "more 1 item",
-      description: "Medium",
-      size: "Medium",
-      name: "Trisha Mae Calibog",
-      gradeOrProgram: "BSIS 4",
-      transactionDate: "08-02-2025",
-      status: "Claimed",
-      totalAmount: 420.0,
-    },
-  ];
+
 
   // API already handles filtering, so we use the orders directly
   // For local filtering (class and year), we still need to filter
@@ -331,22 +240,19 @@ const Orders = () => {
       >
         {/* Orders Content */}
         <div className="p-8">
-          {/* Page Header - Title and Top-Right Controls */}
-          <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            {/* Page Title - Left Side */}
-            <div>
-              <h1 className="text-4xl font-bold">
-                <span className="text-[#0C2340]">Or</span>
-                <span className="text-[#e68b00]">ders</span>
-              </h1>
-            </div>
+          {/* Page Header - Title with QR Code and Search on the same row */}
+          <div className="mb-6 flex items-center justify-between">
+            <h1 className="text-5xl font-extrabold tracking-tight">
+              <span className="text-[#0C2340]">Or</span>
+              <span className="text-[#e68b00]">ders</span>
+            </h1>
 
-            {/* Top-Right Controls - QR Scanner and Search */}
+            {/* QR Scanner and Search Bar - Right Side */}
             <div className="flex items-center gap-3">
               {/* QR Code Scanner Button */}
               <button
                 onClick={openQRScanner}
-                className="flex items-center gap-2 px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium"
+                className="flex items-center gap-2 px-5 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium shadow-sm"
               >
                 <QrCode size={20} />
                 <span>Scan QR Code</span>
@@ -363,58 +269,84 @@ const Orders = () => {
                   placeholder="Search"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-64"
+                  className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-72 shadow-sm"
                 />
               </div>
             </div>
           </div>
 
-          {/* Statistics Cards - Multiple Sections - Only show when not loading and no error */}
-          {!ordersLoading && !ordersError && (
-            <div className="mb-8">
-              <OrdersStatsCards
-                stats={stats}
-                educationLevelFilter={educationLevelFilter}
-                classAndYearFilter={classAndYearFilter}
-                onEducationLevelChange={setEducationLevelFilter}
-                onClassAndYearChange={setClassAndYearFilter}
-                educationLevelOptions={EDUCATION_LEVELS}
-                classAndYearOptions={filteredClassAndYearOptions}
-              />
-            </div>
-          )}
+          {/* Navigation Tabs */}
+          <div className="mb-6 flex items-center gap-8 border-b border-gray-200">
+            <button
+              onClick={() => setActiveStatusTab("Pre-orders")}
+              className={`pb-3 font-semibold transition-colors relative text-base ${
+                activeStatusTab === "Pre-orders"
+                  ? "text-[#0C2340]"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Pre-orders
+              {activeStatusTab === "Pre-orders" && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#e68b00] rounded-t-full"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveStatusTab("Orders")}
+              className={`pb-3 font-semibold transition-colors relative text-base ${
+                activeStatusTab === "Orders"
+                  ? "text-[#0C2340]"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Orders
+              {activeStatusTab === "Orders" && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#e68b00] rounded-t-full"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveStatusTab("Claimed")}
+              className={`pb-3 font-semibold transition-colors relative text-base ${
+                activeStatusTab === "Claimed"
+                  ? "text-[#0C2340]"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Claimed
+              {activeStatusTab === "Claimed" && (
+                <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-[#e68b00] rounded-t-full"></div>
+              )}
+            </button>
+          </div>
 
-          {/* Status Tabs - Processing and Claimed - Only show when not loading and no error */}
-          {!ordersLoading && !ordersError && (
-            <div className="mb-6 flex items-center gap-6 border-b border-gray-200">
-              <button
-                onClick={() => setActiveStatusTab("Processing")}
-                className={`pb-3 font-medium transition-colors relative ${
-                  activeStatusTab === "Processing"
-                    ? "text-[#0C2340]"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Processing
-                {activeStatusTab === "Processing" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveStatusTab("Claimed")}
-                className={`pb-3 font-medium transition-colors relative ${
-                  activeStatusTab === "Claimed"
-                    ? "text-[#0C2340]"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Claimed
-                {activeStatusTab === "Claimed" && (
-                  <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
-                )}
-              </button>
-            </div>
-          )}
+          {/* Filter Dropdowns - Below Tabs, Right Aligned */}
+          <div className="mb-6 flex items-center justify-end gap-4">
+            {/* Grade Level Dropdown */}
+            <select
+              value={educationLevelFilter}
+              onChange={(e) => setEducationLevelFilter(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent bg-white text-gray-700 font-medium shadow-sm cursor-pointer min-w-[200px]"
+            >
+              {EDUCATION_LEVELS.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
+
+            {/* Grade Level Category Dropdown */}
+            <select
+              value={classAndYearFilter}
+              onChange={(e) => setClassAndYearFilter(e.target.value)}
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent bg-white text-gray-700 font-medium shadow-sm cursor-pointer min-w-[200px]"
+              disabled={educationLevelFilter === "All Education Levels"}
+            >
+              {filteredClassAndYearOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Loading State - Show loading overlay on top of existing content */}
           {ordersLoading && (
@@ -442,20 +374,8 @@ const Orders = () => {
             </div>
           )}
 
-          {/* Empty State */}
-          {!ordersLoading && !ordersError && paginatedOrders.length === 0 && (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <p className="text-gray-500 text-lg mb-2">No orders found</p>
-              <p className="text-gray-400 text-sm">
-                {searchTerm
-                  ? `No orders match your search "${searchTerm}"`
-                  : "There are no orders to display"}
-              </p>
-            </div>
-          )}
-
-          {/* Orders Table */}
-          {!ordersLoading && !ordersError && paginatedOrders.length > 0 && (
+          {/* Orders Table - Always shown */}
+          {!ordersLoading && !ordersError && (
             <OrdersTable
               orders={paginatedOrders}
               currentPage={currentPage}
