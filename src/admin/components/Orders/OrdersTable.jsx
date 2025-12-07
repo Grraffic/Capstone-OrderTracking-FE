@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import EditOrderModal from "./EditOrderModal";
 
 /**
  * OrdersTable Component
@@ -35,6 +36,22 @@ const OrdersTable = ({
 }) => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [openMenuId, setOpenMenuId] = useState(null);
+  
+  // Modal state
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Handle edit click
+  const handleEditClick = (order) => {
+    setSelectedOrder(order);
+    setEditModalOpen(true);
+  };
+
+  // Handle close modal
+  const handleCloseModal = () => {
+    setEditModalOpen(false);
+    setSelectedOrder(null);
+  };
 
   const toggleRowSelection = (id) => {
     const newSelected = new Set(selectedRows);
@@ -56,8 +73,8 @@ const OrdersTable = ({
 
   return (
     <div className="space-y-4">
-      {/* Table Header Row - Always visible */}
-      <div className="bg-[#0C2340] rounded-xl py-4 px-6 shadow-lg">
+      {/* Table Header Row - Always visible on desktop, hidden on mobile */}
+      <div className="hidden lg:block bg-[#0C2340] rounded-xl py-4 px-6 shadow-lg">
         <div className="grid grid-cols-7 gap-6 items-center">
           <div className="text-sm font-bold text-white">Transaction no.</div>
           <div className="text-sm font-bold text-white">Item Ordered</div>
@@ -110,11 +127,12 @@ const OrdersTable = ({
         return (
           <div
             key={order.id}
-            className={`bg-white border border-gray-200 rounded-xl p-6 shadow-sm hover:bg-amber-50/30 transition-all duration-200 ${
+            className={`bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-amber-50/30 transition-all duration-200 ${
               selectedRows.has(order.id) ? "bg-amber-50/50" : ""
             }`}
           >
-            <div className="grid grid-cols-7 gap-6 items-center">
+            {/* Desktop Layout - Grid */}
+            <div className="hidden lg:grid lg:grid-cols-7 gap-6 items-center p-6">
               {/* Transaction No */}
               <div className="text-sm font-bold text-[#0C2340]">
                 {order.transactionNo}
@@ -166,9 +184,7 @@ const OrdersTable = ({
               {/* Action Icons */}
               <div className="flex items-center justify-end gap-3">
                 <button
-                  onClick={() => {
-                    console.log("Edit order:", order.id);
-                  }}
+                  onClick={() => handleEditClick(order)}
                   className="p-1.5 hover:bg-gray-100 rounded transition-colors"
                   aria-label="Edit order"
                   title="Edit order"
@@ -187,15 +203,90 @@ const OrdersTable = ({
                 </button>
               </div>
             </div>
+
+            {/* Mobile/Tablet Layout - Stacked */}
+            <div className="lg:hidden p-4 space-y-3">
+              {/* Transaction No & Actions */}
+              <div className="flex items-start justify-between">
+                <div>
+                  <div className="text-xs text-gray-500 font-medium">Transaction No.</div>
+                  <div className="text-sm font-bold text-[#0C2340] mt-0.5">
+                    {order.transactionNo}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleEditClick(order)}
+                    className="p-2 hover:bg-gray-100 rounded transition-colors"
+                    aria-label="Edit order"
+                  >
+                    <Edit2 size={16} className="text-gray-600" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      console.log("Delete order:", order.id);
+                    }}
+                    className="p-2 hover:bg-red-50 rounded transition-colors"
+                    aria-label="Delete order"
+                  >
+                    <Trash2 size={16} className="text-red-500" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Item Ordered */}
+              <div>
+                <div className="text-xs text-gray-500 font-medium">Item Ordered</div>
+                <div className="text-sm font-semibold text-[#0C2340] mt-0.5">
+                  {order.itemOrdered}
+                </div>
+                {order.moreItems && (
+                  <a
+                    href="#"
+                    className="text-xs text-gray-500 hover:text-[#e68b00] transition-colors inline-block mt-1"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      console.log("See more clicked for order:", order.id);
+                    }}
+                  >
+                    See more
+                  </a>
+                )}
+              </div>
+
+              {/* Size */}
+              <div>
+                <div className="text-xs text-gray-500 font-medium">Size</div>
+                <div className={`text-sm font-semibold mt-0.5 ${getSizeColor(order.size)}`}>
+                  {order.size || "N/A"}
+                </div>
+              </div>
+
+              {/* Name */}
+              <div>
+                <div className="text-xs text-gray-500 font-medium">Name</div>
+                <div className="text-sm font-medium text-[#0C2340] mt-0.5">
+                  {order.name}
+                </div>
+              </div>
+
+              {/* Grade Level & Category */}
+              <div>
+                <div className="text-xs text-gray-500 font-medium">Grade Level</div>
+                <div className="text-sm font-medium text-blue-600 mt-0.5">
+                  {order.gradeOrProgram}
+                </div>
+              </div>
+            </div>
           </div>
         );
       })
       )}
 
       {/* Pagination Controls */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Left: Page Indicator */}
-        <div className="text-sm text-gray-600">
+        <div className="text-sm text-gray-600 text-center sm:text-left">
           Page <span className="font-semibold">{currentPage}</span> of{" "}
           <span className="font-semibold">{totalPages}</span>
         </div>
@@ -206,27 +297,34 @@ const OrdersTable = ({
           <button
             onClick={onPrevPage}
             disabled={currentPage === 1}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors flex items-center gap-1 font-medium text-sm"
+            className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors flex items-center gap-1 font-medium text-sm"
             title="Previous page"
             aria-label="Previous page"
           >
             <ChevronLeft size={18} />
-            <span>Previous</span>
+            <span className="hidden sm:inline">Previous</span>
           </button>
 
           {/* Next Button */}
           <button
             onClick={onNextPage}
             disabled={currentPage === totalPages}
-            className="px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors flex items-center gap-1 font-medium text-sm shadow-sm"
+            className="px-3 sm:px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors flex items-center gap-1 font-medium text-sm shadow-sm"
             title="Next page"
             aria-label="Next page"
           >
-            <span>Next</span>
+            <span className="hidden sm:inline">Next</span>
             <ChevronRight size={18} />
           </button>
         </div>
       </div>
+
+      {/* Edit Order Modal */}
+      <EditOrderModal 
+        isOpen={editModalOpen}
+        onClose={handleCloseModal}
+        order={selectedOrder}
+      />
     </div>
   );
 };

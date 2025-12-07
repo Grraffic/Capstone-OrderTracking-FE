@@ -90,7 +90,7 @@ export const useOrderQRScanner = () => {
         );
       }
 
-      // Step 3: Update order status to "claimed"
+      // Step 3: Update order status to "completed"
       const statusResponse = await fetch(
         `${API_BASE_URL}/orders/${order.id}/status`,
         {
@@ -98,7 +98,7 @@ export const useOrderQRScanner = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status: "claimed" }),
+          body: JSON.stringify({ status: "completed" }),
         }
       );
 
@@ -115,7 +115,7 @@ export const useOrderQRScanner = () => {
         );
       }
 
-      console.log("Order status updated to claimed:", statusResult.data);
+      console.log("Order status updated to completed:", statusResult.data);
 
       // Step 4: Reduce inventory for all items in the order
       const inventoryUpdates = [];

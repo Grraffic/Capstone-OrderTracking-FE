@@ -84,13 +84,15 @@ const Orders = () => {
   } = useOrders({
     page: currentPage,
     limit: itemsPerPage,
-    status:
+    orderType:
       activeStatusTab === "Pre-orders"
-        ? "pending_pre_order"
+        ? "pre-order"
         : activeStatusTab === "Orders"
-        ? "pending"
-        : activeStatusTab === "Claimed"
-        ? "claimed"
+        ? "regular"
+        : null,
+    status:
+      activeStatusTab === "Claimed"
+        ? "completed"
         : null,
     educationLevel:
       educationLevelFilter !== "All Education Levels"
@@ -240,46 +242,84 @@ const Orders = () => {
       >
         {/* Orders Content */}
         <div className="p-8">
-          {/* Page Header - Title with QR Code and Search on the same row */}
-          <div className="mb-6 flex items-center justify-between">
-            <h1 className="text-5xl font-extrabold tracking-tight">
-              <span className="text-[#0C2340]">Or</span>
-              <span className="text-[#e68b00]">ders</span>
-            </h1>
+          {/* Page Header - Title with QR Code and Search */}
+          <div className="mb-6">
+            {/* Desktop Layout: Title left, Controls right */}
+            <div className="hidden lg:flex lg:items-center lg:justify-between">
+              <h1 className="text-5xl font-extrabold tracking-tight">
+                <span className="text-[#0C2340]">Or</span>
+                <span className="text-[#e68b00]">ders</span>
+              </h1>
 
-            {/* QR Scanner and Search Bar - Right Side */}
-            <div className="flex items-center gap-3">
-              {/* QR Code Scanner Button */}
-              <button
-                onClick={openQRScanner}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium shadow-sm"
-              >
-                <QrCode size={20} />
-                <span>Scan QR Code</span>
-              </button>
+              {/* QR Scanner and Search Bar - Right Side */}
+              <div className="flex items-center gap-3">
+                {/* QR Code Scanner Button */}
+                <button
+                  onClick={openQRScanner}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium shadow-sm"
+                >
+                  <QrCode size={20} />
+                  <span>Scan QR Code</span>
+                </button>
 
-              {/* Search Bar */}
-              <div className="relative">
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={20}
-                />
-                <input
-                  type="text"
-                  placeholder="Search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-72 shadow-sm"
-                />
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    size={20}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-72 shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile/Tablet Layout: Stacked */}
+            <div className="lg:hidden">
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight mb-4">
+                <span className="text-[#0C2340]">Or</span>
+                <span className="text-[#e68b00]">ders</span>
+              </h1>
+
+              {/* QR Scanner and Search Bar - Stacked */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                {/* QR Code Scanner Button */}
+                <button
+                  onClick={openQRScanner}
+                  className="flex items-center justify-center gap-2 px-5 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium shadow-sm"
+                >
+                  <QrCode size={20} />
+                  <span>Scan QR Code</span>
+                </button>
+
+                {/* Search Bar */}
+                <div className="relative flex-1 sm:flex-initial">
+                  <Search
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                    size={20}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-full sm:w-72 shadow-sm"
+                  />
+                </div>
               </div>
             </div>
           </div>
 
           {/* Navigation Tabs */}
-          <div className="mb-6 flex items-center gap-8 border-b border-gray-200">
+          <div className="mb-6 flex items-center gap-4 sm:gap-6 lg:gap-8 border-b border-gray-200 overflow-x-auto">
             <button
               onClick={() => setActiveStatusTab("Pre-orders")}
-              className={`pb-3 font-semibold transition-colors relative text-base ${
+              className={`pb-3 font-semibold transition-colors relative text-sm sm:text-base whitespace-nowrap ${
                 activeStatusTab === "Pre-orders"
                   ? "text-[#0C2340]"
                   : "text-gray-500 hover:text-gray-700"
@@ -292,7 +332,7 @@ const Orders = () => {
             </button>
             <button
               onClick={() => setActiveStatusTab("Orders")}
-              className={`pb-3 font-semibold transition-colors relative text-base ${
+              className={`pb-3 font-semibold transition-colors relative text-sm sm:text-base whitespace-nowrap ${
                 activeStatusTab === "Orders"
                   ? "text-[#0C2340]"
                   : "text-gray-500 hover:text-gray-700"
@@ -305,7 +345,7 @@ const Orders = () => {
             </button>
             <button
               onClick={() => setActiveStatusTab("Claimed")}
-              className={`pb-3 font-semibold transition-colors relative text-base ${
+              className={`pb-3 font-semibold transition-colors relative text-sm sm:text-base whitespace-nowrap ${
                 activeStatusTab === "Claimed"
                   ? "text-[#0C2340]"
                   : "text-gray-500 hover:text-gray-700"
@@ -318,13 +358,13 @@ const Orders = () => {
             </button>
           </div>
 
-          {/* Filter Dropdowns - Below Tabs, Right Aligned */}
-          <div className="mb-6 flex items-center justify-end gap-4">
+          {/* Filter Dropdowns - Below Tabs */}
+          <div className="mb-6 flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 sm:gap-4">
             {/* Grade Level Dropdown */}
             <select
               value={educationLevelFilter}
               onChange={(e) => setEducationLevelFilter(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent bg-white text-gray-700 font-medium shadow-sm cursor-pointer min-w-[200px]"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent bg-white text-gray-700 font-medium shadow-sm cursor-pointer w-full sm:w-auto sm:min-w-[200px]"
             >
               {EDUCATION_LEVELS.map((level) => (
                 <option key={level} value={level}>
@@ -337,7 +377,7 @@ const Orders = () => {
             <select
               value={classAndYearFilter}
               onChange={(e) => setClassAndYearFilter(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent bg-white text-gray-700 font-medium shadow-sm cursor-pointer min-w-[200px]"
+              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent bg-white text-gray-700 font-medium shadow-sm cursor-pointer w-full sm:w-auto sm:min-w-[200px]"
               disabled={educationLevelFilter === "All Education Levels"}
             >
               {filteredClassAndYearOptions.map((option) => (

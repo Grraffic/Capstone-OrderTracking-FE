@@ -25,6 +25,7 @@ export const useOrders = (options = {}) => {
     page = 1,
     limit = 10,
     status = null,
+    orderType = null,
     educationLevel = null,
     search = null,
   } = options;
@@ -54,6 +55,10 @@ export const useOrders = (options = {}) => {
 
       if (status) {
         params.append("status", status);
+      }
+
+      if (orderType) {
+        params.append("order_type", orderType);
       }
 
       if (educationLevel && educationLevel !== "All Education Levels") {
@@ -102,7 +107,7 @@ export const useOrders = (options = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, status, educationLevel, search]);
+  }, [page, limit, status, orderType, educationLevel, search]);
 
   /**
    * Fetch orders on mount and when dependencies change

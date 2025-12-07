@@ -266,15 +266,18 @@ const QRCodeScannerModal = ({
         <div className="flex-1 overflow-y-auto p-6">
           {/* Video Stream with Overlay */}
           <div className="mb-6 rounded-xl overflow-hidden bg-black relative">
+            {/* Video Element - Always visible when modal is open */}
             <video
               ref={videoRef}
               className="w-full aspect-video object-cover"
-              style={{ display: isScanning ? "block" : "none" }}
+              playsInline
+              muted
+              autoPlay
             />
 
-            {/* Scanning Overlay */}
+            {/* Scanning Overlay - Only show when actively scanning */}
             {isScanning && (
-              <div className="absolute inset-0 pointer-events-none">
+              <div className="absolute inset-0 pointer-events-none z-10">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-64 h-64 border-4 border-[#e68b00] rounded-lg relative">
                     {/* Corner decorations */}
@@ -287,9 +290,9 @@ const QRCodeScannerModal = ({
               </div>
             )}
 
-            {/* Loading State */}
+            {/* Loading State - Show on top of video */}
             {!isScanning && !error && (
-              <div className="w-full aspect-video bg-gray-900 flex items-center justify-center">
+              <div className="absolute inset-0 w-full aspect-video bg-gray-900/80 flex items-center justify-center z-20">
                 <div className="text-center">
                   <Loader2 className="w-12 h-12 text-[#e68b00] animate-spin mx-auto mb-3" />
                   <p className="text-white text-sm font-medium">
@@ -300,9 +303,9 @@ const QRCodeScannerModal = ({
               </div>
             )}
 
-            {/* Error State */}
+            {/* Error State - Show on top of video */}
             {error && (
-              <div className="w-full aspect-video bg-gray-900 flex items-center justify-center">
+              <div className="absolute inset-0 w-full aspect-video bg-gray-900/80 flex items-center justify-center z-20">
                 <div className="text-center px-6">
                   <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
                   <p className="text-white text-sm font-medium mb-2">
