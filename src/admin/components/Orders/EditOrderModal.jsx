@@ -207,11 +207,31 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
               <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-6">
                 {/* Student Profile */}
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
-                    {order.student_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A'}
+                  <div className="w-16 h-16 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center flex-shrink-0 border-2 border-white shadow-md">
+                    {order.student_data?.photo_url || order.student_data?.avatar_url ? (
+                      <img 
+                        src={order.student_data.photo_url || order.student_data.avatar_url} 
+                        alt={order.student_name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className={`w-full h-full flex items-center justify-center text-white font-bold text-xl ${
+                        order.student_data?.photo_url || order.student_data?.avatar_url ? 'hidden' : ''
+                      }`}
+                    >
+                      {order.student_name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'N/A'}
+                    </div>
                   </div>
                   <div>
                     <h4 className="font-bold text-[#0C2340] text-base">{order.student_name}</h4>
+                    {order.student_data?.email && (
+                       <p className="text-xs text-gray-500">{order.student_data.email}</p>
+                    )}
                   </div>
                 </div>
 

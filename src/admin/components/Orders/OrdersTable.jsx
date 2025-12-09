@@ -43,7 +43,7 @@ const OrdersTable = ({
 
   // Handle edit click
   const handleEditClick = (order) => {
-    setSelectedOrder(order);
+    setSelectedOrder(order.originalOrder || order);
     setEditModalOpen(true);
   };
 
