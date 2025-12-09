@@ -7,6 +7,8 @@ import { X, Calendar, Package, User, Mail } from "lucide-react";
  * A detailed modal for viewing and editing order information
  * Matches the Figma design with two-column layout
  */
+import { itemsAPI } from "../../../services/api";
+
 const EditOrderModal = ({ isOpen, onClose, order }) => {
   const [isEditing, setIsEditing] = useState(false);
   
@@ -25,13 +27,56 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
   };
 
   const [editedItems, setEditedItems] = useState([]);
+  const [itemDetailsMap, setItemDetailsMap] = useState({}); // Stores fetched details per item name
 
-  // Update items when order changes
+  // Update items when order changes and fetch pricing details
   React.useEffect(() => {
     if (order) {
-      setEditedItems(parseItems(order.items));
+      const items = parseItems(order.items);
+      setEditedItems(items);
+      
+      // Fetch details for each item to get pricing/stock info
+      items.forEach(async (item) => {
+        try {
+          const response = await itemsAPI.getAvailableSizes(item.name, order.education_level);
+          if (response.data.success) {
+             setItemDetailsMap(prev => ({
+                ...prev,
+                [item.name]: response.data.data
+             }));
+             
+             // If the current item has price 0, try to update it immediately from the fetched data
+             if (!item.price && element.size) {
+                const matchingVariant = response.data.data.find(v => v.size === item.size);
+                if (matchingVariant) {
+                   setEditedItems(prevItems => prevItems.map(i => {
+                      if (i.name === item.name && i.size === item.size) {
+                         return { ...i, price: matchingVariant.price };
+                      }
+                      return i;
+                   }));
+                }
+             }
+          }
+        } catch (error) {
+          console.error(`Failed to fetch details for ${item.name}`, error);
+        }
+      });
     }
   }, [order]);
+  
+  // Helper to get price for a specific size
+  const getPriceForSize = (itemName, size) => {
+     const details = itemDetailsMap[itemName] || [];
+     // Try to find exact size match or abbreviation match
+     const variant = details.find(d => {
+        // Handle mapped sizes (e.g. "Small" vs "Small (S)")
+        // Since we normalized backend response to be "Small", "Medium" etc.
+        // And frontend usually has "Small", "Medium" etc.
+        return d.size === size || size.includes(d.size) || d.size.includes(size);
+     });
+     return variant ? variant.price : 0;
+  };
 
   if (!isOpen || !order) return null;
 
@@ -58,7 +103,16 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
   // Handle size change for an item
   const handleSizeChange = (itemIndex, newSize) => {
     const updated = [...editedItems];
-    updated[itemIndex] = { ...updated[itemIndex], size: newSize };
+    const item = updated[itemIndex];
+    
+    // Lookup new price
+    const newPrice = getPriceForSize(item.name, newSize);
+    
+    updated[itemIndex] = { 
+       ...updated[itemIndex], 
+       size: newSize,
+       price: newPrice || updated[itemIndex].price // Fallback to existing if 0
+    };
     setEditedItems(updated);
   };
 
@@ -162,7 +216,7 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
                       <div className="flex-1">
                         <div className="flex items-start justify-between mb-1">
                           <h4 className="font-bold text-[#0C2340] text-sm">{item.name}</h4>
-                          <span className="text-gray-500 text-sm font-light">₱{(item.price || 0).toFixed(2)}</span>
+                          <span className="text-gray-500 text-sm font-light">₱{(item.price || getPriceForSize(item.name, item.size) || 0).toFixed(2)}</span>
                         </div>
                         
                         <p className="text-xs text-gray-600 mb-2">
@@ -185,11 +239,23 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
                                   : "border border-gray-300 text-gray-700 bg-gray-100 cursor-not-allowed"
                               }`}
                             >
-                              <option value="Small">Small (S)</option>
-                              <option value="Medium">Medium (M)</option>
-                              <option value="Large">Large (L)</option>
-                              <option value="Extra Large">Extra Large (XL)</option>
-                              <option value="N/A">N/A</option>
+                              {/* If we have fetched details, use them to populate options */}
+                              {itemDetailsMap[item.name] && itemDetailsMap[item.name].length > 0 ? (
+                                 itemDetailsMap[item.name].map((variant, vIdx) => (
+                                    <option key={vIdx} value={variant.size}>
+                                       {variant.size}
+                                    </option>
+                                 ))
+                              ) : (
+                                // Fallback options
+                                <>
+                                  <option value="Small">Small (S)</option>
+                                  <option value="Medium">Medium (M)</option>
+                                  <option value="Large">Large (L)</option>
+                                  <option value="Extra Large">Extra Large (XL)</option>
+                                  <option value="N/A">N/A</option>
+                                </>
+                              )}
                             </select>
                           </div>
                         </div>
