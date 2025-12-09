@@ -46,7 +46,7 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
              }));
              
              // If the current item has price 0, try to update it immediately from the fetched data
-             if (!item.price && element.size) {
+             if (!item.price && item.size) {
                 const matchingVariant = response.data.data.find(v => v.size === item.size);
                 if (matchingVariant) {
                    setEditedItems(prevItems => prevItems.map(i => {
@@ -247,7 +247,7 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
                                     </option>
                                  ))
                               ) : (
-                                // Fallback options
+                                 // Fallback options
                                 <>
                                   <option value="Small">Small (S)</option>
                                   <option value="Medium">Medium (M)</option>

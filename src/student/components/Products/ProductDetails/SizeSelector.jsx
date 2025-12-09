@@ -39,9 +39,21 @@ const SizeSelector = ({
   };
 
   // Format size display: "Small (S)" or "XSmall (XS)"
-  const formatSizeDisplay = (sizeAbbr) => {
-    const fullName = sizeNameMapping[sizeAbbr] || sizeAbbr;
-    return `${fullName} (${sizeAbbr})`;
+  const formatSizeDisplay = (sizeInput) => {
+    // If input is abbreviation (S, M, L), keep it as is
+    if (sizeNameMapping[sizeInput]) {
+       return `${sizeNameMapping[sizeInput]} (${sizeInput})`;
+    }
+    
+    // If input is full name (Small, Medium), try to find abbreviation
+    const reverseMapping = Object.entries(sizeNameMapping).find(([key, val]) => val.toLowerCase() === sizeInput.toLowerCase());
+    if (reverseMapping) {
+       return `${sizeInput} (${reverseMapping[0]})`;
+    }
+    
+    // Fallback if no mapping found (e.g. for numbered sizes or unknown text)
+    // Just return as is, or try to format nicely
+    return sizeInput;
   };
 
   if (!availableSizes || availableSizes.length === 0) {
@@ -76,35 +88,25 @@ const SizeSelector = ({
                 <div key={size} className="relative">
                   <button
                     onClick={() => onSizeSelect(size)}
-                    className={`relative px-6 py-2 rounded-lg transition-all duration-200 ${
+                    className={`relative px-6 py-2 rounded-lg transition-all duration-200 bg-white border-2 overflow-hidden ${
                       isSelected
-                        ? "bg-gray-100 border-2 border-gray-300"
-                        : "bg-white border-2 border-gray-300 hover:border-[#F28C28]"
+                        ? "border-gray-300" // Selected state border
+                        : "border-gray-300 hover:border-[#F28C28]" // Default/Hover state
                     } ${
-                      sizeConfirmed && isSelected ? "ring-2 ring-green-500" : ""
-                    } ${!isInStock ? "opacity-75" : ""}`}
+                      !isInStock ? "opacity-75" : ""
+                    }`}
                   >
                     <p className="text-xs font-medium text-[#e68b00]">
                       {formatSizeDisplay(size)}
                     </p>
-                    {sizeConfirmed && isSelected && (
-                      <Check className="inline-block ml-1 w-4 h-4" />
-                    )}
+                    
                     {/* Orange/Yellow left border for selected size (vertical) */}
                     {isSelected && (
-                      <div className="absolute top-0 left-0 bottom-0 w-1 bg-[#CB7B00] rounded-l-lg"></div>
+                      <div className="absolute top-0 left-0 bottom-0 w-1.5 bg-[#CB7B00]"></div>
                     )}
                   </button>
-                  {/* Stock status badge - always show */}
-                  <div
-                    className={`absolute -top-2 -right-2 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      isInStock
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {isInStock ? "✓" : "⏱"}
-                  </div>
+                  {/* Stock status badge - strictly only show for out of stock/pre-order */}
+                 
                 </div>
               );
             })

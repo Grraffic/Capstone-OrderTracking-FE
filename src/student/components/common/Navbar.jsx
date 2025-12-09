@@ -73,7 +73,14 @@ const Navbar = () => {
     }
     // Navigate to orders page if it's a restock notification
     if (notification.type === "restock") {
-      navigate("/student/profile");
+      // Pass state to open "Orders" tab and "Orders" category
+      navigate("/student/profile", { 
+        state: { 
+          activeTab: 'orders',
+          viewMode: 'detail', 
+          activeCategory: 'orders' 
+        } 
+      });
       setIsNotificationOpen(false);
     }
   };
@@ -208,7 +215,7 @@ const Navbar = () => {
                     <div className="px-4 py-2 border-t border-gray-200 text-center">
                       <button
                         onClick={() => {
-                          navigate("/student/profile");
+                          navigate("/student/profile", { state: { activeTab: 'activities' } });
                           setIsNotificationOpen(false);
                         }}
                         className="text-xs text-blue-600 hover:text-blue-700 font-medium"

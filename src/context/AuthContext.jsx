@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }) => {
 
           const normalized = {
             id: userData.id,
+            uid: userData.id, // Compatibility alias for components expecting uid
             email: emailString,
             role: userData.role,
             displayName:

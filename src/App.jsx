@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import Items from "./admin/pages/Items";
+import Inventory from "./admin/pages/Inventory";
 import Orders from "./admin/pages/Orders";
 import Settings from "./admin/pages/Settings";
 import AuthCallback from "./pages/AuthCallback";
@@ -91,6 +92,14 @@ export default function App() {
                           element={
                             <ProtectedRoute requiredRoles={["admin"]}>
                               <Items />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/admin/inventory"
+                          element={
+                            <ProtectedRoute requiredRoles={["admin"]}>
+                              <Inventory />
                             </ProtectedRoute>
                           }
                         />

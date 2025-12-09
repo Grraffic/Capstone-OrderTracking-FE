@@ -56,7 +56,7 @@ export const NotificationProvider = ({ children }) => {
 
     // Listen for inventory restock events
     const handleInventoryRestocked = (data) => {
-      console.log("📡 Received inventory:restocked event:", data);
+      console.log("📡 Received items:restocked event:", data);
       console.log("🔍 Current user.uid:", user.uid);
       console.log("🔍 Event userId:", data.userId);
       console.log("🔍 Match?", data.userId === user.uid);
@@ -87,7 +87,7 @@ export const NotificationProvider = ({ children }) => {
       }
     };
 
-    on("inventory:restocked", handleInventoryRestocked);
+    on("items:restocked", handleInventoryRestocked);
 
     // Request notification permission
     if (Notification.permission === "default") {
@@ -96,7 +96,7 @@ export const NotificationProvider = ({ children }) => {
 
     // Cleanup on unmount
     return () => {
-      off("inventory:restocked", handleInventoryRestocked);
+      off("items:restocked", handleInventoryRestocked);
     };
   }, [user?.uid, isConnected, on, off]);
 

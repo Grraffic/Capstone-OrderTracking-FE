@@ -86,7 +86,11 @@ const ProductDetailsPage = () => {
         product.itemType === "Uniform" ||
         product.itemType === "PE Uniform" ||
         product.itemType?.toLowerCase().includes("uniform") ||
-        product.category?.toLowerCase().includes("uniform");
+        product.category?.toLowerCase().includes("uniform") ||
+        product.name?.toLowerCase().includes("jersey") ||
+        product.name?.toLowerCase().includes("shirt") ||
+        product.name?.toLowerCase().includes("polo") ||
+        product.itemType?.toLowerCase().includes("jersey");
 
       if (!requiresSize) {
         setAvailableSizesData([]);
@@ -101,14 +105,45 @@ const ProductDetailsPage = () => {
         );
 
         if (response.data.success && response.data.data) {
-          // Transform database sizes to customer-facing sizes
-          const transformedSizes = response.data.data.map((sizeData) => ({
-            ...sizeData,
-            // Keep original database size for backend operations
-            dbSize: sizeData.size,
-            // Convert to customer-facing size for display
-            size: reverseSizeMapping[sizeData.size] || sizeData.size,
-          }));
+          // Normalize and transform database sizes
+          const transformedSizes = response.data.data.map((sizeData) => {
+             const originalSize = sizeData.size;
+             const lower = originalSize.toLowerCase().trim();
+             
+             let standardizedSize = originalSize;
+             
+             // PRIORITIZE XS / XSmall checks first to prevent them appearing as Small
+             // Also check for XXLarge/3XLarge before Large
+             
+             if (lower.includes('xxl') || lower.includes('2xl') || (lower.includes('2') && lower.includes('large'))) {
+               standardizedSize = 'XXL';
+             }
+             else if (lower.includes('3xl') || (lower.includes('3') && lower.includes('large'))) {
+                standardizedSize = '3XL';
+             }
+             else if (lower.includes('xl') || lower.includes('extra large') || (lower.includes('extra') && lower.includes('large'))) {
+                standardizedSize = 'XL';
+             }
+             else if (lower.includes('xs') || lower.includes('xsmall') || lower.includes('extra small') || (lower.includes('extra') && lower.includes('small'))) {
+                standardizedSize = 'XS';
+             }
+             // Now safe to check Small without catching XSmall, IF we explicitly exclude x/extra
+             else if (lower === 's' || lower === 'small' || (lower.includes('small') && !lower.includes('x') && !lower.includes('extra'))) {
+                standardizedSize = 'S';
+             }
+             else if (lower === 'm' || lower.includes('medium')) {
+                standardizedSize = 'M';
+             }
+             else if (lower === 'l' || lower === 'large' || (lower.includes('large') && !lower.includes('x') && !lower.includes('extra'))) {
+                standardizedSize = 'L';
+             }
+
+             return {
+               ...sizeData,
+               dbSize: originalSize, // Keep original for DB operations
+               size: standardizedSize // Standardized for UI matching
+             };
+          });
 
           setAvailableSizesData(transformedSizes);
           console.log(
@@ -144,7 +179,11 @@ const ProductDetailsPage = () => {
     product.itemType === "Uniform" ||
     product.itemType === "PE Uniform" ||
     product.itemType?.toLowerCase().includes("uniform") ||
-    product.category?.toLowerCase().includes("uniform");
+    product.category?.toLowerCase().includes("uniform") ||
+    product.name?.toLowerCase().includes("jersey") ||
+    product.name?.toLowerCase().includes("shirt") ||
+    product.name?.toLowerCase().includes("polo") ||
+    product.itemType?.toLowerCase().includes("jersey");
 
   console.log("Requires size selection:", requiresSizeSelection);
 
@@ -206,9 +245,10 @@ const ProductDetailsPage = () => {
 
     try {
       // Convert customer-facing size to database size
-      const dbSize = selectedSize
-        ? sizeMapping[selectedSize] || selectedSize
-        : "N/A";
+      // Use the actual DB size from the fetched data if available
+      const dbSize = selectedSize && selectedSizeData
+        ? selectedSizeData.dbSize
+        : (selectedSize ? (sizeMapping[selectedSize] || selectedSize) : "N/A");
 
       await addToCart({
         inventoryId: product.id,
@@ -227,9 +267,10 @@ const ProductDetailsPage = () => {
 
     try {
       // Convert customer-facing size to database size
-      const dbSize = selectedSize
-        ? sizeMapping[selectedSize] || selectedSize
-        : "N/A";
+      // Use the actual DB size from the fetched data if available
+      const dbSize = selectedSize && selectedSizeData
+        ? selectedSizeData.dbSize
+        : (selectedSize ? (sizeMapping[selectedSize] || selectedSize) : "N/A");
 
       // Determine order intent based on button state
       // If button shows "Pre-Order", user clicked Pre-Order button
@@ -238,7 +279,8 @@ const ProductDetailsPage = () => {
       
       if (requiresSizeSelection && selectedSize) {
         // For items with size selection, check if selected size is out of stock
-        if (selectedSizeData && selectedSizeData.stock <= 0) {
+        // If size data is missing (not found in DB) OR stock is <= 0, it is a pre-order
+        if (!selectedSizeData || selectedSizeData.stock <= 0) {
           orderIntent = "preOrder";
         }
       } else if (isOutOfStock) {

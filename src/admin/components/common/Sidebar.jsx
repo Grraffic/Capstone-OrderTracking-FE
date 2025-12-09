@@ -6,6 +6,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Warehouse,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -43,10 +44,14 @@ const Sidebar = ({ isOpen = true }) => {
       to={to}
       end={isExact}
       className={({ isActive }) =>
-        `group relative flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+        `group relative flex items-center gap-3 text-sm font-medium transition-none ${
           isActive
-            ? "bg-[#0C2340] text-white"
-            : "text-[#0C2340] hover:bg-[#f3f6fb]"
+            ? isOpen
+              ? "bg-[#0C2340] text-white py-4 pl-8 pr-3 -ml-4 mr-8 rounded-r-full"
+              : "bg-[#0C2340] text-white py-4 px-4 rounded-lg justify-center"
+            : isOpen
+            ? "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg"
+            : "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg justify-center"
         }`
       }
       title={!isOpen ? label : ""}
@@ -101,7 +106,7 @@ const Sidebar = ({ isOpen = true }) => {
         {navItem("/admin/items", "Items", Package, false)}
 
         {/* Inventory */}
-        {navItem("/admin/inventory", "Inventory", Package, false)}
+        {navItem("/admin/inventory", "Inventory", Warehouse, false)}
 
         {/* Remaining nav items (Orders, Reports, Settings) */}
         {navItems

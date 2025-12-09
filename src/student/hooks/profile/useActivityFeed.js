@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "../../../context/AuthContext";
 import { useActivity } from "../../../context/ActivityContext";
+import { useLocation } from "react-router-dom";
 import api from "../../../services/api";
 
 /**
@@ -16,13 +17,15 @@ import api from "../../../services/api";
  */
 export const useActivityFeed = () => {
   const { user } = useAuth();
+  const location = useLocation();
   const { activities: allActivities, getActivities } = useActivity();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
   // Tab state: 'activities', 'orders', 'history'
-  const [activeTab, setActiveTab] = useState("activities");
+  // Initialize from location state if available (e.g. from notification click)
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || "activities");
   
   // Filter state: 'all', 'newest', 'oldest'
   const [filter, setFilter] = useState("newest");
