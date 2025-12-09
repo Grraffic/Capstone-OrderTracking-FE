@@ -16,7 +16,6 @@ import Inventory from "./admin/pages/Inventory";
 import Orders from "./admin/pages/Orders";
 import Settings from "./admin/pages/Settings";
 import AuthCallback from "./pages/AuthCallback";
-import ProductCategories from "./student/pages/ProductCategories";
 import StudentDashboard from "./student/pages/StudentDashboard";
 import AllProducts from "./student/pages/AllProducts";
 import ProductDetailsPage from "./student/pages/ProductDetailsPage";
@@ -24,6 +23,7 @@ import MyCart from "./student/pages/MyCart";
 import CheckoutPage from "./student/pages/CheckoutPage";
 import StudentProfile from "./student/pages/StudentProfile";
 import StudentSettings from "./student/pages/StudentSettings";
+import OrderSuccessPage from "./student/pages/OrderSuccessPage";
 
 export default function App() {
   return (
@@ -68,15 +68,7 @@ export default function App() {
                           element={<AuthCallback />}
                         />
 
-                        {/* Product Categories - protected for students */}
-                        <Route
-                          path="/product-categories"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <ProductCategories />
-                            </ProtectedRoute>
-                          }
-                        />
+
 
                         {/* Admin routes - protected to admin role */}
                         <Route
@@ -186,6 +178,16 @@ export default function App() {
                           element={
                             <ProtectedRoute requiredRoles={["student"]}>
                               <StudentSettings />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        {/* Order Success page - protected for students */}
+                        <Route
+                          path="/student/order-success"
+                          element={
+                            <ProtectedRoute requiredRoles={["student"]}>
+                              <OrderSuccessPage />
                             </ProtectedRoute>
                           }
                         />

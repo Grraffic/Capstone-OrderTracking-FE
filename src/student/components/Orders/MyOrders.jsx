@@ -478,13 +478,49 @@ const MyOrders = () => {
 
   // Category button component
   const CategoryButton = ({ category, icon: Icon, label, count, onClick }) => {
+    const [showTooltip, setShowTooltip] = useState(false);
+    
+    // Define styles and content for each category
+    const categoryConfig = {
+      preOrders: {
+        hoverBg: 'hover:bg-[#9FCDFF]',
+        hoverBorder: 'hover:border-[#9FCDFF]',
+        tooltipBg: 'bg-[#9FCDFF]',
+        tooltipArrow: 'border-b-[#9FCDFF]',
+        title: 'Pre-Orders',
+        message: 'Your pre-order is now on process. Check your notification for more updates.'
+      },
+      orders: {
+        hoverBg: 'hover:bg-[#FFCF85]',
+        hoverBorder: 'hover:border-[#FFCF85]',
+        tooltipBg: 'bg-[#F3BC62]',
+        tooltipArrow: 'border-b-[#F3BC62]',
+        title: 'Orders',
+        message: 'Your orders are now ready for claiming. Please have your QR code prepared for verification during the claiming process.'
+      },
+      claimed: {
+        hoverBg: 'hover:bg-[#9AE799]',
+        hoverBorder: 'hover:border-[#9AE799]',
+        tooltipBg: 'bg-[#9AE799]',
+        tooltipArrow: 'border-b-[#9AE799]',
+        title: 'Claimed Orders',
+        message: 'Your orders are now complete. Digital receipts are now available in your order history.'
+      }
+    };
+
+    const config = categoryConfig[category] || categoryConfig.orders;
+
     return (
       <button
         onClick={onClick}
-        className="flex flex-col items-center gap-3 group"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        className="flex flex-col items-center gap-3 group relative"
       >
-        <div className="relative w-20 h-20 rounded-full flex items-center justify-center bg-white border-2 border-gray-300 hover:border-[#F28C28] hover:bg-[#FFF5E6] transition-all duration-300 group-hover:shadow-lg">
-          <Icon className="w-8 h-8 text-[#003363] group-hover:text-[#F28C28] transition-colors" />
+        <div 
+          className={`relative w-20 h-20 rounded-full flex items-center justify-center bg-white border-2 border-gray-300 ${config.hoverBorder} ${config.hoverBg} transition-all duration-300 group-hover:shadow-lg`}
+        >
+          <Icon className="w-8 h-8 text-[#003363] transition-colors" />
 
           {count > 0 && (
             <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#F28C28] rounded-full flex items-center justify-center shadow-md">
@@ -493,9 +529,22 @@ const MyOrders = () => {
           )}
         </div>
 
-        <span className="text-sm font-semibold text-[#003363] group-hover:text-[#F28C28] transition-colors">
+        <span className="text-sm font-semibold text-[#003363] transition-colors">
           {label}
         </span>
+
+        {/* Tooltip */}
+        {showTooltip && (
+          <div className={`absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 ${config.tooltipBg} text-[#003363] text-sm p-4 rounded-lg shadow-lg z-50`}>
+            {/* Arrow */}
+            <div className={`absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent ${config.tooltipArrow}`}></div>
+            
+            <p className="font-bold mb-2">{config.title}</p>
+            <p className="text-xs leading-relaxed">
+              {config.message}
+            </p>
+          </div>
+        )}
       </button>
     );
   };
