@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { useAdminSidebar } from "../common/useAdminSidebar";
 
 /**
  * useAdminDashboardData Hook
@@ -7,12 +8,13 @@ import { useState, useCallback, useEffect } from "react";
  * - Overview statistics (total orders, items below reorder, critical stock, out of stock)
  * - Stock levels data for chart visualization
  * - Recent orders data for table display
- * - Sidebar toggle state
+ * - Sidebar toggle state (uses useAdminSidebar hook for auto-collapse on mobile)
  * - Active tab selection
  * - Loading state for skeleton display
  */
 export const useAdminDashboardData = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Use the shared sidebar hook which includes auto-collapse on mobile
+  const { sidebarOpen, toggleSidebar } = useAdminSidebar();
   const [activeTab, setActiveTab] = useState("Year");
   const [loading, setLoading] = useState(true);
 
@@ -108,11 +110,6 @@ export const useAdminDashboardData = () => {
       transactionDate: "08-02-2025",
     },
   ];
-
-  // Toggle sidebar
-  const toggleSidebar = useCallback(() => {
-    setSidebarOpen((prev) => !prev);
-  }, []);
 
   // Change active tab
   const handleTabChange = useCallback((tab) => {

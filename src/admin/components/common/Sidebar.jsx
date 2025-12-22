@@ -1,4 +1,5 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { useEffect } from "react";
 import {
   Home,
   Package,
@@ -16,10 +17,48 @@ import { useAuth } from "../../../context/AuthContext";
  * Collapsible sidebar with navigation items
  * Props:
  *   - isOpen: boolean - whether sidebar is expanded or collapsed
+ *   - onNavigate: function - callback to close sidebar on mobile when navigating
  */
-const Sidebar = ({ isOpen = true }) => {
+const Sidebar = ({ isOpen = true, onNavigate }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { logout } = useAuth();
+
+  // Close sidebar on mobile when route changes or on initial mount
+  useEffect(() => {
+    // Check if window width is less than 1024px (mobile/tablet) and sidebar is open
+    if (window.innerWidth < 1024 && onNavigate && isOpen) {
+      onNavigate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]); // Close sidebar whenever the route changes
+
+  // Also check on mount and window resize to ensure sidebar closes on mobile
+  useEffect(() => {
+    const MOBILE_BREAKPOINT = 1024;
+    
+    const checkAndClose = () => {
+      if (window.innerWidth < MOBILE_BREAKPOINT && onNavigate && isOpen) {
+        onNavigate();
+      }
+    };
+
+    // Check on mount
+    checkAndClose();
+
+    // Check on window resize
+    window.addEventListener("resize", checkAndClose);
+    return () => window.removeEventListener("resize", checkAndClose);
+  }, [isOpen, onNavigate]);
+
+  // Check if we're on mobile and close sidebar on navigation
+  const handleNavClick = (e) => {
+    // Check if window width is less than 1024px (mobile/tablet)
+    if (window.innerWidth < 1024 && onNavigate) {
+      // Close sidebar on mobile, even if clicking the same route
+      onNavigate();
+    }
+  };
   const navItems = [
     { to: "/admin", label: "Home", icon: Home },
     { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
@@ -40,32 +79,34 @@ const Sidebar = ({ isOpen = true }) => {
   };
 
   const navItem = (to, label, Icon, isExact = false) => (
-    <NavLink
-      to={to}
-      end={isExact}
-      className={({ isActive }) =>
-        `group relative flex items-center gap-3 text-sm font-medium transition-none ${
-          isActive
-            ? isOpen
-              ? "bg-[#0C2340] text-white py-4 pl-8 pr-3 -ml-4 mr-8 rounded-r-full"
-              : "bg-[#0C2340] text-white py-4 px-4 rounded-lg justify-center"
-            : isOpen
-            ? "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg"
-            : "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg justify-center"
-        }`
-      }
-      title={!isOpen ? label : ""}
-    >
-      <Icon size={20} className="flex-shrink-0" />
-      {isOpen && <span>{label}</span>}
+    <div onClick={handleNavClick}>
+      <NavLink
+        to={to}
+        end={isExact}
+        className={({ isActive }) =>
+          `group relative flex items-center gap-3 text-sm font-medium transition-none ${
+            isActive
+              ? isOpen
+                ? "bg-[#0C2340] text-white py-4 pl-8 pr-3 -ml-4 mr-8 rounded-r-full"
+                : "bg-[#0C2340] text-white py-4 px-4 rounded-lg justify-center"
+              : isOpen
+              ? "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg"
+              : "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg justify-center"
+          }`
+        }
+        title={!isOpen ? label : ""}
+      >
+        <Icon size={20} className="flex-shrink-0" />
+        {isOpen && <span>{label}</span>}
 
-      {/* Tooltip for collapsed state */}
-      {!isOpen && (
-        <div className="absolute left-full ml-2 px-3 py-2 bg-[#0C2340] text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-          {label}
-        </div>
-      )}
-    </NavLink>
+        {/* Tooltip for collapsed state */}
+        {!isOpen && (
+          <div className="absolute left-full ml-2 px-3 py-2 bg-[#0C2340] text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
+            {label}
+          </div>
+        )}
+      </NavLink>
+    </div>
   );
 
   return (

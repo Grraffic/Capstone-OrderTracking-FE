@@ -55,7 +55,7 @@ const Settings = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
-        <Sidebar isOpen={sidebarOpen} />
+        <Sidebar isOpen={sidebarOpen} onNavigate={toggleSidebar} />
         <AdminHeader onMenuToggle={toggleSidebar} sidebarOpen={sidebarOpen} />
         <main
           className={`fixed top-16 bottom-0 right-0 bg-gray-50 overflow-y-auto transition-all duration-300 ${

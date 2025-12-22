@@ -23,7 +23,7 @@ const AdminDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Fixed Sidebar */}
-      <Sidebar isOpen={sidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} onNavigate={toggleSidebar} />
 
       {/* Fixed Header */}
       <AdminHeader onMenuToggle={toggleSidebar} sidebarOpen={sidebarOpen} />

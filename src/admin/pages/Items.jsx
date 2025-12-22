@@ -9,9 +9,12 @@ import {
   Pencil,
   Trash2,
   Eye,
+  ChevronDown,
 } from "lucide-react";
+import { subDays } from "date-fns";
 import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
+import DateRangePicker from "../components/common/DateRangePicker";
 import ItemsModals from "../components/Items/ItemsModals";
 import ItemDetailsModal from "../components/Items/ItemDetailsModal";
 import ItemAdjustmentModal from "../components/Items/ItemAdjustmentModal";
@@ -51,7 +54,10 @@ import {
  */
 const Items = () => {
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
-  const [statsRange, setStatsRange] = useState("Week"); // "Week", "Month", "Year"
+  // Date range state - initialize to "Last 7 days"
+  const today = new Date();
+  const [startDate, setStartDate] = useState(subDays(today, 6));
+  const [endDate, setEndDate] = useState(today);
   // Local state for the horizontal education level tabs
   const [selectedLevel, setSelectedLevel] = useState("All Levels");
   const [showFilters, setShowFilters] = useState(true);
@@ -166,7 +172,7 @@ const Items = () => {
 
     // Update tab state when filter changes (e.g., from dropdown)
     const tabLabel = mapEducationLevelToTabLabel(educationLevelFilter);
-    if (tabLabel && ["All Levels", "Preschool", "Elementary", "Junior Highschool", "Senior Highschool", "College"].includes(tabLabel)) {
+    if (tabLabel && ["All Levels", "Preschool", "Elementary", "Junior Highschool", "Senior Highschool", "College", "Accessories"].includes(tabLabel)) {
       setSelectedLevel(tabLabel);
     }
   }, [educationLevelFilter]);
@@ -174,7 +180,7 @@ const Items = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Fixed Sidebar */}
-      <Sidebar isOpen={sidebarOpen} />
+      <Sidebar isOpen={sidebarOpen} onNavigate={toggleSidebar} />
 
       {/* Fixed Header */}
       <AdminHeader onMenuToggle={toggleSidebar} sidebarOpen={sidebarOpen} />
@@ -207,42 +213,60 @@ const Items = () => {
 
           {/* Statistics Cards Section */}
           <div className="mb-6">
-            {/* Time Range Selector: Week / Month / Year */}
+            {/* Date Range Selector */}
             <div className="flex justify-end mb-3">
-              <div className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm">
-                {["Week", "Month", "Year"].map((range) => {
-                  const isActive = statsRange === range;
-                  return (
-                    <button
-                      key={range}
-                      type="button"
-                      onClick={() => setStatsRange(range)}
-                      className={`relative pb-1 font-medium transition-colors ${
-                        isActive
-                          ? "text-[#e68b00]"
-                          : "text-[#0C2340] hover:text-[#e68b00]"
-                      }`}
-                    >
-                      <span>{range}</span>
-                      <span
-                        className={`absolute left-0 -bottom-px h-0.5 rounded-full transition-all duration-200 ${
-                          isActive
-                            ? "w-full bg-[#e68b00]"
-                            : "w-0 bg-transparent"
-                        }`}
-                      />
-                    </button>
-                  );
-                })}
+              <div className="w-full sm:w-auto max-w-md">
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onDateRangeChange={(start, end) => {
+                    setStartDate(start);
+                    setEndDate(end);
+                  }}
+                />
               </div>
             </div>
 
             <ItemsStatsCards stats={stats} />
           </div>
 
-          {/* Horizontal Level Selection Tabs */}
+          {/* Horizontal Level Selection Tabs - Desktop / Dropdown - Mobile */}
           <div className="mb-8 border-b border-gray-200 pb-2">
-            <div className="flex flex-wrap gap-x-12 gap-y-4">
+            {/* Mobile Dropdown */}
+            <div className="md:hidden">
+              <div className="relative">
+                <select
+                  value={selectedLevel}
+                  onChange={(e) => {
+                    const level = e.target.value;
+                    setSelectedLevel(level);
+                    setEducationLevelFilter(level);
+                  }}
+                  className="w-full appearance-none bg-white border-2 border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-[#0C2340] focus:outline-none focus:border-[#e68b00] focus:ring-2 focus:ring-[#e68b00]/20 transition-colors"
+                >
+                  {[
+                    "All Levels",
+                    "Preschool",
+                    "Elementary",
+                    "Junior Highschool",
+                    "Senior Highschool",
+                    "College",
+                    "Accessories",
+                  ].map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 pointer-events-none"
+                  size={20}
+                />
+              </div>
+            </div>
+
+            {/* Desktop Tabs */}
+            <div className="hidden md:flex flex-wrap gap-x-12 gap-y-4">
               {[
                 "All Levels",
                 "Preschool",
@@ -250,6 +274,7 @@ const Items = () => {
                 "Junior Highschool",
                 "Senior Highschool",
                 "College",
+                "Accessories",
               ].map((level) => {
                 const isActive = selectedLevel === level;
                 return (
@@ -648,14 +673,14 @@ const Items = () => {
                     return (
                       <div
                         key={group.groupKey}
-                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex gap-3"
+                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 flex gap-3 sm:gap-4"
                       >
                         {/* Image */}
                         <div className="flex-shrink-0">
                           <img
                             src={group.image}
                             alt={group.name}
-                            className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                            className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border border-gray-200"
                             onError={(e) => {
                               e.target.src = "https://via.placeholder.com/64";
                             }}
@@ -663,51 +688,51 @@ const Items = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 flex flex-col gap-1">
+                        <div className="flex-1 flex flex-col gap-2 min-w-0">
                           <div className="flex justify-between items-start gap-2">
-                            <div>
-                              <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
+                            <div className="flex-1 min-w-0 pr-2">
+                              <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2 mb-1">
                                 {group.name}
                               </h3>
                               <p className="text-xs text-[#e68b00]">
                                 {group.itemType}
                               </p>
                             </div>
-                            <div className="text-xs font-semibold text-[#003363]">
+                            <div className="text-xs font-semibold text-[#003363] flex-shrink-0">
                               ₱ {representativeItem.price?.toLocaleString() || "0.00"}
                             </div>
                           </div>
 
-                        <p className="text-xs text-gray-500">
-                          Grade Level:{" "}
-                          <span className="text-[#0C2340]">
-                            {group.educationLevel || "—"}
-                          </span>
-                        </p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Grade Level:{" "}
+                            <span className="text-[#0C2340]">
+                              {group.educationLevel || "—"}
+                            </span>
+                          </p>
 
-                        {/* Actions */}
-                        <div className="mt-2 flex justify-end gap-2">
-                          <button
-                            onClick={() => openItemDetailsModal(representativeItem)}
-                            className="px-3 py-1.5 rounded-lg bg-[#0C2340]/10 text-xs font-medium text-[#0C2340] hover:bg-[#0C2340]/20 transition-colors"
-                          >
-                            View Details
-                          </button>
-                          <button
-                            onClick={() => openEditModal(representativeItem)}
-                            className="px-3 py-1.5 rounded-lg bg-blue-50 text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => openDeleteModal(representativeItem)}
-                            className="px-3 py-1.5 rounded-lg bg-red-50 text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
-                          >
-                            Delete
-                          </button>
+                          {/* Actions */}
+                          <div className="mt-2 flex justify-end gap-1.5 sm:gap-2 flex-wrap">
+                            <button
+                              onClick={() => openItemDetailsModal(representativeItem)}
+                              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-[#0C2340]/10 text-[10px] sm:text-xs font-medium text-[#0C2340] hover:bg-[#0C2340]/20 transition-colors"
+                            >
+                              View Details
+                            </button>
+                            <button
+                              onClick={() => openEditModal(representativeItem)}
+                              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-blue-50 text-[10px] sm:text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => openDeleteModal(representativeItem)}
+                              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-red-50 text-[10px] sm:text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
                     );
                   })
                 )}

@@ -36,10 +36,6 @@ const StockLevelsChart = ({ data }) => {
 
   return (
     <div className="bg-white rounded-lg p-6 border border-gray-200">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">Stock Levels</h2>
-      </div>
-
       <div className="w-full h-80">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

@@ -60,11 +60,6 @@ const CheckoutPage = () => {
     });
   };
 
-  // Handle back navigation
-  const handleBack = () => {
-    navigate(-1); // Go back to previous page
-  };
-
   // Handle checkout submission
   const handleCheckout = async () => {
     if (items.length === 0) {
@@ -275,8 +270,6 @@ const CheckoutPage = () => {
     }
   };
 
- 
-
   return (
     <div className="min-h-screen">
       {/* Navigation */}
@@ -286,137 +279,132 @@ const CheckoutPage = () => {
       <HeroSection />
 
       {/* Main Content - Scrollable content that overlaps hero */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-32 relative z-10 pb-8">
         {/* Main Card Container */}
-        <div className="w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden">
+        <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
           {/* Header Section */}
-          <div className="p-6 sm:p-8">
-            {/* Back Button */}
-          
-
-      
-
+          <div className="p-4 sm:p-6 lg:p-8">
             {/* Cart Items List */}
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 sm:space-y-4 mb-6">
               {groupedItems.map((group) => {
-                  const isExpanded = expandedGroups.has(group.groupKey);
-                  const hasMultipleVariations = group.variations.length > 1;
+                const isExpanded = expandedGroups.has(group.groupKey);
+                const hasMultipleVariations = group.variations.length > 1;
 
-                  return (
-                    <div key={group.groupKey} className="space-y-2">
-                      {/* Main Group Card */}
-                      <div
-                        className={`flex items-center gap-4 p-4 rounded-2xl transition-colors ${
-                          hasMultipleVariations && isExpanded
-                            ? "bg-orange-50 border-2 border-[#F28C28]"
-                            : "bg-gray-50 hover:bg-gray-100"
-                        }`}
-                      >
-                        {/* Quantity Badge */}
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center border-2 border-[#003363] font-bold text-[#003363]">
-                            {group.totalQuantity}PC
-                          </div>
-                        </div>
-
-                        {/* Product Image */}
-                        <div className="flex-shrink-0 w-20 h-20 bg-white rounded-xl overflow-hidden shadow-sm">
-                          <img
-                            src={
-                              group.image || "/images/products/placeholder.jpg"
-                            }
-                            alt={group.name || "Product"}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              e.target.src =
-                                'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                            }}
-                          />
-                        </div>
-
-                        {/* Product Details */}
-                        <div className="flex-grow">
-                          <p className="text-xs text-gray-500 mb-1">
-                            {hasMultipleVariations
-                              ? `${group.variations.length} Size${
-                                  group.variations.length > 1 ? "s" : ""
-                                }`
-                              : `${group.variations[0]?.size || "N/A"} Size`}
-                          </p>
-                          <h3 className="font-bold text-[#003363] text-sm sm:text-base leading-tight">
-                            {group.name}
-                          </h3>
-                          <p className="text-xs text-[#F28C28] font-semibold mt-1">
-                            ({group.educationLevel})
-                          </p>
-                          {hasMultipleVariations && (
-                            <button
-                              onClick={() => toggleGroup(group.groupKey)}
-                              className="mt-2 text-xs text-[#F28C28] hover:text-[#d97a1f] font-medium"
-                            >
-                              {isExpanded
-                                ? "Hide variations"
-                                : `Show ${group.variations.length} size${
-                                    group.variations.length > 1 ? "s" : ""
-                                  }`}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* FREE Badge */}
-                        <div className="flex-shrink-0">
-                          <span className="inline-block px-4 py-1.5 bg-[#F28C28] text-white font-bold text-sm rounded-full">
-                            FREE
-                          </span>
+                return (
+                  <div key={group.groupKey} className="space-y-2">
+                    {/* Main Group Card */}
+                    <div
+                      className={`flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl sm:rounded-2xl transition-colors ${
+                        hasMultipleVariations && isExpanded
+                          ? "bg-orange-50 border-2 border-[#F28C28]"
+                          : "bg-gray-50 hover:bg-gray-100"
+                      }`}
+                    >
+                      {/* Quantity Badge */}
+                      <div className="flex-shrink-0">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center border-2 border-[#003363] font-bold text-[#003363] text-xs sm:text-sm">
+                          {group.totalQuantity}PC
                         </div>
                       </div>
 
-                      {/* Variations List (when expanded) */}
-                      {isExpanded &&
-                        hasMultipleVariations &&
-                        group.variations.map((variation) => (
-                          <div
-                            key={variation.id}
-                            className="flex items-center gap-4 p-3 ml-16 bg-orange-50 border-2 border-[#F28C28] rounded-xl"
+                      {/* Product Image */}
+                      <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-lg sm:rounded-xl overflow-hidden shadow-sm">
+                        <img
+                          src={
+                            group.image || "/images/products/placeholder.jpg"
+                          }
+                          alt={group.name || "Product"}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src =
+                              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                      </div>
+
+                      {/* Product Details */}
+                      <div className="flex-grow min-w-0">
+                        <p className="text-xs text-gray-500 mb-1">
+                          {hasMultipleVariations
+                            ? `${group.variations.length} Size${
+                                group.variations.length > 1 ? "s" : ""
+                              }`
+                            : `${group.variations[0]?.size || "N/A"} Size`}
+                        </p>
+                        <h3 className="font-bold text-[#003363] text-sm sm:text-base leading-tight break-words">
+                          {group.name}
+                        </h3>
+                        <p className="text-xs text-[#F28C28] font-semibold mt-1">
+                          ({group.educationLevel})
+                        </p>
+                        {hasMultipleVariations && (
+                          <button
+                            onClick={() => toggleGroup(group.groupKey)}
+                            className="mt-2 text-xs text-[#F28C28] hover:text-[#d97a1f] font-medium"
                           >
-                            {/* Quantity Badge */}
-                            <div className="flex-shrink-0">
-                              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center border-2 border-[#F28C28] font-bold text-[#F28C28] text-xs">
-                                {variation.quantity}PC
-                              </div>
-                            </div>
+                            {isExpanded
+                              ? "Hide variations"
+                              : `Show ${group.variations.length} size${
+                                  group.variations.length > 1 ? "s" : ""
+                                }`}
+                          </button>
+                        )}
+                      </div>
 
-                            {/* Variation Details */}
-                            <div className="flex-grow">
-                              <p className="text-xs text-gray-600 mb-1">
-                                {variation.size || "N/A"} Size
-                              </p>
-                              <h4 className="font-semibold text-[#003363] text-sm">
-                                {group.name} {variation.size}
-                              </h4>
-                            </div>
+                      {/* FREE Badge */}
+                      <div className="flex-shrink-0">
+                        <span className="inline-block px-2.5 py-1 sm:px-4 sm:py-1.5 bg-[#F28C28] text-white font-bold text-xs sm:text-sm rounded-full">
+                          FREE
+                        </span>
+                      </div>
+                    </div>
 
-                            {/* FREE Badge */}
-                            <div className="flex-shrink-0">
-                              <span className="inline-block px-3 py-1 bg-[#F28C28] text-white font-bold text-xs rounded-full">
-                                FREE
-                              </span>
+                    {/* Variations List (when expanded) */}
+                    {isExpanded &&
+                      hasMultipleVariations &&
+                      group.variations.map((variation) => (
+                        <div
+                          key={variation.id}
+                          className="flex items-center gap-3 sm:gap-4 p-2.5 sm:p-3 ml-12 sm:ml-16 bg-orange-50 border-2 border-[#F28C28] rounded-lg sm:rounded-xl"
+                        >
+                          {/* Quantity Badge */}
+                          <div className="flex-shrink-0">
+                            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white rounded-full flex items-center justify-center border-2 border-[#F28C28] font-bold text-[#F28C28] text-xs">
+                              {variation.quantity}PC
                             </div>
                           </div>
-                        ))}
-                    </div>
-                  );
-                })}
+
+                          {/* Variation Details */}
+                          <div className="flex-grow min-w-0">
+                            <p className="text-xs text-gray-600 mb-1">
+                              {variation.size || "N/A"} Size
+                            </p>
+                            <h4 className="font-semibold text-[#003363] text-xs sm:text-sm break-words">
+                              {group.name} {variation.size}
+                            </h4>
+                          </div>
+
+                          {/* FREE Badge */}
+                          <div className="flex-shrink-0">
+                            <span className="inline-block px-2 py-0.5 sm:px-3 sm:py-1 bg-[#F28C28] text-white font-bold text-xs rounded-full">
+                              FREE
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           {/* Checkout Button - Fixed at Bottom */}
           {items.length > 0 && (
-            <div className="p-6 sm:p-8 pt-0">
+            <div className="p-4 sm:p-6 lg:p-8 pt-0">
               <button
                 onClick={handleCheckout}
                 disabled={loading || submitting}
-                className="w-full py-4 bg-[#F28C28] text-white font-bold text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3 sm:py-4 bg-[#F28C28] text-white font-bold text-base sm:text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting
                   ? "Submitting Order..."

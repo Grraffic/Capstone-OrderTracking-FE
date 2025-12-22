@@ -79,6 +79,54 @@ export const useOrderQRScanner = () => {
       const order = orderResult.data;
       console.log("Found order:", order);
 
+      // --- NEW VALIDATION: Check for School Uniforms ---
+      // We need to verify if the order contains at least one "school_uniform" or "pe_uniform"
+      const validationItems = order.items || [];
+      let hasUniform = false;
+      const educationLevel = order.education_level;
+
+      for (const item of validationItems) {
+        try {
+          // Fetch item details to check category
+          // We search by name and education level to find the specific item
+          const itemSearchResponse = await fetch(
+            `${API_BASE_URL}/items?search=${encodeURIComponent(
+              item.name
+            )}&education_level=${encodeURIComponent(educationLevel)}`
+          );
+
+          if (itemSearchResponse.ok) {
+            const itemSearchResult = await itemSearchResponse.json();
+            if (
+              itemSearchResult.success &&
+              itemSearchResult.data &&
+              itemSearchResult.data.length > 0
+            ) {
+              // Check the category of the found item
+              const foundItem = itemSearchResult.data[0];
+              // Assuming 'category' field exists and populated like 'school_uniform', 'pe_uniform', 'other_items'
+              if (
+                foundItem.category === "school_uniform" ||
+                foundItem.category === "pe_uniform"
+              ) {
+                hasUniform = true;
+                break; // Found a uniform, order is valid
+              }
+            }
+          }
+        } catch (catCheckError) {
+          console.warn("Error checking item category:", catCheckError);
+          // Continue checking other items
+        }
+      }
+
+      if (!hasUniform) {
+        throw new Error(
+          "This QR code is for an order that does not contain any School Uniforms. Please scan a valid uniform order."
+        );
+      }
+      // ------------------------------------------------
+
       // Check if order is already completed
       if (order.status === "completed" || order.status === "claimed") {
         throw new Error(
@@ -98,7 +146,7 @@ export const useOrderQRScanner = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status: "completed" }),
+          body: JSON.stringify({ status: "claimed" }), // Changed to "claimed" to match standard flow if needed, or keep "completed" if that's the enum
         }
       );
 

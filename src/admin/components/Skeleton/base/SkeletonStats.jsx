@@ -43,18 +43,18 @@ const SkeletonStats = ({
   // Vertical variant - Used for Items and Orders stats cards
   return (
     <div
-      className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 ${className}`}
+      className={`bg-white rounded-lg p-3 sm:p-4 shadow-sm border border-gray-200 ${className}`}
     >
       <div className="flex items-center justify-between">
-        <div className="flex-1 space-y-2">
+        <div className="flex-1 space-y-1.5 sm:space-y-2">
           {/* Label */}
-          <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+          <div className="h-3 w-20 sm:w-24 bg-gray-200 rounded animate-pulse" />
           {/* Value */}
-          <div className="h-7 w-12 bg-gray-200 rounded animate-pulse" />
+          <div className="h-6 sm:h-7 w-10 sm:w-12 bg-gray-200 rounded animate-pulse" />
         </div>
         {/* Icon Placeholder */}
         {showIcon && (
-          <div className="w-12 h-12 rounded-lg bg-gray-200 animate-pulse" />
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gray-200 animate-pulse flex-shrink-0" />
         )}
       </div>
     </div>

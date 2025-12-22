@@ -19,6 +19,56 @@ import { orderAPI } from "../../../services/api";
  * - onMenuToggle: Function to toggle sidebar
  * - sidebarOpen: Boolean indicating if sidebar is open
  */
+
+// localStorage key for storing cleared notification IDs
+const CLEARED_NOTIFICATIONS_KEY = 'admin_cleared_notifications';
+
+/**
+ * Get cleared notification order IDs from localStorage
+ * @returns {Set<string>} Set of cleared order IDs
+ */
+const getClearedNotifications = () => {
+  try {
+    const stored = localStorage.getItem(CLEARED_NOTIFICATIONS_KEY);
+    if (!stored) return new Set();
+    const parsed = JSON.parse(stored);
+    return new Set(parsed);
+  } catch (error) {
+    console.error("Error reading cleared notifications from localStorage:", error);
+    return new Set();
+  }
+};
+
+/**
+ * Add order IDs to the cleared notifications list in localStorage
+ * @param {string[]} orderIds - Array of order IDs to add
+ */
+const addToClearedNotifications = (orderIds) => {
+  try {
+    const cleared = getClearedNotifications();
+    orderIds.forEach(id => cleared.add(id));
+    localStorage.setItem(CLEARED_NOTIFICATIONS_KEY, JSON.stringify(Array.from(cleared)));
+  } catch (error) {
+    console.error("Error saving cleared notifications to localStorage:", error);
+    // Handle quota exceeded error gracefully
+    if (error.name === 'QuotaExceededError') {
+      console.warn("localStorage quota exceeded. Clearing old entries...");
+      // Optionally clear old entries or notify user
+    }
+  }
+};
+
+/**
+ * Clear all stored cleared notifications (optional, for reset)
+ */
+const clearClearedNotifications = () => {
+  try {
+    localStorage.removeItem(CLEARED_NOTIFICATIONS_KEY);
+  } catch (error) {
+    console.error("Error clearing cleared notifications from localStorage:", error);
+  }
+};
+
 const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
   const { user } = useAuth();
   const { on, off, isConnected } = useSocket();
@@ -59,8 +109,16 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
         if (response.data && response.data.data) {
           const pendingOrders = response.data.data;
           
+          // Get cleared notifications from localStorage
+          const clearedNotifications = getClearedNotifications();
+          
+          // Filter out orders that have been cleared
+          const filteredOrders = pendingOrders.filter(order => 
+            !clearedNotifications.has(order.id)
+          );
+          
           // Transform orders to notifications
-          const initialNotifications = pendingOrders.map(order => ({
+          const initialNotifications = filteredOrders.map(order => ({
             id: order.id,
             title: "New Order Received",
             message: `Order #${order.order_number} received from ${order.student_name || "Student"}`,
@@ -89,9 +147,18 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
     const handleNewOrder = (data) => {
       console.log("🔔 New order received:", data);
       
+      const orderId = data.orderId || data.id;
+      
+      // Check if this order has been cleared
+      const clearedNotifications = getClearedNotifications();
+      if (clearedNotifications.has(orderId)) {
+        console.log("Order notification skipped - already cleared:", orderId);
+        return;
+      }
+      
       // Check if we already have this notification (avoid duplicates from socket+fetch race)
       setNotifications(prev => {
-        const exists = prev.some(n => n.orderId === (data.orderId || data.id));
+        const exists = prev.some(n => n.orderId === orderId);
         if (exists) return prev;
 
         // Create new notification object
@@ -102,7 +169,7 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
           type: "order",
           is_read: false,
           timestamp: new Date().toISOString(),
-          orderId: data.orderId || data.id, // Ensure we store ID
+          orderId: orderId, // Ensure we store ID
           data: data
         };
 
@@ -142,6 +209,17 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
 
 
   const handleClearAll = () => {
+    // Extract all current notification order IDs
+    const orderIds = notifications
+      .map(n => n.orderId)
+      .filter(id => id != null); // Filter out any null/undefined IDs
+    
+    // Store cleared notification IDs in localStorage
+    if (orderIds.length > 0) {
+      addToClearedNotifications(orderIds);
+    }
+    
+    // Clear local state
     setNotifications([]);
     setUnreadCount(0);
   };

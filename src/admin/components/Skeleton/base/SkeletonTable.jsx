@@ -30,13 +30,13 @@ const SkeletonTable = ({
           <thead>
             <tr className="border-b border-gray-200 bg-gray-50">
               {showCheckbox && (
-                <th className="px-6 py-4 text-left">
+                <th className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left">
                   <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
                 </th>
               )}
               {Array.from({ length: columns }).map((_, index) => (
-                <th key={index} className="px-6 py-4 text-left">
-                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                <th key={index} className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4 text-left">
+                  <div className="h-3 sm:h-4 w-16 sm:w-24 bg-gray-200 rounded animate-pulse" />
                 </th>
               ))}
             </tr>
@@ -52,15 +52,15 @@ const SkeletonTable = ({
                 }`}
               >
                 {showCheckbox && (
-                  <td className="px-6 py-4">
+                  <td className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <div className="w-4 h-4 bg-gray-200 rounded animate-pulse" />
                   </td>
                 )}
                 {Array.from({ length: columns }).map((_, colIndex) => (
-                  <td key={colIndex} className="px-6 py-4">
+                  <td key={colIndex} className="px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
                     <div
-                      className={`h-4 bg-gray-200 rounded animate-pulse ${
-                        colIndex === 0 ? "w-20" : "w-full max-w-[150px]"
+                      className={`h-3 sm:h-4 bg-gray-200 rounded animate-pulse ${
+                        colIndex === 0 ? "w-16 sm:w-20" : "w-full max-w-[100px] sm:max-w-[150px]"
                       }`}
                     />
                   </td>
@@ -72,14 +72,14 @@ const SkeletonTable = ({
       </div>
 
       {/* Pagination Skeleton */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
+      <div className="bg-white border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-0">
         {/* Page Indicator */}
-        <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+        <div className="h-4 w-20 sm:w-24 bg-gray-200 rounded animate-pulse" />
 
         {/* Navigation Buttons */}
         <div className="flex items-center gap-2">
-          <div className="h-9 w-24 bg-gray-200 rounded-lg animate-pulse" />
-          <div className="h-9 w-24 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-9 w-20 sm:w-24 bg-gray-200 rounded-lg animate-pulse" />
+          <div className="h-9 w-20 sm:w-24 bg-gray-200 rounded-lg animate-pulse" />
         </div>
       </div>
     </div>

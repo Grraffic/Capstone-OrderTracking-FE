@@ -61,6 +61,10 @@ const ItemsModals = ({
   const [variantPrices, setVariantPrices] = useState(["", ""]);
   const [variantStocks, setVariantStocks] = useState(["", ""]); // Stock per variant
   const [selectedVariantIndices, setSelectedVariantIndices] = useState([0]); // Multiple selection
+  // State for accessories (no sizes)
+  const [accessoryStocks, setAccessoryStocks] = useState([""]);
+  const [accessoryPrices, setAccessoryPrices] = useState([""]);
+  const [selectedAccessoryIndices, setSelectedAccessoryIndices] = useState([0]);
   const editorRef = useRef(null);
   const isEditorInitialized = useRef(false);
   const colorPickerRef = useRef(null);
@@ -99,6 +103,16 @@ const ItemsModals = ({
         return level;
       }),
     []
+  );
+
+  // Conditional logic for item type
+  const isAccessories = useMemo(
+    () => formData.itemType === "Accessories",
+    [formData.itemType]
+  );
+  const isUniforms = useMemo(
+    () => formData.itemType === "Uniforms",
+    [formData.itemType]
   );
 
   // Grade level category options mapping
@@ -200,8 +214,53 @@ const ItemsModals = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // If adding and multiple sizes are selected, create ONE item with comma-separated sizes
-    if (modalState.mode === "add" && selectedVariantIndices.length > 0) {
+    // Handle Accessories (no sizes)
+    if (isAccessories && modalState.mode === "add" && selectedAccessoryIndices.length > 0) {
+      // Calculate total stock from all accessory entries
+      const totalStock = selectedAccessoryIndices.reduce((sum, index) => {
+        return sum + (Number(accessoryStocks[index]) || 0);
+      }, 0);
+
+      // Use the first selected entry's price, or formData.price as fallback
+      const firstSelectedIndex = selectedAccessoryIndices[0];
+      const itemPrice =
+        accessoryPrices[firstSelectedIndex] || formData.price || 0;
+
+      // Store all accessory entries in note field as JSON (no size field)
+      const accessoryEntries = selectedAccessoryIndices.map((index) => {
+        return {
+          stock: Number(accessoryStocks[index]) || 0,
+          price: Number(accessoryPrices[index]) || Number(itemPrice) || 0,
+        };
+      });
+
+      // Create item without size field
+      const itemToAdd = {
+        ...formData,
+        // Don't include size field for accessories
+        stock: totalStock,
+        price: Number(itemPrice) || 0,
+        note: JSON.stringify({
+          accessoryEntries: accessoryEntries,
+          _type: "accessoryEntries", // Marker to identify this as accessory entry data
+        }),
+      };
+
+      // Remove size from the item data
+      delete itemToAdd.size;
+
+      // Add the item
+      try {
+        onAdd(itemToAdd);
+        setTimeout(() => {
+          onClose();
+        }, 500);
+      } catch (error) {
+        console.error("Error adding item:", error);
+      }
+    }
+    // Handle Uniforms with sizes (existing logic)
+    else if (isUniforms && modalState.mode === "add" && selectedVariantIndices.length > 0) {
       // Calculate total stock from all selected variants
       const totalStock = selectedVariantIndices.reduce((sum, index) => {
         return sum + (Number(variantStocks[index]) || 0);
@@ -340,6 +399,77 @@ const ItemsModals = ({
     selectedItem?.size,
     variants,
   ]);
+
+  // Initialize accessory entries when editing an Accessories item
+  useEffect(() => {
+    if (
+      modalState.isOpen &&
+      modalState.mode === "edit" &&
+      isAccessories &&
+      selectedItem?.note
+    ) {
+      try {
+        const noteData = JSON.parse(selectedItem.note);
+        if (noteData._type === "accessoryEntries" && noteData.accessoryEntries) {
+          const entries = noteData.accessoryEntries;
+          setAccessoryStocks(entries.map((e) => String(e.stock || "")));
+          setAccessoryPrices(entries.map((e) => String(e.price || "")));
+          setSelectedAccessoryIndices(
+            entries.map((_, idx) => idx).length > 0
+              ? entries.map((_, idx) => idx)
+              : [0]
+          );
+        }
+      } catch (error) {
+        console.error("Error parsing accessory entries:", error);
+        // Fallback: initialize with item's stock and price
+        setAccessoryStocks([String(selectedItem.stock || "")]);
+        setAccessoryPrices([String(selectedItem.price || "")]);
+        setSelectedAccessoryIndices([0]);
+      }
+    } else if (modalState.isOpen && modalState.mode === "add" && isAccessories) {
+      // Reset accessory entries for add mode
+      setAccessoryStocks([""]);
+      setAccessoryPrices([""]);
+      setSelectedAccessoryIndices([0]);
+    }
+  }, [
+    modalState.isOpen,
+    modalState.mode,
+    isAccessories,
+    selectedItem?.note,
+    selectedItem?.stock,
+    selectedItem?.price,
+  ]);
+
+  // Reset state when item type changes
+  useEffect(() => {
+    if (modalState.isOpen) {
+      if (isAccessories) {
+        // Reset variant-related state when switching to Accessories
+        setVariantPrices(["", ""]);
+        setVariantStocks(["", ""]);
+        setSelectedVariantIndices([0]);
+        // Initialize accessory state if not already set
+        if (accessoryStocks.length === 0) {
+          setAccessoryStocks([""]);
+          setAccessoryPrices([""]);
+          setSelectedAccessoryIndices([0]);
+        }
+      } else if (isUniforms) {
+        // Reset accessory-related state when switching to Uniforms
+        setAccessoryStocks([""]);
+        setAccessoryPrices([""]);
+        setSelectedAccessoryIndices([0]);
+        // Initialize variant state if not already set
+        if (variantPrices.length === 0) {
+          setVariantPrices(["", ""]);
+          setVariantStocks(["", ""]);
+          setSelectedVariantIndices([0]);
+        }
+      }
+    }
+  }, [isAccessories, isUniforms, modalState.isOpen]);
 
   if (!modalState.isOpen) return null;
 
@@ -611,6 +741,29 @@ const ItemsModals = ({
       const newIndices = prev
         .filter((idx) => idx !== valueIndex)
         .map((idx) => (idx > valueIndex ? idx - 1 : idx));
+      return newIndices.length > 0 ? newIndices : [0];
+    });
+  };
+
+  // Handler functions for accessories (no sizes)
+  const handleAddAccessoryEntry = () => {
+    setAccessoryStocks((prev) => [...prev, ""]);
+    setAccessoryPrices((prev) => [...prev, ""]);
+    setSelectedAccessoryIndices((prev) => [...prev, prev.length]);
+  };
+
+  const handleRemoveAccessoryEntry = (index) => {
+    // Don't allow removing if there's only one entry
+    if (accessoryStocks.length <= 1) {
+      return;
+    }
+
+    setAccessoryStocks((prev) => prev.filter((_, idx) => idx !== index));
+    setAccessoryPrices((prev) => prev.filter((_, idx) => idx !== index));
+    setSelectedAccessoryIndices((prev) => {
+      const newIndices = prev
+        .filter((idx) => idx !== index)
+        .map((idx) => (idx > index ? idx - 1 : idx));
       return newIndices.length > 0 ? newIndices : [0];
     });
   };
@@ -1038,7 +1191,8 @@ const ItemsModals = ({
                     </div>
                   </div>
                 </div>
-                {/* Variants */}
+                {/* Variants - Only show for Uniforms */}
+                {isUniforms && (
                 <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     Variants
@@ -1259,6 +1413,135 @@ const ItemsModals = ({
                     </div>
                   </div>
                 </div>
+                )}
+                {/* Accessories Stock & Price Entries - Only show for Accessories */}
+                {isAccessories && (
+                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Stock & Price Entries
+                    </p>
+                    <span className="text-xs text-gray-400 italic">
+                      (No sizes required)
+                    </span>
+                  </div>
+
+                  {/* Stock & Price Entries Card */}
+                  <div className="rounded-xl border border-gray-200 bg-white">
+                    <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                      <span>Entry</span>
+                      <span>Stock</span>
+                      <span>Unit Price</span>
+                    </div>
+                    <div className="px-4 py-3 space-y-2 text-sm">
+                      {accessoryStocks.map((_, index) => (
+                        <div
+                          key={index}
+                          className="grid grid-cols-3 gap-4 items-center"
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedAccessoryIndices.includes(index)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedAccessoryIndices((prev) => {
+                                    const newIndices = [...prev, index];
+                                    return newIndices;
+                                  });
+                                  // Sync first entry's price to formData.price
+                                  if (
+                                    accessoryPrices[index] &&
+                                    selectedAccessoryIndices.length === 0
+                                  ) {
+                                    handleInputChange({
+                                      target: {
+                                        name: "price",
+                                        value: accessoryPrices[index],
+                                      },
+                                    });
+                                  }
+                                } else {
+                                  setSelectedAccessoryIndices((prev) => {
+                                    const newIndices = prev.filter(
+                                      (i) => i !== index
+                                    );
+                                    return newIndices.length > 0 ? newIndices : [0];
+                                  });
+                                }
+                              }}
+                              className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                            />
+                            <span className="text-gray-800">
+                              Entry {index + 1}
+                            </span>
+                          </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={accessoryStocks[index] ?? ""}
+                            onChange={(e) => {
+                              const next = [...accessoryStocks];
+                              next[index] = e.target.value;
+                              setAccessoryStocks(next);
+                            }}
+                            placeholder="0"
+                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={accessoryPrices[index] ?? ""}
+                              onChange={(e) => {
+                                const next = [...accessoryPrices];
+                                next[index] = e.target.value;
+                                setAccessoryPrices(next);
+                                // If this is one of the selected entries and it's the first one, sync its price
+                                if (
+                                  selectedAccessoryIndices.includes(index) &&
+                                  selectedAccessoryIndices[0] === index &&
+                                  e.target.value
+                                ) {
+                                  handleInputChange({
+                                    target: {
+                                      name: "price",
+                                      value: e.target.value,
+                                    },
+                                  });
+                                }
+                              }}
+                              placeholder="Php 0.00"
+                              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            {accessoryStocks.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveAccessoryEntry(index)}
+                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Remove this entry"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-4 pb-3">
+                      <button
+                        type="button"
+                        onClick={handleAddAccessoryEntry}
+                        className="text-xs font-medium text-orange-500 hover:text-orange-600"
+                      >
+                        + Add another entry
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                )}
               </div>
             </div>
           </div>
