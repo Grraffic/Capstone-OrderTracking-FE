@@ -52,8 +52,9 @@ export const useItems = () => {
 
   // State for filters
   const [educationLevelFilter, setEducationLevelFilter] =
-    useState("All Levels");
+    useState("All");
   const [itemTypeFilter, setItemTypeFilter] = useState("All Types");
+  const [gradeLevelFilter, setGradeLevelFilter] = useState("All");
 
   // State for item adjustment modal
   const [adjustmentModalState, setAdjustmentModalState] = useState({
@@ -188,7 +189,7 @@ export const useItems = () => {
    */
   const mapTabLabelToEducationLevel = useCallback((tabLabel) => {
     const mapping = {
-      "All Levels": "All Levels",
+      "All": "All Levels",
       Preschool: "Kindergarten", // UI says "Preschool" but DB stores "Kindergarten"
       Elementary: "Elementary",
       "Junior Highschool": "Junior High School", // UI has no space, DB has space
@@ -199,21 +200,87 @@ export const useItems = () => {
   }, []);
 
   /**
+   * Get grade level options based on selected education level tab
+   */
+  const getGradeLevelOptions = useCallback((educationLevel) => {
+    const map = {
+      "All": [
+        "All",
+        "Prekindergarten",
+        "Kindergarten",
+        "Grade 1",
+        "Grade 2",
+        "Grade 3",
+        "Grade 4",
+        "Grade 5",
+        "Grade 6",
+        "Grade 7",
+        "Grade 8",
+        "Grade 9",
+        "Grade 10",
+        "Grade 11",
+        "Grade 12",
+        "1st yr",
+        "2nd yr",
+        "3rd yr",
+        "4th yr",
+      ],
+      Preschool: ["All", "Prekindergarten", "Kindergarten"],
+      Elementary: ["All", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"],
+      "Junior Highschool": ["All", "Grade 7", "Grade 8", "Grade 9", "Grade 10"],
+      "Senior Highschool": ["All", "Grade 11", "Grade 12"],
+      College: ["All", "1st yr", "2nd yr", "3rd yr", "4th yr"],
+      Accessories: ["All"], // Accessories don't have grade levels
+    };
+    return map[educationLevel] || ["All"];
+  }, []);
+
+  /**
    * Filter items based on search term and filters
    */
   const filteredItems = useMemo(() => {
     let result = items;
 
-    // Apply education level filter
-    if (educationLevelFilter !== "All Levels") {
+    // Handle "Accessories" tab - filter by item type instead of education level
+    if (educationLevelFilter === "Accessories") {
+      result = result.filter((item) => item.itemType === "Accessories");
+    } else if (educationLevelFilter !== "All") {
+      // Apply education level filter - show both uniforms and accessories for this level
       // Map the filter value to the actual database value
       const mappedFilter = mapTabLabelToEducationLevel(educationLevelFilter);
       result = result.filter((item) => item.educationLevel === mappedFilter);
     }
+    // When "All" is selected, show all items including accessories
 
-    // Apply item type filter
+    // Apply item type filter - this will narrow down to uniforms or accessories if selected
     if (itemTypeFilter !== "All Types") {
       result = result.filter((item) => item.itemType === itemTypeFilter);
+    }
+
+    // Apply grade level filter (filter by category)
+    if (gradeLevelFilter !== "All") {
+      result = result.filter((item) => {
+        // Map grade level filter to possible category values
+        const categoryMap = {
+          "1st yr": ["1st Year", "1st yr"],
+          "2nd yr": ["2nd Year", "2nd yr"],
+          "3rd yr": ["3rd Year", "3rd yr"],
+          "4th yr": ["4th Year", "4th yr"],
+        };
+        
+        // For college years, check if category matches (case-insensitive partial match)
+        if (categoryMap[gradeLevelFilter]) {
+          const categoryLower = item.category?.toLowerCase() || "";
+          const yearNumber = gradeLevelFilter.split(" ")[0]; // "1st", "2nd", etc.
+          return categoryMap[gradeLevelFilter].some(val => 
+            item.category === val || 
+            categoryLower.includes(yearNumber.toLowerCase())
+          );
+        }
+        
+        // For other grade levels, do exact match
+        return item.category === gradeLevelFilter;
+      });
     }
 
     // Apply search term filter
@@ -235,6 +302,7 @@ export const useItems = () => {
     searchTerm,
     educationLevelFilter,
     itemTypeFilter,
+    gradeLevelFilter,
     mapTabLabelToEducationLevel,
   ]);
 
@@ -585,6 +653,9 @@ export const useItems = () => {
     selectedItem,
     modalState,
     openAddModal,
+    gradeLevelFilter,
+    setGradeLevelFilter,
+    getGradeLevelOptions,
     openEditModal,
     openViewModal,
     openDeleteModal,

@@ -19,7 +19,7 @@ export const EDUCATION_LEVELS = [
 // Item Type Options
 export const ITEM_TYPES = [
   // { value: "All Item Types", label: "All Item Types" },
-  { value: "Uniforms", label: "Uniforms" },
+  { value: "Uniforms", label: "Uniform" },
   { value: "Accessories", label: "Accessories" },
 ];
 

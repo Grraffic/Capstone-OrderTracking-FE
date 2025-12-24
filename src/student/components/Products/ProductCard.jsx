@@ -39,8 +39,27 @@ const ProductCard = ({ product }) => {
           }}
         />
 
-        {/* Status Badge - Top Left for Pre-Order */}
-        {isPreOrder && (
+        {/* Pre-Order Button Overlay - Only show when out of stock */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
+            <button
+              type="button"
+              className="px-6 py-3 bg-[#F28C28] text-white font-bold rounded-lg shadow-lg hover:bg-[#E68B00] transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                // Handle pre-order action
+                console.log("Pre-order clicked for:", product.name);
+                // Navigate to product details for pre-order
+                navigate(`/products/${product.id}`);
+              }}
+            >
+              Pre-Order
+            </button>
+          </div>
+        )}
+
+        {/* Status Badge - Top Left for Pre-Order (legacy support) */}
+        {isPreOrder && !isOutOfStock && (
           <div className="absolute top-3 left-3">
             <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-[#F28C28] text-white shadow-md">
               Pre-Order

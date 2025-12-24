@@ -94,8 +94,8 @@ export default {
         "slide-up": "slideUp 0.3s ease-out",
         "slide-down": "slideDown 0.3s ease-out",
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-        "fadeInUp": "fadeInUp 0.6s ease-out",
-        "scaleIn": "scaleIn 0.5s ease-out 0.2s both",
+        fadeInUp: "fadeInUp 0.6s ease-out",
+        scaleIn: "scaleIn 0.5s ease-out 0.2s both",
       },
       keyframes: {
         fadeIn: {

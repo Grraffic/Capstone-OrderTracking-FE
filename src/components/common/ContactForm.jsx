@@ -140,12 +140,13 @@ export default function ContactForm() {
         </div>
       </form>
 
-      {/* Image at the bottom */}
-      <div className="w-full mt-6 sm:mt-8 rounded-xl overflow-hidden shadow-lg">
+      {/* Image at the bottom - extends to both left and right edges with rounded bottom corners */}
+      <div className="mt-6 sm:mt-8 -mb-4 sm:-mb-6 lg:-mb-8 overflow-hidden rounded-b-xl w-[calc(100%+2rem)] sm:w-[calc(100%+3rem)] lg:w-[calc(100%+4rem)] -ml-4 sm:-ml-6 lg:-ml-8 -mr-4 sm:-mr-6 lg:-mr-8">
         <img
           src="../../assets/image/LandingPage.png"
           alt="La Verdad Christian College"
-          className="w-full h-40 sm:h-48 lg:h-64 object-cover"
+          className="w-full h-40 sm:h-48 md:h-56 lg:h-64 object-contain object-center rounded-bl-xl rounded-br-xl"
+          style={{ display: "block", width: "100%", height: "100%" }}
         />
       </div>
     </div>

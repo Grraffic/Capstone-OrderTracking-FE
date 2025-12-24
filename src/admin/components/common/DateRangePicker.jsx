@@ -13,9 +13,7 @@ import "react-datepicker/dist/react-datepicker.css";
  */
 const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = "" }) => {
   const [preset, setPreset] = useState("Last 7 days");
-  const [showPresetDropdown, setShowPresetDropdown] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
-  const presetDropdownRef = useRef(null);
   const calendarRef = useRef(null);
 
   // Preset options
@@ -29,12 +27,9 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
     "Custom range",
   ];
 
-  // Close dropdowns when clicking outside
+  // Close calendar when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (presetDropdownRef.current && !presetDropdownRef.current.contains(event.target)) {
-        setShowPresetDropdown(false);
-      }
       if (calendarRef.current && !calendarRef.current.contains(event.target)) {
         setShowCalendar(false);
       }
@@ -91,9 +86,9 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
   };
 
   // Handle preset selection
-  const handlePresetChange = (presetValue) => {
+  const handlePresetChange = (event) => {
+    const presetValue = event.target.value;
     setPreset(presetValue);
-    setShowPresetDropdown(false);
     
     if (presetValue !== "Custom range") {
       calculateDateRange(presetValue);
@@ -127,58 +122,43 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
   };
 
   return (
-    <div className={`flex items-center border border-gray-300 rounded-lg bg-white ${className}`}>
+    <div className={`flex items-center border border-gray-300 rounded-lg bg-white whitespace-nowrap ${className}`}>
       {/* Left Section - Preset Dropdown */}
-      <div className="relative flex-1" ref={presetDropdownRef}>
-        <button
-          type="button"
-          onClick={() => {
-            setShowPresetDropdown(!showPresetDropdown);
-            setShowCalendar(false);
-          }}
-          className="w-full flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors rounded-l-lg"
-        >
-          <span className="text-sm font-medium">{preset}</span>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
-        </button>
-
-        {/* Preset Dropdown Menu */}
-        {showPresetDropdown && (
-          <div className="absolute top-full left-0 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-50">
-            {presetOptions.map((option) => (
-              <button
-                key={option}
-                type="button"
-                onClick={() => handlePresetChange(option)}
-                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                  preset === option ? "bg-orange-50 text-[#e68b00] font-medium" : "text-gray-700"
-                }`}
-              >
-                {option}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      <select
+        value={preset}
+        onChange={handlePresetChange}
+        className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border-0 rounded-l-lg focus:outline-none focus:ring-0 cursor-pointer appearance-none pr-8"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'right 0.5rem center',
+          backgroundSize: '1rem',
+        }}
+      >
+        {presetOptions.map((option) => (
+          <option key={option} value={option}>
+            {option}
+          </option>
+        ))}
+      </select>
 
       {/* Vertical Separator */}
       <div className="w-px h-8 bg-gray-300" />
 
       {/* Right Section - Calendar Date Range */}
-      <div className="relative flex-1" ref={calendarRef}>
+      <div className="relative flex-shrink-0" ref={calendarRef}>
         <button
           type="button"
           onClick={() => {
             setShowCalendar(!showCalendar);
-            setShowPresetDropdown(false);
           }}
-          className="w-full flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors rounded-r-lg"
+          className="flex items-center justify-between px-4 py-2 text-gray-700 hover:bg-gray-50 transition-colors rounded-r-lg"
         >
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium">{formatDateRange()}</span>
+            <Calendar className="w-4 h-4 text-gray-500 flex-shrink-0" />
+            <span className="text-sm font-medium whitespace-nowrap">{formatDateRange()}</span>
           </div>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
+          <ChevronDown className="w-4 h-4 text-gray-500 ml-2 flex-shrink-0" />
         </button>
 
         {/* Calendar Dropdown */}

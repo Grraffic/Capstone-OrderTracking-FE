@@ -9,7 +9,7 @@ import FeatureCarousel from "../constants/carouselSlides";
 export default function LandingPage() {
   useScrollOnState();
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       {/* Header */}
       <Header />
 
@@ -205,18 +205,16 @@ export default function LandingPage() {
               </p>
             </div>
           </div>
-
-          {/* Background Image - FIXED: Contained with proper spacing */}
-          <div className="relative w-full">
-            <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-8 lg:px-12">
-              <img
-                src="../../assets/image/Untitled design.png"
-                alt="La Verdad Christian College Building"
-                className="w-full h-auto object-contain rounded-lg shadow-md"
-              />
-            </div>
-          </div>
         </div>
+      </section>
+
+      {/* Background Image - Responsive full viewport corner-to-corner */}
+      <section className="relative w-full h-[50vh] sm:h-[60vh] md:h-[70vh] lg:h-screen overflow-hidden">
+        <img
+          src="../../assets/image/Untitled design.png"
+          alt="La Verdad Christian College Building"
+          className="w-full h-full object-cover object-center"
+        />
       </section>
 
       {/* Contact Section */}

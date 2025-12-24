@@ -96,9 +96,17 @@ const ItemsModals = ({
   // Grade level options override (use existing values, custom labels)
   const gradeLevelOptions = useMemo(
     () =>
-      EDUCATION_LEVELS.map((level) => {
+      EDUCATION_LEVELS.filter(
+        (level) => level.value !== "All Education Levels"
+      ).map((level) => {
         if (level.value === "Kindergarten") {
           return { ...level, label: "Preschool" };
+        }
+        if (level.value === "Junior High School") {
+          return { ...level, label: "Junior Highschool" };
+        }
+        if (level.value === "Senior High School") {
+          return { ...level, label: "Senior Highschool" };
         }
         return level;
       }),
@@ -119,7 +127,6 @@ const ItemsModals = ({
   const gradeLevelCategoryOptions = useMemo(() => {
     const map = {
       "All Education Levels": [
-        "All Levels",
         "Prekindergarten",
         "Kindergarten",
         "Grade 1",
@@ -215,7 +222,11 @@ const ItemsModals = ({
     e.preventDefault();
 
     // Handle Accessories (no sizes)
-    if (isAccessories && modalState.mode === "add" && selectedAccessoryIndices.length > 0) {
+    if (
+      isAccessories &&
+      modalState.mode === "add" &&
+      selectedAccessoryIndices.length > 0
+    ) {
       // Calculate total stock from all accessory entries
       const totalStock = selectedAccessoryIndices.reduce((sum, index) => {
         return sum + (Number(accessoryStocks[index]) || 0);
@@ -260,7 +271,11 @@ const ItemsModals = ({
       }
     }
     // Handle Uniforms with sizes (existing logic)
-    else if (isUniforms && modalState.mode === "add" && selectedVariantIndices.length > 0) {
+    else if (
+      isUniforms &&
+      modalState.mode === "add" &&
+      selectedVariantIndices.length > 0
+    ) {
       // Calculate total stock from all selected variants
       const totalStock = selectedVariantIndices.reduce((sum, index) => {
         return sum + (Number(variantStocks[index]) || 0);
@@ -410,7 +425,10 @@ const ItemsModals = ({
     ) {
       try {
         const noteData = JSON.parse(selectedItem.note);
-        if (noteData._type === "accessoryEntries" && noteData.accessoryEntries) {
+        if (
+          noteData._type === "accessoryEntries" &&
+          noteData.accessoryEntries
+        ) {
           const entries = noteData.accessoryEntries;
           setAccessoryStocks(entries.map((e) => String(e.stock || "")));
           setAccessoryPrices(entries.map((e) => String(e.price || "")));
@@ -427,7 +445,11 @@ const ItemsModals = ({
         setAccessoryPrices([String(selectedItem.price || "")]);
         setSelectedAccessoryIndices([0]);
       }
-    } else if (modalState.isOpen && modalState.mode === "add" && isAccessories) {
+    } else if (
+      modalState.isOpen &&
+      modalState.mode === "add" &&
+      isAccessories
+    ) {
       // Reset accessory entries for add mode
       setAccessoryStocks([""]);
       setAccessoryPrices([""]);
@@ -1193,316 +1215,213 @@ const ItemsModals = ({
                 </div>
                 {/* Variants - Only show for Uniforms */}
                 {isUniforms && (
-                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                    Variants
-                  </p>
+                  <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Variants
+                    </p>
 
-                  {/* Top card: Option Name / Option Value */}
-                  <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 space-y-3">
-                    {variants.slice(0, 1).map((variant, vIndex) => (
-                      <div
-                        key={vIndex}
-                        className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                      >
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-gray-600">
-                            Option Name
-                          </label>
-                          <input
-                            type="text"
-                            value={variant.name}
-                            onChange={(e) =>
-                              handleVariantNameChange(vIndex, e.target.value)
-                            }
-                            placeholder="Size Choices"
-                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-gray-600">
-                            Option Value
-                          </label>
-                          <div className="space-y-2">
-                            {variant.values.map((value, valIndex) => (
-                              <div
-                                key={valIndex}
-                                className="flex items-center gap-2"
-                              >
-                                <input
-                                  type="text"
-                                  value={value}
-                                  onChange={(e) =>
-                                    handleVariantValueChange(
-                                      vIndex,
-                                      valIndex,
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder={
-                                    valIndex === 0 ? "Small (S)" : "Medium (M)"
-                                  }
-                                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                />
-                                {variant.values.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleRemoveVariantValue(vIndex, valIndex)
-                                    }
-                                    className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Remove this option value"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleAddVariantValue(vIndex)}
-                            className="mt-1 text-xs font-medium text-orange-500 hover:text-orange-600"
-                          >
-                            + Add another option value
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Bottom card: Option Value / Stock / Unit Price */}
-                  <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                      <span>Option Value</span>
-                      <span>Stock</span>
-                      <span>Unit Price</span>
-                    </div>
-                    <div className="px-4 py-3 space-y-2 text-sm">
-                      {variants[0].values.map((value, index) => (
+                    {/* Top card: Option Name / Option Value */}
+                    <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 space-y-3">
+                      {variants.slice(0, 1).map((variant, vIndex) => (
                         <div
-                          key={index}
-                          className="grid grid-cols-3 gap-4 items-center"
+                          key={vIndex}
+                          className="grid grid-cols-1 md:grid-cols-2 gap-4"
                         >
-                          <div className="flex items-center gap-2">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-600">
+                              Option Name
+                            </label>
                             <input
-                              type="checkbox"
-                              checked={selectedVariantIndices.includes(index)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  // Add to selected indices
-                                  setSelectedVariantIndices((prev) => {
-                                    const newIndices = [...prev, index];
-                                    // Update size field with selected sizes
-                                    const updatedSizes = newIndices
-                                      .map((idx) => {
-                                        const val = variants[0].values[idx];
-                                        return (
-                                          val ||
-                                          (idx === 0
-                                            ? "Small (S)"
-                                            : idx === 1
-                                            ? "Medium (M)"
-                                            : "")
-                                        );
-                                      })
-                                      .filter(Boolean)
-                                      .join(", ");
-                                    if (updatedSizes) {
-                                      handleInputChange({
-                                        target: {
-                                          name: "size",
-                                          value: updatedSizes,
-                                        },
-                                      });
-                                    }
-                                    // Sync this variant's price to the item's price field if it's the first selected
-                                    if (
-                                      variantPrices[index] &&
-                                      prev.length === 0
-                                    ) {
-                                      handleInputChange({
-                                        target: {
-                                          name: "price",
-                                          value: variantPrices[index],
-                                        },
-                                      });
-                                    }
-                                    return newIndices;
-                                  });
-                                } else {
-                                  // Remove from selected indices
-                                  setSelectedVariantIndices((prev) => {
-                                    const newIndices = prev.filter(
-                                      (i) => i !== index
-                                    );
-                                    // Update size field
-                                    const updatedSizes = newIndices
-                                      .map((idx) => {
-                                        const val = variants[0].values[idx];
-                                        return (
-                                          val ||
-                                          (idx === 0
-                                            ? "Small (S)"
-                                            : idx === 1
-                                            ? "Medium (M)"
-                                            : "")
-                                        );
-                                      })
-                                      .filter(Boolean)
-                                      .join(", ");
-                                    handleInputChange({
-                                      target: {
-                                        name: "size",
-                                        value: updatedSizes || "N/A",
-                                      },
-                                    });
-                                    return newIndices;
-                                  });
-                                }
-                              }}
-                              className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
-                            />
-                            <span className="text-gray-800">
-                              {value ||
-                                (index === 0 ? "Small (S)" : "Medium (M)")}
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={variantStocks[index] ?? ""}
-                            onChange={(e) => {
-                              const next = [...variantStocks];
-                              next[index] = e.target.value;
-                              setVariantStocks(next);
-                            }}
-                            placeholder="0"
-                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={variantPrices[index] ?? ""}
-                            onChange={(e) => {
-                              const next = [...variantPrices];
-                              next[index] = e.target.value;
-                              setVariantPrices(next);
-                              // If this is one of the selected variants and it's the first one, sync its price
-                              if (
-                                selectedVariantIndices.includes(index) &&
-                                selectedVariantIndices[0] === index &&
-                                e.target.value
-                              ) {
-                                handleInputChange({
-                                  target: {
-                                    name: "price",
-                                    value: e.target.value,
-                                  },
-                                });
+                              type="text"
+                              value={variant.name}
+                              onChange={(e) =>
+                                handleVariantNameChange(vIndex, e.target.value)
                               }
-                            }}
-                            placeholder="Php 0.00"
-                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
+                              placeholder="Size Choices"
+                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-medium text-gray-600">
+                              Option Value
+                            </label>
+                            <div className="space-y-2">
+                              {variant.values.map((value, valIndex) => (
+                                <div
+                                  key={valIndex}
+                                  className="flex items-center gap-2"
+                                >
+                                  <input
+                                    type="text"
+                                    value={value}
+                                    onChange={(e) =>
+                                      handleVariantValueChange(
+                                        vIndex,
+                                        valIndex,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder={
+                                      valIndex === 0
+                                        ? "Small (S)"
+                                        : "Medium (M)"
+                                    }
+                                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  />
+                                  {variant.values.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleRemoveVariantValue(
+                                          vIndex,
+                                          valIndex
+                                        )
+                                      }
+                                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Remove this option value"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleAddVariantValue(vIndex)}
+                              className="mt-1 text-xs font-medium text-orange-500 hover:text-orange-600"
+                            >
+                              + Add another option value
+                            </button>
+                          </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                </div>
-                )}
-                {/* Accessories Stock & Price Entries - Only show for Accessories */}
-                {isAccessories && (
-                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
-                  <div className="flex items-center gap-2">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Stock & Price Entries
-                    </p>
-                    <span className="text-xs text-gray-400 italic">
-                      (No sizes required)
-                    </span>
-                  </div>
 
-                  {/* Stock & Price Entries Card */}
-                  <div className="rounded-xl border border-gray-200 bg-white">
-                    <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                      <span>Entry</span>
-                      <span>Stock</span>
-                      <span>Unit Price</span>
-                    </div>
-                    <div className="px-4 py-3 space-y-2 text-sm">
-                      {accessoryStocks.map((_, index) => (
-                        <div
-                          key={index}
-                          className="grid grid-cols-3 gap-4 items-center"
-                        >
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="checkbox"
-                              checked={selectedAccessoryIndices.includes(index)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedAccessoryIndices((prev) => {
-                                    const newIndices = [...prev, index];
-                                    return newIndices;
-                                  });
-                                  // Sync first entry's price to formData.price
-                                  if (
-                                    accessoryPrices[index] &&
-                                    selectedAccessoryIndices.length === 0
-                                  ) {
-                                    handleInputChange({
-                                      target: {
-                                        name: "price",
-                                        value: accessoryPrices[index],
-                                      },
+                    {/* Bottom card: Option Value / Stock / Unit Price */}
+                    <div className="rounded-xl border border-gray-200 bg-white">
+                      <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                        <span>Option Value</span>
+                        <span>Stock</span>
+                        <span>Unit Price</span>
+                      </div>
+                      <div className="px-4 py-3 space-y-2 text-sm">
+                        {variants[0].values.map((value, index) => (
+                          <div
+                            key={index}
+                            className="grid grid-cols-3 gap-4 items-center"
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedVariantIndices.includes(index)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    // Add to selected indices
+                                    setSelectedVariantIndices((prev) => {
+                                      const newIndices = [...prev, index];
+                                      // Update size field with selected sizes
+                                      const updatedSizes = newIndices
+                                        .map((idx) => {
+                                          const val = variants[0].values[idx];
+                                          return (
+                                            val ||
+                                            (idx === 0
+                                              ? "Small (S)"
+                                              : idx === 1
+                                              ? "Medium (M)"
+                                              : "")
+                                          );
+                                        })
+                                        .filter(Boolean)
+                                        .join(", ");
+                                      if (updatedSizes) {
+                                        handleInputChange({
+                                          target: {
+                                            name: "size",
+                                            value: updatedSizes,
+                                          },
+                                        });
+                                      }
+                                      // Sync this variant's price to the item's price field if it's the first selected
+                                      if (
+                                        variantPrices[index] &&
+                                        prev.length === 0
+                                      ) {
+                                        handleInputChange({
+                                          target: {
+                                            name: "price",
+                                            value: variantPrices[index],
+                                          },
+                                        });
+                                      }
+                                      return newIndices;
+                                    });
+                                  } else {
+                                    // Remove from selected indices
+                                    setSelectedVariantIndices((prev) => {
+                                      const newIndices = prev.filter(
+                                        (i) => i !== index
+                                      );
+                                      // Update size field
+                                      const updatedSizes = newIndices
+                                        .map((idx) => {
+                                          const val = variants[0].values[idx];
+                                          return (
+                                            val ||
+                                            (idx === 0
+                                              ? "Small (S)"
+                                              : idx === 1
+                                              ? "Medium (M)"
+                                              : "")
+                                          );
+                                        })
+                                        .filter(Boolean)
+                                        .join(", ");
+                                      handleInputChange({
+                                        target: {
+                                          name: "size",
+                                          value: updatedSizes || "N/A",
+                                        },
+                                      });
+                                      return newIndices;
                                     });
                                   }
-                                } else {
-                                  setSelectedAccessoryIndices((prev) => {
-                                    const newIndices = prev.filter(
-                                      (i) => i !== index
-                                    );
-                                    return newIndices.length > 0 ? newIndices : [0];
-                                  });
-                                }
+                                }}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                              />
+                              <span className="text-gray-800">
+                                {value ||
+                                  (index === 0 ? "Small (S)" : "Medium (M)")}
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={variantStocks[index] ?? ""}
+                              onChange={(e) => {
+                                const next = [...variantStocks];
+                                next[index] = e.target.value;
+                                setVariantStocks(next);
                               }}
-                              className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                              placeholder="0"
+                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
-                            <span className="text-gray-800">
-                              Entry {index + 1}
-                            </span>
-                          </div>
-                          <input
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={accessoryStocks[index] ?? ""}
-                            onChange={(e) => {
-                              const next = [...accessoryStocks];
-                              next[index] = e.target.value;
-                              setAccessoryStocks(next);
-                            }}
-                            placeholder="0"
-                            className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                          <div className="flex items-center gap-2">
                             <input
                               type="number"
                               min="0"
                               step="0.01"
-                              value={accessoryPrices[index] ?? ""}
+                              value={variantPrices[index] ?? ""}
                               onChange={(e) => {
-                                const next = [...accessoryPrices];
+                                const next = [...variantPrices];
                                 next[index] = e.target.value;
-                                setAccessoryPrices(next);
-                                // If this is one of the selected entries and it's the first one, sync its price
+                                setVariantPrices(next);
+                                // If this is one of the selected variants and it's the first one, sync its price
                                 if (
-                                  selectedAccessoryIndices.includes(index) &&
-                                  selectedAccessoryIndices[0] === index &&
+                                  selectedVariantIndices.includes(index) &&
+                                  selectedVariantIndices[0] === index &&
                                   e.target.value
                                 ) {
                                   handleInputChange({
@@ -1514,33 +1433,147 @@ const ItemsModals = ({
                                 }
                               }}
                               placeholder="Php 0.00"
-                              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
-                            {accessoryStocks.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveAccessoryEntry(index)}
-                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                                title="Remove this entry"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="px-4 pb-3">
-                      <button
-                        type="button"
-                        onClick={handleAddAccessoryEntry}
-                        className="text-xs font-medium text-orange-500 hover:text-orange-600"
-                      >
-                        + Add another entry
-                      </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
+                {/* Accessories Stock & Price Entries - Only show for Accessories */}
+                {isAccessories && (
+                  <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                        Stock & Price Entries
+                      </p>
+                      <span className="text-xs text-gray-400 italic">
+                        (No sizes required)
+                      </span>
+                    </div>
+
+                    {/* Stock & Price Entries Card */}
+                    <div className="rounded-xl border border-gray-200 bg-white">
+                      <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                        <span>Entry</span>
+                        <span>Stock</span>
+                        <span>Unit Price</span>
+                      </div>
+                      <div className="px-4 py-3 space-y-2 text-sm">
+                        {accessoryStocks.map((_, index) => (
+                          <div
+                            key={index}
+                            className="grid grid-cols-3 gap-4 items-center"
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={selectedAccessoryIndices.includes(
+                                  index
+                                )}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedAccessoryIndices((prev) => {
+                                      const newIndices = [...prev, index];
+                                      return newIndices;
+                                    });
+                                    // Sync first entry's price to formData.price
+                                    if (
+                                      accessoryPrices[index] &&
+                                      selectedAccessoryIndices.length === 0
+                                    ) {
+                                      handleInputChange({
+                                        target: {
+                                          name: "price",
+                                          value: accessoryPrices[index],
+                                        },
+                                      });
+                                    }
+                                  } else {
+                                    setSelectedAccessoryIndices((prev) => {
+                                      const newIndices = prev.filter(
+                                        (i) => i !== index
+                                      );
+                                      return newIndices.length > 0
+                                        ? newIndices
+                                        : [0];
+                                    });
+                                  }
+                                }}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                              />
+                              <span className="text-gray-800">
+                                Entry {index + 1}
+                              </span>
+                            </div>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={accessoryStocks[index] ?? ""}
+                              onChange={(e) => {
+                                const next = [...accessoryStocks];
+                                next[index] = e.target.value;
+                                setAccessoryStocks(next);
+                              }}
+                              placeholder="0"
+                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={accessoryPrices[index] ?? ""}
+                                onChange={(e) => {
+                                  const next = [...accessoryPrices];
+                                  next[index] = e.target.value;
+                                  setAccessoryPrices(next);
+                                  // If this is one of the selected entries and it's the first one, sync its price
+                                  if (
+                                    selectedAccessoryIndices.includes(index) &&
+                                    selectedAccessoryIndices[0] === index &&
+                                    e.target.value
+                                  ) {
+                                    handleInputChange({
+                                      target: {
+                                        name: "price",
+                                        value: e.target.value,
+                                      },
+                                    });
+                                  }
+                                }}
+                                placeholder="Php 0.00"
+                                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              />
+                              {accessoryStocks.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleRemoveAccessoryEntry(index)
+                                  }
+                                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Remove this entry"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="px-4 pb-3">
+                        <button
+                          type="button"
+                          onClick={handleAddAccessoryEntry}
+                          className="text-xs font-medium text-orange-500 hover:text-orange-600"
+                        >
+                          + Add another entry
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
