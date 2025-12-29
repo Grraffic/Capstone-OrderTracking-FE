@@ -72,27 +72,27 @@ const OrdersTable = ({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       {/* Table Header Row - Always visible on desktop, hidden on mobile */}
-      <div className="hidden lg:block bg-[#0C2340] rounded-xl py-4 px-6 shadow-lg">
-        <div className="grid grid-cols-7 gap-6 items-center">
-          <div className="text-sm font-bold text-white">Transaction no.</div>
-          <div className="text-sm font-bold text-white">Item Ordered</div>
-          <div className="text-sm font-bold text-white">Size</div>
-          <div className="text-sm font-bold text-white">Name</div>
-          <div className="text-sm font-bold text-white">Grade Level</div>
-          <div className="text-sm font-bold text-white">Grade Level Category</div>
-          <div className="text-sm font-bold text-white text-right">Action</div>
+      <div className="hidden lg:block bg-[#0C2340] rounded-xl py-3 sm:py-4 px-4 sm:px-6 shadow-lg">
+        <div className="grid grid-cols-7 gap-3 sm:gap-4 lg:gap-6 items-center">
+          <div className="text-xs sm:text-sm font-bold text-white">Transaction no.</div>
+          <div className="text-xs sm:text-sm font-bold text-white">Item Ordered</div>
+          <div className="text-xs sm:text-sm font-bold text-white">Size</div>
+          <div className="text-xs sm:text-sm font-bold text-white">Name</div>
+          <div className="text-xs sm:text-sm font-bold text-white">Grade Level</div>
+          <div className="text-xs sm:text-sm font-bold text-white hidden xl:block">Grade Level Category</div>
+          <div className="text-xs sm:text-sm font-bold text-white text-right">Action</div>
         </div>
       </div>
 
       {/* Table Rows or Empty State */}
       {(!orders || orders.length === 0) ? (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <div className="p-12 text-center">
-            <div className="text-gray-400 mb-4">
+          <div className="p-8 sm:p-12 text-center">
+            <div className="text-gray-400 mb-3 sm:mb-4">
               <svg
-                className="w-16 h-16 mx-auto"
+                className="w-12 h-12 sm:w-16 sm:h-16 mx-auto"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -105,10 +105,10 @@ const OrdersTable = ({
                 />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">
               No Orders Found
             </h3>
-            <p className="text-gray-500">
+            <p className="text-sm sm:text-base text-gray-500 px-4">
               There are no orders to display at the moment.
             </p>
           </div>
@@ -132,15 +132,15 @@ const OrdersTable = ({
             }`}
           >
             {/* Desktop Layout - Grid */}
-            <div className="hidden lg:grid lg:grid-cols-7 gap-6 items-center p-6">
+            <div className="hidden lg:grid lg:grid-cols-7 gap-3 sm:gap-4 lg:gap-6 items-center p-4 sm:p-5 lg:p-6">
               {/* Transaction No */}
-              <div className="text-sm font-bold text-[#0C2340]">
+              <div className="text-xs sm:text-sm font-bold text-[#0C2340] truncate">
                 {order.transactionNo}
               </div>
 
               {/* Item Ordered */}
-              <div>
-                <div className="text-sm font-semibold text-[#0C2340] mb-1">
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-semibold text-[#0C2340] mb-1 truncate">
                   {order.itemOrdered}
                 </div>
                 {order.moreItems && (
@@ -159,7 +159,7 @@ const OrdersTable = ({
 
               {/* Size */}
               <div
-                className={`text-sm font-semibold ${getSizeColor(
+                className={`text-xs sm:text-sm font-semibold truncate ${getSizeColor(
                   order.size
                 )}`}
               >
@@ -167,22 +167,22 @@ const OrdersTable = ({
               </div>
 
               {/* Name */}
-              <div className="text-sm font-medium text-[#0C2340]">
+              <div className="text-xs sm:text-sm font-medium text-[#0C2340] truncate">
                 {order.name}
               </div>
 
               {/* Grade Level */}
-              <div className="text-sm font-medium text-blue-600">
+              <div className="text-xs sm:text-sm font-medium text-blue-600 truncate">
                 {order.gradeOrProgram}
               </div>
 
-              {/* Grade Level Category */}
-              <div className="text-sm font-medium text-blue-600">
+              {/* Grade Level Category - Hidden on smaller screens */}
+              <div className="text-xs sm:text-sm font-medium text-blue-600 truncate hidden xl:block">
                 {order.gradeOrProgram}
               </div>
 
               {/* Action Icons */}
-              <div className="flex items-center justify-end gap-3">
+              <div className="flex items-center justify-end gap-2 sm:gap-3">
                 <button
                   onClick={() => handleEditClick(order)}
                   className="p-1.5 hover:bg-gray-100 rounded transition-colors"
@@ -205,19 +205,19 @@ const OrdersTable = ({
             </div>
 
             {/* Mobile/Tablet Layout - Stacked */}
-            <div className="lg:hidden p-4 space-y-3">
+            <div className="lg:hidden p-3 sm:p-4 space-y-2.5 sm:space-y-3">
               {/* Transaction No & Actions */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="text-xs text-gray-500 font-medium">Transaction No.</div>
-                  <div className="text-sm font-bold text-[#0C2340] mt-0.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Transaction No.</div>
+                  <div className="text-sm sm:text-base font-bold text-[#0C2340] break-words">
                     {order.transactionNo}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                   <button
                     onClick={() => handleEditClick(order)}
-                    className="p-2 hover:bg-gray-100 rounded transition-colors"
+                    className="p-1.5 sm:p-2 hover:bg-gray-100 rounded transition-colors"
                     aria-label="Edit order"
                   >
                     <Edit2 size={16} className="text-gray-600" />
@@ -226,7 +226,7 @@ const OrdersTable = ({
                     onClick={() => {
                       console.log("Delete order:", order.id);
                     }}
-                    className="p-2 hover:bg-red-50 rounded transition-colors"
+                    className="p-1.5 sm:p-2 hover:bg-red-50 rounded transition-colors"
                     aria-label="Delete order"
                   >
                     <Trash2 size={16} className="text-red-500" />
@@ -236,8 +236,8 @@ const OrdersTable = ({
 
               {/* Item Ordered */}
               <div>
-                <div className="text-xs text-gray-500 font-medium">Item Ordered</div>
-                <div className="text-sm font-semibold text-[#0C2340] mt-0.5">
+                <div className="text-xs text-gray-500 font-medium mb-0.5">Item Ordered</div>
+                <div className="text-sm sm:text-base font-semibold text-[#0C2340] break-words">
                   {order.itemOrdered}
                 </div>
                 {order.moreItems && (
@@ -254,26 +254,29 @@ const OrdersTable = ({
                 )}
               </div>
 
-              {/* Size */}
-              <div>
-                <div className="text-xs text-gray-500 font-medium">Size</div>
-                <div className={`text-sm font-semibold mt-0.5 ${getSizeColor(order.size)}`}>
-                  {order.size || "N/A"}
+              {/* Size and Name - Side by side on larger mobile */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                {/* Size */}
+                <div>
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Size</div>
+                  <div className={`text-sm sm:text-base font-semibold ${getSizeColor(order.size)}`}>
+                    {order.size || "N/A"}
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div>
+                  <div className="text-xs text-gray-500 font-medium mb-0.5">Name</div>
+                  <div className="text-sm sm:text-base font-medium text-[#0C2340] break-words">
+                    {order.name}
+                  </div>
                 </div>
               </div>
 
-              {/* Name */}
+              {/* Grade Level */}
               <div>
-                <div className="text-xs text-gray-500 font-medium">Name</div>
-                <div className="text-sm font-medium text-[#0C2340] mt-0.5">
-                  {order.name}
-                </div>
-              </div>
-
-              {/* Grade Level & Category */}
-              <div>
-                <div className="text-xs text-gray-500 font-medium">Grade Level</div>
-                <div className="text-sm font-medium text-blue-600 mt-0.5">
+                <div className="text-xs text-gray-500 font-medium mb-0.5">Grade Level</div>
+                <div className="text-sm sm:text-base font-medium text-blue-600 break-words">
                   {order.gradeOrProgram}
                 </div>
               </div>
@@ -284,37 +287,39 @@ const OrdersTable = ({
       )}
 
       {/* Pagination Controls */}
-      <div className="bg-white border-t border-gray-200 px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-white border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         {/* Left: Page Indicator */}
-        <div className="text-sm text-gray-600 text-center sm:text-left">
+        <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left w-full sm:w-auto">
           Page <span className="font-semibold">{currentPage}</span> of{" "}
           <span className="font-semibold">{totalPages}</span>
         </div>
 
         {/* Right: Navigation Buttons */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
           {/* Previous Button */}
           <button
             onClick={onPrevPage}
             disabled={currentPage === 1}
-            className="px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors flex items-center gap-1 font-medium text-sm"
+            className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors flex items-center justify-center gap-1 font-medium text-xs sm:text-sm"
             title="Previous page"
             aria-label="Previous page"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
             <span className="hidden sm:inline">Previous</span>
+            <span className="sm:hidden">Prev</span>
           </button>
 
           {/* Next Button */}
           <button
             onClick={onNextPage}
             disabled={currentPage === totalPages}
-            className="px-3 sm:px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors flex items-center gap-1 font-medium text-sm shadow-sm"
+            className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors flex items-center justify-center gap-1 font-medium text-xs sm:text-sm shadow-sm"
             title="Next page"
             aria-label="Next page"
           >
             <span className="hidden sm:inline">Next</span>
-            <ChevronRight size={18} />
+            <span className="sm:hidden">Next</span>
+            <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
       </div>

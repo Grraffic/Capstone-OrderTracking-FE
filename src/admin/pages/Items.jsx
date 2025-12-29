@@ -15,19 +15,19 @@ import { subDays } from "date-fns";
 import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
 import DateRangePicker from "../components/common/DateRangePicker";
+import InventoryHealth from "../components/Dashboard/InventoryHealth";
 import ItemsModals from "../components/Items/ItemsModals";
 import ItemDetailsModal from "../components/Items/ItemDetailsModal";
 import ItemAdjustmentModal from "../components/Items/ItemAdjustmentModal";
 import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
-import ItemsStatsCards from "../components/Items/ItemsStatsCards";
 import { ItemsSkeleton } from "../components/Skeleton";
 import { groupItemsByVariations } from "../../utils/groupItems";
 import {
   useAdminSidebar,
   useQRScanner,
-  useItemsStats,
   useItems,
   useItemDetailsModal,
+  useInventoryHealthStats,
 } from "../hooks";
 
 /**
@@ -114,10 +114,6 @@ const Items = () => {
     loading,
     // Pagination
     currentPage,
-    totalPages: originalTotalPages,
-    goToPage,
-    nextPage,
-    prevPage,
   } = useItems();
 
   // Group filtered items by name and item_type to avoid duplicates
@@ -132,11 +128,6 @@ const Items = () => {
     const endIndex = startIndex + itemsPerPage;
     return groupedItems.slice(startIndex, endIndex);
   }, [groupedItems, currentPage, itemsPerPage]);
-
-  // Calculate total pages for grouped items
-  const totalPages = useMemo(() => {
-    return Math.ceil(groupedItems.length / itemsPerPage);
-  }, [groupedItems.length, itemsPerPage]);
 
   // Item Details Modal (new enhanced view modal)
   const {
@@ -156,8 +147,8 @@ const Items = () => {
   const { qrScannerOpen, closeQRScanner, handleQRCodeScanned } =
     useQRScanner(setSearchTerm);
 
-  // Calculate items statistics (use original filteredItems for stats)
-  const stats = useItemsStats(filteredItems);
+  // Fetch inventory health stats (consistent across all pages)
+  const { stats: inventoryHealthStats } = useInventoryHealthStats();
 
   // Helper function to format item type for display
   const formatItemType = (itemType) => {
@@ -230,22 +221,22 @@ const Items = () => {
               </h1>
             </div>
 
-            {/* Statistics Cards Section */}
-            <div className="mb-6">
-              {/* Date Range Selector */}
-              <div className="flex justify-end mb-3">
-                <DateRangePicker
-                  startDate={startDate}
-                  endDate={endDate}
-                  onDateRangeChange={(start, end) => {
-                    setStartDate(start);
-                    setEndDate(end);
-                  }}
-                  className="w-auto"
-                />
-              </div>
+            {/* Inventory Health Section */}
+            <div className="mb-8">
+              <InventoryHealth stats={inventoryHealthStats} />
+            </div>
 
-              <ItemsStatsCards stats={stats} />
+            {/* Date Range Selector */}
+            <div className="mb-6 flex justify-end">
+              <DateRangePicker
+                startDate={startDate}
+                endDate={endDate}
+                onDateRangeChange={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+                className="w-auto"
+              />
             </div>
 
             {/* Horizontal Level Selection Tabs - Desktop / Dropdown - Mobile */}
@@ -464,7 +455,6 @@ const Items = () => {
                   paginatedGroupedItems.map((group) => {
                     // Use first variation as representative item for operations
                     const representativeItem = group.variations[0];
-                    const hasMultipleSizes = group.variations.length > 1;
 
                     return (
                       <div
@@ -598,7 +588,6 @@ const Items = () => {
                       paginatedGroupedItems.map((group, index) => {
                         // Use first variation as representative item for operations
                         const representativeItem = group.variations[0];
-                        const hasMultipleSizes = group.variations.length > 1;
 
                         return (
                           <div
@@ -695,7 +684,6 @@ const Items = () => {
                     paginatedGroupedItems.map((group) => {
                       // Use first variation as representative item for operations
                       const representativeItem = group.variations[0];
-                      const hasMultipleSizes = group.variations.length > 1;
 
                       return (
                         <div

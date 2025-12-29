@@ -1,5 +1,4 @@
 import React from "react";
-import ItemsStatsCards from "../Items/ItemsStatsCards";
 import TransactionsControlBar from "./TransactionsControlBar";
 import TransactionsTable from "./TransactionsTable";
 
@@ -12,7 +11,6 @@ import TransactionsTable from "./TransactionsTable";
  * - Transactions table
  */
 const TransactionsView = ({
-  stats,
   startDate,
   endDate,
   onDateRangeChange,
@@ -22,12 +20,7 @@ const TransactionsView = ({
   filteredTransactions,
 }) => {
   return (
-    <>
-      {/* Stats Cards */}
-      <div className="mb-6">
-        <ItemsStatsCards stats={stats} />
-      </div>
-
+    <div className="w-full">
       {/* Control Bar */}
       <TransactionsControlBar
         startDate={startDate}
@@ -40,7 +33,7 @@ const TransactionsView = ({
 
       {/* Transactions Table */}
       <TransactionsTable transactions={filteredTransactions} />
-    </>
+    </div>
   );
 };
 

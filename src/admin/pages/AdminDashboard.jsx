@@ -1,8 +1,9 @@
 import Sidebar from "../components/common/Sidebar";
 import AdminHeader from "../components/common/AdminHeader";
-import OverviewCards from "../components/Dashboard/OverviewCards";
-import StockLevelsChart from "../components/Items/StockLevelsChart";
-import RecentOrdersTable from "../components/Dashboard/RecentOrdersTable";
+import InventoryHealth from "../components/Dashboard/InventoryHealth";
+import InventoryAlerts from "../components/Dashboard/InventoryAlerts";
+import OrderTracking from "../components/Dashboard/OrderTracking";
+import RecentAudits from "../components/Dashboard/RecentAudits";
 import { useAdminDashboardData } from "../hooks";
 import { DashboardSkeleton } from "../components/Skeleton";
 
@@ -12,9 +13,10 @@ const AdminDashboard = () => {
     toggleSidebar,
     activeTab,
     handleTabChange,
-    overviewStats,
-    stockLevelsData,
-    recentOrders,
+    inventoryHealth,
+    outOfStockItems,
+    orderTracking,
+    recentAudits,
     loading,
   } = useAdminDashboardData();
 
@@ -48,52 +50,51 @@ const AdminDashboard = () => {
               </h1>
             </div>
 
-            {/* Overview and Stock Levels - Side by Side Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              {/* Left Side: Overview Section */}
-              <div>
-                <div className="flex items-center gap-8 mb-4">
-                  <h2 className="text-lg font-semibold text-[#0C2340]">
-                    Overview
-                  </h2>
-                  {/* Tabs */}
-                  <div className="flex gap-6">
-                    {tabs.map((tab) => (
-                      <button
-                        key={tab}
-                        onClick={() => handleTabChange(tab)}
-                        className={`pb-0 font-medium transition-colors relative text-sm ${
-                          activeTab === tab
-                            ? "text-[#e68b00]"
-                            : "text-gray-600 hover:text-gray-900"
-                        }`}
-                      >
-                        {tab}
-                        {activeTab === tab && (
-                          <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
-                        )}
-                      </button>
-                    ))}
-                  </div>
+            {/* Inventory Health Section */}
+            <div className="mb-8">
+              <div className="flex items-center gap-8 mb-4">
+                <h2 className="text-lg font-semibold text-[#0C2340]">
+                  Inventory <span className="text-[#e68b00]">Health</span>
+                </h2>
+                {/* Tabs */}
+                <div className="flex gap-6">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => handleTabChange(tab)}
+                      className={`pb-0 font-medium transition-colors relative text-sm ${
+                        activeTab === tab
+                          ? "text-[#e68b00]"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {tab}
+                      {activeTab === tab && (
+                        <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
+                      )}
+                    </button>
+                  ))}
                 </div>
-                <OverviewCards stats={overviewStats} />
+              </div>
+              <InventoryHealth stats={inventoryHealth} />
+            </div>
+
+            {/* Inventory Alerts and Order Tracking - Side by Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              {/* Left: Inventory Alerts */}
+              <div>
+                <InventoryAlerts items={outOfStockItems} />
               </div>
 
-              {/* Right Side: Stock Levels Chart */}
+              {/* Right: Order Tracking */}
               <div>
-                <h2 className="text-lg font-semibold text-[#0C2340] mb-4">
-                  Stock Levels
-                </h2>
-                <StockLevelsChart data={stockLevelsData} />
+                <OrderTracking stats={orderTracking} />
               </div>
             </div>
 
-            {/* Recent Orders Table */}
+            {/* Recent Audits */}
             <div>
-              <h2 className="text-lg font-semibold text-[#0C2340] mb-4">
-                Recent Orders
-              </h2>
-              <RecentOrdersTable orders={recentOrders} />
+              <RecentAudits transactions={recentAudits} />
             </div>
           </div>
         )}

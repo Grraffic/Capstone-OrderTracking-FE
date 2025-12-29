@@ -185,6 +185,24 @@ const ItemDetailsModal = ({
                       {displayItem.educationLevel || "N/A"}
                     </span>
                   </div>
+                  <div className="flex">
+                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                      Beginning Inventory:
+                    </span>
+                    <span className="text-sm font-semibold text-[#0C2340]">
+                      {displayItem.beginning_inventory ||
+                        displayItem.beginningInventory ||
+                        0}
+                    </span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                      Purchases:
+                    </span>
+                    <span className="text-sm font-semibold text-[#0C2340]">
+                      {displayItem.purchases || 0}
+                    </span>
+                  </div>
                   <div className="flex pt-3 mt-2 border-t border-gray-100">
                     <span className="text-sm font-medium text-[#e68b00] w-40">
                       Cost Summary:
@@ -231,14 +249,26 @@ const ItemDetailsModal = ({
                   </div>
                 ) : (
                   <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-                    {variations.map((variation) => {
+                    {variations.map((variation, index) => {
                       // Use _variationKey for virtual variations, fallback to id
+                      // For duplicate items (same name+size), use id + created_at to ensure uniqueness
                       const variationKey =
-                        variation._variationKey || variation.id;
+                        variation._variationKey ||
+                        `${variation.id}-${variation.created_at || index}` ||
+                        variation.id;
                       const selectedKey =
                         selectedVariation?._variationKey ||
+                        `${selectedVariation?.id}-${selectedVariation?.created_at}` ||
                         selectedVariation?.id;
                       const isSelected = selectedKey === variationKey;
+
+                      // Display beginning_inventory and purchases if available
+                      const beginningInventory =
+                        variation.beginning_inventory ||
+                        variation.beginningInventory ||
+                        0;
+                      const purchases = variation.purchases || 0;
+
                       return (
                         <div
                           key={variationKey}
@@ -269,6 +299,10 @@ const ItemDetailsModal = ({
                             </p>
                             <p className="text-xs font-medium text-[#e68b00]">
                               {variation.size || "Standard"}
+                            </p>
+                            {/* Always show beginning_inventory and purchases */}
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Beg: {beginningInventory} | Purch: {purchases}
                             </p>
                           </div>
 

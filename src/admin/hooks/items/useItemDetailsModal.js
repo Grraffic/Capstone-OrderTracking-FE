@@ -43,13 +43,21 @@ export const useItemDetailsModal = (allItems = []) => {
 
       try {
         // Filter items from allItems that match the name and education level
+        // IMPORTANT: Include ALL items with same name+education, even if they have same size
+        // This ensures duplicate items (same name+size but different IDs) are shown separately
         const matchingItems = allItems.filter(
           (i) =>
             i.name === item.name && i.educationLevel === item.educationLevel
         );
 
+        console.log(`[useItemDetailsModal] Found ${matchingItems.length} matching items for "${item.name}"`);
+        matchingItems.forEach((m, idx) => {
+          console.log(`[useItemDetailsModal] Item ${idx + 1}: id=${m.id}, size="${m.size}", stock=${m.stock}, beginning_inventory=${m.beginning_inventory || 'N/A'}, purchases=${m.purchases || 'N/A'}`);
+        });
+
         // Process all matching items to create variations
-        // Each size should be a separate variation, never combined
+        // Each item (even with same size) should be a separate variation, never combined
+        // This ensures duplicate items are shown separately with their own purchases values
         const allVariations = [];
 
         matchingItems.forEach((matchingItem) => {
@@ -102,25 +110,61 @@ export const useItemDetailsModal = (allItems = []) => {
                 // Use per-size stock and price if available, otherwise use item defaults
                 stock: variationData?.stock ?? matchingItem.stock,
                 price: variationData?.price ?? matchingItem.price,
+                // Use per-size beginning_inventory and purchases if available, otherwise use item-level
+                beginning_inventory: variationData?.beginning_inventory !== undefined && variationData?.beginning_inventory !== null
+                  ? Number(variationData.beginning_inventory) || 0
+                  : (matchingItem.beginning_inventory || 0),
+                purchases: variationData?.purchases !== undefined && variationData?.purchases !== null
+                  ? Number(variationData.purchases) || 0
+                  : (matchingItem.purchases || 0),
               });
             });
           } else {
             // Item has a single size (or N/A), add it as a separate variation
+            // IMPORTANT: Even if another item has the same size, keep them separate
+            // This ensures duplicate items (same name+size but different IDs) are shown separately
             allVariations.push({
               ...matchingItem,
               // Ensure size is properly set
               size: matchingItem.size || "N/A",
+              // Add unique key to distinguish from other items with same size
+              _variationKey: matchingItem.id || `${matchingItem.name}-${matchingItem.size}-${matchingItem.created_at || Date.now()}`,
             });
           }
         });
 
-        // Set all variations (each size is now a separate variation)
-        if (allVariations.length > 0) {
-          setVariations(allVariations);
+        // Filter out duplicate entries - keep only the first entry (with beginning_inventory > 0)
+        // Sort by created_at ascending so the first entry appears first
+        const sortedVariations = allVariations.sort((a, b) => {
+          const dateA = new Date(a.created_at || 0);
+          const dateB = new Date(b.created_at || 0);
+          return dateA - dateB; // Ascending order (oldest first)
+        });
+
+        // Group by name+size and keep only the first entry (the one with beginning_inventory)
+        const seen = new Map();
+        const uniqueVariations = [];
+        
+        sortedVariations.forEach((variation) => {
+          const key = `${variation.name}-${variation.size || 'N/A'}`;
+          
+          if (!seen.has(key)) {
+            // First entry for this name+size - keep it
+            seen.set(key, true);
+            uniqueVariations.push(variation);
+          } else {
+            // Duplicate entry - skip it (we only want the first entry)
+            console.log(`[useItemDetailsModal] Skipping duplicate entry: ${variation.name} ${variation.size} (ID: ${variation.id})`);
+          }
+        });
+
+        // Set all variations (only first entry for each name+size)
+        if (uniqueVariations.length > 0) {
+          setVariations(uniqueVariations);
 
           // Set the selected variation - try to match the current item's size
           const selectedVariation =
-            allVariations.find(
+            uniqueVariations.find(
               (v) =>
                 v.id === item.id &&
                 (item.size === v.size ||
@@ -128,7 +172,7 @@ export const useItemDetailsModal = (allItems = []) => {
                     item.size.includes(",") &&
                     v.size &&
                     item.size.split(",").some((s) => s.trim() === v.size)))
-            ) || allVariations[0];
+            ) || uniqueVariations[0];
           setSelectedVariation(selectedVariation);
         } else {
           // Fallback: just use the selected item

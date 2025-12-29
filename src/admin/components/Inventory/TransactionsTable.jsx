@@ -41,16 +41,16 @@ const TransactionsTable = ({ transactions }) => {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-6 shadow-sm">
+    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-sm">
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full">
           <thead className="bg-[#0C2340]">
             <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              <th className="px-3 lg:px-4 py-3 text-left text-xs lg:text-sm font-semibold text-white">
                 TYPE
                 <svg
-                  className="inline-block ml-2 w-4 h-4"
+                  className="inline-block ml-2 w-3 h-3 lg:w-4 lg:h-4"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -63,16 +63,16 @@ const TransactionsTable = ({ transactions }) => {
                   />
                 </svg>
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              <th className="px-3 lg:px-4 py-3 text-left text-xs lg:text-sm font-semibold text-white">
                 DATE & TIME
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              <th className="px-3 lg:px-4 py-3 text-left text-xs lg:text-sm font-semibold text-white">
                 USER
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              <th className="px-3 lg:px-4 py-3 text-left text-xs lg:text-sm font-semibold text-white">
                 ACTION
               </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              <th className="px-3 lg:px-4 py-3 text-left text-xs lg:text-sm font-semibold text-white">
                 DETAILS
               </th>
             </tr>
@@ -81,15 +81,15 @@ const TransactionsTable = ({ transactions }) => {
             {transactions.map((transaction) => (
               <tr
                 key={transaction.id}
-                className="border-b border-gray-200 hover:bg-gray-50"
+                className="border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150"
               >
-                <td className="px-4 py-3 text-sm text-green-600 font-medium">
+                <td className="px-3 lg:px-4 py-3 text-xs lg:text-sm text-green-600 font-medium">
                   {transaction.type}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                <td className="px-3 lg:px-4 py-3 text-xs lg:text-sm text-gray-700">
                   {transaction.dateTime}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                <td className="px-3 lg:px-4 py-3 text-xs lg:text-sm text-gray-700">
                   {(() => {
                     const userInfo = parseUserInfo(transaction.user);
                     return (
@@ -106,7 +106,7 @@ const TransactionsTable = ({ transactions }) => {
                     );
                   })()}
                 </td>
-                <td className="px-4 py-3 text-sm text-green-600 font-medium">
+                <td className="px-3 lg:px-4 py-3 text-xs lg:text-sm text-green-600 font-medium">
                   <div className="flex flex-col">
                     <span>{extractActionPrefix(transaction.action)}</span>
                     {extractItemFromAction(transaction.action) && (
@@ -116,7 +116,7 @@ const TransactionsTable = ({ transactions }) => {
                     )}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
+                <td className="px-3 lg:px-4 py-3 text-xs lg:text-sm text-gray-700">
                   <div className="flex flex-col">
                     <span>
                       {transaction.details
@@ -145,29 +145,37 @@ const TransactionsTable = ({ transactions }) => {
         </table>
       </div>
 
-      {/* Mobile Table */}
+      {/* Mobile Card Layout */}
       <div className="md:hidden">
-        <div className="divide-y divide-gray-200">
+        <div className="space-y-3">
           {transactions.map((transaction) => (
-            <div key={transaction.id} className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <span className="text-sm font-medium text-green-600">
-                  {transaction.type}
-                </span>
-                <span className="text-xs text-gray-500">
+            <div 
+              key={transaction.id} 
+              className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow"
+            >
+              {/* Header Row */}
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3 pb-3 border-b border-gray-200">
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                    {transaction.type}
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500 font-medium">
                   {transaction.dateTime}
                 </span>
               </div>
-              <div className="text-sm text-gray-700 mb-1">
+
+              {/* User Info */}
+              <div className="mb-3">
                 {(() => {
                   const userInfo = parseUserInfo(transaction.user);
                   return (
                     <div className="flex flex-col">
                       {userInfo.name && (
-                        <span className="font-medium">{userInfo.name}</span>
+                        <span className="text-sm font-semibold text-gray-900">{userInfo.name}</span>
                       )}
                       {userInfo.role && (
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 mt-0.5">
                           {userInfo.role}
                         </span>
                       )}
@@ -175,9 +183,13 @@ const TransactionsTable = ({ transactions }) => {
                   );
                 })()}
               </div>
-              <div className="text-sm text-green-600 font-medium mb-1">
+
+              {/* Action */}
+              <div className="mb-3">
                 <div className="flex flex-col">
-                  <span>{extractActionPrefix(transaction.action)}</span>
+                  <span className="text-sm font-semibold text-green-600">
+                    {extractActionPrefix(transaction.action)}
+                  </span>
                   {extractItemFromAction(transaction.action) && (
                     <span className="text-xs text-gray-600 mt-1 font-normal">
                       {extractItemFromAction(transaction.action)}
@@ -185,16 +197,18 @@ const TransactionsTable = ({ transactions }) => {
                   )}
                 </div>
               </div>
-              <div className="text-sm text-gray-700">
+
+              {/* Details */}
+              <div className="pt-3 border-t border-gray-100">
                 <div className="flex flex-col">
-                  <span>
+                  <span className="text-sm text-gray-700">
                     {transaction.details
                       .split(transaction.price || "")
                       .map((part, idx) => (
                         <span key={idx}>
                           {part}
                           {idx === 0 && transaction.price && (
-                            <span className="text-[#E68B00] font-semibold">
+                            <span className="text-[#E68B00] font-semibold ml-1">
                               {transaction.price}
                             </span>
                           )}
@@ -202,7 +216,7 @@ const TransactionsTable = ({ transactions }) => {
                       ))}
                   </span>
                   {extractVariants(transaction.details) && (
-                    <span className="text-xs text-gray-500 mt-1">
+                    <span className="text-xs text-gray-500 mt-2 inline-block">
                       {extractVariants(transaction.details)}
                     </span>
                   )}

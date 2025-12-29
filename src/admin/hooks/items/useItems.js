@@ -108,6 +108,10 @@ export const useItems = () => {
           isActive: item.is_active,
           createdAt: item.created_at,
           updatedAt: item.updated_at,
+          // Include purchases and beginning_inventory for inventory tracking
+          purchases: item.purchases || 0,
+          beginning_inventory: item.beginning_inventory || 0,
+          beginningInventory: item.beginning_inventory || 0, // Also include camelCase version
         }));
         setItems(transformedData);
       } else {
@@ -399,6 +403,21 @@ export const useItems = () => {
 
         const result = await response.json();
 
+        // Log the response to see if duplicate was detected
+        console.log("[addItem] Backend response:", {
+          success: result.success,
+          isExisting: result.isExisting,
+          message: result.message,
+          data: result.data ? {
+            id: result.data.id,
+            name: result.data.name,
+            size: result.data.size,
+            stock: result.data.stock,
+            beginning_inventory: result.data.beginning_inventory,
+            purchases: result.data.purchases
+          } : null
+        });
+
         if (result.success && result.data) {
           // Transform snake_case back to camelCase for frontend state
           const transformedData = {
@@ -424,8 +443,23 @@ export const useItems = () => {
             updatedAt: result.data.updated_at,
           };
 
-          // Add the new item to the local state
-          setItems((prev) => [transformedData, ...prev]);
+          // If item already existed (duplicate), refresh the items list instead of adding
+          // This ensures we get the updated purchases value
+          if (result.isExisting) {
+            console.log("[addItem] ✅ Item was existing - refreshing items list to get updated purchases");
+            console.log("[addItem] Response data:", {
+              id: result.data?.id,
+              purchases: result.data?.purchases,
+              stock: result.data?.stock,
+              beginning_inventory: result.data?.beginning_inventory
+            });
+            // Refresh items to get updated data with purchases
+            await fetchItems();
+            console.log("[addItem] ✅ Items list refreshed after duplicate detection");
+          } else {
+            // Add the new item to the local state
+            setItems((prev) => [transformedData, ...prev]);
+          }
 
           // Show notification info if students were notified
           if (result.notificationInfo && result.notificationInfo.notified > 0) {

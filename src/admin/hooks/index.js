@@ -16,9 +16,11 @@
 
 // Common Hooks
 export { useAdminSidebar } from "./common/useAdminSidebar";
+export { useSearchDebounce } from "./common/useSearchDebounce";
 
 // Dashboard Hooks
 export { useAdminDashboardData } from "./dashboard/useAdminDashboardData";
+export { useInventoryHealthStats } from "./dashboard/useInventoryHealthStats";
 
 // Items Hooks
 export { useItemsStats } from "./items/useItemsStats";

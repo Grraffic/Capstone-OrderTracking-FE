@@ -21,30 +21,41 @@ const UpdateQuantityModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-2xl font-semibold text-[#0C2340]">
-            Update Quantity
-          </h2>
-          <p className="text-sm text-gray-600 mt-1">Inventory</p>
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-semibold text-[#0C2340]">
+                Update Quantity
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-600 mt-1">Inventory</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="sm:hidden p-2 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Form Content */}
         <form
           id="updateQuantityForm"
-          className="flex-1 overflow-y-auto bg-gray-50 px-6 py-5"
+          className="flex-1 overflow-y-auto bg-gray-50 px-4 sm:px-6 py-4 sm:py-5"
           onSubmit={(e) => {
             e.preventDefault();
             onSubmit();
           }}
         >
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+          <div className="max-w-2xl mx-auto bg-white rounded-xl sm:rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Two Column Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Left Column */}
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Item Name */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">
@@ -101,7 +112,7 @@ const UpdateQuantityModal = ({
               </div>
 
               {/* Right Column */}
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {/* Variant */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">
@@ -148,17 +159,17 @@ const UpdateQuantityModal = ({
         </form>
 
         {/* Footer with Buttons */}
-        <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors text-sm sm:text-base font-medium"
           >
             Cancel
           </button>
           <button
             type="submit"
             form="updateQuantityForm"
-            className="px-4 py-2 bg-[#E68B00] text-white rounded-lg hover:bg-[#D67A00] transition-colors"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-[#E68B00] text-white rounded-lg hover:bg-[#D67A00] transition-colors text-sm sm:text-base font-medium"
           >
             Save
           </button>
