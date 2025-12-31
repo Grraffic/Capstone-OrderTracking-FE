@@ -39,18 +39,32 @@ export const useInventoryHealthStats = () => {
           let atReorderPoint = 0;
           let outOfStock = 0;
           
-          // Process each item
+          // Group items by name and item_type (same as Items page does)
+          // This ensures we count grouped items, not individual size rows
+          const groupedItemsMap = new Map();
+          
           result.data.forEach((item) => {
-            // Skip inactive items
-            if (item.is_active === false) return;
+            // Create a unique key for grouping (name + item_type)
+            const groupKey = `${item.name || ''}_${item.item_type || ''}`;
             
-            // Check if item has JSON size variations in note field
+            if (!groupedItemsMap.has(groupKey)) {
+              groupedItemsMap.set(groupKey, []);
+            }
+            groupedItemsMap.get(groupKey).push(item);
+          });
+          
+          // Process each grouped item (counts as one variant, matches Items list)
+          groupedItemsMap.forEach((itemsInGroup) => {
+            totalItemVariants++;
+            
+            // Use the first item in the group for checking JSON variations
+            const firstItem = itemsInGroup[0];
             let hasJsonVariations = false;
             let sizeVariations = [];
             
-            if (item.note) {
+            if (firstItem.note) {
               try {
-                const parsedNote = JSON.parse(item.note);
+                const parsedNote = JSON.parse(firstItem.note);
                 if (
                   parsedNote &&
                   parsedNote._type === "sizeVariations" &&
@@ -65,27 +79,47 @@ export const useInventoryHealthStats = () => {
             }
             
             if (hasJsonVariations && sizeVariations.length > 0) {
-              // Count each size variation
+              // For items with size variations, check each size for stock status
+              let itemOutOfStock = true;
+              let itemAtReorderPoint = false;
+              
               sizeVariations.forEach((variant) => {
-                totalItemVariants++;
                 const variantStock = Number(variant.stock) || 0;
                 
-                if (variantStock === 0) {
-                  outOfStock++;
-                } else if (variantStock >= 20 && variantStock < 50) {
-                  // At Reorder Point: stock between 20-49
-                  atReorderPoint++;
+                if (variantStock > 0) {
+                  itemOutOfStock = false;
+                }
+                if (variantStock >= 20 && variantStock < 50) {
+                  itemAtReorderPoint = true;
                 }
               });
-            } else {
-              // Regular item - count as one variant
-              totalItemVariants++;
-              const itemStock = Number(item.stock) || 0;
               
-              if (itemStock === 0) {
+              if (itemOutOfStock) {
                 outOfStock++;
-              } else if (itemStock >= 20 && itemStock < 50) {
-                // At Reorder Point: stock between 20-49
+              } else if (itemAtReorderPoint) {
+                atReorderPoint++;
+              }
+            } else {
+              // Regular item - check stock from all items in group
+              // Item is out of stock if ALL sizes are out of stock
+              // Item is at reorder point if ANY size is at reorder point
+              let allOutOfStock = true;
+              let anyAtReorderPoint = false;
+              
+              itemsInGroup.forEach((item) => {
+                const itemStock = Number(item.stock) || 0;
+                
+                if (itemStock > 0) {
+                  allOutOfStock = false;
+                }
+                if (itemStock >= 20 && itemStock < 50) {
+                  anyAtReorderPoint = true;
+                }
+              });
+              
+              if (allOutOfStock) {
+                outOfStock++;
+              } else if (anyAtReorderPoint) {
                 atReorderPoint++;
               }
             }
@@ -120,4 +154,5 @@ export const useInventoryHealthStats = () => {
 
   return { stats, loading };
 };
+
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { ArrowLeft } from "lucide-react";
 
 /**
  * ProductInfo Component
@@ -9,35 +10,75 @@ import React from "react";
 const ProductInfo = ({ product, onClose }) => {
   const isOutOfStock = product.status === "out_of_stock";
 
+  // Parse product name to separate main name and "for Girls/Boys" part
+  const parseProductName = (name) => {
+    if (!name) return { mainName: "", suffix: "" };
+
+    // Check for "for Girls" or "for Boys" pattern
+    const forGirlsMatch = name.match(/^(.+?)\s+(for\s+Girls)$/i);
+    const forBoysMatch = name.match(/^(.+?)\s+(for\s+Boys)$/i);
+
+    if (forGirlsMatch) {
+      return { mainName: forGirlsMatch[1], suffix: forGirlsMatch[2] };
+    } else if (forBoysMatch) {
+      return { mainName: forBoysMatch[1], suffix: forBoysMatch[2] };
+    }
+
+    return { mainName: name, suffix: "" };
+  };
+
+  const { mainName, suffix } = parseProductName(product.name);
+
   return (
-    <div className="space-y-4">
-      {/* Back Button and FREE Label - Same Row */}
-      <div className="flex items-center justify-between gap-4">
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border-2 border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white transition-all duration-200 font-semibold rounded-full"
-          >
-            Back
-          </button>
-        )}
+    <div className="space-y-3 sm:space-y-4 relative">
+      {/* FREE Badge - Top Right (Absolute Positioned) */}
+      <span className="absolute top-6 right-0 px-3 py-1 sm:px-4 sm:py-1.5 bg-white border border-[#003363] text-[#003363] rounded-full text-xs sm:text-sm font-bold shadow-sm">
+        FREE
+      </span>
 
-        <span className="px-5 py-2 bg-white border-2 border-[#003363] text-[#003363] rounded-full text-sm font-bold shadow-sm">
-          FREE
-        </span>
+      {/* Top Row: Back Button (left) */}
+      <div className="flex items-start">
+        <div className="flex flex-col gap-2 sm:gap-3">
+          {/* Back Button - Top Left */}
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2 border border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white transition-all duration-200 rounded-full flex items-center justify-center w-fit"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+
+          {/* Education Level - Below Back Button, Left Aligned */}
+          <p className="text-[#003363] text-sm sm:text-base font-semibold">
+            {product.educationLevel || "All Education Levels"}
+          </p>
+
+          {/* Product Name - Below Education Level */}
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#F28C28] leading-tight">
+              {mainName}
+            </h1>
+            {suffix && (
+              <p className="text-xl sm:text-2xl font-bold text-[#F28C28] leading-tight">
+                {suffix}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Education Level Badge - Below Back Button */}
-      <div>
-        <span className="inline-block px-4 py-2 bg-[#F28C28] text-white text-sm font-semibold rounded-full">
-          {product.educationLevel || "All Education Levels"}
-        </span>
-      </div>
-
-      {/* Product Name */}
-      <h1 className="text-3xl font-bold text-[#F28C28] leading-tight">
-        {product.name}
-      </h1>
+      {/* Description/Note - Rich text content from admin form */}
+      {(product.description_text || product.descriptionText) && (
+        <div className="space-y-2 mt-3">
+          <div
+            className="text-gray-700 text-sm leading-relaxed rich-text-content"
+            dangerouslySetInnerHTML={{
+              __html: product.description_text || product.descriptionText,
+            }}
+          />
+        </div>
+      )}
 
       {/* Complete Set Badge */}
       {(product.isCompleteSet || product.itemType === "Complete Set") && (

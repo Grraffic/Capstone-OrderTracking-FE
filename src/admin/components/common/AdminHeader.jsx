@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { Menu, Bell, ChevronDown } from "lucide-react";
+import { Menu, Bell } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useSocket } from "../../../context/SocketContext";
 import { toast } from "react-hot-toast";
@@ -230,7 +230,7 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
 
   return (
     <header
-      className={`fixed top-0 right-0 h-16 bg-white border-b border-gray-200 px-4 sm:px-8 flex items-center justify-between z-40 transition-all duration-300 ${
+      className={`fixed top-0 right-0 h-16 bg-white border-b border-gray-100 px-4 sm:px-8 flex items-center justify-between z-40 transition-all duration-300 ${
         sidebarOpen ? "left-64" : "left-20"
       }`}
     >
@@ -295,12 +295,6 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
               alt={displayName}
               className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-[#e68b00]"
             />
-            <button
-              className="hidden sm:block p-1 hover:bg-gray-100 rounded transition-colors"
-              aria-label="User menu"
-            >
-              <ChevronDown size={18} className="text-[#0C2340]" />
-            </button>
           </div>
         </div>
       </div>

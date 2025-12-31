@@ -311,7 +311,13 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
-                      // Navigate to orders page
+                      navigate("/student/profile", { 
+                        state: { 
+                          activeTab: 'orders',
+                          viewMode: 'detail', 
+                          activeCategory: 'orders' 
+                        } 
+                      });
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
@@ -453,7 +459,19 @@ const Navbar = () => {
               </button>
 
               {/* Orders - Mobile */}
-              <button className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors">
+              <button
+                onClick={() => {
+                  navigate("/student/profile", { 
+                    state: { 
+                      activeTab: 'orders',
+                      viewMode: 'detail', 
+                      activeCategory: 'orders' 
+                    } 
+                  });
+                  setIsMenuOpen(false);
+                }}
+                className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
+              >
                 <ShoppingCart className="w-5 h-5 text-gray-700" />
                 <span className="text-sm font-medium text-gray-700">
                   My Orders

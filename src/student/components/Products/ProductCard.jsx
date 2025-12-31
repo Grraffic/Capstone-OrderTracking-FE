@@ -71,13 +71,13 @@ const ProductCard = ({ product }) => {
       {/* Product Info */}
       <div className="p-5 flex flex-col flex-grow">
         {/* Product Name */}
-        <h3 className="text-lg font-bold text-[#003363] line-clamp-2 min-h-[3.5rem] leading-tight">
+        <h3 className="text-lg font-bold text-[#003363] line-clamp-2 leading-tight">
           {product.name}
         </h3>
 
         {/* Education Level */}
         {product.educationLevel && (
-          <p className="text-base text-[#F28C28] font-semibold -mt-8">
+          <p className="text-base text-[#F28C28] font-semibold mt-0.5">
             ({product.educationLevel})
           </p>
         )}
@@ -88,11 +88,11 @@ const ProductCard = ({ product }) => {
         {/* Stock Status - Only show for out of stock items */}
         {isOutOfStock && (
           <div className="mt-3">
-            <div className="flex flex-col">
+            <div className="flex flex-row items-center justify-between">
               <span className="text-xs text-red-600 font-semibold">
                 Out of Stock
               </span>
-              <button className="flex items-center gap-1 text-xs text-[#003363] hover:text-[#F28C28] transition-colors mt-1">
+              <button className="flex items-center gap-1 text-xs text-[#003363] hover:text-[#F28C28] transition-colors">
                 <Bell size={12} />
                 <span>Remind me</span>
               </button>

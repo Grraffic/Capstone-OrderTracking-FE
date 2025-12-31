@@ -27,7 +27,7 @@ export default function LandingPage() {
               Apalit.
             </p>
             <Link
-              to="/get-started"
+              to="/login"
               className="border-2 border-[#E68B00] text-[#E68B00] px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:bg-orange-50 hover:text-orange-600 transition ml-auto block w-fit text-sm sm:text-base min-h-[44px] flex items-center justify-center"
             >
               Get Started
@@ -103,7 +103,7 @@ export default function LandingPage() {
               />
               <div>
                 <Link
-                  to="/order"
+                  to="/all-products"
                   className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
                 >
                   Click here to Order →
@@ -125,7 +125,7 @@ export default function LandingPage() {
                 className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
               />
               <Link
-                to="/order"
+                to="/all-products"
                 className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
               >
                 Click here to Order →
@@ -146,7 +146,7 @@ export default function LandingPage() {
                 className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
               />
               <Link
-                to="/order"
+                to="/all-products"
                 className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
               >
                 Click here to Order →

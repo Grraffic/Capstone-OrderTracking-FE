@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useItemsModalForm } from "../../hooks";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { EDUCATION_LEVELS, ITEM_TYPES } from "../../constants/inventoryOptions";
 import { orderAPI } from "../../../services/api";
 import { HexColorPicker, HexColorInput } from "react-colorful";
@@ -366,6 +367,29 @@ const ItemsModals = ({
     }
   }, [modalState.isOpen]);
 
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (modalState.isOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      // Lock body scroll
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = "100%";
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        // Restore body scroll
+        document.body.style.position = "";
+        document.body.style.top = "";
+        document.body.style.width = "";
+        document.body.style.overflow = "";
+        // Restore scroll position
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [modalState.isOpen]);
+
   // Initialize variant prices when editing an item
   useEffect(() => {
     if (
@@ -497,9 +521,20 @@ const ItemsModals = ({
 
   // Delete Confirmation Modal
   if (modalState.mode === "delete") {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+    return createPortal(
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+        onClick={(e) => {
+          // Close modal when clicking backdrop
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <div 
+          className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-shrink-0 w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
               <AlertTriangle className="text-red-600" size={24} />
@@ -538,15 +573,27 @@ const ItemsModals = ({
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
   // View Item Modal
   if (modalState.mode === "view") {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+    return createPortal(
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+        onClick={(e) => {
+          // Close modal when clicking backdrop
+          if (e.target === e.currentTarget) {
+            onClose();
+          }
+        }}
+      >
+        <div 
+          className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
             <h3 className="text-xl font-semibold text-[#0C2340]">
@@ -670,7 +717,8 @@ const ItemsModals = ({
             </button>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body
     );
   }
 
@@ -829,9 +877,20 @@ const ItemsModals = ({
   };
 
   // Add/Edit Item Modal
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Pre-Order Notification Banner - Only for Add mode */}
         {modalState.mode === "add" &&
           preOrderCount > 0 &&
@@ -857,7 +916,7 @@ const ItemsModals = ({
         {/* Content - Single Column Centered Card */}
         <form
           onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto bg-gray-50 px-6 py-5"
+          className="flex-1 overflow-y-auto bg-gray-50 px-6 pt-4 pb-8"
         >
           {/* Breadcrumb (outside white card) */}
           <div className="max-w-2xl mx-auto mb-4">
@@ -1581,7 +1640,7 @@ const ItemsModals = ({
         </form>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-white">
+        <div className="flex items-center justify-end gap-3 px-6 py-5 border-t bg-white">
           <button
             type="button"
             onClick={onClose}
@@ -1598,7 +1657,8 @@ const ItemsModals = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

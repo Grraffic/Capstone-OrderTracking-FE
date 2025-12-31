@@ -1,82 +1,82 @@
-import React, { useState } from "react";
-import { ZoomIn, ZoomOut } from "lucide-react";
+import React from "react";
 
 /**
  * ProductImageViewer Component
  *
- * Displays the main product image with zoom functionality
+ * Displays the main product image
  * Handles image loading errors with fallback
  * Shows selected size on the image
  */
 const ProductImageViewer = ({ product, selectedSize }) => {
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [imageError, setImageError] = useState(false);
-
   const handleImageError = (e) => {
-    setImageError(true);
     e.target.src =
       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"%3E%3Crect fill="%23f3f4f6" width="400" height="400"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
   };
 
-  const toggleZoom = () => {
-    setIsZoomed(!isZoomed);
+  // Map size abbreviations to full names for display
+  const sizeNameMapping = {
+    XS: "XSmall",
+    S: "Small",
+    M: "Medium",
+    L: "Large",
+    XL: "XLarge",
+    XXL: "2XLarge",
+    "3XL": "3XLarge",
+  };
+
+  // Map size abbreviations to full display names (for image label)
+  const sizeDisplayNames = {
+    XS: "Extra Small",
+    S: "Small",
+    M: "Medium",
+    L: "Large",
+    XL: "Extra Large",
+    XXL: "2X Large",
+    "3XL": "3X Large",
+  };
+
+  // Get full display name for size label on image
+  const getFullSizeDisplay = (size) => {
+    // If input is abbreviation (XS, S, M, L), return full display name
+    if (sizeDisplayNames[size]) {
+      return sizeDisplayNames[size];
+    }
+    // If input is database format (XSmall, Small), find abbreviation first then get display name
+    const entry = Object.entries(sizeNameMapping).find(
+      ([, val]) => val.toLowerCase() === size.toLowerCase()
+    );
+    if (entry && sizeDisplayNames[entry[0]]) {
+      return sizeDisplayNames[entry[0]];
+    }
+    // Fallback
+    return size;
   };
 
   return (
     <div className="relative rounded-2xl overflow-hidden h-full">
       {/* Product Image Container */}
-      <div className="relative flex items-center justify-center p-8 min-h-[500px] h-full">
+      <div className="relative flex items-center justify-center p-1 sm:p-2 min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px] h-full">
         <img
           src={product.image}
           alt={product.name}
-          className={`w-full h-full max-h-[500px] object-contain transition-transform duration-300 drop-shadow-2xl ${
-            isZoomed ? "scale-150 cursor-zoom-out" : "cursor-zoom-in"
-          }`}
+          className="relative z-10 w-full h-full max-h-[300px] sm:max-h-[400px] md:max-h-[500px] lg:max-h-[600px] xl:max-h-[750px] max-w-[300px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px] xl:max-w-[750px] object-contain transition-transform duration-300 drop-shadow-2xl scale-100 sm:scale-110 md:scale-115 lg:scale-125"
           onError={handleImageError}
-          onClick={toggleZoom}
         />
-
-        {/* Zoom Button */}
-        {!imageError && (
-          <button
-            onClick={toggleZoom}
-            className="absolute bottom-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110"
-            title={isZoomed ? "Zoom Out" : "Zoom In"}
-          >
-            {isZoomed ? (
-              <ZoomOut className="w-5 h-5 text-gray-700" />
-            ) : (
-              <ZoomIn className="w-5 h-5 text-gray-700" />
-            )}
-          </button>
-        )}
 
         {/* Pre-Order Badge - Top Right */}
         {product.status === "pre_order" && (
-          <div className="absolute top-4 right-4">
-            <span className="inline-block px-4 py-2 rounded-full text-sm font-bold bg-[#F28C28] text-white shadow-lg">
+          <div className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10">
+            <span className="inline-block px-2 py-1 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-bold bg-[#F28C28] text-white shadow-lg">
               Pre-Order
             </span>
           </div>
         )}
 
-        {/* Selected Size Label - Bottom Left with Background */}
+        {/* Selected Size Label - Bottom Left Corner (close to edge) */}
         {selectedSize && (
-          <div className="absolute bottom-6 left-6 px-5 py-3">
-            <p className="text-2xl font-bold text-[#fefefe]">
-              {selectedSize === "XS"
-                ? "Extra Small"
-                : selectedSize === "S"
-                ? "Small"
-                : selectedSize === "M"
-                ? "Medium"
-                : selectedSize === "L"
-                ? "Large"
-                : selectedSize === "XL"
-                ? "Extra Large"
-                : selectedSize === "XXL"
-                ? "2X Large"
-                : selectedSize}
+          <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 md:bottom-4 md:left-4 z-10 pointer-events-none">
+            <p className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-[#fefefe] drop-shadow-lg whitespace-nowrap">
+              {getFullSizeDisplay(selectedSize)}
             </p>
           </div>
         )}

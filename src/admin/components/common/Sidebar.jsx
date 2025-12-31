@@ -15,54 +15,32 @@ import { useAuth } from "../../../context/AuthContext";
  * Sidebar Component
  *
  * Collapsible sidebar with navigation items
+ * Behaves consistently across all screen sizes - user controls via toggle button
  * Props:
  *   - isOpen: boolean - whether sidebar is expanded or collapsed
- *   - onNavigate: function - callback to close sidebar on mobile when navigating
+ *   - onNavigate: function - callback function (optional, for future use)
  */
 const Sidebar = ({ isOpen = true, onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
 
-  // Close sidebar on mobile when route changes or on initial mount
+  // Auto-close sidebar on mobile/tablet when route changes
   useEffect(() => {
-    // Check if window width is less than 1024px (mobile/tablet) and sidebar is open
-    if (window.innerWidth < 1024 && onNavigate && isOpen) {
+    const MOBILE_BREAKPOINT = 1024; // px (matches Tailwind's lg breakpoint)
+    
+    // Close sidebar on mobile/tablet when navigating to a new route
+    if (window.innerWidth < MOBILE_BREAKPOINT && isOpen && onNavigate) {
       onNavigate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname]); // Close sidebar whenever the route changes
+  }, [location.pathname]); // Close sidebar whenever the route changes on mobile/tablet
 
-  // Also check on mount and window resize to ensure sidebar closes on mobile
-  useEffect(() => {
-    const MOBILE_BREAKPOINT = 1024;
-    
-    const checkAndClose = () => {
-      if (window.innerWidth < MOBILE_BREAKPOINT && onNavigate && isOpen) {
-        onNavigate();
-      }
-    };
-
-    // Check on mount
-    checkAndClose();
-
-    // Check on window resize
-    window.addEventListener("resize", checkAndClose);
-    return () => window.removeEventListener("resize", checkAndClose);
-  }, [isOpen, onNavigate]);
-
-  // Check if we're on mobile and close sidebar on navigation
-  const handleNavClick = (e) => {
-    // Check if window width is less than 1024px (mobile/tablet)
-    if (window.innerWidth < 1024 && onNavigate) {
-      // Close sidebar on mobile, even if clicking the same route
-      onNavigate();
-    }
-  };
+  // No auto-close behavior - sidebar behaves like desktop on all screen sizes
+  // User controls sidebar state manually via toggle button
   const navItems = [
     { to: "/admin", label: "Home", icon: Home },
     { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
-    { to: "/admin/reports", label: "Reports", icon: BarChart3 },
     { to: "/admin/settings", label: "Settings", icon: Settings },
   ];
 
@@ -79,10 +57,23 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   };
 
   const navItem = (to, label, Icon, isExact = false) => (
-    <div onClick={handleNavClick}>
+    <div
+      onClick={(e) => {
+        // Prevent any click on nav items from opening the sidebar
+        // Sidebar should only be controlled by the menu button in header
+        e.stopPropagation();
+      }}
+    >
       <NavLink
         to={to}
         end={isExact}
+        onClick={(e) => {
+          // Prevent navigation items from opening the sidebar
+          // Only the menu button in header should toggle sidebar
+          e.stopPropagation();
+          // Ensure sidebar stays in its current state (closed if closed, open if open)
+          // Do not change sidebar state on navigation
+        }}
         className={({ isActive }) =>
           `group relative flex items-center gap-3 text-sm font-medium transition-none ${
             isActive
@@ -110,11 +101,29 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   );
 
   return (
-    <aside
-      className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-100 p-4 flex flex-col transition-all duration-300 z-30 ${
-        isOpen ? "w-64" : "w-20"
-      }`}
-    >
+    <>
+      {/* Backdrop overlay for mobile when sidebar is open */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+          onClick={() => {
+            // Close sidebar when clicking backdrop on mobile
+            if (window.innerWidth < 1024 && onNavigate) {
+              onNavigate();
+            }
+          }}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={`fixed left-0 top-0 bottom-0 bg-white border-r border-gray-100 p-4 flex flex-col transition-all duration-300 z-30 shadow-lg ${
+          isOpen ? "w-64" : "w-20"
+        }`}
+        style={{
+          // Ensure sidebar is always visible and can be interacted with
+          pointerEvents: 'auto',
+        }}
+      >
       {/* Logo Section */}
       <div
         className={`h-16 flex items-center mb-8 px-3 transition-all duration-300 ${
@@ -185,6 +194,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
         </button>
       </div>
     </aside>
+    </>
   );
 };
 

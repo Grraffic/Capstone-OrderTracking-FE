@@ -107,42 +107,65 @@ const ProductDetailsPage = () => {
         if (response.data.success && response.data.data) {
           // Normalize and transform database sizes
           const transformedSizes = response.data.data.map((sizeData) => {
-             const originalSize = sizeData.size;
-             const lower = originalSize.toLowerCase().trim();
-             
-             let standardizedSize = originalSize;
-             
-             // PRIORITIZE XS / XSmall checks first to prevent them appearing as Small
-             // Also check for XXLarge/3XLarge before Large
-             
-             if (lower.includes('xxl') || lower.includes('2xl') || (lower.includes('2') && lower.includes('large'))) {
-               standardizedSize = 'XXL';
-             }
-             else if (lower.includes('3xl') || (lower.includes('3') && lower.includes('large'))) {
-                standardizedSize = '3XL';
-             }
-             else if (lower.includes('xl') || lower.includes('extra large') || (lower.includes('extra') && lower.includes('large'))) {
-                standardizedSize = 'XL';
-             }
-             else if (lower.includes('xs') || lower.includes('xsmall') || lower.includes('extra small') || (lower.includes('extra') && lower.includes('small'))) {
-                standardizedSize = 'XS';
-             }
-             // Now safe to check Small without catching XSmall, IF we explicitly exclude x/extra
-             else if (lower === 's' || lower === 'small' || (lower.includes('small') && !lower.includes('x') && !lower.includes('extra'))) {
-                standardizedSize = 'S';
-             }
-             else if (lower === 'm' || lower.includes('medium')) {
-                standardizedSize = 'M';
-             }
-             else if (lower === 'l' || lower === 'large' || (lower.includes('large') && !lower.includes('x') && !lower.includes('extra'))) {
-                standardizedSize = 'L';
-             }
+            const originalSize = sizeData.size;
+            const lower = originalSize.toLowerCase().trim();
 
-             return {
-               ...sizeData,
-               dbSize: originalSize, // Keep original for DB operations
-               size: standardizedSize // Standardized for UI matching
-             };
+            let standardizedSize = originalSize;
+
+            // PRIORITIZE XS / XSmall checks first to prevent them appearing as Small
+            // Also check for XXLarge/3XLarge before Large
+
+            if (
+              lower.includes("xxl") ||
+              lower.includes("2xl") ||
+              (lower.includes("2") && lower.includes("large"))
+            ) {
+              standardizedSize = "XXL";
+            } else if (
+              lower.includes("3xl") ||
+              (lower.includes("3") && lower.includes("large"))
+            ) {
+              standardizedSize = "3XL";
+            } else if (
+              lower.includes("xl") ||
+              lower.includes("extra large") ||
+              (lower.includes("extra") && lower.includes("large"))
+            ) {
+              standardizedSize = "XL";
+            } else if (
+              lower.includes("xs") ||
+              lower.includes("xsmall") ||
+              lower.includes("extra small") ||
+              (lower.includes("extra") && lower.includes("small"))
+            ) {
+              standardizedSize = "XS";
+            }
+            // Now safe to check Small without catching XSmall, IF we explicitly exclude x/extra
+            else if (
+              lower === "s" ||
+              lower === "small" ||
+              (lower.includes("small") &&
+                !lower.includes("x") &&
+                !lower.includes("extra"))
+            ) {
+              standardizedSize = "S";
+            } else if (lower === "m" || lower.includes("medium")) {
+              standardizedSize = "M";
+            } else if (
+              lower === "l" ||
+              lower === "large" ||
+              (lower.includes("large") &&
+                !lower.includes("x") &&
+                !lower.includes("extra"))
+            ) {
+              standardizedSize = "L";
+            }
+
+            return {
+              ...sizeData,
+              dbSize: originalSize, // Keep original for DB operations
+              size: standardizedSize, // Standardized for UI matching
+            };
           });
 
           setAvailableSizesData(transformedSizes);
@@ -246,9 +269,12 @@ const ProductDetailsPage = () => {
     try {
       // Convert customer-facing size to database size
       // Use the actual DB size from the fetched data if available
-      const dbSize = selectedSize && selectedSizeData
-        ? selectedSizeData.dbSize
-        : (selectedSize ? (sizeMapping[selectedSize] || selectedSize) : "N/A");
+      const dbSize =
+        selectedSize && selectedSizeData
+          ? selectedSizeData.dbSize
+          : selectedSize
+          ? sizeMapping[selectedSize] || selectedSize
+          : "N/A";
 
       await addToCart({
         inventoryId: product.id,
@@ -268,15 +294,18 @@ const ProductDetailsPage = () => {
     try {
       // Convert customer-facing size to database size
       // Use the actual DB size from the fetched data if available
-      const dbSize = selectedSize && selectedSizeData
-        ? selectedSizeData.dbSize
-        : (selectedSize ? (sizeMapping[selectedSize] || selectedSize) : "N/A");
+      const dbSize =
+        selectedSize && selectedSizeData
+          ? selectedSizeData.dbSize
+          : selectedSize
+          ? sizeMapping[selectedSize] || selectedSize
+          : "N/A";
 
       // Determine order intent based on button state
       // If button shows "Pre-Order", user clicked Pre-Order button
       // If button shows "Order Now", user clicked Order Now button
       let orderIntent = "orderNow"; // Default to Order Now
-      
+
       if (requiresSizeSelection && selectedSize) {
         // For items with size selection, check if selected size is out of stock
         // If size data is missing (not found in DB) OR stock is <= 0, it is a pre-order
@@ -362,31 +391,94 @@ const ProductDetailsPage = () => {
         {/* Product Detail Section with Gradient Border */}
         <div className="rounded-r-3xl shadow-2xl mb-8">
           <div className="bg-white rounded-r-3xl overflow-hidden">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-0 h-auto md:h-[500px] lg:h-[700px]">
               {/* Left Column: Product Image with Gradient Background */}
               <div
-                className="relative p-8 min-h-[600px] flex items-center"
+                className="relative p-4 sm:p-6 md:p-8 h-[400px] sm:h-[450px] md:h-full flex items-center md:col-span-1 lg:col-span-2 overflow-hidden"
                 style={{
                   background: `linear-gradient(
       to bottom,
-      rgba(254, 254, 254, 1) 0%,
+      rgba(243, 243, 243, 1) 0%,
       rgba(249, 240, 227, 0.97) 11%,
-      rgba(203, 123, 0, 70) 60%,
+      rgba(203, 123, 0, 0.7) 60%,
       rgba(1, 109, 211, 0.7) 100%
     )`,
                 }}
               >
                 {/* Logo and Education Level Badge - Top Left Overlay */}
-                <div className="absolute top-6 left-6 z-10 flex items-center gap-3">
+                <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 flex items-center gap-2 sm:gap-3">
                   <img
                     src="../../../assets/image/LV Logo.png"
                     alt="La Verdad Logo"
                     className="h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg"
                   />
                   <h2 className="text-lg sm:text-xl font-bold text-[#003363]  ">
-                    Basic Education
+                    {product?.educationLevel?.toLowerCase().includes("college")
+                      ? "Higher Education"
+                      : "Basic Education"}
                   </h2>
                 </div>
+
+                {/* Background Education Level Text - At corners with no spacing */}
+                {product?.educationLevel &&
+                  (() => {
+                    const level = product.educationLevel.toLowerCase();
+                    let textLines = [];
+                    if (level.includes("senior") && level.includes("high")) {
+                      textLines = ["Senior", "Highschool"];
+                    } else if (level.includes("college")) {
+                      // Display "Higher" and "Education" on two lines
+                      textLines = ["Higher", "Education"];
+                    } else if (level.includes("elementary")) {
+                      // Always display "Elementary" and "School" on two lines
+                      textLines = ["Elementary", "School"];
+                    } else if (
+                      level.includes("junior") &&
+                      level.includes("high")
+                    ) {
+                      textLines = ["Junior", "Highschool"];
+                    } else if (level.includes("kindergarten")) {
+                      // Display "Kinder" and "garten" on two lines
+                      textLines = ["Kinder", "garten"];
+                    } else {
+                      const words = product.educationLevel.split(" ");
+                      if (words.length > 1) {
+                        const mid = Math.ceil(words.length / 2);
+                        textLines = [
+                          words.slice(0, mid).join(" "),
+                          words.slice(mid).join(" "),
+                        ];
+                      } else {
+                        textLines = [product.educationLevel];
+                      }
+                    }
+
+                    return textLines.length > 0 ? (
+                      <>
+                        {/* Left Corner - ELEMENTARY and SCHOOL stacked at bottom */}
+                        <div className="absolute -left-2 sm:-left-4 md:-left-6 lg:-left-8 bottom-0 pointer-events-none z-0">
+                          <div className="text-left">
+                            {textLines.map((line, index) => (
+                              <div
+                                key={index}
+                                className="text-8xl sm:text-9xl md:text-[10rem] lg:text-[11rem] xl:text-[12rem] 2xl:text-[14rem] font-bold text-blue-200/30 select-none uppercase"
+                                style={{
+                                  letterSpacing: "0.05em",
+                                  lineHeight: "0.85",
+                                  margin: 0,
+                                  padding: 0,
+                                  display: "block",
+                                  marginTop: index > 0 ? "-0.1em" : "0",
+                                }}
+                              >
+                                {line.toUpperCase()}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </>
+                    ) : null;
+                  })()}
 
                 {/* Product Image Viewer */}
                 <div className="w-full">
@@ -398,95 +490,103 @@ const ProductDetailsPage = () => {
               </div>
 
               {/* Right Column: Product Information Card */}
-              <div className="space-y-5 p-6 md:p-8 bg-white">
-                {/* Search Bar */}
-                <div>
-                  <form onSubmit={handleSearchSubmit} className="w-full">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        placeholder="Search for items"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-12 pr-14 py-3 border-2 border-gray-300 rounded-full focus:ring-2 focus:ring-[#003363] focus:border-[#003363] text-sm transition-all"
+              <div className="flex flex-col p-4 md:p-6 bg-white md:col-span-1 lg:col-span-3 h-auto md:h-full overflow-hidden">
+                {/* Top Section - Content */}
+                <div className="flex-1 space-y-3">
+                  {/* Search Bar */}
+                  <div className="flex justify-center sm:justify-end">
+                    <form onSubmit={handleSearchSubmit} className="w-full sm:w-auto">
+                      <div className="relative max-w-sm w-full sm:w-80">
+                        <input
+                          type="text"
+                          placeholder="Search for items"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full pl-12 pr-14 py-3 border-2 border-gray-300 rounded-full focus:ring-2 focus:ring-[#003363] focus:border-[#003363] text-sm transition-all"
+                        />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <button
+                          type="submit"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#003363] text-white p-2 rounded-full hover:bg-[#002347] transition-all shadow-md"
+                        >
+                          <ArrowLeft className="w-4 h-4 rotate-180" />
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Product Info (includes Education Level Badge, Back Button, FREE Label, Title, Description) */}
+                  <ProductInfo product={product} onClose={handleBackClick} />
+
+                  {/* Size Selector - Fixed height to prevent layout shift */}
+                  <div className="min-h-[150px] sm:min-h-[180px]">
+                    {requiresSizeSelection && (
+                      <SizeSelector
+                        availableSizes={availableSizes}
+                        availableSizesData={availableSizesData}
+                        selectedSize={selectedSize}
+                        onSizeSelect={handleSizeSelect}
+                        sizeConfirmed={sizeConfirmed}
+                        onSizeConfirm={handleSizeConfirm}
+                        loadingSizes={loadingSizes}
                       />
-                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <button
-                        type="submit"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-[#003363] text-white p-2 rounded-full hover:bg-[#002347] transition-all shadow-md"
-                      >
-                        <ArrowLeft className="w-4 h-4 rotate-180" />
-                      </button>
-                    </div>
-                  </form>
-                </div>
-
-                {/* Product Info (includes Education Level Badge, Back Button, FREE Label, Title, Description) */}
-                <ProductInfo product={product} onClose={handleBackClick} />
-
-                {/* Size Selector (if required) */}
-                {requiresSizeSelection && (
-                  <SizeSelector
-                    availableSizes={availableSizes}
-                    availableSizesData={availableSizesData}
-                    selectedSize={selectedSize}
-                    onSizeSelect={handleSizeSelect}
-                    sizeConfirmed={sizeConfirmed}
-                    onSizeConfirm={handleSizeConfirm}
-                    loadingSizes={loadingSizes}
-                  />
-                )}
-
-                {/* Quantity Selector */}
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-700">
-                    Quantity:
-                  </h3>
-                  <div className="flex items-center gap-4">
-                    <button
-                      onClick={() => handleQuantityChange(quantity - 1)}
-                      disabled={quantity <= 1}
-                      className="p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
-                    >
-                      <Minus className="w-4 h-4 text-gray-700" />
-                    </button>
-
-                    <span className="text-xl font-bold text-[#003363] min-w-[3rem] text-center">
-                      {quantity}
-                    </span>
-
-                    <button
-                      onClick={() => handleQuantityChange(quantity + 1)}
-                      className="p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
-                    >
-                      <Plus className="w-4 h-4 text-gray-700" />
-                    </button>
+                    )}
                   </div>
                 </div>
 
-                {/* Action Buttons - Right Aligned */}
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    onClick={handleAddToCart}
-                    disabled={isOrderDisabled}
-                    className="px-5 py-2 bg-white border-2 border-[#003363] text-[#003363] font-semibold rounded-full hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md text-sm"
-                  >
-                    <ShoppingCart className="w-4 h-4" /> Add to Cart
-                  </button>
+                {/* Bottom Section - Fixed at Bottom */}
+                <div className="mt-auto pt-4 space-y-3 border-t border-gray-200">
+                  {/* Quantity Selector */}
+                  <div className="space-y-2 sm:space-y-3">
+                    <h3 className="text-xs sm:text-sm font-semibold text-gray-700">
+                      Quantity:
+                    </h3>
+                    <div className="flex items-center gap-3 sm:gap-4">
+                      <button
+                        onClick={() => handleQuantityChange(quantity - 1)}
+                        disabled={quantity <= 1}
+                        className="p-2 sm:p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                      >
+                        <Minus className="w-4 h-4 text-gray-700" />
+                      </button>
 
-                  <button
-                    onClick={handleOrderNow}
-                    disabled={isOrderDisabled}
-                    className="px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
-                  >
-                    {requiresSizeSelection && selectedSize
-                      ? selectedSizeData && selectedSizeData.stock > 0
-                        ? "Order Now"
-                        : "Pre-Order"
-                      : isOutOfStock
-                      ? "Pre-Order"
-                      : "Order Now"}
-                  </button>
+                      <span className="text-lg sm:text-xl font-bold text-[#003363] min-w-[3rem] text-center">
+                        {quantity}
+                      </span>
+
+                      <button
+                        onClick={() => handleQuantityChange(quantity + 1)}
+                        className="p-2 sm:p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                      >
+                        <Plus className="w-4 h-4 text-gray-700" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons - Stack on Mobile */}
+                  <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                    <button
+                      onClick={handleAddToCart}
+                      disabled={isOrderDisabled}
+                      className="w-full sm:w-auto px-5 py-2 bg-white border-2 border-[#003363] text-[#003363] font-semibold rounded-full hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md text-sm"
+                    >
+                      <ShoppingCart className="w-4 h-4" /> Add to Cart
+                    </button>
+
+                    <button
+                      onClick={handleOrderNow}
+                      disabled={isOrderDisabled}
+                      className="w-full sm:w-auto px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
+                    >
+                      {requiresSizeSelection && selectedSize
+                        ? selectedSizeData && selectedSizeData.stock > 0
+                          ? "Order Now"
+                          : "Pre-Order"
+                        : isOutOfStock
+                        ? "Pre-Order"
+                        : "Order Now"}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Size Selection Warning

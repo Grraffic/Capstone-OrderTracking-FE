@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
@@ -7,23 +7,7 @@ import { OrderProvider } from "./context/OrderContext";
 import { ActivityProvider } from "./context/ActivityContext";
 import { CheckoutProvider } from "./context/CheckoutContext";
 import { NotificationProvider } from "./context/NotificationContext";
-import LandingPage from "./pages/LandingPage";
-import LoginPage from "./pages/LoginPage";
-import ProtectedRoute from "./components/auth/ProtectedRoute";
-import AdminDashboard from "./admin/pages/AdminDashboard";
-import Items from "./admin/pages/Items";
-import Inventory from "./admin/pages/Inventory";
-import Orders from "./admin/pages/Orders";
-import Settings from "./admin/pages/Settings";
-import AuthCallback from "./pages/AuthCallback";
-import StudentDashboard from "./student/pages/StudentDashboard";
-import AllProducts from "./student/pages/AllProducts";
-import ProductDetailsPage from "./student/pages/ProductDetailsPage";
-import MyCart from "./student/pages/MyCart";
-import CheckoutPage from "./student/pages/CheckoutPage";
-import StudentProfile from "./student/pages/StudentProfile";
-import StudentSettings from "./student/pages/StudentSettings";
-import OrderSuccessPage from "./student/pages/OrderSuccessPage";
+import AppRoutes from "./routes";
 
 export default function App() {
   return (
@@ -60,138 +44,7 @@ export default function App() {
                           },
                         }}
                       />
-                      <Routes>
-                        <Route path="/" element={<LandingPage />} />
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route
-                          path="/auth/callback"
-                          element={<AuthCallback />}
-                        />
-
-
-
-                        {/* Admin routes - protected to admin role */}
-                        <Route
-                          path="/admin"
-                          element={
-                            <ProtectedRoute requiredRoles={["admin"]}>
-                              <AdminDashboard />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/admin/items"
-                          element={
-                            <ProtectedRoute requiredRoles={["admin"]}>
-                              <Items />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/admin/inventory"
-                          element={
-                            <ProtectedRoute requiredRoles={["admin"]}>
-                              <Inventory />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/admin/orders"
-                          element={
-                            <ProtectedRoute requiredRoles={["admin"]}>
-                              <Orders />
-                            </ProtectedRoute>
-                          }
-                        />
-                        <Route
-                          path="/admin/settings"
-                          element={
-                            <ProtectedRoute requiredRoles={["admin"]}>
-                              <Settings />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Student dashboard - protected */}
-                        <Route
-                          path="/student-dashboard"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <StudentDashboard />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* All Products page - protected for students */}
-                        <Route
-                          path="/all-products"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <AllProducts />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Product Details page - protected for students */}
-                        <Route
-                          path="/products/:productId"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <ProductDetailsPage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* My Cart page - protected for students */}
-                        <Route
-                          path="/student/cart"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <MyCart />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Checkout page - protected for students */}
-                        <Route
-                          path="/student/checkout"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <CheckoutPage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Student Profile page - protected for students */}
-                        <Route
-                          path="/student/profile"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <StudentProfile />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Student Settings page - protected for students */}
-                        <Route
-                          path="/student/settings"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <StudentSettings />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* Order Success page - protected for students */}
-                        <Route
-                          path="/student/order-success"
-                          element={
-                            <ProtectedRoute requiredRoles={["student"]}>
-                              <OrderSuccessPage />
-                            </ProtectedRoute>
-                          }
-                        />
-                      </Routes>
+                      <AppRoutes />
                     </BrowserRouter>
                   </OrderProvider>
                 </CheckoutProvider>
