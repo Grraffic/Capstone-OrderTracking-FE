@@ -1,6 +1,17 @@
 import { io } from "socket.io-client";
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:5000";
+// Extract base URL from VITE_API_URL (remove /api suffix if present)
+const getSocketURL = () => {
+  const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  // Remove trailing /api if present, otherwise use as-is
+  if (apiUrl.endsWith("/api")) {
+    return apiUrl.slice(0, -4);
+  }
+  // If it doesn't end with /api, assume it's already the base URL
+  return apiUrl.replace(/\/api\/?$/, "");
+};
+
+const SOCKET_URL = getSocketURL();
 
 /**
  * Socket.IO Client Instance (Singleton)

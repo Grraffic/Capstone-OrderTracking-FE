@@ -18,10 +18,12 @@ export const AuthProvider = ({ children }) => {
 
   // User roles for school uniform ordering system
   // - STUDENT: Students ordering uniforms (@student.laverdad.edu.ph)
-  // - ADMIN: Administrators managing uniform orders (@laverdad.edu.ph)
+  // - PROPERTY_CUSTODIAN: Property custodians managing inventory (@laverdad.edu.ph)
+  // - SYSTEM_ADMIN: System administrators managing users and settings
   const USER_ROLES = {
     STUDENT: "student",
-    ADMIN: "admin",
+    PROPERTY_CUSTODIAN: "property_custodian",
+    SYSTEM_ADMIN: "system_admin",
   };
 
   useEffect(() => {

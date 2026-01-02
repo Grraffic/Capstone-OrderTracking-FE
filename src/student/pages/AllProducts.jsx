@@ -7,7 +7,7 @@ import CategorySidebar from "../components/Products/CategorySidebar";
 import ProductGrid from "../components/Products/ProductGrid";
 import Pagination from "../components/common/Pagination";
 import Footer from "../../components/common/Footer";
-import { useItems } from "../../admin/hooks/items/useItems";
+import { useItems } from "../../property-custodian/hooks/items/useItems";
 import { useSearchDebounce, useProductPagination } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { authAPI } from "../../services/api";

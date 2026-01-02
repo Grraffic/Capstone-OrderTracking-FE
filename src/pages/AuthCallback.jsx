@@ -50,8 +50,11 @@ const AuthCallback = () => {
       const payload = parseJwt(token);
       const role = payload?.role;
 
-      if (role === "admin") {
-        navigate("/admin", { replace: true });
+      if (role === "system_admin") {
+        navigate("/system-admin", { replace: true });
+      } else if (role === "property_custodian" || role === "admin") {
+        // Handle both new and old role names for backward compatibility
+        navigate("/property-custodian", { replace: true });
       } else if (role === "student") {
         navigate("/all-products", { replace: true });
       } else {

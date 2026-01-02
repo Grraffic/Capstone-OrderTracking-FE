@@ -4,12 +4,18 @@ import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
 import AuthCallback from "../pages/AuthCallback";
 
-// Admin Pages
-import AdminDashboard from "../admin/pages/AdminDashboard";
-import Items from "../admin/pages/Items";
-import Inventory from "../admin/pages/Inventory";
-import Orders from "../admin/pages/Orders";
-import Settings from "../admin/pages/Settings";
+// Property Custodian Pages
+import AdminDashboard from "../property-custodian/pages/AdminDashboard";
+import Items from "../property-custodian/pages/Items";
+import Inventory from "../property-custodian/pages/Inventory";
+import Orders from "../property-custodian/pages/Orders";
+import Settings from "../property-custodian/pages/Settings";
+
+// System Admin Pages
+import SystemAdminDashboard from "../system-admin/pages/SystemAdminDashboard";
+import UserManagement from "../system-admin/pages/UserManagement";
+import EligibilityManagement from "../system-admin/pages/EligibilityManagement";
+import SystemSettings from "../system-admin/pages/SystemSettings";
 
 // Student Pages
 import StudentDashboard from "../student/pages/StudentDashboard";
@@ -35,11 +41,53 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Admin Routes - Protected to admin role */}
+      {/* Property Custodian Routes - Protected to property_custodian role (with backward compatibility for admin) */}
+      <Route
+        path="/property-custodian"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-custodian/items"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+            <Items />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-custodian/inventory"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+            <Inventory />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-custodian/orders"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+            <Orders />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-custodian/settings"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+            <Settings />
+          </ProtectedRoute>
+        }
+      />
+      
+      {/* Legacy admin routes - redirect to property-custodian for backward compatibility */}
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requiredRoles={["admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
             <AdminDashboard />
           </ProtectedRoute>
         }
@@ -47,7 +95,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/items"
         element={
-          <ProtectedRoute requiredRoles={["admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
             <Items />
           </ProtectedRoute>
         }
@@ -55,7 +103,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/inventory"
         element={
-          <ProtectedRoute requiredRoles={["admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
             <Inventory />
           </ProtectedRoute>
         }
@@ -63,7 +111,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/orders"
         element={
-          <ProtectedRoute requiredRoles={["admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
             <Orders />
           </ProtectedRoute>
         }
@@ -71,8 +119,42 @@ const AppRoutes = () => {
       <Route
         path="/admin/settings"
         element={
-          <ProtectedRoute requiredRoles={["admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
             <Settings />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* System Admin Routes - Protected to system_admin role */}
+      <Route
+        path="/system-admin"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <SystemAdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-admin/users"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <UserManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-admin/eligibility"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <EligibilityManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-admin/settings"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <SystemSettings />
           </ProtectedRoute>
         }
       />

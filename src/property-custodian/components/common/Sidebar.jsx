@@ -39,9 +39,9 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   // No auto-close behavior - sidebar behaves like desktop on all screen sizes
   // User controls sidebar state manually via toggle button
   const navItems = [
-    { to: "/admin", label: "Home", icon: Home },
-    { to: "/admin/orders", label: "Orders", icon: ShoppingCart },
-    { to: "/admin/settings", label: "Settings", icon: Settings },
+    { to: "/property-custodian", label: "Home", icon: Home },
+    { to: "/property-custodian/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/property-custodian/settings", label: "Settings", icon: Settings },
   ];
 
   // Handle logout
@@ -150,17 +150,17 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
       {/* Navigation */}
       <nav className="flex flex-col gap-2 flex-1">
         {/* Home */}
-        {navItem("/admin", "Home", Home, true)}
+        {navItem("/property-custodian", "Home", Home, true)}
 
         {/* Items */}
-        {navItem("/admin/items", "Items", Package, false)}
+        {navItem("/property-custodian/items", "Items", Package, false)}
 
         {/* Inventory */}
-        {navItem("/admin/inventory", "Inventory", Warehouse, false)}
+        {navItem("/property-custodian/inventory", "Inventory", Warehouse, false)}
 
         {/* Remaining nav items (Orders, Reports, Settings) */}
         {navItems
-          .filter((item) => item.to !== "/admin")
+          .filter((item) => item.to !== "/property-custodian")
           .map((item) => (
             <div key={item.to}>
               {navItem(item.to, item.label, item.icon, false)}

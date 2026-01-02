@@ -25,8 +25,11 @@ const getDefaultRoute = (user) => {
 
   // Use role from backend (single source of truth)
   // Backend determines role based on email domain and admin config
-  if (user.role === "admin") {
-    return "/admin";
+  if (user.role === "system_admin") {
+    return "/system-admin";
+  } else if (user.role === "property_custodian" || user.role === "admin") {
+    // Handle both new and old role names for backward compatibility
+    return "/property-custodian";
   } else if (user.role === "student") {
     return "/all-products";
   }

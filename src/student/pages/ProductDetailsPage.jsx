@@ -9,7 +9,7 @@ import ProductImageViewer from "../components/Products/ProductDetails/ProductIma
 import ProductInfo from "../components/Products/ProductDetails/ProductInfo";
 import SizeSelector from "../components/Products/ProductDetails/SizeSelector";
 import ProductCarousel from "../components/Products/ProductDetails/ProductCarousel";
-import { useItems } from "../../admin/hooks/items/useItems";
+import { useItems } from "../../property-custodian/hooks/items/useItems";
 import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
 import { itemsAPI } from "../../services/api";
