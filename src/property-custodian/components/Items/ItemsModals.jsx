@@ -304,10 +304,14 @@ const ItemsModals = ({
         const sizeValue =
           variants[0].values[index] ||
           (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "");
+        const variantStock = Number(variantStocks[index]) || 0;
         return {
           size: sizeValue.trim(),
-          stock: Number(variantStocks[index]) || 0,
+          stock: variantStock,
           price: Number(variantPrices[index]) || Number(itemPrice) || 0,
+          // Set beginning_inventory equal to stock for each variant
+          // This ensures each size has its own beginning inventory, not the sum
+          beginning_inventory: variantStock,
         };
       });
 
@@ -390,53 +394,112 @@ const ItemsModals = ({
     }
   }, [modalState.isOpen]);
 
-  // Initialize variant prices when editing an item
+  // Initialize variant prices and stocks when editing an item
   useEffect(() => {
     if (
       modalState.isOpen &&
       modalState.mode === "edit" &&
-      selectedItem?.price
+      selectedItem
     ) {
-      // Initialize first variant price with the item's price
-      setVariantPrices((prev) => {
-        if (prev[0] === "" && selectedItem.price) {
-          return [String(selectedItem.price), prev[1] || ""];
+      // Try to parse sizeVariations from note field
+      let sizeVariations = null;
+      if (selectedItem.note) {
+        try {
+          const parsedNote = JSON.parse(selectedItem.note);
+          if (
+            parsedNote?._type === "sizeVariations" &&
+            Array.isArray(parsedNote.sizeVariations)
+          ) {
+            sizeVariations = parsedNote.sizeVariations;
+          }
+        } catch (e) {
+          // Not JSON or parse error, continue with fallback
         }
-        return prev;
-      });
-      // Initialize selected indices based on size field
-      if (selectedItem.size && selectedItem.size !== "N/A") {
-        const sizes = selectedItem.size.split(",").map((s) => s.trim());
-        const selectedIndices = variants[0].values
-          .map((val, idx) => {
-            const normalizedVal =
-              val || (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
-            return sizes.some(
-              (size) =>
-                normalizedVal.includes(size) || size.includes(normalizedVal)
-            )
-              ? idx
-              : null;
-          })
-          .filter((idx) => idx !== null);
-        setSelectedVariantIndices(
-          selectedIndices.length > 0 ? selectedIndices : [0]
-        );
+      }
+
+      if (sizeVariations && sizeVariations.length > 0) {
+        // Initialize from sizeVariations data
+        const maxLength = Math.max(sizeVariations.length, 2);
+        const initialPrices = [];
+        const initialStocks = [];
+        const initialValues = [];
+        const selectedIndices = [];
+
+        sizeVariations.forEach((variant, index) => {
+          initialPrices[index] = String(variant.price || selectedItem.price || "");
+          initialStocks[index] = String(variant.stock || "");
+          initialValues[index] = variant.size || "";
+          selectedIndices.push(index);
+        });
+
+        // Fill remaining slots with empty strings
+        while (initialPrices.length < maxLength) {
+          initialPrices.push("");
+          initialStocks.push("");
+          initialValues.push("");
+        }
+
+        setVariantPrices(initialPrices);
+        setVariantStocks(initialStocks);
+        setSelectedVariantIndices(selectedIndices);
+
+        // Update variants with the size values
+        setVariants([
+          {
+            name: "",
+            values: initialValues.length > 0 ? initialValues : ["", ""],
+          },
+        ]);
       } else {
-        setSelectedVariantIndices([0]);
+        // Fallback: Initialize first variant price with the item's price
+        setVariantPrices((prev) => {
+          if (prev[0] === "" && selectedItem.price) {
+            return [String(selectedItem.price), prev[1] || ""];
+          }
+          return prev;
+        });
+        // Initialize selected indices based on size field
+        if (selectedItem.size && selectedItem.size !== "N/A") {
+          const sizes = selectedItem.size.split(",").map((s) => s.trim());
+          const selectedIndices = variants[0].values
+            .map((val, idx) => {
+              const normalizedVal =
+                val || (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
+              return sizes.some(
+                (size) =>
+                  normalizedVal.includes(size) || size.includes(normalizedVal)
+              )
+                ? idx
+                : null;
+            })
+            .filter((idx) => idx !== null);
+          setSelectedVariantIndices(
+            selectedIndices.length > 0 ? selectedIndices : [0]
+          );
+        } else {
+          setSelectedVariantIndices([0]);
+        }
       }
     } else if (modalState.isOpen && modalState.mode === "add") {
       // Reset variant prices and stocks for add mode
       setVariantPrices(["", ""]);
       setVariantStocks(["", ""]);
       setSelectedVariantIndices([0]);
+      setVariants([
+        {
+          name: "",
+          values: ["", ""],
+        },
+      ]);
     }
   }, [
     modalState.isOpen,
     modalState.mode,
     selectedItem?.price,
     selectedItem?.size,
-    variants,
+    selectedItem?.note,
+    // Note: variants is intentionally not in dependencies to avoid loops
+    // We update variants inside this effect when needed
   ]);
 
   // Initialize accessory entries when editing an Accessories item
@@ -759,23 +822,18 @@ const ItemsModals = ({
     });
 
     // Preserve existing prices and stocks when adding new values
+    // Use functional updates to ensure we're working with the latest state
     setVariantPrices((prev) => {
-      const currentLength = variants[variantIndex].values.length;
       const newPrices = [...prev];
-      // Only add empty string if we're actually adding a new value
-      if (newPrices.length <= currentLength) {
-        newPrices.push("");
-      }
+      // Add empty string for the new value
+      newPrices.push("");
       return newPrices;
     });
 
     setVariantStocks((prev) => {
-      const currentLength = variants[variantIndex].values.length;
       const newStocks = [...prev];
-      // Only add empty string if we're actually adding a new value
-      if (newStocks.length <= currentLength) {
-        newStocks.push("");
-      }
+      // Add empty string for the new value
+      newStocks.push("");
       return newStocks;
     });
   };

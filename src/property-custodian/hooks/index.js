@@ -21,6 +21,9 @@ export { useSearchDebounce } from "./common/useSearchDebounce";
 // Dashboard Hooks
 export { useAdminDashboardData } from "./dashboard/useAdminDashboardData";
 export { useInventoryHealthStats } from "./dashboard/useInventoryHealthStats";
+export { useInventoryDetail } from "./dashboard/useInventoryDetail";
+export { useInventoryAtReorderPoint } from "./dashboard/useInventoryAtReorderPoint";
+export { useInventoryOutOfStock } from "./dashboard/useInventoryOutOfStock";
 
 // Items Hooks
 export { useItemsStats } from "./items/useItemsStats";

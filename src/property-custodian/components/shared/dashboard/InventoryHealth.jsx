@@ -1,4 +1,8 @@
+import { useState } from "react";
 import { ShoppingCart, AlertCircle, XCircle } from "lucide-react";
+import InventoryDetailSection from "./InventoryDetailSection";
+import AtReorderPointSection from "./AtReorderPointSection";
+import OutOfStockSection from "./OutOfStockSection";
 
 /**
  * InventoryHealth Component
@@ -12,6 +16,28 @@ import { ShoppingCart, AlertCircle, XCircle } from "lucide-react";
  * - stats: Object containing totalItemVariants, atReorderPoint, outOfStock
  */
 const InventoryHealth = ({ stats }) => {
+  const [isDetailSectionVisible, setIsDetailSectionVisible] = useState(false);
+  const [isAtReorderPointSectionVisible, setIsAtReorderPointSectionVisible] = useState(false);
+  const [isOutOfStockSectionVisible, setIsOutOfStockSectionVisible] = useState(false);
+
+  const handleCardClick = (cardId) => {
+    if (cardId === 1) {
+      // Total Item Variant card - toggle section visibility
+      setIsDetailSectionVisible((prev) => !prev);
+      setIsAtReorderPointSectionVisible(false); // Close other sections
+      setIsOutOfStockSectionVisible(false);
+    } else if (cardId === 2) {
+      // At Reorder Point card - toggle section visibility
+      setIsAtReorderPointSectionVisible((prev) => !prev);
+      setIsDetailSectionVisible(false); // Close other sections
+      setIsOutOfStockSectionVisible(false);
+    } else if (cardId === 3) {
+      // Out of Stock card - toggle section visibility
+      setIsOutOfStockSectionVisible((prev) => !prev);
+      setIsDetailSectionVisible(false); // Close other sections
+      setIsAtReorderPointSectionVisible(false);
+    }
+  };
   const cards = [
     {
       id: 1,
@@ -40,14 +66,18 @@ const InventoryHealth = ({ stats }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
-      {cards.map((card) => {
-        const IconComponent = card.icon;
-        return (
-          <div
-            key={card.id}
-            className={`${card.bgColor} rounded-lg p-3 sm:p-4 md:p-5 lg:p-6 shadow-md flex items-center gap-3 sm:gap-4 transition-all duration-200 hover:shadow-lg`}
-          >
+    <>
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5">
+        {cards.map((card) => {
+          const IconComponent = card.icon;
+          return (
+            <div
+              key={card.id}
+              onClick={() => handleCardClick(card.id)}
+              className={`${card.bgColor} rounded-lg p-3 sm:p-4 md:p-5 lg:p-6 shadow-md flex items-center gap-3 sm:gap-4 transition-all duration-200 hover:shadow-lg ${
+                card.id === 1 || card.id === 2 || card.id === 3 ? "cursor-pointer" : ""
+              }`}
+            >
             {/* Circular Icon */}
             <div
               className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full flex items-center justify-center"
@@ -68,7 +98,29 @@ const InventoryHealth = ({ stats }) => {
           </div>
         );
       })}
-    </div>
+      </div>
+
+      {/* Inventory Detail Section - appears below cards when visible */}
+      {isDetailSectionVisible && (
+        <InventoryDetailSection
+          totalItemVariants={stats.totalItemVariants || 0}
+        />
+      )}
+
+      {/* At Reorder Point Section - appears below cards when visible */}
+      {isAtReorderPointSectionVisible && (
+        <AtReorderPointSection
+          totalAtReorderPoint={stats.atReorderPoint || 0}
+        />
+      )}
+
+      {/* Out of Stock Section - appears below cards when visible */}
+      {isOutOfStockSectionVisible && (
+        <OutOfStockSection
+          totalOutOfStock={stats.outOfStock || 0}
+        />
+      )}
+    </>
   );
 };
 
