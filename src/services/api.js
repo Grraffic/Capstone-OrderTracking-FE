@@ -1,8 +1,11 @@
 import axios from "axios";
 
+// Export API base URL for use in services that don't use axios
+export const API_BASE_URL = import.meta.env.VITE_API_URL;
+
 // Create axios instance with base configuration
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -131,6 +134,9 @@ export const orderAPI = {
   },
   getOrderStats: async () => {
     return api.get("/orders/stats");
+  },
+  convertPreOrderToRegular: async (orderId) => {
+    return api.post(`/orders/${orderId}/convert-pre-order`);
   },
 };
 

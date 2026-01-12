@@ -7,6 +7,43 @@ import React from "react";
  * - No., Item, Beginning Inventory, Unreleased, Purchases, Released, Returns, Available, Ending Inventory, Unit Price, Total Amount
  */
 const InventoryTable = ({ inventoryData }) => {
+  /**
+   * Calculate total inventory cost per item
+   * Formula: (Beginning Inventory × Beginning Inventory Unit Price) + (Purchase₁ × Purchase Unit Price₁) + ... + (Purchaseₙ × Purchase Unit Priceₙ)
+   * 
+   * Since we don't have separate unit prices for beginning inventory vs purchases,
+   * we use the current unit price for both. If purchase prices differ, they would
+   * need to be tracked separately in transactions metadata.
+   * 
+   * @param {object} item - Inventory item data
+   * @returns {number} Total inventory cost for this item
+   */
+  const calculateTotalInventoryCostPerItem = (item) => {
+    const beginningInventory = item.beginningInventory || 0;
+    const purchases = item.purchases || 0;
+    const unitPrice = item.unitPrice || 0;
+    
+    // Formula: (Beginning Inventory × Unit Price) + (Purchases × Unit Price)
+    // Simplified: (Beginning Inventory + Purchases) × Unit Price
+    // Note: If purchase prices differ, we'd need to sum individual purchase transactions
+    return (beginningInventory + purchases) * unitPrice;
+  };
+
+  /**
+   * Calculate total inventory cost (sum of all items)
+   * @returns {number} Total inventory cost across all items
+   */
+  const calculateTotalInventoryCost = () => {
+    if (!inventoryData || inventoryData.length === 0) return 0;
+    
+    return inventoryData.reduce((total, item) => {
+      const itemCost = calculateTotalInventoryCostPerItem(item);
+      return total + (typeof itemCost === 'number' ? itemCost : parseFloat(itemCost) || 0);
+    }, 0);
+  };
+
+  const totalInventoryCost = calculateTotalInventoryCost();
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mb-4 sm:mb-6 shadow-sm transition-opacity duration-200 ease-in-out">
       {/* Desktop Table */}
@@ -51,6 +88,9 @@ const InventoryTable = ({ inventoryData }) => {
               </th>
               <th className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-left text-[10px] sm:text-xs md:text-xs lg:text-sm font-semibold text-white whitespace-nowrap">
                 Total Amount
+              </th>
+              <th className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-left text-[10px] sm:text-xs md:text-xs lg:text-sm font-semibold text-white whitespace-nowrap">
+                Total Inventory Cost
               </th>
             </tr>
           </thead>
@@ -101,6 +141,9 @@ const InventoryTable = ({ inventoryData }) => {
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-gray-900 whitespace-nowrap">
                   P {row.totalAmount.toLocaleString()}
+                </td>
+                <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm font-bold text-[#0C2340] whitespace-nowrap">
+                  P {calculateTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
@@ -190,6 +233,16 @@ const InventoryTable = ({ inventoryData }) => {
             </div>
           </div>
         ))}
+        
+        {/* Total Inventory Cost - Mobile */}
+        <div className="bg-[#0C2340] border border-gray-200 rounded-lg p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-bold text-white">Total Inventory Cost:</span>
+            <span className="text-base font-bold text-white">
+              P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Tablet/Medium Mobile - Horizontally Scrollable Table */}
@@ -235,6 +288,9 @@ const InventoryTable = ({ inventoryData }) => {
                   </th>
                   <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">
                     Total Amount
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-white whitespace-nowrap">
+                    Total Inventory Cost
                   </th>
                 </tr>
               </thead>
@@ -285,6 +341,9 @@ const InventoryTable = ({ inventoryData }) => {
                     </td>
                     <td className="px-3 py-3 text-xs text-gray-900 whitespace-nowrap">
                       P {row.totalAmount.toLocaleString()}
+                    </td>
+                    <td className="px-3 py-3 text-xs font-bold text-[#0C2340] whitespace-nowrap">
+                      P {calculateTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}

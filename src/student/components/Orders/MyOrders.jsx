@@ -11,6 +11,7 @@ import { useAuth } from "../../../context/AuthContext";
 import QRCode from "react-qr-code";
 import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
+import { orderAPI, itemsAPI } from "../../../services/api";
 
 /**
  * Helper function to download SVG as PNG
@@ -258,6 +259,9 @@ const MyOrders = () => {
   const { orders, loading, error } = useOrder();
   const { user } = useAuth();
 
+  // Safety check: ensure orders is always an array
+  const safeOrders = Array.isArray(orders) ? orders : [];
+
   // Initialize state from location state if available (for navigation from checkout)
   const [viewMode, setViewMode] = useState(
     location.state?.viewMode || "overview"
@@ -269,6 +273,9 @@ const MyOrders = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const [orderAvailability, setOrderAvailability] = useState({}); // { orderId: boolean }
+  const [checkingAvailability, setCheckingAvailability] = useState({}); // { orderId: boolean }
+  const [convertingOrders, setConvertingOrders] = useState({}); // { orderId: boolean }
 
   // Update state when location state changes (e.g., navigation from checkout)
   useEffect(() => {
@@ -287,9 +294,9 @@ const MyOrders = () => {
   // Count orders by category
   const getOrderCounts = () => {
     return {
-      preOrders: orders.filter((order) => order.order_type === "pre-order")
+      preOrders: safeOrders.filter((order) => order.order_type === "pre-order")
         .length,
-      orders: orders.filter(
+      orders: safeOrders.filter(
         (order) =>
           order.order_type !== "pre-order" &&
           (order.status === "pending" ||
@@ -297,7 +304,7 @@ const MyOrders = () => {
             order.status === "ready" ||
             order.status === "payment_pending")
       ).length,
-      claimed: orders.filter(
+      claimed: safeOrders.filter(
         (order) =>
           order.order_type !== "pre-order" &&
           (order.status === "completed" || order.status === "claimed")
@@ -322,7 +329,7 @@ const MyOrders = () => {
   const getSuggestedProducts = () => {
     const uniqueProducts = new Map();
 
-    orders.forEach((order) => {
+    safeOrders.forEach((order) => {
       if (order.items && order.items.length > 0) {
         order.items.forEach((item) => {
           if (item.image && !uniqueProducts.has(item.name)) {
@@ -476,6 +483,241 @@ const MyOrders = () => {
     setShowQRModal(true);
   };
 
+  // Check if pre-order items are available
+  const checkPreOrderAvailability = useCallback(async (order) => {
+    if (!order || order.order_type !== "pre-order") {
+      return false;
+    }
+
+    // Must use UUID id, not order_number
+    const orderId = order.id;
+    
+    if (!orderId) {
+      console.error("Order missing UUID id:", order);
+      return false;
+    }
+    
+    // Prevent duplicate checks
+    if (checkingAvailability[orderId]) {
+      return orderAvailability[orderId] || false;
+    }
+
+    // If already checked, return cached result
+    if (orderAvailability[orderId] !== undefined) {
+      return orderAvailability[orderId];
+    }
+
+    setCheckingAvailability((prev) => ({ ...prev, [orderId]: true }));
+
+    try {
+      const items = order.items || [];
+      if (items.length === 0) {
+        setOrderAvailability((prev) => ({ ...prev, [orderId]: false }));
+        setCheckingAvailability((prev) => {
+          const next = { ...prev };
+          delete next[orderId];
+          return next;
+        });
+        return false;
+      }
+
+      // Check availability for each item
+      const availabilityChecks = await Promise.all(
+        items.map(async (item) => {
+          try {
+            const educationLevel =
+              item.education_level ||
+              order.education_level ||
+              order.type ||
+              "General";
+
+            // Get available sizes for this item
+            const response = await itemsAPI.getAvailableSizes(
+              item.name,
+              educationLevel
+            );
+
+            // Handle different response structures
+            const responseData = response?.data?.data || response?.data || response;
+            const sizesData = Array.isArray(responseData) 
+              ? responseData 
+              : (responseData?.data || []);
+
+            if (sizesData && sizesData.length > 0) {
+              const itemSize = item.size || "N/A";
+              
+              // Size alias mapping for flexible matching
+              const normalizeSizeForMatching = (size) => {
+                if (!size || size === "N/A") return "";
+                const normalized = size.trim().toLowerCase();
+                
+                // Extract abbreviation from formats like "Small (S)" -> "s"
+                const parenMatch = normalized.match(/\(([^)]+)\)/);
+                if (parenMatch) {
+                  return parenMatch[1].trim().toLowerCase();
+                }
+                
+                return normalized;
+              };
+
+              const normalizedItemSize = normalizeSizeForMatching(itemSize);
+              
+              // Size aliases map (same as backend)
+              const sizeAliases = {
+                'xs': ['xsmall', 'extra small', 'xs', 'x-small'],
+                's': ['small', 's'],
+                'm': ['medium', 'm'],
+                'l': ['large', 'l'],
+                'xl': ['xlarge', 'extra large', 'xl', 'x-large'],
+                'xxl': ['2xlarge', '2xl', 'xxl', 'double extra large', '2x-large'],
+                '3xl': ['3xlarge', '3xl', 'triple extra large', '3x-large']
+              };
+
+              // Find matching size using alias matching
+              const sizeData = sizesData.find((s) => {
+                const dbSize = s.size || "N/A";
+                const normalizedDbSize = normalizeSizeForMatching(dbSize);
+                
+                // Direct match
+                if (normalizedItemSize === normalizedDbSize) {
+                  return true;
+                }
+                
+                // Check if both belong to the same alias group
+                for (const [key, aliases] of Object.entries(sizeAliases)) {
+                  const itemInGroup = aliases.includes(normalizedItemSize);
+                  const dbInGroup = aliases.includes(normalizedDbSize);
+                  if (itemInGroup && dbInGroup) {
+                    return true;
+                  }
+                }
+                
+                return false;
+              });
+
+              // Item is available if size exists and has stock > 0
+              if (sizeData && (sizeData.stock > 0 || sizeData.available > 0)) {
+                return true;
+              }
+
+              // Also check if item has no size requirement (N/A)
+              if (itemSize === "N/A" || itemSize === "") {
+                // Check if any size has stock
+                return sizesData.some((s) => (s.stock > 0 || s.available > 0));
+              }
+
+              return false;
+            }
+
+            return false;
+          } catch (error) {
+            console.error(
+              `Error checking availability for ${item.name}:`,
+              error
+            );
+            return false;
+          }
+        })
+      );
+
+      // All items must be available
+      const allAvailable = availabilityChecks.every((available) => available);
+
+      setOrderAvailability((prev) => ({ ...prev, [orderId]: allAvailable }));
+      setCheckingAvailability((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+
+      return allAvailable;
+    } catch (error) {
+      console.error("Error checking pre-order availability:", error);
+      setOrderAvailability((prev) => ({ ...prev, [orderId]: false }));
+      setCheckingAvailability((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+      return false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - using functional updates for state
+
+  // Check availability when pre-orders are displayed
+  useEffect(() => {
+    if (activeCategory === "preOrders" && paginatedOrders.length > 0) {
+      // Use forEach but don't await - we're just triggering the checks
+      paginatedOrders.forEach((order) => {
+        if (order.order_type === "pre-order") {
+          const orderId = order.id || order.order_number;
+          // Only check if not already checking and not already checked
+          if (!checkingAvailability[orderId] && orderAvailability[orderId] === undefined) {
+            checkPreOrderAvailability(order).catch((error) => {
+              console.error("Error in availability check:", error);
+            });
+          }
+        }
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeCategory, paginatedOrders]);
+
+  // Handle convert pre-order to regular order
+  const handleConvertPreOrder = useCallback(async (order) => {
+    // Must use UUID id, not order_number (which is a string like "ORD-...")
+    const orderId = order.id;
+    
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (!orderId) {
+      console.error("Order missing UUID id:", order);
+      return;
+    }
+    
+    if (!uuidRegex.test(orderId)) {
+      console.error("Invalid UUID format:", { orderId, fullOrder: order });
+      return;
+    }
+    
+    if (convertingOrders[orderId]) {
+      return; // Already converting
+    }
+
+    console.log(`🔄 Converting pre-order:`, { orderId, orderNumber: order.orderNumber || order.order_number, order });
+    setConvertingOrders((prev) => ({ ...prev, [orderId]: true }));
+
+    try {
+      const response = await orderAPI.convertPreOrderToRegular(orderId);
+
+      if (response.data.success) {
+        console.log(`✅ Order #${order.order_number || order.orderNumber} converted successfully`);
+        
+        // Refresh orders
+        window.location.reload(); // Simple refresh - could be improved with context refetch
+
+        // Optionally navigate to Orders tab
+        // setActiveCategory("orders");
+        // setViewMode("detail");
+      } else {
+        throw new Error(response.data.message || "Failed to convert pre-order");
+      }
+    } catch (error) {
+      console.error("Error converting pre-order:", error);
+      console.error("Error details:", {
+        message: error.response?.data?.message || error.message,
+        response: error.response?.data
+      });
+    } finally {
+      setConvertingOrders((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    }
+  }, [convertingOrders]);
+
   // Category button component
   const CategoryButton = ({ category, icon: Icon, label, count, onClick }) => {
     const [showTooltip, setShowTooltip] = useState(false);
@@ -564,6 +806,16 @@ const MyOrders = () => {
       <div className="text-center text-red-500 py-16">
         <p className="text-lg font-semibold">Error loading orders</p>
         <p className="text-sm mt-2">{error}</p>
+      </div>
+    );
+  }
+
+  // Safety check: ensure we have valid orders data
+  if (!safeOrders || !Array.isArray(safeOrders)) {
+    return (
+      <div className="text-center text-gray-500 py-16">
+        <p className="text-lg font-semibold">No orders data available</p>
+        <p className="text-sm mt-2">Please try refreshing the page</p>
       </div>
     );
   }
@@ -733,8 +985,16 @@ const MyOrders = () => {
           <>
             {/* Single Border Container */}
             <div className="bg-white rounded-lg border-2 border-gray-200 divide-y divide-gray-200">
-              {paginatedOrders.map((order, orderIndex) => (
-                <div key={order.id} className="p-6">
+              {paginatedOrders.map((order, orderIndex) => {
+                // Safety check: ensure order exists and has required properties
+                if (!order) return null;
+                
+                // Must use UUID id for database operations, fallback to order_number only for display/key
+                const orderId = order.id || `order-${orderIndex}`;
+                const orderKey = order.id || order.order_number || `order-${orderIndex}`;
+                
+                return (
+                <div key={orderKey} className="p-6">
                   {/* Order Items List */}
                   <div className="space-y-4 mb-4">
                     {order.items && order.items.length > 0 ? (
@@ -849,27 +1109,52 @@ const MyOrders = () => {
                     )}
                   </div>
 
-                  {/* Show QR Button */}
+                  {/* Action Button - Order for pre-orders, Show QR for regular orders */}
                   <div className="flex justify-end">
-                    <button
-                      onClick={() => handleShowQR(order)}
-                      disabled={activeCategory === "preOrders"}
-                      className={`px-6 py-2 border-2 rounded-full font-semibold text-sm transition-colors ${
-                        activeCategory === "preOrders"
-                          ? "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
-                          : "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
-                      }`}
-                      title={
-                        activeCategory === "preOrders"
-                          ? "QR code not available for pre-orders"
-                          : "Show QR code"
-                      }
-                    >
-                      Show QR
-                    </button>
+                    {activeCategory === "preOrders" ? (
+                      <button
+                        onClick={() => handleConvertPreOrder(order)}
+                        disabled={
+                          !orderAvailability[orderId] ||
+                          convertingOrders[orderId] ||
+                          checkingAvailability[orderId]
+                        }
+                        className={`px-6 py-2 border-2 rounded-full font-semibold text-sm transition-colors ${
+                          orderAvailability[orderId] &&
+                          !convertingOrders[orderId] &&
+                          !checkingAvailability[orderId]
+                            ? "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
+                            : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                        }`}
+                        title={
+                          checkingAvailability[orderId]
+                            ? "Checking availability..."
+                            : orderAvailability[orderId]
+                            ? "Click to convert pre-order to regular order"
+                            : "Item not yet available"
+                        }
+                      >
+                        {convertingOrders[orderId]
+                          ? "Processing..."
+                          : checkingAvailability[orderId]
+                          ? "Checking..."
+                          : orderAvailability[orderId]
+                          ? "Order"
+                          : "Not Available"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleShowQR(order)}
+                        className="px-6 py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-sm transition-colors hover:bg-[#003363] hover:text-white"
+                        title="Show QR code"
+                      >
+                        Show QR
+                      </button>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Pagination Controls */}

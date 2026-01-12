@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { subDays } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
@@ -8,6 +8,7 @@ import UpdateQuantityModal from "../components/Inventory/UpdateQuantityModal";
 import { useOrders, useInventoryHealthStats } from "../hooks";
 import { useSocket } from "../../context/SocketContext";
 import inventoryService from "../../services/inventory.service";
+import transactionService from "../../services/transaction.service";
 
 /**
  * Inventory Page Component
@@ -30,9 +31,16 @@ const Inventory = () => {
   const [activeTab, setActiveTab] = useState("inventory");
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
   // Date range state for transactions view only
+  // Default to last 30 days to show more transactions
   const today = new Date();
-  const [startDate, setStartDate] = useState(subDays(today, 6));
-  const [endDate, setEndDate] = useState(today);
+  // Set startDate to beginning of day 30 days ago
+  const defaultStartDate = subDays(today, 29);
+  defaultStartDate.setHours(0, 0, 0, 0);
+  // Set endDate to end of today
+  const defaultEndDate = new Date(today);
+  defaultEndDate.setHours(23, 59, 59, 999);
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
 
   // Inventory data state
   const [inventoryData, setInventoryData] = useState([]);
@@ -61,73 +69,9 @@ const Inventory = () => {
     educationLevel: null,
     search: null,
   });
-  // Transaction data - TODO: Implement when transaction tracking is available
-  // For now, using empty array - transactions will be fetched from API later
-  const [transactionData, setTransactionData] = useState([
-    {
-      id: 1,
-      type: "Items",
-      dateTime: "Nov 12, 2025 09:15 AM",
-      user: "Jeremy Amponget Property Custodian",
-      action: "ITEM CREATED SHS Men's Polo",
-      details: "Beginning Inventory: 200 units at P100 With 6 Variants",
-      price: "P100",
-    },
-    {
-      id: 2,
-      type: "Purchases",
-      dateTime: "Nov 13, 2025 10:56 AM",
-      user: "Jeremy Amponget Property Custodian",
-      action: "PURCHASE RECORDED SHS Men's Polo",
-      details: "+100 units at P110 New total ending inventory: 300",
-      price: "P110",
-    },
-    {
-      id: 3,
-      type: "Returns",
-      dateTime: "Nov 15, 2025 11:11 AM",
-      user: "Jeremy Amponget Property Custodian",
-      action: "RETURN RECORDED SHS Men's Polo",
-      details: "+1 unit at P100 New total ending inventory: 301",
-      price: "P100",
-    },
-    {
-      id: 4,
-      type: "Items",
-      dateTime: "Nov 16, 2025 02:10 PM",
-      user: "Jeremy Amponget Property Custodian",
-      action: "ITEM DETAILS UPDATED SHS Men's Polo",
-      details: "Updated Small Variant Description",
-      price: null,
-    },
-    {
-      id: 5,
-      type: "Releases",
-      dateTime: "Nov 17, 2025 08:56 AM",
-      user: "Rafael Ramos Student",
-      action: "ITEM RELEASED College Men's Polo",
-      details: "-1 unit at P120",
-      price: "P120",
-    },
-    {
-      id: 6,
-      type: "Releases",
-      dateTime: "Nov 17, 2025 08:56 AM",
-      user: "Rafael Ramos Student",
-      action: "ITEM RELEASED College Men's Pants",
-      details: "-1 unit at P130",
-      price: "P130",
-    },
-    {
-      id: 7,
-      type: "Releases",
-      dateTime: "Nov 17, 2025 08:56 AM",
-      user: "Rafael Ramos Student",
-      action: "ITEM RELEASED Logo Patch",
-      details: "-1 unit at P80",
-      price: "P80",
-    },
-  ]);
+  // Transaction data - fetched from API
+  const [transactionData, setTransactionData] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
   // Calculate pagination for inventory (8 items per page)
   const itemsPerPage = 8;
   const totalPages = Math.ceil(inventoryData.length / itemsPerPage);
@@ -176,61 +120,20 @@ const Inventory = () => {
   // Socket connection for real-time updates
   const { on, off, isConnected } = useSocket();
 
-  // Listen for item updates to refresh inventory data
-  useEffect(() => {
-    if (!isConnected) {
-      return;
-    }
+  // State to trigger transaction refresh
+  const [transactionRefreshKey, setTransactionRefreshKey] = useState(0);
 
-    // Listen for item updates (when stock/purchases are updated)
-    const handleItemUpdate = (data) => {
-      console.log("📡 [Inventory] Received item update via Socket.IO:", data);
-      // Refresh inventory data to show updated purchases
-      fetchInventoryData();
-    };
+  // Function to refresh transactions
+  const refreshTransactions = useCallback(() => {
+    // Always increment refresh key to trigger fetch when on transaction tab
+    setTransactionRefreshKey((prev) => prev + 1);
+    console.log("[Inventory] 🔄 Transaction refresh triggered");
+  }, []);
 
-    // Listen for order created events (which may trigger item updates)
-    const handleOrderCreated = (data) => {
-      console.log("📡 [Inventory] Received order created event:", data);
-      // Refresh inventory data
-      fetchInventoryData();
-    };
-
-    on("item:updated", handleItemUpdate);
-    on("order:created", handleOrderCreated);
-
-    // Cleanup on unmount
-    return () => {
-      off("item:updated", handleItemUpdate);
-      off("order:created", handleOrderCreated);
-    };
-  }, [isConnected, on, off]);
-
-  // Fetch inventory data
-  // Only fetch when orders are loaded (or if ordersLoading is false to avoid waiting forever)
-  // Include date range to filter releases by date
-  useEffect(() => {
-    if (!ordersLoading) {
-      fetchInventoryData();
-    }
-  }, [gradeLevel, searchQuery, startDate, endDate, allOrders, ordersLoading]);
-
-  // Reset to page 1 when inventory data changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [inventoryData.length]);
-
-  const fetchInventoryData = async () => {
+  // Fetch inventory data - wrapped in useCallback to fix initialization order
+  const fetchInventoryData = useCallback(async () => {
     try {
-      // Only show loading skeleton on initial load, not during search/filter
-      // This prevents page shaking during search
-      const isInitialLoad = inventoryData.length === 0;
-      if (isInitialLoad) {
-        setLoading(true);
-      } else {
-        // Show subtle loading indicator during search/filter
-        setLoading(true);
-      }
+      setLoading(true);
       console.log("[Inventory] 🔄 Fetching inventory data...");
       console.log(
         `[Inventory] 📦 Orders available: ${allOrders?.length || 0} orders`
@@ -636,7 +539,71 @@ const Inventory = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [gradeLevel, searchQuery, startDate, endDate, allOrders]);
+
+  // Listen for item updates to refresh inventory data and transactions
+  useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+
+    // Listen for item updates (when stock/purchases are updated)
+    const handleItemUpdate = (data) => {
+      console.log("📡 [Inventory] Received item update via Socket.IO:", data);
+      // Refresh inventory data to show updated purchases
+      fetchInventoryData();
+      // Refresh transactions if on transaction tab
+      if (activeTab === "transaction") {
+        refreshTransactions();
+      }
+    };
+
+    // Listen for item created events (when new items are added)
+    const handleItemCreated = (data) => {
+      console.log("📡 [Inventory] Received item created event:", data);
+      // Refresh inventory data to show new item
+      fetchInventoryData();
+      // Always refresh transactions (will fetch when user switches to transaction tab)
+      // This ensures transactions are ready when user views the tab
+      refreshTransactions();
+    };
+
+    // Listen for order created events (which may trigger item updates)
+    const handleOrderCreated = (data) => {
+      console.log("📡 [Inventory] Received order created event:", data);
+      // Refresh inventory data
+      fetchInventoryData();
+      // Refresh transactions if on transaction tab
+      if (activeTab === "transaction") {
+        refreshTransactions();
+      }
+    };
+
+    on("item:updated", handleItemUpdate);
+    on("item:created", handleItemCreated);
+    on("order:created", handleOrderCreated);
+
+    // Cleanup on unmount
+    return () => {
+      off("item:updated", handleItemUpdate);
+      off("item:created", handleItemCreated);
+      off("order:created", handleOrderCreated);
+    };
+  }, [isConnected, on, off, activeTab, fetchInventoryData, refreshTransactions]);
+
+  // Fetch inventory data
+  // Only fetch when orders are loaded (or if ordersLoading is false to avoid waiting forever)
+  // Include date range to filter releases by date
+  useEffect(() => {
+    if (!ordersLoading) {
+      fetchInventoryData();
+    }
+  }, [gradeLevel, searchQuery, startDate, endDate, allOrders, ordersLoading, fetchInventoryData]);
+
+  // Reset to page 1 when inventory data changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [inventoryData.length]);
 
   // Calculate unreleased and released order counts
   useEffect(() => {
@@ -698,13 +665,188 @@ const Inventory = () => {
     fetchInventoryData();
   };
 
+  // Helper function to extract item name from action string
+  const extractItemNameFromAction = (action) => {
+    // Extract item name from action: "ITEM CREATED SHS Men's Polo"
+    const itemMatch = action.match(/(?:ITEM CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)\s+(.+)$/i);
+    return itemMatch ? itemMatch[1].trim() : "";
+  };
+
+  // Fetch transactions from API
+  useEffect(() => {
+    console.log("[Inventory] 🔄 Transaction fetch useEffect triggered", {
+      activeTab,
+      transactionRefreshKey,
+      startDate: startDate?.toISOString(),
+      endDate: endDate?.toISOString(),
+    });
+    
+    // Early return if not on transaction tab
+    if (activeTab !== "transaction") {
+      console.log("[Inventory] ⏸️ Not on transaction tab, skipping fetch. Current tab:", activeTab);
+      return;
+    }
+    
+    const fetchTransactions = async () => {
+      try {
+        console.log("[Inventory] 🚀 Starting transaction fetch...");
+        setTransactionsLoading(true);
+        // Set endDate to end of day to include all transactions created today
+        const endOfDay = new Date(endDate);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        const filters = {
+          startDate: startDate,
+          endDate: endOfDay,
+          limit: 1000, // Get a large number of transactions
+        };
+        
+        console.log("[Inventory] 📤 Fetching transactions with filters:", {
+          startDate: filters.startDate?.toISOString(),
+          endDate: filters.endDate?.toISOString(),
+          limit: filters.limit,
+        });
+        
+        const response = await transactionService.getTransactions(filters);
+        
+        console.log("[Inventory] 📊 Transaction fetch response:", {
+          success: response.success,
+          dataLength: response.data?.length || 0,
+          filters: filters,
+        });
+        
+        if (response.success && response.data) {
+          console.log("[Inventory] ✅ Received transactions:", response.data.length);
+          console.log("[Inventory] 📋 Sample transaction from API:", response.data[0]);
+          // Transform API data to match component format
+          const transformedTransactions = response.data.map((tx, index) => {
+            if (index === 0) {
+              console.log("[Inventory] 🔍 Transforming first transaction:", tx);
+            }
+            // Format date and time
+            const date = new Date(tx.created_at);
+            const formattedDate = date.toLocaleDateString("en-US", {
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            });
+            const formattedTime = date.toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            });
+            const dateTime = `${formattedDate} ${formattedTime}`;
+
+            // Format user name and role
+            const user = `${tx.user_name} ${tx.user_role === "property_custodian" ? "Property Custodian" : tx.user_role === "student" ? "Student" : tx.user_role === "system_admin" ? "System Admin" : tx.user_role || ""}`;
+
+            // Map transaction type to display type (for filtering purposes)
+            let displayType = tx.type;
+            if (tx.type === "Inventory") {
+              if (tx.action.startsWith("PURCHASE RECORDED")) {
+                displayType = "Purchases";
+              } else if (tx.action.startsWith("RETURN RECORDED")) {
+                displayType = "Returns";
+              } else if (tx.action.startsWith("ITEM RELEASED")) {
+                displayType = "Releases";
+              }
+            } else if (tx.type === "Item") {
+              displayType = "Items";
+            }
+
+            // Extract price from metadata if available
+            const price = tx.metadata?.unit_price 
+              ? `P${tx.metadata.unit_price}` 
+              : tx.metadata?.price 
+              ? `P${tx.metadata.price}` 
+              : null;
+
+            return {
+              id: tx.id,
+              type: displayType, // Keep for filtering
+              dateTime: dateTime,
+              user: user,
+              action: tx.action,
+              details: tx.details,
+              price: price,
+              status: displayType, // Use displayType for status (Items, Purchases, Returns, Releases)
+              metadata: tx.metadata || {}, // Pass metadata for dynamic formatting
+              itemName: tx.metadata?.item_name || extractItemNameFromAction(tx.action),
+            };
+          });
+
+          setTransactionData(transformedTransactions);
+          console.log("[Inventory] ✅ Transformed transactions:", transformedTransactions.length);
+        } else {
+          console.warn("[Inventory] ⚠️ No transaction data in response:", response);
+          setTransactionData([]);
+        }
+      } catch (error) {
+        console.error("[Inventory] ❌ Failed to fetch transactions:", error);
+        console.error("[Inventory] Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
+        
+        // Handle 403 Forbidden errors with user-friendly message
+        if (error.message === "Forbidden" || error.message.includes("Forbidden")) {
+          console.error("[Inventory] 🔒 Access denied - 403 Forbidden error");
+          // Show user-friendly error message
+          alert(
+            "Access Denied\n\n" +
+            "You don't have permission to view transactions. " +
+            "Please ensure you are logged in with a Property Custodian account.\n\n" +
+            "If you believe this is an error, please contact your administrator."
+          );
+        } else if (error.message.includes("Unauthorized") || error.message.includes("401")) {
+          console.error("[Inventory] 🔐 Authentication error - 401 Unauthorized");
+          alert(
+            "Authentication Error\n\n" +
+            "Your session may have expired. Please log out and log back in."
+          );
+        }
+        
+        setTransactionData([]);
+      } finally {
+        setTransactionsLoading(false);
+      }
+    };
+
+    // Always call fetchTransactions since we already checked activeTab above
+    console.log("[Inventory] ✅ Calling fetchTransactions...");
+    fetchTransactions();
+  }, [startDate, endDate, activeTab, transactionRefreshKey]);
+
   // Filter transactions by type
   const filteredTransactions = transactionData.filter((transaction) => {
     if (transactionTypeFilter === "all") return true;
+    // Map filter values to transaction types
+    const typeMap = {
+      purchases: "Purchases",
+      returns: "Returns",
+      releases: "Releases",
+      items: "Items",
+    };
+    const filterType = typeMap[transactionTypeFilter] || transactionTypeFilter;
     return (
-      transaction.type.toLowerCase() === transactionTypeFilter.toLowerCase()
+      transaction.type.toLowerCase() === filterType.toLowerCase()
     );
   });
+  
+  // Log filtered transactions for debugging
+  useEffect(() => {
+    if (activeTab === "transaction") {
+      console.log("[Inventory] 📊 Transaction display state:", {
+        transactionDataCount: transactionData.length,
+        filteredTransactionsCount: filteredTransactions.length,
+        transactionTypeFilter,
+        transactionsLoading,
+      });
+      if (filteredTransactions.length > 0) {
+        console.log("[Inventory] 📋 Sample filtered transaction:", filteredTransactions[0]);
+      }
+    }
+  }, [transactionData, filteredTransactions, transactionTypeFilter, transactionsLoading, activeTab]);
 
   // Count transactions by type
   const transactionCounts = {
@@ -874,20 +1016,31 @@ const Inventory = () => {
         )}
 
         {/* Transactions View */}
-        {activeTab === "transaction" && (
-          <TransactionsView
-            startDate={startDate}
-            endDate={endDate}
-            onDateRangeChange={(start, end) => {
-              setStartDate(start);
-              setEndDate(end);
-            }}
-            transactionTypeFilter={transactionTypeFilter}
-            onTransactionTypeFilterChange={setTransactionTypeFilter}
-            transactionCounts={transactionCounts}
-            filteredTransactions={filteredTransactions}
-          />
-        )}
+        {activeTab === "transaction" && (() => {
+          console.log("[Inventory] 🎨 Rendering TransactionsView with props:", {
+            filteredTransactionsCount: filteredTransactions.length,
+            transactionDataCount: transactionData.length,
+            transactionTypeFilter,
+            transactionCounts,
+            transactionsLoading,
+            startDate: startDate?.toISOString(),
+            endDate: endDate?.toISOString(),
+          });
+          return (
+            <TransactionsView
+              startDate={startDate}
+              endDate={endDate}
+              onDateRangeChange={(start, end) => {
+                setStartDate(start);
+                setEndDate(end);
+              }}
+              transactionTypeFilter={transactionTypeFilter}
+              onTransactionTypeFilterChange={setTransactionTypeFilter}
+              transactionCounts={transactionCounts}
+              filteredTransactions={filteredTransactions}
+            />
+          );
+        })()}
 
         {/* Pagination - Only show for inventory tab and when there's more than 1 page */}
         {activeTab === "inventory" && totalPages > 1 && (

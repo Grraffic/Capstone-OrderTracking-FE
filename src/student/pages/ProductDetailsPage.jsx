@@ -12,7 +12,8 @@ import ProductCarousel from "../components/Products/ProductDetails/ProductCarous
 import { useItems } from "../../property-custodian/hooks/items/useItems";
 import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
-import { itemsAPI } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
+import { itemsAPI, authAPI } from "../../services/api";
 
 /**
  * ProductDetailsPage Component
@@ -26,6 +27,7 @@ const ProductDetailsPage = () => {
   const { items: allProducts } = useItems();
   const { addToCart } = useCart();
   const { setDirectCheckoutItems } = useCheckout();
+  const { user } = useAuth();
 
   const [product, setProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState("");
@@ -34,6 +36,7 @@ const ProductDetailsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [availableSizesData, setAvailableSizesData] = useState([]);
   const [loadingSizes, setLoadingSizes] = useState(false);
+  const [userEducationLevel, setUserEducationLevel] = useState(null);
 
   // Size mapping: Maps customer-facing sizes to database sizes
   const sizeMapping = {
@@ -51,6 +54,22 @@ const ProductDetailsPage = () => {
     Object.entries(sizeMapping).map(([key, value]) => [value, key])
   );
 
+  // Fetch user education level
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (user) {
+        try {
+          const response = await authAPI.getProfile();
+          const userData = response.data;
+          setUserEducationLevel(userData.educationLevel || null);
+        } catch (err) {
+          console.error("Error fetching user profile:", err);
+        }
+      }
+    };
+    fetchUserProfile();
+  }, [user]);
+
   // Load product data
   useEffect(() => {
     // Scroll to top when page loads
@@ -63,6 +82,30 @@ const ProductDetailsPage = () => {
       const foundProduct = allProducts.find((p) => p.id === productId);
 
       if (foundProduct) {
+        // Check if product matches user's education level
+        const productEducationLevel = foundProduct.educationLevel;
+        
+        // Allow access if:
+        // 1. Product is "General" or has no education level
+        // 2. User has no education level set (show all)
+        // 3. Product matches user's education level
+        const isAccessible =
+          !productEducationLevel ||
+          productEducationLevel === "General" ||
+          !userEducationLevel ||
+          productEducationLevel === userEducationLevel;
+
+        if (!isAccessible) {
+          console.log(
+            "Product education level doesn't match user's level, redirecting"
+          );
+          toast.error(
+            "This product is not available for your education level."
+          );
+          navigate("/all-products");
+          return;
+        }
+
         console.log("Product found:", foundProduct.name);
         setProduct(foundProduct);
         setSelectedSize("");
@@ -74,7 +117,7 @@ const ProductDetailsPage = () => {
         navigate("/all-products");
       }
     }
-  }, [productId, allProducts, navigate]);
+  }, [productId, allProducts, navigate, userEducationLevel]);
 
   // Fetch available sizes when product is loaded
   useEffect(() => {

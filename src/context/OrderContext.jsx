@@ -91,28 +91,40 @@ export const OrderProvider = ({ children }) => {
       
       if (response.data.success) {
         // Transform backend data to match frontend format
-        const transformedOrders = response.data.data.map(order => ({
-          id: order.order_number || order.id,
-          studentId: order.student_id,
-          studentName: order.student_name,
-          type: order.education_level || 'School Uniform',
-          item: order.items?.[0]?.name || 'Order Items',
-          size: order.items?.[0]?.size || 'N/A',
-          quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 1,
-          status: order.status,
-          order_type: order.order_type || 'regular', // Add order type
-          orderDate: order.created_at,
-          expectedDate: order.expected_delivery_date,
-          eligibility: order.eligibility || 'eligible',
-          orderNumber: order.order_number,
-          items: order.items || [],
-          totalAmount: order.total_amount || 0,
-          qrCodeData: order.qr_code_data,
-          notes: order.notes,
-          paymentDate: order.payment_date,
-          claimedDate: order.claimed_date,
-          statusHistory: []
-        }));
+        const transformedOrders = response.data.data.map(order => {
+          // Ensure we have a valid UUID - log warning if missing
+          if (!order.id) {
+            console.warn('Order missing UUID id field:', {
+              order_number: order.order_number,
+              order: order
+            });
+          }
+          
+          return {
+            id: order.id, // Keep the actual UUID from database (required for API calls)
+            studentId: order.student_id,
+            studentName: order.student_name,
+            type: order.education_level || 'School Uniform',
+            item: order.items?.[0]?.name || 'Order Items',
+            size: order.items?.[0]?.size || 'N/A',
+            quantity: order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 1,
+            status: order.status,
+            order_type: order.order_type || 'regular', // Add order type
+            orderDate: order.created_at,
+            expectedDate: order.expected_delivery_date,
+            eligibility: order.eligibility || 'eligible',
+            orderNumber: order.order_number, // Keep order_number separate for display
+            items: order.items || [],
+            totalAmount: order.total_amount || 0,
+            qrCodeData: order.qr_code_data,
+            notes: order.notes,
+            paymentDate: order.payment_date,
+            claimedDate: order.claimed_date,
+            statusHistory: [],
+            // Keep original order data for debugging
+            _original: order
+          };
+        });
 
         dispatch({ type: 'SET_ORDERS', payload: transformedOrders });
       } else {
@@ -138,7 +150,7 @@ export const OrderProvider = ({ children }) => {
         
         // Transform to frontend format
         const transformedOrder = {
-          id: newOrder.order_number || newOrder.id,
+          id: newOrder.id, // Keep the actual UUID from database
           studentId: newOrder.student_id,
           studentName: newOrder.student_name,
           type: newOrder.education_level || 'School Uniform',

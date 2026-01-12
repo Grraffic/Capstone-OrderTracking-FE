@@ -23,6 +23,9 @@ import { useState, useCallback, useMemo } from "react";
  *   selectVariation,
  * } = useItemDetailsModal();
  */
+// Helper function for case-insensitive string normalization
+const normalizeString = (str) => (str || "").trim().toLowerCase();
+
 export const useItemDetailsModal = (allItems = []) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -45,14 +48,48 @@ export const useItemDetailsModal = (allItems = []) => {
         // Filter items from allItems that match the name and education level
         // IMPORTANT: Include ALL items with same name+education, even if they have same size
         // This ensures duplicate items (same name+size but different IDs) are shown separately
+        // Use case-insensitive matching to find all variations
         const matchingItems = allItems.filter(
           (i) =>
-            i.name === item.name && i.educationLevel === item.educationLevel
+            normalizeString(i.name) === normalizeString(item.name) &&
+            normalizeString(i.educationLevel) ===
+              normalizeString(item.educationLevel)
         );
 
-        console.log(`[useItemDetailsModal] Found ${matchingItems.length} matching items for "${item.name}"`);
+        console.log(
+          `[useItemDetailsModal] Found ${matchingItems.length} matching items for "${item.name}" (educationLevel: "${item.educationLevel}")`
+        );
         matchingItems.forEach((m, idx) => {
-          console.log(`[useItemDetailsModal] Item ${idx + 1}: id=${m.id}, size="${m.size}", stock=${m.stock}, beginning_inventory=${m.beginning_inventory || 'N/A'}, purchases=${m.purchases || 'N/A'}`);
+          console.log(
+            `[useItemDetailsModal] Item ${idx + 1}: id=${m.id}, size="${
+              m.size
+            }", stock=${m.stock}, beginning_inventory=${
+              m.beginning_inventory || "N/A"
+            }, purchases=${m.purchases || "N/A"}, hasNote=${!!m.note}`
+          );
+          // If item has note field, try to parse it to see what's inside
+          if (m.note) {
+            try {
+              const parsedNote = JSON.parse(m.note);
+              if (
+                parsedNote._type === "sizeVariations" &&
+                parsedNote.sizeVariations
+              ) {
+                console.log(
+                  `[useItemDetailsModal]   └─ Note contains sizeVariations:`,
+                  parsedNote.sizeVariations.map((v) => ({
+                    size: v.size,
+                    stock: v.stock,
+                  }))
+                );
+              }
+            } catch (e) {
+              console.log(
+                `[useItemDetailsModal]   └─ Note is not JSON or parse error:`,
+                e.message
+              );
+            }
+          }
         });
 
         // Process all matching items to create variations
@@ -61,35 +98,84 @@ export const useItemDetailsModal = (allItems = []) => {
         const allVariations = [];
 
         matchingItems.forEach((matchingItem) => {
-          // Check if this item has comma-separated sizes
+          // First, check if item has JSON variations in note field
+          // This handles cases where sizes were added via duplicate detection
+          // and stored in JSON even though the main size field is a single size
+          let sizeVariationsData = null;
+          try {
+            if (matchingItem.note) {
+              const parsedNote = JSON.parse(matchingItem.note);
+              if (
+                parsedNote._type === "sizeVariations" &&
+                parsedNote.sizeVariations &&
+                Array.isArray(parsedNote.sizeVariations) &&
+                parsedNote.sizeVariations.length > 0
+              ) {
+                sizeVariationsData = parsedNote.sizeVariations;
+                console.log(
+                  `[useItemDetailsModal] Item ${matchingItem.id} has JSON sizeVariations:`,
+                  sizeVariationsData.map((v) => v.size)
+                );
+              }
+            }
+          } catch (e) {
+            // If note is not JSON or doesn't contain size variations, use defaults
+            console.log(
+              `[useItemDetailsModal] Note field doesn't contain size variation data for item ${matchingItem.id}:`,
+              e.message
+            );
+          }
+
+          // Check if this item has comma-separated sizes in the main size field
           const hasCommaSeparatedSizes =
             matchingItem.size &&
             matchingItem.size.includes(",") &&
             matchingItem.size !== "N/A";
 
-          if (hasCommaSeparatedSizes) {
+          // If we have JSON variations, use those to create variations
+          // This handles items where sizes were added via duplicate detection
+          if (sizeVariationsData && sizeVariationsData.length > 0) {
+            console.log(
+              `[useItemDetailsModal] Creating variations from JSON sizeVariations for item ${matchingItem.id}`
+            );
+            sizeVariationsData.forEach((variationData, index) => {
+              allVariations.push({
+                ...matchingItem,
+                // Keep original ID for edit/delete operations
+                id: matchingItem.id,
+                size: variationData.size || matchingItem.size || "N/A",
+                // Add a unique key for React rendering and selection
+                _variationKey: `${matchingItem.id}-json-${index}`,
+                // Use per-size stock and price from JSON
+                stock:
+                  variationData.stock !== undefined &&
+                  variationData.stock !== null
+                    ? Number(variationData.stock) || 0
+                    : matchingItem.stock || 0,
+                price:
+                  variationData.price !== undefined &&
+                  variationData.price !== null
+                    ? Number(variationData.price) || 0
+                    : matchingItem.price || 0,
+                // Use per-size beginning_inventory and purchases from JSON
+                beginning_inventory:
+                  variationData.beginning_inventory !== undefined &&
+                  variationData.beginning_inventory !== null
+                    ? Number(variationData.beginning_inventory) || 0
+                    : matchingItem.beginning_inventory || 0,
+                purchases:
+                  variationData.purchases !== undefined &&
+                  variationData.purchases !== null
+                    ? Number(variationData.purchases) || 0
+                    : matchingItem.purchases || 0,
+              });
+            });
+          } else if (hasCommaSeparatedSizes) {
             // Split comma-separated sizes and create virtual variations for each size
             const sizes = matchingItem.size
               .split(",")
               .map((s) => s.trim())
               .filter(Boolean);
-
-            // Try to parse per-size stock and price from note field
-            let sizeVariationsData = null;
-            try {
-              if (matchingItem.note) {
-                const parsedNote = JSON.parse(matchingItem.note);
-                if (
-                  parsedNote._type === "sizeVariations" &&
-                  parsedNote.sizeVariations
-                ) {
-                  sizeVariationsData = parsedNote.sizeVariations;
-                }
-              }
-            } catch (e) {
-              // If note is not JSON or doesn't contain size variations, use defaults
-              console.log("Note field doesn't contain size variation data:", e);
-            }
 
             // Create a separate virtual variation for each size
             sizes.forEach((size, index) => {
@@ -111,16 +197,21 @@ export const useItemDetailsModal = (allItems = []) => {
                 stock: variationData?.stock ?? matchingItem.stock,
                 price: variationData?.price ?? matchingItem.price,
                 // Use per-size beginning_inventory and purchases if available, otherwise use item-level
-                beginning_inventory: variationData?.beginning_inventory !== undefined && variationData?.beginning_inventory !== null
-                  ? Number(variationData.beginning_inventory) || 0
-                  : (matchingItem.beginning_inventory || 0),
-                purchases: variationData?.purchases !== undefined && variationData?.purchases !== null
-                  ? Number(variationData.purchases) || 0
-                  : (matchingItem.purchases || 0),
+                beginning_inventory:
+                  variationData?.beginning_inventory !== undefined &&
+                  variationData?.beginning_inventory !== null
+                    ? Number(variationData.beginning_inventory) || 0
+                    : matchingItem.beginning_inventory || 0,
+                purchases:
+                  variationData?.purchases !== undefined &&
+                  variationData?.purchases !== null
+                    ? Number(variationData.purchases) || 0
+                    : matchingItem.purchases || 0,
               });
             });
           } else {
-            // Item has a single size (or N/A), add it as a separate variation
+            // Item has a single size (or N/A) and no JSON variations
+            // Add it as a separate variation
             // IMPORTANT: Even if another item has the same size, keep them separate
             // This ensures duplicate items (same name+size but different IDs) are shown separately
             allVariations.push({
@@ -128,7 +219,11 @@ export const useItemDetailsModal = (allItems = []) => {
               // Ensure size is properly set
               size: matchingItem.size || "N/A",
               // Add unique key to distinguish from other items with same size
-              _variationKey: matchingItem.id || `${matchingItem.name}-${matchingItem.size}-${matchingItem.created_at || Date.now()}`,
+              _variationKey:
+                matchingItem.id ||
+                `${matchingItem.name}-${matchingItem.size}-${
+                  matchingItem.created_at || Date.now()
+                }`,
             });
           }
         });
@@ -142,20 +237,86 @@ export const useItemDetailsModal = (allItems = []) => {
         });
 
         // Group by name+size and keep only the first entry (the one with beginning_inventory)
+        // Use case-insensitive matching for size to ensure all sizes are included
         const seen = new Map();
         const uniqueVariations = [];
-        
-        sortedVariations.forEach((variation) => {
-          const key = `${variation.name}-${variation.size || 'N/A'}`;
-          
+
+        console.log(
+          `[useItemDetailsModal] Processing ${sortedVariations.length} variations for deduplication`
+        );
+        sortedVariations.forEach((variation, idx) => {
+          // Normalize size for case-insensitive matching
+          // Extract the base size name (e.g., "Small" from "Small (S)" or just "Small")
+          const rawSize = variation.size || "N/A";
+          const normalizedSize = normalizeString(rawSize);
+          // Remove parenthetical content like "(S)", "(L)" etc. for comparison
+          // This ensures "Small" and "Small (S)" are treated as the same size
+          const sizeForComparison = normalizedSize
+            .replace(/\s*\([^)]*\)\s*/g, "")
+            .trim();
+          const key = `${normalizeString(variation.name)}-${sizeForComparison}`;
+
+          console.log(
+            `[useItemDetailsModal] Variation ${idx + 1}: name="${
+              variation.name
+            }", rawSize="${rawSize}", normalizedSize="${normalizedSize}", sizeForComparison="${sizeForComparison}", key="${key}"`
+          );
+
           if (!seen.has(key)) {
-            // First entry for this name+size - keep it
+            // First entry for this name+size combination - keep it
             seen.set(key, true);
             uniqueVariations.push(variation);
+            console.log(
+              `[useItemDetailsModal] ✅ Keeping variation: ${variation.name} ${rawSize} (ID: ${variation.id})`
+            );
           } else {
-            // Duplicate entry - skip it (we only want the first entry)
-            console.log(`[useItemDetailsModal] Skipping duplicate entry: ${variation.name} ${variation.size} (ID: ${variation.id})`);
+            // This is a duplicate size - check if we should keep it anyway
+            // Only skip if it's truly a duplicate (same ID or same size format)
+            const existingVariation = uniqueVariations.find((v) => {
+              const existingRawSize = v.size || "N/A";
+              const existingNormalized = normalizeString(existingRawSize);
+              const existingSizeForComparison = existingNormalized
+                .replace(/\s*\([^)]*\)\s*/g, "")
+                .trim();
+              return (
+                existingSizeForComparison === sizeForComparison &&
+                normalizeString(v.name) === normalizeString(variation.name)
+              );
+            });
+
+            if (existingVariation) {
+              // Check if this is the same item (same ID) or a different item with same size
+              if (existingVariation.id === variation.id) {
+                // Same item, definitely skip
+                console.log(
+                  `[useItemDetailsModal] ⚠️ Skipping duplicate (same ID): ${variation.name} ${rawSize} (ID: ${variation.id})`
+                );
+              } else {
+                // Different items with same size - this shouldn't happen if items are created correctly
+                // But keep the first one (already in uniqueVariations)
+                console.log(
+                  `[useItemDetailsModal] ⚠️ Skipping duplicate size (different ID): ${variation.name} ${rawSize} (ID: ${variation.id}) - keeping first entry (ID: ${existingVariation.id})`
+                );
+              }
+            } else {
+              // Shouldn't happen, but keep it just in case
+              uniqueVariations.push(variation);
+              console.log(
+                `[useItemDetailsModal] ⚠️ Unexpected: key exists but variation not found, keeping anyway: ${variation.name} ${rawSize} (ID: ${variation.id})`
+              );
+            }
           }
+        });
+
+        console.log(
+          `[useItemDetailsModal] Final unique variations: ${uniqueVariations.length}`
+        );
+        uniqueVariations.forEach((v, idx) => {
+          console.log(
+            `[useItemDetailsModal] Final variation ${idx + 1}: ${v.name} ${
+              v.size
+            } (ID: ${v.id}, stock: ${v.stock})`
+          );
         });
 
         // Set all variations (only first entry for each name+size)

@@ -77,7 +77,8 @@ const CheckoutPage = () => {
       setSubmitting(true);
 
       // Get student education level from first item (assuming all items are for the same level)
-      const educationLevel = items[0]?.inventory?.educationLevel || "General";
+      // Backend returns education_level (snake_case), but also check camelCase for compatibility
+      const educationLevel = items[0]?.inventory?.education_level || items[0]?.inventory?.educationLevel || "General";
 
       // Generate order number
       const orderNumber = `ORD-${Date.now()}-${Math.random()
@@ -88,18 +89,40 @@ const CheckoutPage = () => {
       // Check if any item is out of stock OR if selected size is not available
       // We need to check size-specific availability for uniform items
       // Default to "regular" order type - only mark as pre-order if explicitly out of stock
+      console.log(`[CheckoutPage] 🛒 Starting stock check for ${items.length} item(s) from ${isDirectCheckout ? 'direct checkout' : 'cart'}`);
+      console.log(`[CheckoutPage] 📋 Cart items structure:`, items.map((item, idx) => ({
+        index: idx,
+        id: item.id,
+        size: item.size,
+        quantity: item.quantity,
+        inventoryId: item.inventoryId,
+        productName: item.inventory?.name,
+        educationLevel: item.inventory?.educationLevel,
+        itemType: item.inventory?.item_type || item.inventory?.itemType,
+        inventoryStock: item.inventory?.stock,
+        inventoryStatus: item.inventory?.status,
+      })));
+      
       const sizeAvailabilityChecks = await Promise.all(
-        items.map(async (item) => {
+        items.map(async (item, itemIndex) => {
           const selectedSize = item.size;
           const productName = item.inventory?.name;
-          const productEducationLevel = item.inventory?.educationLevel;
+          // Backend returns education_level (snake_case), but also check camelCase for compatibility
+          const productEducationLevel = item.inventory?.education_level || item.inventory?.educationLevel;
+          
+          console.log(
+            `[CheckoutPage] 📦 Item ${itemIndex + 1}/${items.length}: ${productName} | Size: "${selectedSize}" | Education: ${productEducationLevel}`
+          );
 
           // Check if this is a uniform item that requires size selection
+          // Backend returns item_type (snake_case), but also check camelCase for compatibility
+          const itemType = item.inventory?.item_type || item.inventory?.itemType;
+          const category = item.inventory?.category;
           const requiresSize =
-            item.inventory?.itemType === "Uniform" ||
-            item.inventory?.itemType === "PE Uniform" ||
-            item.inventory?.itemType?.toLowerCase().includes("uniform") ||
-            item.inventory?.category?.toLowerCase().includes("uniform");
+            itemType === "Uniform" ||
+            itemType === "PE Uniform" ||
+            itemType?.toLowerCase().includes("uniform") ||
+            category?.toLowerCase().includes("uniform");
 
           if (!requiresSize || selectedSize === "N/A") {
             // For non-uniform items, check overall stock
@@ -115,145 +138,405 @@ const CheckoutPage = () => {
           }
 
           // For uniform items, check if the specific size is available
+          // Validate that we have both product name and education level
+          if (!productName) {
+            console.error(
+              `[CheckoutPage] ❌ Missing product name for item ${itemIndex + 1}`
+            );
+            return true; // Default to pre-order when data is incomplete
+          }
+          
+          if (!productEducationLevel) {
+            console.error(
+              `[CheckoutPage] ❌ Missing education level for item ${itemIndex + 1} (${productName}). Cart item structure:`,
+              item
+            );
+            // Try to get education level from the item's inventory data with different property names
+            const fallbackEducationLevel = 
+              item.inventory?.education_level || 
+              item.inventory?.educationLevel ||
+              item.education_level ||
+              item.educationLevel ||
+              "General";
+            
+            console.warn(
+              `[CheckoutPage] ⚠️ Using fallback education level: "${fallbackEducationLevel}"`
+            );
+            
+            // If we still don't have it, default to pre-order for safety
+            if (fallbackEducationLevel === "General" && productName) {
+              console.warn(
+                `[CheckoutPage] ⚠️ Education level is "General" - this might cause incorrect stock checks. Item should have specific education level.`
+              );
+            }
+          }
+          
           try {
             const response = await itemsAPI.getAvailableSizes(
               productName,
-              productEducationLevel
+              productEducationLevel || item.inventory?.education_level || item.inventory?.educationLevel || "General"
+            );
+
+            console.log(
+              `[CheckoutPage] 🔍 Checking availability for: ${productName} | Size: "${selectedSize}" | Education: ${productEducationLevel}`
+            );
+            console.log(
+              `[CheckoutPage] API response:`,
+              {
+                success: response.data?.success,
+                dataLength: response.data?.data?.length,
+                sizes: response.data?.data?.map((s) => ({
+                  size: s.size,
+                  stock: s.stock,
+                  status: s.status,
+                })),
+              }
             );
 
             if (response.data.success && response.data.data) {
-              // Improve size matching: case-insensitive, trim whitespace
-              const normalizedSelectedSize =
-                selectedSize?.trim().toLowerCase() || "";
+              // Improve size matching: case-insensitive, trim whitespace, remove parentheses
+              const normalizeSizeForComparison = (sizeStr) => {
+                if (!sizeStr) return "";
+                return sizeStr
+                  .trim()
+                  .toLowerCase()
+                  .replace(/\s*\([^)]*\)\s*/g, "") // Remove parentheses and content
+                  .trim();
+              };
+
+              const normalizedSelectedSize = normalizeSizeForComparison(selectedSize);
+              
+              console.log(
+                `[CheckoutPage] 🔎 Looking for size "${selectedSize}" (normalized: "${normalizedSelectedSize}")`
+              );
+              console.log(
+                `[CheckoutPage] 📋 Available sizes from API (normalized):`,
+                response.data.data.map((s) => ({
+                  original: s.size,
+                  normalized: normalizeSizeForComparison(s.size),
+                  stock: s.stock,
+                }))
+              );
+
               const sizeData = response.data.data.find((s) => {
-                const normalizedSize = s.size?.trim().toLowerCase() || "";
-                return normalizedSize === normalizedSelectedSize;
+                const normalizedSize = normalizeSizeForComparison(s.size);
+                // Exact match only - don't use includes() as it causes false matches
+                // (e.g., "Small" would incorrectly match "XSmall")
+                const matches = normalizedSize === normalizedSelectedSize;
+                if (matches) {
+                  console.log(
+                    `[CheckoutPage] ✅ MATCH FOUND: "${s.size}" (normalized: "${normalizedSize}") matches "${selectedSize}" (normalized: "${normalizedSelectedSize}")`
+                  );
+                  console.log(
+                    `[CheckoutPage] 📊 Stock details: stock=${s.stock}, status="${s.status}"`
+                  );
+                }
+                return matches;
               });
 
               // Only mark as pre-order if size doesn't exist OR explicitly has stock = 0 or less
               // If size exists and stock > 0, it's available (return false = in stock)
               if (!sizeData) {
                 console.log(
-                  `Size ${selectedSize} not found for ${productName} - marking as pre-order`
+                  `[CheckoutPage] ❌ Size "${selectedSize}" NOT FOUND in API response for ${productName}`
                 );
-                return true; // Out of stock
+                console.log(
+                  `[CheckoutPage] Available sizes from API:`,
+                  response.data.data.map((s) => `${s.size} (stock: ${s.stock})`)
+                );
+                
+                // IMPORTANT: If specific size is not found in API response, it means that size doesn't exist
+                // or is not available. We should default to pre-order, NOT check total item stock
+                // because total stock might include other sizes (e.g., Small has stock but Large doesn't)
+                console.log(
+                  `[CheckoutPage] 🚨 DECISION: Size "${selectedSize}" not found → PRE-ORDER (size-specific stock unavailable)`
+                );
+                return true; // Out of stock - size not found means it's not available
               }
 
+              // Size was found - check its stock
               const isOutOfStock = sizeData.stock === 0 || sizeData.stock < 0;
+              
+              console.log(
+                `[CheckoutPage] 📦 Size "${selectedSize}" FOUND with stock: ${sizeData.stock}, status: "${sizeData.status}"`
+              );
+              
               if (isOutOfStock) {
                 console.log(
-                  `Size ${selectedSize} for ${productName} has stock ${sizeData.stock} - marking as pre-order`
+                  `[CheckoutPage] 🚨 DECISION: Size "${selectedSize}" for ${productName} has stock ${sizeData.stock} → PRE-ORDER`
                 );
               } else {
                 console.log(
-                  `Size ${selectedSize} for ${productName} has stock ${sizeData.stock} - marking as regular order`
+                  `[CheckoutPage] ✅ DECISION: Size "${selectedSize}" for ${productName} has stock ${sizeData.stock} → REGULAR ORDER`
                 );
               }
+              
               return isOutOfStock;
             }
 
-            // If API call fails, default to in stock (regular order)
-            // This prevents false pre-orders when API calls fail
+            // If API response structure is unexpected, we can't verify size-specific stock
+            // Default to pre-order to be safe (can't verify = assume not available)
             console.warn(
-              `Failed to check size availability for ${productName} (${selectedSize}), defaulting to regular order`
+              `[CheckoutPage] ⚠️ Unexpected API response structure for ${productName} (${selectedSize}) - cannot verify size-specific stock`
             );
-            return false;
+            console.warn(
+              `[CheckoutPage] ⚠️ Defaulting to pre-order for safety (cannot verify "${selectedSize}" availability)`
+            );
+            return true; // Default to pre-order when we can't verify
           } catch (error) {
             console.error(
-              `Failed to check size availability for ${productName} (${selectedSize}):`,
+              `[CheckoutPage] ❌ Failed to check size availability for ${productName} (${selectedSize}):`,
               error
             );
-            // If API call fails, default to in stock (regular order)
-            // This prevents false pre-orders when API calls fail
-            return false;
+            
+            // On API error, we can't verify size-specific stock
+            // Default to pre-order to be safe (can't verify = assume not available)
+            console.warn(
+              `[CheckoutPage] ⚠️ API error - cannot verify "${selectedSize}" stock - defaulting to pre-order for safety`
+            );
+            return true; // Default to pre-order when we can't verify (safer than creating false regular orders)
           }
         })
       );
 
-      // Determine order type based on button intent (for direct checkout) or stock availability (for cart checkout)
-      let orderType;
+      // Split items into available and unavailable groups
+      const availableItems = [];
+      const unavailableItems = [];
 
-      if (isDirectCheckout && orderIntent) {
-        // For direct checkout, use the order intent from the button clicked
-        // This ensures "Order Now" button → regular order, "Pre-Order" button → pre-order
-        orderType = orderIntent === "preOrder" ? "pre-order" : "regular";
-      } else {
-        // For cart checkout, use stock-based determination
-        // Only mark as pre-order if we're CERTAIN at least one item is out of stock
-        const hasOutOfStockItems = sizeAvailabilityChecks.some(
-          (isOutOfStock) => isOutOfStock === true
+      items.forEach((item, index) => {
+        const isOutOfStock = sizeAvailabilityChecks[index];
+        const selectedSize = item.size;
+        const productName = item.inventory?.name;
+        
+        if (isOutOfStock) {
+          unavailableItems.push(item); // Out of stock - pre-order
+          console.log(
+            `[CheckoutPage] 📦 Item "${productName}" size "${selectedSize}" → PRE-ORDER (out of stock)`
+          );
+        } else {
+          availableItems.push(item); // In stock - regular order
+          console.log(
+            `[CheckoutPage] ✅ Item "${productName}" size "${selectedSize}" → REGULAR ORDER (in stock)`
+          );
+        }
+      });
+
+      // Log for debugging
+      console.log(`[CheckoutPage] Item availability split:`, {
+        totalItems: items.length,
+        availableItems: availableItems.length,
+        unavailableItems: unavailableItems.length,
+        sizeAvailabilityChecks,
+        availableItemsDetails: availableItems.map((i) => ({
+          name: i.inventory?.name,
+          size: i.size,
+        })),
+        unavailableItemsDetails: unavailableItems.map((i) => ({
+          name: i.inventory?.name,
+          size: i.size,
+        })),
+      });
+
+      // Prepare orders to create
+      const ordersToCreate = [];
+
+      // Add regular order for available items
+      if (availableItems.length > 0) {
+        const regularOrderItems = availableItems.map((item) => ({
+          name: item.inventory?.name || "Unknown Item",
+          size: item.size || "N/A",
+          quantity: item.quantity || 1,
+          item_type: item.inventory?.item_type || item.inventory?.itemType || "Uniform",
+          education_level: item.inventory?.education_level || item.inventory?.educationLevel || "General",
+          image: item.inventory?.image || null,
+        }));
+
+        const regularOrderNumber = `ORD-${Date.now()}-${Math.random()
+          .toString(36)
+          .substring(2, 9)
+          .toUpperCase()}`;
+
+        const regularOrderData = {
+          order_number: regularOrderNumber,
+          student_id: user.uid,
+          student_name: user.displayName || user.email,
+          student_email: user.email,
+          education_level: educationLevel,
+          items: regularOrderItems,
+          total_amount: 0,
+          status: "pending",
+          order_type: "regular",
+          notes: `Order placed via ${isDirectCheckout ? "direct" : "cart"} checkout. ${availableItems.length} item(s) ordered.`,
+        };
+
+        // Generate QR code for regular order
+        regularOrderData.qr_code_data = generateOrderReceiptQRData({
+          orderNumber: regularOrderData.order_number,
+          studentId: regularOrderData.student_id,
+          studentName: regularOrderData.student_name,
+          studentEmail: regularOrderData.student_email,
+          items: regularOrderData.items,
+          educationLevel: regularOrderData.education_level,
+          totalAmount: regularOrderData.total_amount,
+          orderDate: new Date().toISOString(),
+          status: regularOrderData.status,
+        });
+
+        ordersToCreate.push({
+          data: regularOrderData,
+          type: "regular",
+          items: availableItems,
+          orderItems: regularOrderItems,
+        });
+      }
+
+      // Add pre-order for unavailable items
+      if (unavailableItems.length > 0) {
+        const preOrderItems = unavailableItems.map((item) => ({
+          name: item.inventory?.name || "Unknown Item",
+          size: item.size || "N/A",
+          quantity: item.quantity || 1,
+          item_type: item.inventory?.item_type || item.inventory?.itemType || "Uniform",
+          education_level: item.inventory?.education_level || item.inventory?.educationLevel || "General",
+          image: item.inventory?.image || null,
+        }));
+
+        // Generate unique order number for pre-order (add small delay to ensure uniqueness)
+        const preOrderNumber = `ORD-${Date.now() + 1}-${Math.random()
+          .toString(36)
+          .substring(2, 9)
+          .toUpperCase()}`;
+
+        const preOrderData = {
+          order_number: preOrderNumber,
+          student_id: user.uid,
+          student_name: user.displayName || user.email,
+          student_email: user.email,
+          education_level: educationLevel,
+          items: preOrderItems,
+          total_amount: 0,
+          status: "pending",
+          order_type: "pre-order",
+          notes: `Pre-order placed via ${isDirectCheckout ? "direct" : "cart"} checkout. ${unavailableItems.length} item(s) ordered.`,
+        };
+
+        // Generate QR code for pre-order
+        preOrderData.qr_code_data = generateOrderReceiptQRData({
+          orderNumber: preOrderData.order_number,
+          studentId: preOrderData.student_id,
+          studentName: preOrderData.student_name,
+          studentEmail: preOrderData.student_email,
+          items: preOrderData.items,
+          educationLevel: preOrderData.education_level,
+          totalAmount: preOrderData.total_amount,
+          orderDate: new Date().toISOString(),
+          status: preOrderData.status,
+        });
+
+        ordersToCreate.push({
+          data: preOrderData,
+          type: "pre-order",
+          items: unavailableItems,
+          orderItems: preOrderItems,
+        });
+      }
+
+      // Handle direct checkout with orderIntent override
+      // If direct checkout and orderIntent is set, respect it for single-item orders
+      if (isDirectCheckout && orderIntent && items.length === 1) {
+        // For single-item direct checkout, use the button intent
+        if (orderIntent === "preOrder") {
+          // If user clicked "Pre-Order" button, mark as pre-order regardless of stock
+          if (ordersToCreate.length > 0) {
+            ordersToCreate[0].data.order_type = "pre-order";
+            ordersToCreate[0].data.notes = `Pre-order placed via direct checkout. 1 item(s) ordered.`;
+          }
+        }
+      }
+
+      // Create orders sequentially with error handling
+      const createdOrders = [];
+      const failedOrders = [];
+
+      for (const orderConfig of ordersToCreate) {
+        try {
+          console.log(
+            `[CheckoutPage] Creating ${orderConfig.type} order with ${orderConfig.items.length} item(s)...`
+          );
+          const createdOrder = await createOrder(orderConfig.data);
+
+          createdOrders.push({
+            order: createdOrder,
+            type: orderConfig.type,
+            orderNumber: orderConfig.data.order_number,
+          });
+
+          // Track checkout activity for each order
+          trackCheckout({
+            orderId: createdOrder?.id,
+            orderNumber: orderConfig.data.order_number,
+            itemCount: orderConfig.items.length,
+            items: orderConfig.orderItems,
+          });
+
+          console.log(
+            `[CheckoutPage] ✅ ${orderConfig.type} order created successfully: ${orderConfig.data.order_number}`
+          );
+        } catch (error) {
+          console.error(
+            `[CheckoutPage] ❌ Failed to create ${orderConfig.type} order:`,
+            error
+          );
+          failedOrders.push({
+            type: orderConfig.type,
+            orderNumber: orderConfig.data.order_number,
+            error: error.response?.data?.message || error.message,
+          });
+        }
+      }
+
+      // Handle results
+      if (createdOrders.length === 0) {
+        // All orders failed
+        throw new Error(
+          failedOrders.length > 0
+            ? `Failed to create orders: ${failedOrders.map((f) => f.error).join(", ")}`
+            : "Failed to create orders. Please try again."
         );
-        orderType = hasOutOfStockItems ? "pre-order" : "regular";
       }
 
-      // Transform cart items to order items format
-      const orderItems = items.map((item) => ({
-        name: item.inventory?.name || "Unknown Item",
-        size: item.size || "N/A",
-        quantity: item.quantity || 1,
-        item_type: item.inventory?.itemType || "Uniform",
-        education_level: item.inventory?.educationLevel || "General",
-        image: item.inventory?.image || null, // Include product image
-      }));
+      // Clear cart/checkout items only after successful order creation
+      // Only clear if at least one order was created successfully
+      if (createdOrders.length > 0) {
+        if (isDirectCheckout) {
+          clearCheckoutItems();
+        } else {
+          await clearCart(user.uid);
+        }
+      }
 
-      // Calculate total (all items are FREE, so total is 0)
-      const totalAmount = 0;
-
-      // Create order data
-      const orderData = {
-        order_number: orderNumber,
-        student_id: user.uid,
-        student_name: user.displayName || user.email,
-        student_email: user.email,
-        education_level: educationLevel,
-        items: orderItems,
-        total_amount: totalAmount,
-        status: "pending",
-        order_type: orderType, // Track if this is a pre-order or regular order
-        notes: `${
-          orderType === "pre-order" ? "Pre-order" : "Order"
-        } placed via ${isDirectCheckout ? "direct" : "cart"} checkout. ${
-          items.length
-        } item(s) ordered.`,
-      };
-
-      // Generate QR code data for the order
-      const qrCodeData = generateOrderReceiptQRData({
-        orderNumber: orderData.order_number,
-        studentId: orderData.student_id,
-        studentName: orderData.student_name,
-        studentEmail: orderData.student_email,
-        items: orderData.items,
-        educationLevel: orderData.education_level,
-        totalAmount: orderData.total_amount,
-        orderDate: new Date().toISOString(),
-        status: orderData.status,
-      });
-      orderData.qr_code_data = qrCodeData;
-
-      // Submit order to backend
-      const createdOrder = await createOrder(orderData);
-
-      // Track checkout activity
-      trackCheckout({
-        orderId: createdOrder?.id,
-        orderNumber: orderNumber,
-        itemCount: items.length,
-        items: orderItems,
-      });
-
-      // Clear appropriate items after successful order
-      if (isDirectCheckout) {
-        // For direct checkout, just clear the checkout items (don't touch cart)
-        clearCheckoutItems();
+      // Show appropriate success message
+      if (createdOrders.length === 1) {
+        toast.success("Order submitted successfully!");
       } else {
-        // For cart checkout, clear the cart
-        await clearCart(user.uid);
+        toast.success(
+          `${createdOrders.length} orders created successfully! ${
+            failedOrders.length > 0
+              ? `(${failedOrders.length} failed)`
+              : ""
+          }`
+        );
       }
 
-      toast.success("Order submitted successfully!");
+      // Show warning if some orders failed
+      if (failedOrders.length > 0) {
+        toast.error(
+          `Some orders failed to create. Please check your orders page.`,
+          { duration: 5000 }
+        );
+      }
 
-      // Navigate to Order Success page immediately
+      // Navigate to Order Success page
       navigate("/student/order-success");
     } catch (error) {
       console.error("Checkout error:", error);

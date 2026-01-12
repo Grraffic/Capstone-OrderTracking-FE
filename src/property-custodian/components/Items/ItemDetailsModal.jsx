@@ -190,9 +190,17 @@ const ItemDetailsModal = ({
                       Beginning Inventory:
                     </span>
                     <span className="text-sm font-semibold text-[#0C2340]">
-                      {displayItem.beginning_inventory ||
-                        displayItem.beginningInventory ||
-                        0}
+                      {(() => {
+                        let begInv = displayItem.beginning_inventory ||
+                          displayItem.beginningInventory ||
+                          0;
+                        // If beginning_inventory is 0 but we have stock, use stock as beginning inventory
+                        // (for backward compatibility with items created before beginning_inventory tracking)
+                        if (begInv === 0 && (displayItem.stock || 0) > 0) {
+                          begInv = displayItem.stock || 0;
+                        }
+                        return begInv;
+                      })()}
                     </span>
                   </div>
                   <div className="flex">
@@ -263,10 +271,17 @@ const ItemDetailsModal = ({
                       const isSelected = selectedKey === variationKey;
 
                       // Display beginning_inventory and purchases if available
-                      const beginningInventory =
+                      // If beginning_inventory is 0 but stock > 0, use stock as beginning_inventory
+                      // (for backward compatibility with items created before beginning_inventory tracking)
+                      let beginningInventory =
                         variation.beginning_inventory ||
                         variation.beginningInventory ||
                         0;
+                      // If beginning_inventory is 0 but we have stock, assume stock is the beginning inventory
+                      // This handles items created before beginning_inventory tracking was added
+                      if (beginningInventory === 0 && (variation.stock || 0) > 0) {
+                        beginningInventory = variation.stock || 0;
+                      }
                       const purchases = variation.purchases || 0;
 
                       return (
