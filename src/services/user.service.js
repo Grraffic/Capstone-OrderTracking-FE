@@ -20,8 +20,27 @@ const userAPI = {
     if (params.search) queryParams.append("search", params.search);
     if (params.role) queryParams.append("role", params.role);
     if (params.status) queryParams.append("status", params.status);
+    // Always send education_level (even if empty string) so backend knows whether to filter
+    if (params.education_level !== undefined) {
+      queryParams.append("education_level", params.education_level);
+      console.log(`[user.service] Sending education_level: "${params.education_level}" (type: ${typeof params.education_level}, length: ${params.education_level?.length})`);
+    }
+    // Always send course_year_level (even if empty string) so backend knows whether to filter
+    if (params.course_year_level !== undefined) {
+      queryParams.append("course_year_level", params.course_year_level);
+    }
+    // Send school_year (2-digit year prefix for filtering student_number)
+    if (params.school_year !== undefined && params.school_year !== "") {
+      queryParams.append("school_year", params.school_year);
+    }
+    // Send excludeRole to exclude specific roles (e.g., "student")
+    if (params.excludeRole !== undefined && params.excludeRole !== "") {
+      queryParams.append("excludeRole", params.excludeRole);
+    }
 
-    return api.get(`/users?${queryParams.toString()}`);
+    const url = `/users?${queryParams.toString()}`;
+    console.log(`[user.service] Request URL: ${url}`);
+    return api.get(url);
   },
 
   /**
@@ -59,6 +78,19 @@ const userAPI = {
    */
   deleteUser: (userId) => {
     return api.delete(`/users/${userId}`);
+  },
+
+  /**
+   * Bulk update users
+   * @param {Array<string>} userIds - Array of user IDs to update
+   * @param {Object} updateData - Data to update (max_items_per_order, order_lockout_period)
+   * @returns {Promise} API response
+   */
+  bulkUpdateUsers: (userIds, updateData) => {
+    return api.patch("/users/bulk-update", {
+      userIds,
+      updateData,
+    });
   },
 };
 

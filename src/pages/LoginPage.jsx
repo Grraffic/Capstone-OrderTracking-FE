@@ -4,14 +4,39 @@ import { FcGoogle } from "react-icons/fc";
 import { useLogin } from "../hooks/useLogin";
 import { useLoginRedirect } from "../hooks/useLoginRedirect";
 import { useAuth } from "../context/AuthContext";
+import { useMaintenance } from "../context/MaintenanceContext";
+import MaintenanceOverlay from "../components/common/MaintenanceOverlay";
 
 export default function LoginPage() {
   // Extract business logic into hooks
   const { user } = useAuth();
   const { loading, error, handleGoogleLogin } = useLogin();
+  const { isActive, message, loading: maintenanceLoading } = useMaintenance();
 
   // Handle redirect after login
   useLoginRedirect(user);
+
+  // Show loading state while checking maintenance (but don't block if we already know it's active)
+  if (maintenanceLoading && !isActive) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0C2340] mx-auto"></div>
+          <p className="mt-2 text-sm text-gray-600">Checking system status...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show maintenance overlay if maintenance is active
+  // This blocks all login attempts during maintenance
+  if (isActive) {
+    console.log("🚫 Maintenance mode is active, blocking login", { isActive, message, maintenanceLoading });
+    return <MaintenanceOverlay message={message} />;
+  }
+  
+  // Debug logging
+  console.log("🔓 Login page - Maintenance status:", { isActive, message, maintenanceLoading });
 
   return (
     <div className="bg-[#fefefe] min-h-screen w-full overflow-hidden flex items-center justify-center px-2">

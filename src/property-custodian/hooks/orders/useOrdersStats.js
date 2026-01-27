@@ -5,7 +5,7 @@ import { useMemo } from "react";
  * 
  * Calculates various statistics from orders data:
  * - Total cost summary
- * - Status counts (pending, processing, completed, claimed, cancelled)
+ * - Status counts (pending, processing, claimed, cancelled)
  * - Unreleased quantity
  * - Released quantity
  * - Processing count
@@ -21,7 +21,6 @@ const useOrdersStats = (orders) => {
         totalCost: 0,
         pendingCount: 0,
         processingCount: 0,
-        completedCount: 0,
         claimedCount: 0,
         cancelledCount: 0,
         unreleasedQuantity: 0,
@@ -43,10 +42,6 @@ const useOrdersStats = (orders) => {
       (order) => order.status?.toLowerCase() === "processing"
     ).length;
 
-    const completedCount = orders.filter(
-      (order) => order.status?.toLowerCase() === "completed"
-    ).length;
-
     const claimedCount = orders.filter(
       (order) => order.status?.toLowerCase() === "claimed"
     ).length;
@@ -62,10 +57,9 @@ const useOrdersStats = (orders) => {
         order.status?.toLowerCase() === "processing"
     ).length;
 
-    // Calculate released quantity (completed + claimed)
+    // Calculate released quantity (claimed)
     const releasedQuantity = orders.filter(
       (order) =>
-        order.status?.toLowerCase() === "completed" ||
         order.status?.toLowerCase() === "claimed"
     ).length;
 
@@ -73,7 +67,6 @@ const useOrdersStats = (orders) => {
       totalCost,
       pendingCount,
       processingCount,
-      completedCount,
       claimedCount,
       cancelledCount,
       unreleasedQuantity,

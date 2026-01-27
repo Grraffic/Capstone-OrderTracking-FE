@@ -45,19 +45,18 @@ export const useItemDetailsModal = (allItems = []) => {
       setLoadingVariations(true);
 
       try {
-        // Filter items from allItems that match the name and education level
-        // IMPORTANT: Include ALL items with same name+education, even if they have same size
-        // This ensures duplicate items (same name+size but different IDs) are shown separately
+        // Filter items from allItems that match the name (regardless of education level)
+        // IMPORTANT: Include ALL items with same name, even if they have different education levels
+        // This combines items with same name but different education levels into one item with variants
         // Use case-insensitive matching to find all variations
         const matchingItems = allItems.filter(
           (i) =>
-            normalizeString(i.name) === normalizeString(item.name) &&
-            normalizeString(i.educationLevel) ===
-              normalizeString(item.educationLevel)
+            normalizeString(i.name) === normalizeString(item.name)
+            // Removed education level filter to combine items with same name but different education levels
         );
 
         console.log(
-          `[useItemDetailsModal] Found ${matchingItems.length} matching items for "${item.name}" (educationLevel: "${item.educationLevel}")`
+          `[useItemDetailsModal] Found ${matchingItems.length} matching items for "${item.name}" (combining across all education levels)`
         );
         matchingItems.forEach((m, idx) => {
           console.log(
@@ -254,7 +253,9 @@ export const useItemDetailsModal = (allItems = []) => {
           const sizeForComparison = normalizedSize
             .replace(/\s*\([^)]*\)\s*/g, "")
             .trim();
-          const key = `${normalizeString(variation.name)}-${sizeForComparison}`;
+          // Include education level in key to treat items with same name+size but different education levels as unique variations
+          const educationLevelForComparison = normalizeString(variation.educationLevel || variation.education_level || "N/A");
+          const key = `${normalizeString(variation.name)}-${sizeForComparison}-${educationLevelForComparison}`;
 
           console.log(
             `[useItemDetailsModal] Variation ${idx + 1}: name="${
@@ -278,9 +279,11 @@ export const useItemDetailsModal = (allItems = []) => {
               const existingSizeForComparison = existingNormalized
                 .replace(/\s*\([^)]*\)\s*/g, "")
                 .trim();
+              const existingEducationLevel = normalizeString(v.educationLevel || v.education_level || "N/A");
               return (
                 existingSizeForComparison === sizeForComparison &&
-                normalizeString(v.name) === normalizeString(variation.name)
+                normalizeString(v.name) === normalizeString(variation.name) &&
+                existingEducationLevel === educationLevelForComparison
               );
             });
 

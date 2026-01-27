@@ -375,8 +375,7 @@ const TransactionsTable = ({ transactions }) => {
               </div>
             );
           })}
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

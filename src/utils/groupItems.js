@@ -7,7 +7,10 @@
  * IMPORTANT: Items with the same name+size but different IDs (duplicates) are NOT grouped.
  * Only items with different sizes are grouped together.
  * 
- * @param {Array} items - Array of items
+ * NOTE: This function assumes items have already been filtered by education level.
+ * Items passed to this function should all match the selected education level filter.
+ * 
+ * @param {Array} items - Array of items (should already be filtered by education level)
  * @returns {Array} Array of grouped items with variations
  */
 export const groupItemsByVariations = (items) => {
@@ -35,28 +38,33 @@ export const groupItemsByVariations = (items) => {
     // Only group items that have DIFFERENT sizes
     // Strategy: Check if there's an existing group with same name+type but different size
     
-    // First, try to find a group with same name+type but different size
+    // First, try to find a group with same name+type but different size or education level
     // We'll check the group's variations to determine name+type instead of parsing the key
+    // IMPORTANT: Group items by name+type only, ignoring education level to combine items
+    // with same name but different education levels (e.g., "Jogging Pants" for College and Pre-Kindergarten)
     let existingGroupKey = null;
     for (const [key, group] of groupedMap.entries()) {
-      // Check if this group has the same name and type
+      // Check if this group has the same name and type (ignore education level)
       const groupName = group.name || "Unknown Item";
       const groupItemType = group.itemType || "Uniform";
       
       if (groupName === name && groupItemType === itemType) {
-        // Same name+type, now check if sizes are different
-        // Check if this group already has an item with the current size
-        const hasThisSize = group.variations.some(v => {
+        // Same name+type, now check if this is a unique variation
+        // A variation is unique if it has a different size OR different education level
+        // Check if this group already has an item with the same size AND education level
+        const hasThisVariation = group.variations.some(v => {
           const vSize = (v.size || "N/A").trim().toLowerCase();
+          const vEducationLevel = (v.educationLevel || v.education_level || "N/A").trim().toLowerCase();
           const currentSize = size.toLowerCase();
-          return vSize === currentSize;
+          const currentEducationLevel = (educationLevel || "N/A").trim().toLowerCase();
+          return vSize === currentSize && vEducationLevel === currentEducationLevel;
         });
         
         // Also check if this group already has an item with the same ID (shouldn't happen, but safety check)
         const hasThisId = group.variations.some(v => v.id === itemId);
         
-        // Only group if sizes are different and ID is not already in group
-        if (!hasThisSize && !hasThisId) {
+        // Only group if this is a unique variation (different size or education level) and ID is not already in group
+        if (!hasThisVariation && !hasThisId) {
           existingGroupKey = key;
           break;
         }
@@ -78,15 +86,15 @@ export const groupItemsByVariations = (items) => {
       console.log(`[groupItemsByVariations] Added to existing group: ${name} - ${size} (ID: ${itemId})`);
     } else {
       // Create new group - this item will be its own group
-      // Items with same name+size but different IDs will each have their own group
-      // This ensures duplicates are kept separate
-      const groupKey = `${name}-${itemType}-${size}-${itemId}`;
-      console.log(`[groupItemsByVariations] Creating new group for: ${name} - ${size} (ID: ${itemId})`);
+      // Use name+type as the key (ignore size and education level) to combine items with same name
+      // Items with same name+type but different sizes/education levels will be grouped together
+      const groupKey = `${name}-${itemType}`;
+      console.log(`[groupItemsByVariations] Creating new group for: ${name} - ${itemType} (ID: ${itemId})`);
       groupedMap.set(groupKey, {
         groupKey,
         name,
         itemType,
-        educationLevel,
+        educationLevel, // Keep first education level as representative
         image,
         category,
         variations: [{
@@ -108,7 +116,7 @@ export const groupItemsByVariations = (items) => {
     }
 
     // Update representative image if current item has one and group doesn't
-    const finalGroupKey = existingGroupKey || `${name}-${itemType}-${size}-${itemId}`;
+    const finalGroupKey = existingGroupKey || `${name}-${itemType}`;
     const group = groupedMap.get(finalGroupKey);
     if (!group.image && image) {
       group.image = image;
@@ -123,6 +131,13 @@ export const groupItemsByVariations = (items) => {
       const sizeB = b.size || "";
       return sizeA.localeCompare(sizeB);
     });
+    
+    // Update representative education level to show the first variation's education level
+    // This helps with display, but all variations are still accessible
+    if (group.variations.length > 0) {
+      group.educationLevel = group.variations[0].educationLevel || group.variations[0].education_level || group.educationLevel;
+    }
+    
     return group;
   });
   

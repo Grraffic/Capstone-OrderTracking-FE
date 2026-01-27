@@ -1,5 +1,6 @@
 import { X, Info, MoreHorizontal } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * ItemDetailsModal Component
@@ -42,7 +43,9 @@ const ItemDetailsModal = ({
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const menuRef = useRef(null);
+  const buttonRefs = useRef({});
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -57,6 +60,35 @@ const ItemDetailsModal = ({
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openMenuId]);
+
+  // Calculate menu position to ensure it's always visible
+  const handleMenuClick = (e, variationKey) => {
+    e.stopPropagation();
+    
+    const buttonElement = e.currentTarget;
+    const rect = buttonElement.getBoundingClientRect();
+    const scrollContainer = buttonElement.closest('.max-h-\\[400px\\]');
+    const containerRect = scrollContainer?.getBoundingClientRect();
+    
+    // Calculate position - prefer above if near bottom
+    const spaceBelow = containerRect 
+      ? containerRect.bottom - rect.bottom 
+      : window.innerHeight - rect.bottom;
+    const spaceAbove = containerRect 
+      ? rect.top - containerRect.top 
+      : rect.top;
+    
+    // Position menu above button if there's more space above, or if near bottom
+    const shouldPositionAbove = spaceBelow < 100 || (spaceAbove > spaceBelow && spaceAbove > 80);
+    
+    setMenuPosition({
+      top: shouldPositionAbove ? rect.top - 80 : rect.bottom + 4,
+      left: rect.right - 128, // Align to right edge of button, menu width is ~128px
+    });
+    
+    setOpenMenuId(openMenuId === variationKey ? null : variationKey);
+  };
+
   if (!isOpen || !selectedItem) return null;
 
   const displayItem = selectedVariation || selectedItem;
@@ -179,36 +211,18 @@ const ItemDetailsModal = ({
                   </div>
                   <div className="flex">
                     <span className="text-sm font-medium text-[#e68b00] w-40">
-                      Grade Level:
+                      Education Level:
                     </span>
                     <span className="text-sm text-[#0C2340]">
-                      {displayItem.educationLevel || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
-                      Beginning Inventory:
-                    </span>
-                    <span className="text-sm font-semibold text-[#0C2340]">
                       {(() => {
-                        let begInv = displayItem.beginning_inventory ||
-                          displayItem.beginningInventory ||
-                          0;
-                        // If beginning_inventory is 0 but we have stock, use stock as beginning inventory
-                        // (for backward compatibility with items created before beginning_inventory tracking)
-                        if (begInv === 0 && (displayItem.stock || 0) > 0) {
-                          begInv = displayItem.stock || 0;
-                        }
-                        return begInv;
+                        const raw = displayItem.educationLevel || displayItem.education_level || "";
+                        const toDisplay = {
+                          Kindergarten: "Preschool",
+                          "Junior High School": "Junior Highschool",
+                          "Senior High School": "Senior Highschool",
+                        };
+                        return toDisplay[raw] || raw || "N/A";
                       })()}
-                    </span>
-                  </div>
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
-                      Purchases:
-                    </span>
-                    <span className="text-sm font-semibold text-[#0C2340]">
-                      {displayItem.purchases || 0}
                     </span>
                   </div>
                   <div className="flex pt-3 mt-2 border-t border-gray-100">
@@ -270,32 +284,21 @@ const ItemDetailsModal = ({
                         selectedVariation?.id;
                       const isSelected = selectedKey === variationKey;
 
-                      // Display beginning_inventory and purchases if available
-                      // If beginning_inventory is 0 but stock > 0, use stock as beginning_inventory
-                      // (for backward compatibility with items created before beginning_inventory tracking)
-                      let beginningInventory =
-                        variation.beginning_inventory ||
-                        variation.beginningInventory ||
-                        0;
-                      // If beginning_inventory is 0 but we have stock, assume stock is the beginning inventory
-                      // This handles items created before beginning_inventory tracking was added
-                      if (beginningInventory === 0 && (variation.stock || 0) > 0) {
-                        beginningInventory = variation.stock || 0;
-                      }
-                      const purchases = variation.purchases || 0;
 
                       return (
                         <div
                           key={variationKey}
-                          onClick={() => onSelectVariation(variation)}
-                          className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                          className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
                             isSelected
                               ? "bg-orange-50 border-[#e68b00] shadow-sm"
                               : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm"
                           }`}
                         >
-                          {/* Thumbnail */}
-                          <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                          {/* Thumbnail - Clickable to select variation */}
+                          <div 
+                            onClick={() => onSelectVariation(variation)}
+                            className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer"
+                          >
                             <img
                               src={variation.image}
                               alt={variation.name}
@@ -307,22 +310,35 @@ const ItemDetailsModal = ({
                             />
                           </div>
 
-                          {/* Variation Info */}
-                          <div className="flex-1 min-w-0">
+                          {/* Variation Info - Clickable to select variation */}
+                          <div 
+                            onClick={() => onSelectVariation(variation)}
+                            className="flex-1 min-w-0 cursor-pointer"
+                          >
                             <p className="text-sm font-semibold text-[#0C2340] truncate">
                               {variation.name}
                             </p>
-                            <p className="text-xs font-medium text-[#e68b00]">
-                              {variation.size || "Standard"}
-                            </p>
-                            {/* Always show beginning_inventory and purchases */}
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Beg: {beginningInventory} | Purch: {purchases}
-                            </p>
+                            <div className="flex flex-col gap-0.5">
+                              <p className="text-xs font-medium text-[#e68b00]">
+                                {variation.size || "Standard"}
+                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-xs text-gray-600">
+                                  Beginning Inventory: {variation.beginning_inventory || 0}
+                                </span>
+                                <span className="text-xs text-gray-400">•</span>
+                                <span className="text-xs text-gray-600">
+                                  Purchases: {variation.purchases || 0}
+                                </span>
+                              </div>
+                            </div>
                           </div>
 
-                          {/* Stock Info */}
-                          <div className="flex items-center gap-1 mr-2">
+                          {/* Stock Info - Clickable to select variation */}
+                          <div 
+                            onClick={() => onSelectVariation(variation)}
+                            className="flex items-center gap-1 cursor-pointer"
+                          >
                             <span className="text-sm text-gray-600">
                               Stock:
                             </span>
@@ -339,20 +355,13 @@ const ItemDetailsModal = ({
                             </span>
                           </div>
 
-                          {/* Actions Menu */}
-                          <div
-                            className="relative"
-                            ref={openMenuId === variationKey ? menuRef : null}
-                          >
+                          {/* Actions Menu Button */}
+                          <div className="relative flex-shrink-0">
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(
-                                  openMenuId === variationKey
-                                    ? null
-                                    : variationKey
-                                );
+                              ref={(el) => {
+                                if (el) buttonRefs.current[variationKey] = el;
                               }}
+                              onClick={(e) => handleMenuClick(e, variationKey)}
                               className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
                               aria-label="More actions"
                             >
@@ -361,30 +370,6 @@ const ItemDetailsModal = ({
                                 className="text-gray-500"
                               />
                             </button>
-                            {openMenuId === variationKey && (
-                              <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 z-20 overflow-hidden">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onEdit?.(variation);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onDelete?.(variation);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
                           </div>
                         </div>
                       );
@@ -396,6 +381,56 @@ const ItemDetailsModal = ({
           </div>
         </div>
       </div>
+
+      {/* Menu Portal - Rendered outside scroll container to avoid clipping */}
+      {openMenuId && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 z-[100] w-32 overflow-hidden"
+          style={{
+            top: `${menuPosition.top}px`,
+            left: `${menuPosition.left}px`,
+          }}
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const variation = variations.find(
+                (v) => {
+                  const key = v._variationKey ||
+                    `${v.id}-${v.created_at}` ||
+                    v.id;
+                  return key === openMenuId;
+                }
+              );
+              onEdit?.(variation);
+              setOpenMenuId(null);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <span>Edit</span>
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              const variation = variations.find(
+                (v) => {
+                  const key = v._variationKey ||
+                    `${v.id}-${v.created_at}` ||
+                    v.id;
+                  return key === openMenuId;
+                }
+              );
+              onDelete?.(variation);
+              setOpenMenuId(null);
+            }}
+            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+          >
+            <span>Delete</span>
+          </button>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

@@ -128,7 +128,7 @@ const MyCart = () => {
     return (
       <div className="min-h-screen">
         <Navbar />
-        <HeroSection />
+        <HeroSection heading="Item Cart" align="bottom-center" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
           <div className="max-w-4xl mx-auto">
             <div className="bg-white rounded-xl shadow-lg p-8 md:p-12 text-center">
@@ -156,7 +156,7 @@ const MyCart = () => {
   return (
     <div className="min-h-screen">
       <Navbar />
-      <HeroSection />
+      <HeroSection heading="Item Cart" align="bottom-center" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
         <div className="max-w-6xl mx-auto">
           {/* Cart Container */}

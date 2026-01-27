@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { X } from "lucide-react";
 
 /**
  * UserModal Component
@@ -12,8 +12,6 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
     lastName: "",
     email: "",
     role: "",
-    status: "",
-    gradeLevelAndCourse: "",
   });
   
   const [fieldErrors, setFieldErrors] = useState({});
@@ -21,9 +19,6 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
 
   // Check if email is a student email (only @student.laverdad.edu.ph)
   const isStudentEmail = formData.email.toLowerCase().endsWith("@student.laverdad.edu.ph");
-  
-  // Check if grade level field should be enabled (student email AND student role)
-  const shouldEnableGradeLevel = isStudentEmail && formData.role === "student";
 
   // Auto-fill email when typing @student.laverdad.edu.ph or @laverdad.edu.ph
   const handleEmailChange = (e) => {
@@ -86,26 +81,14 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
     }
   };
   
-  // Handle role change - reset grade level if role changes from student
+  // Handle role change
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
     setFormData(prev => ({
       ...prev,
       role: newRole,
-      // Clear grade level if role is not student
-      gradeLevelAndCourse: newRole !== "student" ? "" : prev.gradeLevelAndCourse,
     }));
   };
-
-  // Clear student fields if email changes and is no longer a student email or role changes
-  useEffect(() => {
-    if ((!isStudentEmail || formData.role !== "student") && formData.gradeLevelAndCourse) {
-      setFormData(prev => ({
-        ...prev,
-        gradeLevelAndCourse: "",
-      }));
-    }
-  }, [formData.email, formData.role, isStudentEmail]);
 
   useEffect(() => {
     if (user) {
@@ -114,18 +97,11 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || "";
       
-      // Combine course_year_level and education_level for display
-      const gradeLevelAndCourse = user.course_year_level && user.education_level
-        ? `${user.course_year_level} - ${user.education_level}`
-        : user.course_year_level || "";
-      
       setFormData({
         firstName: firstName,
         lastName: lastName,
         email: user.email || "",
         role: user.role || "",
-        status: user.is_active !== undefined ? (user.is_active ? "Active" : "Inactive") : "",
-        gradeLevelAndCourse: gradeLevelAndCourse,
       });
 
       // Set isLastSystemAdmin flag if provided by backend
@@ -136,8 +112,6 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
         lastName: "",
         email: "",
         role: "",
-        status: "",
-        gradeLevelAndCourse: "",
       });
       setIsLastSystemAdmin(false);
     }
@@ -168,12 +142,6 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
     if (!formData.lastName || formData.lastName.trim() === "") return false;
     if (!formData.email || formData.email.trim() === "") return false;
     if (!formData.role || formData.role === "") return false;
-    if (!formData.status || formData.status === "") return false;
-
-    // Check grade level for student emails with student role
-    if (isStudentEmail && formData.role === "student" && !formData.gradeLevelAndCourse) {
-      return false;
-    }
 
     return true;
   };
@@ -205,17 +173,6 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
       hasErrors = true;
     }
 
-    if (!formData.status || formData.status === "") {
-      errors.status = true;
-      hasErrors = true;
-    }
-
-    // Validate grade level for student emails with student role
-    if (isStudentEmail && formData.role === "student" && !formData.gradeLevelAndCourse) {
-      errors.gradeLevelAndCourse = true;
-      hasErrors = true;
-    }
-
     setFieldErrors(errors);
 
     if (hasErrors) {
@@ -230,69 +187,13 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
       name: fullName,
       email: formData.email,
       role: formData.role,
-      is_active: formData.status === "Active",
+      is_active: true, // Default to active for new users
     };
-
-    // Add student-specific fields only if email is student email and role is student
-    if (isStudentEmail && formData.role === "student" && formData.gradeLevelAndCourse) {
-      // Parse the combined value (format: "Grade 10 - High School" or just "Grade 10")
-      const parts = formData.gradeLevelAndCourse.split(" - ");
-      saveData.course_year_level = parts[0] || formData.gradeLevelAndCourse;
-      saveData.education_level = parts[1] || null;
-    } else {
-      // Clear student fields for non-students
-      saveData.course_year_level = null;
-      saveData.education_level = null;
-    }
     
     onSave(saveData);
   };
   
 
-  // Combined Grade Level and Course Access options
-  const gradeLevelAndCourseOptions = [
-    // Kindergarten
-    { value: "Kinder - Kindergarten", label: "Kinder - Kindergarten" },
-    // Elementary (Grades 1-6)
-    { value: "Grade 1 - Elementary", label: "Grade 1 - Elementary" },
-    { value: "Grade 2 - Elementary", label: "Grade 2 - Elementary" },
-    { value: "Grade 3 - Elementary", label: "Grade 3 - Elementary" },
-    { value: "Grade 4 - Elementary", label: "Grade 4 - Elementary" },
-    { value: "Grade 5 - Elementary", label: "Grade 5 - Elementary" },
-    { value: "Grade 6 - Elementary", label: "Grade 6 - Elementary" },
-    // High School (Grades 7-10)
-    { value: "Grade 7 - High School", label: "Grade 7 - High School" },
-    { value: "Grade 8 - High School", label: "Grade 8 - High School" },
-    { value: "Grade 9 - High School", label: "Grade 9 - High School" },
-    { value: "Grade 10 - High School", label: "Grade 10 - High School" },
-    // Senior High School (Grades 11-12)
-    { value: "Grade 11 - Senior High School", label: "Grade 11 - Senior High School" },
-    { value: "Grade 12 - Senior High School", label: "Grade 12 - Senior High School" },
-    // College Programs
-    { value: "BSIS 1st Year - College", label: "BSIS 1st Year - College" },
-    { value: "BSIS 2nd Year - College", label: "BSIS 2nd Year - College" },
-    { value: "BSIS 3rd Year - College", label: "BSIS 3rd Year - College" },
-    { value: "BSIS 4th Year - College", label: "BSIS 4th Year - College" },
-    { value: "BSA 1st Year - College", label: "BSA 1st Year - College" },
-    { value: "BSA 2nd Year - College", label: "BSA 2nd Year - College" },
-    { value: "BSA 3rd Year - College", label: "BSA 3rd Year - College" },
-    { value: "BSA 4th Year - College", label: "BSA 4th Year - College" },
-    { value: "BSAIS 1st Year - College", label: "BSAIS 1st Year - College" },
-    { value: "BSAIS 2nd Year - College", label: "BSAIS 2nd Year - College" },
-    { value: "BSAIS 3rd Year - College", label: "BSAIS 3rd Year - College" },
-    { value: "BSAIS 4th Year - College", label: "BSAIS 4th Year - College" },
-    { value: "BSSW 1st Year - College", label: "BSSW 1st Year - College" },
-    { value: "BSSW 2nd Year - College", label: "BSSW 2nd Year - College" },
-    { value: "BSSW 3rd Year - College", label: "BSSW 3rd Year - College" },
-    { value: "BSSW 4th Year - College", label: "BSSW 4th Year - College" },
-    { value: "BAB 1st Year - College", label: "BAB 1st Year - College" },
-    { value: "BAB 2nd Year - College", label: "BAB 2nd Year - College" },
-    { value: "BAB 3rd Year - College", label: "BAB 3rd Year - College" },
-    { value: "BAB 4th Year - College", label: "BAB 4th Year - College" },
-    // Vocational
-    { value: "ACT 1st Year - Vocational", label: "ACT 1st Year - Vocational" },
-    { value: "ACT 2nd Year - Vocational", label: "ACT 2nd Year - Vocational" },
-  ];
 
   if (!isOpen) return null;
 
@@ -406,121 +307,51 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
             />
           </div>
 
-          {/* Role and Status - Side by Side */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.role}
-                onChange={(e) => {
-                  handleRoleChange(e);
-                  if (fieldErrors.role) {
-                    setFieldErrors(prev => ({ ...prev, role: false }));
-                  }
-                }}
-                onBlur={() => handleFieldBlur("role", formData.role)}
-                disabled={isLastSystemAdmin && formData.role === "system_admin"}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white ${
-                  fieldErrors.role ? "border-red-500" : "border-gray-300"
-                } ${
-                  isLastSystemAdmin && formData.role === "system_admin" 
-                    ? "bg-gray-50 text-gray-500 cursor-not-allowed" 
-                    : ""
-                }`}
-                required
-              >
-                <option value="">Select user role</option>
-                <option value="student">Student</option>
-                {!isStudentEmail && (
-                  <>
-                    <option value="property_custodian">Property Custodian</option>
-                    <option value="system_admin">System Admin</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={formData.status}
-                onChange={(e) => {
-                  setFormData({ ...formData, status: e.target.value });
-                  if (fieldErrors.status) {
-                    setFieldErrors(prev => ({ ...prev, status: false }));
-                  }
-                }}
-                onBlur={() => handleFieldBlur("status", formData.status)}
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white ${
-                  fieldErrors.status ? "border-red-500" : "border-gray-300"
-                }`}
-                required
-              >
-                <option value="">Select status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Grade Level and Course Access - Always visible as placeholder, active only for student emails with student role */}
+          {/* Role */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Grade Level and Course Access
+              Role <span className="text-red-500">*</span>
             </label>
-            <div className="relative">
-                <select
-                  value={formData.gradeLevelAndCourse}
-                  onChange={(e) => {
-                    setFormData({ ...formData, gradeLevelAndCourse: e.target.value });
-                    if (fieldErrors.gradeLevelAndCourse) {
-                      setFieldErrors(prev => ({ ...prev, gradeLevelAndCourse: false }));
-                    }
-                  }}
-                  onBlur={() => {
-                    if (shouldEnableGradeLevel && !formData.gradeLevelAndCourse) {
-                      setFieldErrors(prev => ({ ...prev, gradeLevelAndCourse: true }));
-                    }
-                  }}
-                  disabled={!shouldEnableGradeLevel}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white appearance-none pr-10 ${
-                    !shouldEnableGradeLevel 
-                      ? "bg-gray-50 text-gray-400 cursor-not-allowed" 
-                      : ""
-                  } ${
-                    fieldErrors.gradeLevelAndCourse ? "border-red-500" : "border-gray-300"
-                  }`}
-                  required={shouldEnableGradeLevel}
-                >
-                <option value="">Grade Level and Course Access</option>
-                {shouldEnableGradeLevel && gradeLevelAndCourseOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none w-5 h-5 ${
-                !shouldEnableGradeLevel ? "text-gray-300" : "text-gray-400"
-              }`} />
-            </div>
+            <select
+              value={formData.role}
+              onChange={(e) => {
+                handleRoleChange(e);
+                if (fieldErrors.role) {
+                  setFieldErrors(prev => ({ ...prev, role: false }));
+                }
+              }}
+              onBlur={() => handleFieldBlur("role", formData.role)}
+              disabled={isLastSystemAdmin && formData.role === "system_admin"}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white ${
+                fieldErrors.role ? "border-red-500" : "border-gray-300"
+              } ${
+                isLastSystemAdmin && formData.role === "system_admin" 
+                  ? "bg-gray-50 text-gray-500 cursor-not-allowed" 
+                  : ""
+              }`}
+              required
+            >
+              <option value="">Select user role</option>
+              <option value="property_custodian">Property Custodian</option>
+              <option value="system_admin">System Admin</option>
+              <option value="finance_staff">Finance Staff</option>
+              <option value="accounting_staff">Accounting Staff</option>
+              <option value="department_head">Department Head</option>
+            </select>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={!isFormValid()}
-              className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium ${
+              className={`px-4 py-2 rounded-lg transition-colors font-medium ${
                 isFormValid()
                   ? "bg-[#0C2340] text-white hover:bg-[#0a1d33] cursor-pointer"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"

@@ -35,6 +35,36 @@
 }
 
 @layer components {
+  /* Custom checkbox styling for eligibility table */
+  .eligibility-checkbox {
+    @apply w-5 h-5 rounded border-2 border-gray-300 cursor-pointer transition-all duration-200;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    position: relative;
+    background-color: white;
+  }
+
+  .eligibility-checkbox:checked {
+    @apply bg-green-500 border-green-500;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='white'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-size: 100% 100%;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .eligibility-checkbox:hover:not(:disabled) {
+    @apply border-green-400;
+  }
+
+  .eligibility-checkbox:focus {
+    @apply ring-2 ring-green-500 ring-offset-2 outline-none;
+  }
+
+  .eligibility-checkbox:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
   .btn {
     @apply inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-white;
   }

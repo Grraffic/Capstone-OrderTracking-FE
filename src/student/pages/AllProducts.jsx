@@ -62,8 +62,21 @@ const AllProducts = () => {
     }
   }, [user]);
 
-  // Fetch items data using existing hook
-  const { items, loading, error } = useItems();
+  // Fetch items data using existing hook with user education level for eligibility filtering
+  const { items, loading, error, fetchItems } = useItems();
+  
+  // Fetch items when user education level is available.
+  // Treat "Vocational" as "College" for eligibility (ACT is part of College).
+  const eligibilityLevel =
+    userEducationLevel === "Vocational" ? "College" : userEducationLevel;
+
+  useEffect(() => {
+    if (eligibilityLevel && fetchItems) {
+      fetchItems(eligibilityLevel);
+    } else if (fetchItems) {
+      fetchItems(); // Fetch all items if no education level
+    }
+  }, [eligibilityLevel, fetchItems]);
 
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);
@@ -123,21 +136,14 @@ const AllProducts = () => {
     });
   }, [items]);
 
-  // Filter products by education level, category, and search
+  // Filter products by category and search
+  // Note: Education level filtering is now handled by the backend via eligibility table
+  // So we don't need to filter by education level here anymore
   const filteredProducts = useMemo(() => {
     let filtered = [...transformedProducts];
 
-    // Filter by education level (if user has set their year level)
-    if (userEducationLevel) {
-      filtered = filtered.filter((product) => {
-        // Always show "General" products (available to all students)
-        if (product.educationLevel === "General" || !product.educationLevel) {
-          return true;
-        }
-        // Show products matching the user's education level
-        return product.educationLevel === userEducationLevel;
-      });
-    }
+    // Education level filtering is now done by the backend based on eligibility table
+    // Items returned from the API are already filtered to show only eligible items
 
     // Filter by category
     if (selectedCategory !== "all") {
@@ -234,8 +240,8 @@ const AllProducts = () => {
       {/* Navigation */}
       <Navbar />
 
-      {/* Hero Section - Scrolls naturally with page */}
-      <HeroSection />
+      {/* Hero Section – "Item Card" at middle bottom */}
+      <HeroSection heading="Item Card" align="bottom-center" />
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-16">

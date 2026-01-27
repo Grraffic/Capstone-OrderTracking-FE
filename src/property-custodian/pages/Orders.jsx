@@ -100,7 +100,7 @@ const Orders = () => {
         : activeStatusTab === "Orders"
         ? "regular"
         : null,
-    status: activeStatusTab === "Claimed" ? "completed" : null,
+    status: activeStatusTab === "Claimed" ? "claimed" : null,
     educationLevel:
       educationLevelFilter !== "All Education Levels"
         ? educationLevelFilter
@@ -135,7 +135,7 @@ const Orders = () => {
         status:
           order.status === "pending"
             ? "Processing"
-            : order.status === "completed" || order.status === "claimed"
+            : order.status === "claimed"
             ? "Claimed"
             : order.status,
         totalAmount: order.total_amount || 0,
@@ -149,15 +149,83 @@ const Orders = () => {
   const mockOrders = transformedOrders;
 
   // API already handles filtering, so we use the orders directly
-  // For local filtering (class and year), we still need to filter
+  // For local filtering (class and year, and date range), we still need to filter
   const filteredOrders = useMemo(() => {
-    if (classAndYearFilter === "All Class & Year") {
-      return mockOrders;
+    let filtered = mockOrders;
+
+    // Apply date range filter
+    if (startDate || endDate) {
+      filtered = filtered.filter((order) => {
+        // Use appropriate date based on order status
+        // For claimed orders, use claimed_date or updated_at
+        // For other orders, use created_at
+        const originalOrder = order.originalOrder || {};
+        const status = originalOrder.status?.toLowerCase() || order.status?.toLowerCase();
+        const isClaimed = status === "claimed";
+        
+        // Get the date from the original order object
+        let orderDate = null;
+        if (isClaimed) {
+          orderDate = originalOrder.claimed_date || originalOrder.updated_at || originalOrder.created_at;
+        } else {
+          orderDate = originalOrder.created_at || originalOrder.order_date;
+        }
+
+        // If no date found, include the order (don't filter out)
+        if (!orderDate) return true;
+
+        try {
+          const orderDateObj = new Date(orderDate);
+          if (isNaN(orderDateObj.getTime())) return true; // Invalid date, include it
+
+          const orderDateOnly = new Date(
+            orderDateObj.getFullYear(),
+            orderDateObj.getMonth(),
+            orderDateObj.getDate()
+          );
+
+          if (startDate) {
+            const startDateOnly = new Date(
+              startDate.getFullYear(),
+              startDate.getMonth(),
+              startDate.getDate()
+            );
+            if (orderDateOnly < startDateOnly) {
+              return false; // Exclude orders before start date
+            }
+          }
+
+          if (endDate) {
+            const endDateOnly = new Date(
+              endDate.getFullYear(),
+              endDate.getMonth(),
+              endDate.getDate()
+            );
+            // Include the end date (add 1 day and compare with <)
+            const endDateInclusive = new Date(endDateOnly);
+            endDateInclusive.setDate(endDateInclusive.getDate() + 1);
+            if (orderDateOnly >= endDateInclusive) {
+              return false; // Exclude orders after end date
+            }
+          }
+
+          return true;
+        } catch (e) {
+          console.warn("Error parsing order date:", orderDate, e);
+          return true; // Include if date parsing fails
+        }
+      });
     }
-    return mockOrders.filter((order) => {
-      return order.gradeOrProgram === classAndYearFilter;
-    });
-  }, [mockOrders, classAndYearFilter]);
+
+    // Apply class and year filter
+    if (classAndYearFilter !== "All Class & Year") {
+      filtered = filtered.filter((order) => {
+        return order.gradeOrProgram === classAndYearFilter;
+      });
+    }
+
+    return filtered;
+  }, [mockOrders, classAndYearFilter, startDate, endDate]);
 
   // Calculate statistics from all orders (not just current page)
   const stats = useOrdersStats(mockOrders);
@@ -191,14 +259,13 @@ const Orders = () => {
       const status = order.status?.toLowerCase();
       return (
         orderType !== "pre-order" &&
-        status !== "claimed" &&
-        status !== "completed"
+        status !== "claimed"
       );
     }).length;
 
     const allClaimed = allOrdersForCount.filter((order) => {
       const status = order.status?.toLowerCase();
-      return status === "claimed" || status === "completed";
+      return status === "claimed";
     }).length;
 
     return {

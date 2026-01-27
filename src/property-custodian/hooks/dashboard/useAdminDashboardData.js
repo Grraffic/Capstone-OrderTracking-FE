@@ -39,6 +39,7 @@ export const useAdminDashboardData = () => {
 
   // Recent Audits (transactions)
   const [recentAudits, setRecentAudits] = useState([]);
+  const [recentAuditsLoading, setRecentAuditsLoading] = useState(true);
 
   // Fetch all orders to calculate order counts
   const { orders: allOrders, loading: ordersLoading } = useOrders({
@@ -181,7 +182,7 @@ export const useAdminDashboardData = () => {
       const currentMonthClaimed = allOrders.filter((order) => {
         const status = order.status?.toLowerCase();
         return (
-          (status === "claimed" || status === "completed") &&
+          status === "claimed" &&
           isInMonth(
             order.claimed_date || order.updated_at || order.created_at,
             currentMonth,
@@ -195,8 +196,7 @@ export const useAdminDashboardData = () => {
         const status = order.status?.toLowerCase();
         const isRegular =
           orderType !== "pre-order" &&
-          status !== "claimed" &&
-          status !== "completed";
+          status !== "claimed";
         return (
           isRegular && isInMonth(order.created_at, currentMonth, currentYear)
         );
@@ -213,7 +213,7 @@ export const useAdminDashboardData = () => {
       const lastMonthClaimed = allOrders.filter((order) => {
         const status = order.status?.toLowerCase();
         return (
-          (status === "claimed" || status === "completed") &&
+          status === "claimed" &&
           isInMonth(
             order.claimed_date || order.updated_at || order.created_at,
             lastMonth,
@@ -227,8 +227,7 @@ export const useAdminDashboardData = () => {
         const status = order.status?.toLowerCase();
         const isRegular =
           orderType !== "pre-order" &&
-          status !== "claimed" &&
-          status !== "completed";
+          status !== "claimed";
         return (
           isRegular && isInMonth(order.created_at, lastMonth, lastMonthYear)
         );
@@ -241,7 +240,7 @@ export const useAdminDashboardData = () => {
 
       const totalClaimed = allOrders.filter((order) => {
         const status = order.status?.toLowerCase();
-        return status === "claimed" || status === "completed";
+        return status === "claimed";
       }).length;
 
       const totalOrders = allOrders.filter((order) => {
@@ -249,8 +248,7 @@ export const useAdminDashboardData = () => {
         const status = order.status?.toLowerCase();
         return (
           orderType !== "pre-order" &&
-          status !== "claimed" &&
-          status !== "completed"
+          status !== "claimed"
         );
       }).length;
 
@@ -277,51 +275,109 @@ export const useAdminDashboardData = () => {
     }
   }, [allOrders, ordersLoading]);
 
-  // Fetch recent transactions (using mock data for now, as transactions API may not be available)
-  useEffect(() => {
-    // For now, we'll use the transaction data structure from Inventory page
-    // In the future, this should fetch from a transactions API endpoint
-    const mockTransactions = [
-      {
-        id: 1,
-        type: "Items",
-        dateTime: "Nov 12, 2025 09:15 AM",
-        user: "Jeremy Amponget (Property Custodian)",
-        action: "ITEM CREATED (SHS Men's Polo)",
-        details: "Beginning Inventory: 200 units at P100, With 6 Variants",
-        status: "Items",
-      },
-      {
-        id: 2,
-        type: "Purchases",
-        dateTime: "Nov 13, 2025 10:56 AM",
-        user: "Jeremy Amponget (Property Custodian)",
-        action: "PURCHASE RECORDED (SHS Men's Polo)",
-        details: "+100 units at P110, New total ending inventory: 300",
-        status: "Purchases",
-      },
-      {
-        id: 3,
-        type: "Returns",
-        dateTime: "Nov 15, 2025 11:11 AM",
-        user: "Jeremy Amponget (Property Custodian)",
-        action: "RETURN RECORDED (SHS Men's Polo)",
-        details: "+1 unit at P100, New total ending inventory: 301",
-        status: "Returns",
-      },
-    ];
-    setRecentAudits(mockTransactions);
+  // Fetch recent transactions for Recent Audits section
+  const fetchRecentAudits = useCallback(async () => {
+    try {
+      setRecentAuditsLoading(true);
+      
+      // Get transactions from the last 30 days, limit to 15 most recent
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - 30); // Last 30 days
+      
+      const filters = {
+        startDate: startDate,
+        endDate: endDate,
+        limit: 5, // Show 5 most recent transactions
+      };
+
+      // Import transactionService dynamically to avoid circular dependencies
+      const transactionService = (await import("../../../services/transaction.service")).default;
+      const response = await transactionService.getTransactions(filters);
+
+      if (response.success && response.data && response.data.length > 0) {
+        // Transform API data to match RecentAudits component format
+        const transformedTransactions = response.data.map((tx) => {
+          // Format date and time
+          const date = new Date(tx.created_at);
+          const formattedDate = date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+          const formattedTime = date.toLocaleTimeString("en-US", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          });
+          const dateTime = `${formattedDate} ${formattedTime}`;
+
+          // Format user name and role
+          const userRole = tx.user_role === "property_custodian" 
+            ? "Property Custodian" 
+            : tx.user_role === "student" 
+            ? "Student" 
+            : tx.user_role === "system_admin" 
+            ? "System Admin" 
+            : tx.user_role || "";
+          const user = tx.user_name 
+            ? `${tx.user_name}${userRole ? ` (${userRole})` : ""}` 
+            : userRole || "Unknown User";
+
+          // Map transaction type to display type (for status column)
+          let displayType = tx.type;
+          if (tx.type === "Inventory") {
+            if (tx.action?.startsWith("PURCHASE RECORDED")) {
+              displayType = "Purchases";
+            } else if (tx.action?.startsWith("RETURN RECORDED")) {
+              displayType = "Returns";
+            } else if (tx.action?.startsWith("ITEM RELEASED")) {
+              displayType = "Releases";
+            } else {
+              displayType = "Items";
+            }
+          } else if (tx.type === "Item") {
+            displayType = "Items";
+          }
+
+          return {
+            id: tx.id,
+            dateTime: dateTime,
+            user: user,
+            action: tx.action || "N/A",
+            details: tx.details || "No details available",
+            status: displayType,
+          };
+        });
+
+        setRecentAudits(transformedTransactions);
+      } else {
+        // If no transactions, set empty array
+        setRecentAudits([]);
+      }
+    } catch (error) {
+      console.error("Error fetching recent audits:", error);
+      // On error, set empty array (don't show mock data)
+      setRecentAudits([]);
+    } finally {
+      setRecentAuditsLoading(false);
+    }
   }, []);
+
+  // Fetch recent transactions on mount
+  useEffect(() => {
+    fetchRecentAudits();
+  }, [fetchRecentAudits]);
 
   // Set loading to false when all data is loaded
   useEffect(() => {
-    if (!ordersLoading) {
+    if (!ordersLoading && !recentAuditsLoading) {
       const timer = setTimeout(() => {
         setLoading(false);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [ordersLoading]);
+  }, [ordersLoading, recentAuditsLoading]);
 
   // Change active tab
   const handleTabChange = useCallback((tab) => {

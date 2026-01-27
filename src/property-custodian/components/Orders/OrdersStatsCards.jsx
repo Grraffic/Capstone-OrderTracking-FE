@@ -85,7 +85,7 @@ const OrdersStatsCards = ({
                 </span>
                 <span className="text-gray-300">|</span>
                 <span className="text-sm text-gray-700">
-                  Done: <span className="font-semibold">{stats.completedCount}</span>
+                  Claimed: <span className="font-semibold">{stats.claimedCount}</span>
                 </span>
               </div>
             </div>
@@ -172,7 +172,7 @@ const OrdersStatsCards = ({
                 {stats.releasedQuantity}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                Completed + Claimed
+                Claimed
               </p>
             </div>
             <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600">

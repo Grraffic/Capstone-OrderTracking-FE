@@ -89,11 +89,13 @@ const ProductDetailsPage = () => {
         // 1. Product is "General" or has no education level
         // 2. User has no education level set (show all)
         // 3. Product matches user's education level
+        // 4. User has "Vocational" (ACT) and product is "College" – ACT is part of College
         const isAccessible =
           !productEducationLevel ||
           productEducationLevel === "General" ||
           !userEducationLevel ||
-          productEducationLevel === userEducationLevel;
+          productEducationLevel === userEducationLevel ||
+          (userEducationLevel === "Vocational" && productEducationLevel === "College");
 
         if (!isAccessible) {
           console.log(
@@ -468,7 +470,7 @@ const ProductDetailsPage = () => {
                     const level = product.educationLevel.toLowerCase();
                     let textLines = [];
                     if (level.includes("senior") && level.includes("high")) {
-                      textLines = ["Senior", "Highschool"];
+                      textLines = ["Senior", "High School"];
                     } else if (level.includes("college")) {
                       // Display "Higher" and "Education" on two lines
                       textLines = ["Higher", "Education"];
@@ -479,7 +481,7 @@ const ProductDetailsPage = () => {
                       level.includes("junior") &&
                       level.includes("high")
                     ) {
-                      textLines = ["Junior", "Highschool"];
+                      textLines = ["Junior", "High School"];
                     } else if (level.includes("kindergarten")) {
                       // Display "Kinder" and "garten" on two lines
                       textLines = ["Kinder", "garten"];

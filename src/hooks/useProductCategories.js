@@ -23,7 +23,7 @@ export const useProductCategories = () => {
     },
     {
       title: 'School Uniform',
-      subCategories: ['Elementary', 'Senior High School', 'College'],
+      subCategories: ['Elementary', 'Junior High School', 'Senior High School', 'College'],
     },
     {
       title: 'PE Uniform',

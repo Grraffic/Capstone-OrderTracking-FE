@@ -1,0 +1,69 @@
+import React from "react";
+import { createPortal } from "react-dom";
+import { XCircle } from "lucide-react";
+
+/**
+ * DisableUserModal Component
+ * 
+ * Confirmation modal for disabling a user
+ */
+const DisableUserModal = ({ isOpen, onClose, onConfirm, userName }) => {
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      onClick={(e) => {
+        // Close modal when clicking backdrop
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      {/* Modal Content */}
+      <div 
+        className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 transform transition-all"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Icon */}
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 rounded-full bg-[#e68b00] bg-opacity-20 flex items-center justify-center">
+            <XCircle className="text-[#e68b00]" size={32} />
+          </div>
+        </div>
+
+        {/* Title */}
+        <h2 className="text-2xl font-bold text-[#0C2340] text-center mb-4">
+          Disable User
+        </h2>
+
+        {/* Message */}
+        <p className="text-[#0C2340] text-center mb-8">
+          Are you sure you want to disable <span className="font-bold">{userName}</span>?
+        </p>
+
+        {/* Buttons */}
+        <div className="flex gap-4">
+          {/* No Button */}
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all duration-200 text-sm"
+          >
+            No
+          </button>
+
+          {/* Yes Button */}
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2 bg-[#e68b00] text-white font-semibold rounded-lg hover:bg-[#d97a1f] transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+          >
+            Yes
+          </button>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+export default DisableUserModal;

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { parseOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
+import api from "../../../services/api";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -11,7 +12,7 @@ const API_BASE_URL =
  * 1. Scan QR code from student's order receipt
  * 2. Parse QR code data to extract order number
  * 3. Find order in database by order number
- * 4. Update order status from "pending" to "completed"
+ * 4. Update order status from "pending" to "claimed"
  * 5. Reduce inventory for all items in the order
  *
  * @returns {Object} Scanner state and functions
@@ -60,75 +61,61 @@ export const useOrderQRScanner = () => {
 
       // Step 2: Find order by order number
       const orderNumber = orderData.orderNumber;
-      const orderResponse = await fetch(
-        `${API_BASE_URL}/orders/number/${orderNumber}`
-      );
+      const orderResponse = await api.get(`/orders/number/${orderNumber}`);
 
-      if (!orderResponse.ok) {
-        if (orderResponse.status === 404) {
-          throw new Error(`Order ${orderNumber} not found in database.`);
-        }
-        throw new Error(`Failed to fetch order: ${orderResponse.statusText}`);
-      }
-
-      const orderResult = await orderResponse.json();
-      if (!orderResult.success || !orderResult.data) {
+      if (!orderResponse.data.success || !orderResponse.data.data) {
         throw new Error("Order not found in database.");
       }
 
-      const order = orderResult.data;
+      const order = orderResponse.data.data;
       console.log("Found order:", order);
 
-      // --- NEW VALIDATION: Check for School Uniforms ---
-      // We need to verify if the order contains at least one "school_uniform" or "pe_uniform"
+      // --- VALIDATION: Check if order contains valid items ---
+      // Verify that the order has items and they can be found in inventory
       const validationItems = order.items || [];
-      let hasUniform = false;
+      
+      if (!validationItems || validationItems.length === 0) {
+        throw new Error(
+          "This order does not contain any items. Please contact support."
+        );
+      }
+
+      // Optional: Verify items exist in inventory (but don't block if check fails)
+      // This is just for logging/debugging purposes
+      let validItemsFound = 0;
       const educationLevel = order.education_level;
 
       for (const item of validationItems) {
         try {
-          // Fetch item details to check category
-          // We search by name and education level to find the specific item
-          const itemSearchResponse = await fetch(
-            `${API_BASE_URL}/items?search=${encodeURIComponent(
-              item.name
-            )}&education_level=${encodeURIComponent(educationLevel)}`
-          );
+          // Fetch item details to verify it exists
+          const itemSearchResponse = await api.get(`/items`, {
+            params: {
+              search: item.name,
+              education_level: educationLevel,
+            },
+          });
 
-          if (itemSearchResponse.ok) {
-            const itemSearchResult = await itemSearchResponse.json();
-            if (
-              itemSearchResult.success &&
-              itemSearchResult.data &&
-              itemSearchResult.data.length > 0
-            ) {
-              // Check the category of the found item
-              const foundItem = itemSearchResult.data[0];
-              // Assuming 'category' field exists and populated like 'school_uniform', 'pe_uniform', 'other_items'
-              if (
-                foundItem.category === "school_uniform" ||
-                foundItem.category === "pe_uniform"
-              ) {
-                hasUniform = true;
-                break; // Found a uniform, order is valid
-              }
-            }
+          if (
+            itemSearchResponse.data.success &&
+            itemSearchResponse.data.data &&
+            itemSearchResponse.data.data.length > 0
+          ) {
+            validItemsFound++;
           }
         } catch (catCheckError) {
-          console.warn("Error checking item category:", catCheckError);
-          // Continue checking other items
+          console.warn("Error checking item:", catCheckError);
+          // Continue checking other items - don't block the order
         }
       }
 
-      if (!hasUniform) {
-        throw new Error(
-          "This QR code is for an order that does not contain any School Uniforms. Please scan a valid uniform order."
-        );
+      // Log validation result but don't block the order
+      if (validItemsFound === 0) {
+        console.warn("⚠️ Warning: Could not verify items in inventory, but proceeding with order claim");
       }
       // ------------------------------------------------
 
-      // Check if order is already completed
-      if (order.status === "completed" || order.status === "claimed") {
+      // Check if order is already claimed
+      if (order.status === "claimed") {
         throw new Error(
           `Order ${orderNumber} has already been claimed on ${
             order.claimed_date
@@ -138,32 +125,20 @@ export const useOrderQRScanner = () => {
         );
       }
 
-      // Step 3: Update order status to "completed"
-      const statusResponse = await fetch(
-        `${API_BASE_URL}/orders/${order.id}/status`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: "claimed" }), // Changed to "claimed" to match standard flow if needed, or keep "completed" if that's the enum
-        }
-      );
+      // Step 3: Update order status to "claimed"
+      const statusResponse = await api.patch(`/orders/${order.id}/status`, {
+        status: "claimed",
+      });
 
-      if (!statusResponse.ok) {
+      if (!statusResponse.data.success) {
         throw new Error(
-          `Failed to update order status: ${statusResponse.statusText}`
+          statusResponse.data.message || "Failed to update order status"
         );
       }
 
-      const statusResult = await statusResponse.json();
-      if (!statusResult.success) {
-        throw new Error(
-          statusResult.message || "Failed to update order status"
-        );
-      }
+      const statusResult = statusResponse.data;
 
-      console.log("Order status updated to completed:", statusResult.data);
+      console.log("Order status updated to claimed:", statusResult.data);
 
       // Step 4: Reduce inventory for all items in the order
       const inventoryUpdates = [];
@@ -172,56 +147,45 @@ export const useOrderQRScanner = () => {
       for (const item of items) {
         try {
           // Find inventory item by name and education level
-          const inventoryResponse = await fetch(
-            `${API_BASE_URL}/items?search=${encodeURIComponent(
-              item.name
-            )}&education_level=${encodeURIComponent(order.education_level)}`
-          );
+          const inventoryResponse = await api.get(`/items`, {
+            params: {
+              search: item.name,
+              education_level: order.education_level,
+            },
+          });
 
-          if (!inventoryResponse.ok) {
-            console.error(`Failed to fetch inventory for ${item.name}`);
-            continue;
-          }
-
-          const inventoryResult = await inventoryResponse.json();
           if (
-            !inventoryResult.success ||
-            !inventoryResult.data ||
-            inventoryResult.data.length === 0
+            !inventoryResponse.data.success ||
+            !inventoryResponse.data.data ||
+            inventoryResponse.data.data.length === 0
           ) {
             console.error(`Inventory item not found: ${item.name}`);
             continue;
           }
 
           // Get the first matching item
-          const inventoryItem = inventoryResult.data[0];
+          const inventoryItem = inventoryResponse.data.data[0];
 
           // Reduce stock by the ordered quantity
           const adjustment = -item.quantity; // Negative to reduce stock
-          const adjustResponse = await fetch(
-            `${API_BASE_URL}/items/${inventoryItem.id}/adjust`,
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                adjustment,
-                reason: `Order ${orderNumber} claimed - ${item.quantity}x ${item.name}`,
-              }),
-            }
+          
+          // Pass size information if available (for size-specific items)
+          const adjustPayload = {
+            adjustment,
+            reason: `Order ${orderNumber} claimed - ${item.quantity}x ${item.name}`,
+          };
+          
+          // Include size if the item has a size (for JSON variant handling)
+          if (item.size) {
+            adjustPayload.size = item.size;
+          }
+          
+          const adjustResponse = await api.patch(
+            `/items/${inventoryItem.id}/adjust`,
+            adjustPayload
           );
 
-          if (!adjustResponse.ok) {
-            console.error(
-              `Failed to adjust inventory for ${item.name}:`,
-              adjustResponse.statusText
-            );
-            continue;
-          }
-
-          const adjustResult = await adjustResponse.json();
-          if (adjustResult.success) {
+          if (adjustResponse.data.success) {
             inventoryUpdates.push({
               item: item.name,
               quantity: item.quantity,
@@ -229,7 +193,7 @@ export const useOrderQRScanner = () => {
             });
             console.log(
               `Inventory reduced: ${item.name} by ${item.quantity}`,
-              adjustResult.data
+              adjustResponse.data.data
             );
           }
         } catch (itemError) {

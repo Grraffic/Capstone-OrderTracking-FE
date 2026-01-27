@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import {
   Home,
   Users,
+  GraduationCap,
   FileCheck,
   Settings,
   LogOut,
@@ -36,6 +37,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   const navItems = [
     { to: "/system-admin", label: "Home", icon: Home },
     { to: "/system-admin/users", label: "User Management", icon: Users },
+    { to: "/system-admin/students", label: "List of student", icon: GraduationCap },
     { to: "/system-admin/eligibility", label: "Eligibility Management", icon: FileCheck },
     { to: "/system-admin/settings", label: "System Settings", icon: Settings },
   ];

@@ -227,12 +227,12 @@ const Inventory = () => {
 
           allOrders.forEach((order, orderIndex) => {
             // Filter orders by date range if dates are provided
-            // For released orders (completed/claimed), use updated_at (when released)
+            // For released orders (claimed), use updated_at (when released)
             // For unreleased orders (pending/processing), use created_at (when created)
             // This allows comparing releases across different time periods
             if (startDate || endDate) {
               const status = order.status?.toLowerCase();
-              const isReleased = status === "completed" || status === "claimed";
+              const isReleased = status === "claimed";
 
               // Use appropriate date based on order status
               const orderDate = isReleased
@@ -334,7 +334,7 @@ const Inventory = () => {
               const status = order.status?.toLowerCase();
               if (status === "pending" || status === "processing") {
                 unreleasedCount++;
-              } else if (status === "completed" || status === "claimed") {
+              } else if (status === "claimed") {
                 releasedCount++;
               }
             }
@@ -433,7 +433,7 @@ const Inventory = () => {
             beginningInventory: beginningInventory,
             unreleased: orderCounts.unreleased, // Number of orders (pending/processing) containing this item
             purchases: originalPurchases, // Preserve original purchases value
-            released: orderCounts.released, // Number of orders (completed/claimed) containing this item
+            released: orderCounts.released, // Number of orders (claimed) containing this item
             returns: item.returns || 0,
             available: available, // Calculated: Ending Inventory - Unreleased
             endingInventory: endingInventory, // Calculated: Beginning Inventory + Purchases - Released + Returns
@@ -579,15 +579,28 @@ const Inventory = () => {
       }
     };
 
+    // Listen for order claimed events (when QR code is scanned)
+    const handleOrderClaimed = (data) => {
+      console.log("📡 [Inventory] Received order claimed event:", data);
+      // Refresh inventory data to show updated stock
+      fetchInventoryData();
+      // Refresh transactions if on transaction tab
+      if (activeTab === "transaction") {
+        refreshTransactions();
+      }
+    };
+
     on("item:updated", handleItemUpdate);
     on("item:created", handleItemCreated);
     on("order:created", handleOrderCreated);
+    on("order:claimed", handleOrderClaimed);
 
     // Cleanup on unmount
     return () => {
       off("item:updated", handleItemUpdate);
       off("item:created", handleItemCreated);
       off("order:created", handleOrderCreated);
+      off("order:claimed", handleOrderClaimed);
     };
   }, [isConnected, on, off, activeTab, fetchInventoryData, refreshTransactions]);
 
@@ -632,10 +645,9 @@ const Inventory = () => {
           order.status?.toLowerCase() === "processing"
       ).length;
 
-      // Released orders = completed or claimed status
+      // Released orders = claimed status
       const releasedCount = allOrders.filter(
         (order) =>
-          order.status?.toLowerCase() === "completed" ||
           order.status?.toLowerCase() === "claimed"
       ).length;
 

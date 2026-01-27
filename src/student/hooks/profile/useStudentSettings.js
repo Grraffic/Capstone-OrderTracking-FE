@@ -35,6 +35,7 @@ export const useStudentSettings = () => {
   const [formData, setFormData] = useState({
     courseYearLevel: "", // Combined field (e.g., "BSIS 1st Year", "Grade 10")
     studentNumber: "",
+    gender: "",
   });
 
   const fetchProfileData = useCallback(async () => {
@@ -56,6 +57,7 @@ export const useStudentSettings = () => {
           userData.studentNumber || userData.student_number || "N/A",
         courseYearLevel:
           userData.courseYearLevel || userData.course_year_level || "N/A",
+        gender: userData.gender || user?.gender || "",
       };
 
       setProfileData(profile);
@@ -68,6 +70,7 @@ export const useStudentSettings = () => {
           profile.courseYearLevel !== "N/A" ? profile.courseYearLevel : "",
         studentNumber:
           profile.studentNumber !== "N/A" ? profile.studentNumber : "",
+        gender: profile.gender || "",
       });
     } catch (err) {
       console.error("Error fetching profile:", err);
@@ -81,15 +84,15 @@ export const useStudentSettings = () => {
           photoURL: user.photoURL || null,
           role: user.role || "student",
           studentNumber: "N/A",
-          course: "N/A",
-          yearLevel: "N/A",
+          courseYearLevel: "N/A",
+          gender: "",
         };
         setProfileData(fallbackProfile);
         setImagePreview(fallbackProfile.photoURL);
         setFormData({
-          course: "",
-          yearLevel: "",
+          courseYearLevel: "",
           studentNumber: "",
+          gender: "",
         });
       }
     } finally {
@@ -160,17 +163,19 @@ export const useStudentSettings = () => {
   const getEducationLevel = (courseYearLevel) => {
     if (!courseYearLevel) return null;
 
-    // Kindergarten
-    if (courseYearLevel === "Kinder") return "Kindergarten";
+    // Preschool: Prekindergarten and Kindergarten (Kinder kept for backward compatibility)
+    if (courseYearLevel === "Prekindergarten" || courseYearLevel === "Kindergarten" || courseYearLevel === "Kinder") {
+      return "Kindergarten";
+    }
 
     // Elementary (Grades 1-6)
     if (courseYearLevel.match(/^Grade [1-6]$/)) {
       return "Elementary";
     }
 
-    // High School (Grades 7-10)
+    // Junior High School (Grades 7-10)
     if (courseYearLevel.match(/^Grade (7|8|9|10)$/)) {
-      return "High School";
+      return "Junior High School";
     }
 
     // Senior High School (Grades 11-12)
@@ -178,18 +183,13 @@ export const useStudentSettings = () => {
       return "Senior High School";
     }
 
-    // College Programs (BSIS, BSA, BSAIS, BSSW, BAB)
+    // College Programs (BSIS, BSA, BSAIS, BSSW, BAB, ACT)
     if (
       courseYearLevel.match(
-        /^(BSIS|BSA|BSAIS|BSSW|BAB) (1st|2nd|3rd|4th) Year$/
+        /^(BSIS|BSA|BSAIS|BSSW|BAB|ACT) (1st|2nd|3rd|4th) Year$/
       )
     ) {
       return "College";
-    }
-
-    // Vocational (ACT)
-    if (courseYearLevel.match(/^ACT (1st|2nd) Year$/)) {
-      return "Vocational";
     }
 
     return null;
@@ -216,6 +216,7 @@ export const useStudentSettings = () => {
       const updateData = {
         courseYearLevel: formData.courseYearLevel,
         studentNumber: formData.studentNumber || null,
+        gender: formData.gender || null,
         educationLevel: educationLevel,
       };
 
@@ -289,6 +290,7 @@ export const useStudentSettings = () => {
           : "",
       studentNumber:
         profileData?.studentNumber !== "N/A" ? profileData?.studentNumber : "",
+      gender: profileData?.gender || "",
     });
 
     setHasChanges(false);

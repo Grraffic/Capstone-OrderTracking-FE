@@ -1,5 +1,6 @@
 import React from "react";
 import { Menu } from "lucide-react";
+import { getCourseBannerStyle } from "../../utils/courseBanner";
 
 /**
  * ProfileCard Component
@@ -21,12 +22,15 @@ const ProfileCard = ({
   isProfileVisible,
   toggleProfileVisibility,
 }) => {
+  const courseLevel = profileData?.courseYearLevel;
+  const bannerStyle = getCourseBannerStyle(courseLevel);
+
   return (
     <div className="lg:col-span-1">
       {/* Profile card container - overlaps hero section slightly */}
       <div className="-mt-8 lg:-mt-10">
-        {/* Hamburger Menu Icon - Positioned to the left with no gap */}
-        <div className="absolute -left-1 top-12 z-40">
+        {/* Hamburger Menu Icon – original position with margin-top for banner clearance */}
+        <div className="absolute -left-1 top-12 mt-4 z-40 lg:mt-6">
           <button
             onClick={toggleProfileVisibility}
             className="p-3 bg-white hover:bg-gray-50 rounded-lg transition-colors shadow-md border-2 border-gray-200"
@@ -36,20 +40,41 @@ const ProfileCard = ({
         </div>
 
         <div className="relative w-full">
-          {/* BSIS Ribbon - Only visible when profile is expanded */}
-          {isProfileVisible && (
+          {/* Course ribbon: BSIS=red, BAB=blue, BSA/BSAIS=yellow, BSSW=violet */}
+          {isProfileVisible && bannerStyle.label && (
             <div className="absolute top-0 z-20">
               <div
-                className="bg-[#8B0000] text-white px-3 py-8 shadow-lg"
+                className={`${bannerStyle.bg} ${bannerStyle.text} px-3 py-8 shadow-lg flex flex-col items-center justify-start gap-1`}
                 style={{
                   clipPath:
                     "polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)",
                   width: "60px",
                 }}
               >
-                <p className="text-xs font-bold text-center leading-tight transform -rotate-0">
-                  BSIS
-                </p>
+                <img
+                  src={bannerStyle.logo || "/assets/image/LV Logo.png"}
+                  alt={bannerStyle.label}
+                  className="w-10 h-10 object-contain shrink-0"
+                />
+                {bannerStyle.label === "Kindergarten" ? (
+                  <p className="text-[10px] font-bold text-center leading-tight flex flex-col items-center gap-0">
+                    <span>Kinder</span>
+                    <span>garten</span>
+                  </p>
+                ) : bannerStyle.label === "Prekindergarten" ? (
+                  <p className="text-[10px] font-bold text-center leading-tight flex flex-col items-center gap-0">
+                    <span>Pre-</span>
+                    <span>Kinder</span>
+                  </p>
+                ) : (
+                  <p
+                    className={`font-bold text-center leading-tight ${
+                      bannerStyle.label === "Kinder" ? "text-[10px]" : "text-xs"
+                    }`}
+                  >
+                    {bannerStyle.label}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -101,7 +126,7 @@ const ProfileCard = ({
                         <span className="text-[#003363]">
                           {profileData?.name?.split(" ")[0] || "John"}
                         </span>{" "}
-                        <span className="text-[#C5A572]">
+                        <span className="text-[#E68B00]">
                           {profileData?.name?.split(" ").slice(1).join(" ") ||
                             "Doe"}
                         </span>
@@ -110,7 +135,7 @@ const ProfileCard = ({
                         {profileData?.courseYearLevel ||
                           "BS in Information Systems, 4th year"}
                       </p>
-                      <p className="text-[#C5A572] text-sm font-semibold">
+                      <p className="text-[#E68B00] text-sm font-semibold">
                         {profileData?.role || "Student"}
                       </p>
                     </div>
@@ -118,7 +143,7 @@ const ProfileCard = ({
                     {/* Student Details */}
                     <div className="space-y-4 mb-8">
                       <div>
-                        <p className="text-sm font-bold text-[#C5A572] mb-1">
+                        <p className="text-sm font-bold text-[#E68B00] mb-1">
                           Student Number:
                         </p>
                         <p className="text-gray-800 font-medium">
@@ -127,7 +152,7 @@ const ProfileCard = ({
                       </div>
 
                       <div>
-                        <p className="text-sm font-bold text-[#C5A572] mb-1">
+                        <p className="text-sm font-bold text-[#E68B00] mb-1">
                           Email Address:
                         </p>
                         <p className="text-gray-800 text-sm break-all">

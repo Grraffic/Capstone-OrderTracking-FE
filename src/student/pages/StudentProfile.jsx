@@ -134,6 +134,7 @@ const StudentProfile = () => {
         { text: "Higher Education", color: "text-[#FF6B35]", bold: true },
         { text: "College", color: "text-[#C5A572]", bold: true },
         { text: "Senior High School", color: "text-[#C5A572]", bold: true },
+        { text: "Junior High School", color: "text-[#C5A572]", bold: true },
         {
           text: "Basic Education Uniform",
           color: "text-[#003363]",
@@ -203,13 +204,13 @@ const StudentProfile = () => {
     <div className="min-h-screen">
       <Navbar />
 
-      {/* Hero Section - Fixed background */}
-      <HeroSection />
+      {/* Hero Section – "User Profile" at bottom-right */}
+      <HeroSection heading="User Profile" align="bottom-right" />
 
-      {/* Profile Card - Overlapping Hero Section (Left Side) */}
+      {/* Profile Card – left; Activity – right (original layout) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Side - Profile Card Component */}
+          {/* Left Side - Profile Card */}
           <ProfileCard
             profileData={profileData}
             profileLoading={profileLoading}

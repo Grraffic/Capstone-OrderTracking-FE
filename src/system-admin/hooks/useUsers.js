@@ -18,7 +18,7 @@ export const useUsers = () => {
   const [error, setError] = useState(null);
   const [pagination, setPagination] = useState({
     page: 1,
-    limit: 10,
+    limit: 8,
     total: 0,
     totalPages: 0,
   });
@@ -30,7 +30,7 @@ export const useUsers = () => {
       setError(null);
 
       const pageToFetch = params.page || pagination.page;
-      const limitToUse = params.limit || 10; // Always use 10 per page
+      const limitToUse = params.limit || 8; // Always use 8 per page
 
       const response = await userAPI.getUsers({
         page: pageToFetch,
@@ -38,6 +38,10 @@ export const useUsers = () => {
         search: params.search || "",
         role: params.role || "",
         status: params.status || "",
+        education_level: params.education_level || "",
+        course_year_level: params.course_year_level || "",
+        school_year: params.school_year || "", // Pass school_year for filtering by enrollment year
+        excludeRole: params.excludeRole || "", // Pass excludeRole to exclude specific roles (e.g., "student")
       });
 
       if (response.data && response.data.success) {
@@ -106,7 +110,7 @@ export const useUsers = () => {
   };
 
   // Delete user
-  const deleteUser = async (userId) => {
+  const deleteUser = async (userId, refreshParams = null) => {
     try {
       setLoading(true);
       setError(null);
@@ -114,8 +118,12 @@ export const useUsers = () => {
       const response = await userAPI.deleteUser(userId);
       
       if (response.data && response.data.success) {
-        // Refresh users list
-        await fetchUsers();
+        // Refresh users list with provided params or default (excluding students)
+        if (refreshParams) {
+          await fetchUsers(refreshParams);
+        } else {
+          await fetchUsers({ excludeRole: "student" });
+        }
         return response.data.data;
       }
     } catch (err) {

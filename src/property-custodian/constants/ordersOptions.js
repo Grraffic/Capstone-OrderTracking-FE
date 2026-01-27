@@ -67,7 +67,6 @@ export const ORDER_STATUS = [
   "All Status",
   "Pending",
   "Processing",
-  "Completed",
   "Claimed",
   "Cancelled",
 ];

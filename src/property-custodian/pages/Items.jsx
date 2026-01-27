@@ -100,6 +100,7 @@ const Items = () => {
     // Filters
     educationLevelFilter,
     setEducationLevelFilter,
+    mapTabLabelToEducationLevel,
     itemTypeFilter,
     setItemTypeFilter,
     gradeLevelFilter,
@@ -160,10 +161,34 @@ const Items = () => {
     });
   }, [filteredItems, startDate, endDate]);
 
-  // Group filtered items by name and item_type to avoid duplicates
+  // Group filtered items by name and item_type to avoid duplicates.
+  // When a specific education level tab is selected, keep only groups that have at least
+  // one variation matching that level (so College tab never shows Pre-Kindergarten items).
   const groupedItems = useMemo(() => {
-    return groupItemsByVariations(dateFilteredItems);
-  }, [dateFilteredItems]);
+    const grouped = groupItemsByVariations(dateFilteredItems);
+    if (educationLevelFilter === "All" || educationLevelFilter === "Accessories") {
+      return grouped;
+    }
+    const mappedLevel = (mapTabLabelToEducationLevel(educationLevelFilter) || "").trim().toLowerCase();
+    if (!mappedLevel) return grouped;
+    return grouped
+      .map((g) => ({
+        ...g,
+        variations: g.variations.filter((v) => {
+          const vLevel = (v.educationLevel || v.education_level || "").trim().toLowerCase();
+          return vLevel === mappedLevel;
+        }),
+      }))
+      .filter((g) => g.variations.length > 0)
+      .map((g) => ({
+        ...g,
+        totalStock: g.variations.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
+        stock: g.variations.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
+        educationLevel: g.variations[0]?.educationLevel ?? g.variations[0]?.education_level ?? g.educationLevel,
+        id: g.variations[0]?.id ?? g.id,
+        price: g.variations[0]?.price ?? g.price,
+      }));
+  }, [dateFilteredItems, educationLevelFilter, mapTabLabelToEducationLevel]);
 
   // Paginate grouped items
   const itemsPerPage = 12; // Match the itemsPerPage from useItems hook

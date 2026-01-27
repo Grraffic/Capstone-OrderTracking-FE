@@ -1,10 +1,10 @@
 import React, { useRef, useState } from "react";
-import { Camera, Upload, Trash2, ArrowLeft, AlertCircle } from "lucide-react";
+import { Camera, ArrowLeft, AlertCircle, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
-import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
 import { useStudentSettings } from "../hooks";
+import { getCourseBannerStyle } from "../utils/courseBanner";
 
 /**
  * StudentSettings Component
@@ -31,7 +31,6 @@ const StudentSettings = () => {
     hasChanges,
     formData,
     handleImageSelect,
-    handleRemovePhoto,
     handleFieldChange,
     handleSaveChanges,
     handleDiscardChanges,
@@ -39,8 +38,9 @@ const StudentSettings = () => {
 
   // Course & Year Level options - Combined dropdown
   const courseYearLevelOptions = [
-    // Kindergarten
-    { value: "Kinder", label: "Kinder", category: "Kindergarten" },
+    // Preschool (Prekindergarten and Kindergarten)
+    { value: "Prekindergarten", label: "Prekindergarten", category: "Preschool" },
+    { value: "Kindergarten", label: "Kindergarten", category: "Preschool" },
 
     // Elementary (Grades 1-6)
     { value: "Grade 1", label: "Grade 1", category: "Elementary" },
@@ -50,51 +50,50 @@ const StudentSettings = () => {
     { value: "Grade 5", label: "Grade 5", category: "Elementary" },
     { value: "Grade 6", label: "Grade 6", category: "Elementary" },
 
-    // High School (Grades 7-10)
-    { value: "Grade 7", label: "Grade 7", category: "High School" },
-    { value: "Grade 8", label: "Grade 8", category: "High School" },
-    { value: "Grade 9", label: "Grade 9", category: "High School" },
-    { value: "Grade 10", label: "Grade 10", category: "High School" },
+    // Junior High School (Grades 7-10)
+    { value: "Grade 7", label: "Grade 7", category: "Junior High School" },
+    { value: "Grade 8", label: "Grade 8", category: "Junior High School" },
+    { value: "Grade 9", label: "Grade 9", category: "Junior High School" },
+    { value: "Grade 10", label: "Grade 10", category: "Junior High School" },
 
     // Senior High School (Grades 11-12)
     { value: "Grade 11", label: "Grade 11", category: "Senior High School" },
     { value: "Grade 12", label: "Grade 12", category: "Senior High School" },
 
-    // College Programs
-    // BS Information Systems
-    { value: "BSIS 1st Year", label: "BSIS 1st Year", category: "College" },
-    { value: "BSIS 2nd Year", label: "BSIS 2nd Year", category: "College" },
-    { value: "BSIS 3rd Year", label: "BSIS 3rd Year", category: "College" },
-    { value: "BSIS 4th Year", label: "BSIS 4th Year", category: "College" },
+    // College Programs – labels show full program names
+    // BS in Information Systems
+    { value: "BSIS 1st Year", label: "BS in Information Systems 1st Year", category: "College" },
+    { value: "BSIS 2nd Year", label: "BS in Information Systems 2nd Year", category: "College" },
+    { value: "BSIS 3rd Year", label: "BS in Information Systems 3rd Year", category: "College" },
+    { value: "BSIS 4th Year", label: "BS in Information Systems 4th Year", category: "College" },
 
-    // BS Accountancy
-    { value: "BSA 1st Year", label: "BSA 1st Year", category: "College" },
-    { value: "BSA 2nd Year", label: "BSA 2nd Year", category: "College" },
-    { value: "BSA 3rd Year", label: "BSA 3rd Year", category: "College" },
-    { value: "BSA 4th Year", label: "BSA 4th Year", category: "College" },
+    // BS in Accountancy
+    { value: "BSA 1st Year", label: "BS in Accountancy 1st Year", category: "College" },
+    { value: "BSA 2nd Year", label: "BS in Accountancy 2nd Year", category: "College" },
+    { value: "BSA 3rd Year", label: "BS in Accountancy 3rd Year", category: "College" },
+    { value: "BSA 4th Year", label: "BS in Accountancy 4th Year", category: "College" },
 
-    // BS Accounting Information Systems
-    { value: "BSAIS 1st Year", label: "BSAIS 1st Year", category: "College" },
-    { value: "BSAIS 2nd Year", label: "BSAIS 2nd Year", category: "College" },
-    { value: "BSAIS 3rd Year", label: "BSAIS 3rd Year", category: "College" },
-    { value: "BSAIS 4th Year", label: "BSAIS 4th Year", category: "College" },
+    // BS in Accounting Information Systems
+    { value: "BSAIS 1st Year", label: "BS in Accounting Information Systems 1st Year", category: "College" },
+    { value: "BSAIS 2nd Year", label: "BS in Accounting Information Systems 2nd Year", category: "College" },
+    { value: "BSAIS 3rd Year", label: "BS in Accounting Information Systems 3rd Year", category: "College" },
+    { value: "BSAIS 4th Year", label: "BS in Accounting Information Systems 4th Year", category: "College" },
 
-    // BS Social Work
-    { value: "BSSW 1st Year", label: "BSSW 1st Year", category: "College" },
-    { value: "BSSW 2nd Year", label: "BSSW 2nd Year", category: "College" },
-    { value: "BSSW 3rd Year", label: "BSSW 3rd Year", category: "College" },
-    { value: "BSSW 4th Year", label: "BSSW 4th Year", category: "College" },
+    // BS in Social Work
+    { value: "BSSW 1st Year", label: "BS in Social Work 1st Year", category: "College" },
+    { value: "BSSW 2nd Year", label: "BS in Social Work 2nd Year", category: "College" },
+    { value: "BSSW 3rd Year", label: "BS in Social Work 3rd Year", category: "College" },
+    { value: "BSSW 4th Year", label: "BS in Social Work 4th Year", category: "College" },
 
     // Bachelor of Arts in Broadcasting
-    { value: "BAB 1st Year", label: "BAB 1st Year", category: "College" },
-    { value: "BAB 2nd Year", label: "BAB 2nd Year", category: "College" },
-    { value: "BAB 3rd Year", label: "BAB 3rd Year", category: "College" },
-    { value: "BAB 4th Year", label: "BAB 4th Year", category: "College" },
+    { value: "BAB 1st Year", label: "Bachelor of Arts in Broadcasting 1st Year", category: "College" },
+    { value: "BAB 2nd Year", label: "Bachelor of Arts in Broadcasting 2nd Year", category: "College" },
+    { value: "BAB 3rd Year", label: "Bachelor of Arts in Broadcasting 3rd Year", category: "College" },
+    { value: "BAB 4th Year", label: "Bachelor of Arts in Broadcasting 4th Year", category: "College" },
 
-    // Vocational
-    // Associate in Computer Technology
-    { value: "ACT 1st Year", label: "ACT 1st Year", category: "Vocational" },
-    { value: "ACT 2nd Year", label: "ACT 2nd Year", category: "Vocational" },
+    // College – Associate in Computer Technology
+    { value: "ACT 1st Year", label: "Associate in Computer Technology 1st Year", category: "College" },
+    { value: "ACT 2nd Year", label: "Associate in Computer Technology 2nd Year", category: "College" },
   ];
 
   // Handle back button click
@@ -118,31 +117,52 @@ const StudentSettings = () => {
     fileInputRef.current?.click();
   };
 
+  const courseLevel = formData.courseYearLevel || profileData?.courseYearLevel;
+  const bannerStyle = getCourseBannerStyle(courseLevel);
+
+  const programDisplayNames = {
+    BSIS: "BS in Information Systems",
+    BAB: "Bachelor of Arts in Broadcasting",
+    BSA: "BS in Accountancy",
+    BSAIS: "BS in Accounting Information Systems",
+    BSSW: "BS in Social Work",
+    ACT: "Associate in Computer Technology",
+  };
+  const getProgramAndYear = (courseYearLevel) => {
+    if (!courseYearLevel) return { program: "", year: "" };
+    const s = String(courseYearLevel).trim();
+    const match = s.match(/^(BSIS|BAB|BSAIS|BSA|BSSW|ACT)\s+(.+)$/i);
+    if (!match) return { program: s, year: "" };
+    const [, code, yearPart] = match;
+    const program = programDisplayNames[code.toUpperCase()] || code;
+    const year = yearPart ? `${yearPart.replace(/\s*year$/i, "").trim()} year` : "";
+    return { program, year };
+  };
+  const { program: programLabel, year: yearLabel } = getProgramAndYear(courseLevel);
+
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-100">
       <Navbar />
 
-      {/* Hero Section - Fixed background */}
-      <HeroSection />
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-32 relative z-10 pb-8">
+      {/* Main Content - No hero; compact header */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-8">
         {/* Main Container */}
         <div className="bg-white rounded-3xl shadow-gray-800 shadow-md p-6 md:p-8 lg:p-10">
-          {/* Back Button */}
+          {/* Back Button – circular icon-only */}
           <button
             onClick={handleBack}
-            className="mb-6 flex items-center space-x-2 text-gray-600 hover:text-[#003363] transition-colors"
+            type="button"
+            className="mb-6 flex items-center justify-center w-12 h-12 rounded-full bg-white border-2 border-[#003363] text-[#003363] shadow-md hover:bg-gray-50 hover:border-[#002347] hover:text-[#002347] transition-colors"
+            aria-label="Go back"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back</span>
           </button>
 
           {/* Page Title */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold">
               <span className="text-[#003363]">User </span>
-              <span className="text-[#C5A572]">Settings</span>
+              <span className="text-[#E68B00]">Settings</span>
             </h1>
           </div>
 
@@ -156,52 +176,76 @@ const StudentSettings = () => {
               <p>Failed to load settings</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Left Side - Profile Picture Section */}
-              <div className="lg:col-span-1">
-                <div className="bg-gray-50 rounded-xl p-6">
-                  <h2 className="text-lg font-semibold text-[#003363] mb-4">
-                    Profile Picture
-                  </h2>
-
-                  {/* Profile Image */}
-                  <div className="flex flex-col items-center mb-6">
-                    <div className="relative group">
-                      {imagePreview ? (
-                        <img
-                          src={imagePreview}
-                          alt="Profile"
-                          className="w-40 h-40 rounded-full border-4 border-[#C5A572] object-cover cursor-pointer transition-opacity group-hover:opacity-75"
-                          onClick={triggerFileInput}
-                        />
-                      ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
+              {/* Left Side – Student profile card: responsive mobile → tablet → laptop */}
+              <div className="md:col-span-1 flex flex-col min-h-0">
+                <div className="relative bg-white rounded-2xl border-2 sm:border-4 border-gray-200 shadow-sm overflow-visible p-4 sm:p-5 md:p-6 flex flex-col justify-center items-center h-full">
+                  {/* Profile image + banner: banner anchored to image, scales with viewport */}
+                  <div className="flex justify-center">
+                    <div className="relative w-36 h-36 sm:w-40 sm:h-40 md:w-44 md:h-44 lg:w-48 lg:h-48">
+                      {/* Banner – on mobile: less in the border (right/down); desktop: left -17px, top -19px */}
+                      {bannerStyle.label && (
                         <div
-                          className="w-40 h-40 rounded-full border-4 border-[#C5A572] bg-[#003363] flex items-center justify-center cursor-pointer transition-opacity group-hover:opacity-75"
-                          onClick={triggerFileInput}
+                          className={`absolute left-[-8px] top-[-12px] lg:left-[-17px] lg:top-[-19px] z-10 w-11 h-[139px] flex flex-col items-center justify-center gap-2 py-4 shadow-xl origin-top-left
+                            scale-[0.75] sm:scale-[0.833] md:scale-[0.917] lg:scale-100
+                            ${bannerStyle.bg} ${bannerStyle.text}`}
                         >
-                          <span className="text-5xl font-bold text-white">
-                            {profileData?.name?.charAt(0).toUpperCase() || "S"}
-                          </span>
+                          <img
+                            src={bannerStyle.logo || "/assets/image/LV Logo.png"}
+                            alt={bannerStyle.label}
+                            className="w-10 h-10 object-contain shrink-0"
+                          />
+                          {bannerStyle.label === "Kindergarten" ? (
+                            <span className="font-bold tracking-wide text-center leading-tight text-[10px] flex flex-col items-center gap-0">
+                              <span>Kinder</span>
+                              <span>garten</span>
+                            </span>
+                          ) : bannerStyle.label === "Prekindergarten" ? (
+                            <span className="font-bold tracking-wide text-center leading-tight text-[10px] flex flex-col items-center gap-0">
+                              <span>Pre-</span>
+                              <span>Kinder</span>
+                            </span>
+                          ) : (
+                            <span
+                              className={`font-bold tracking-wide text-center leading-tight ${
+                                bannerStyle.label === "Kinder" ? "text-[10px]" : "text-xs"
+                              }`}
+                            >
+                              {bannerStyle.label}
+                            </span>
+                          )}
                         </div>
                       )}
-
-                      {/* Camera Icon Overlay */}
-                      <div
-                        className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        onClick={triggerFileInput}
-                      >
-                        <div className="bg-black bg-opacity-50 rounded-full p-3">
-                          <Camera className="w-8 h-8 text-white" />
+                      <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-[#E68B00] shadow-xl group">
+                        {imagePreview ? (
+                          <img
+                            src={imagePreview}
+                            alt="Profile"
+                            className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-90"
+                            onClick={triggerFileInput}
+                          />
+                        ) : (
+                          <div
+                            className="absolute inset-0 bg-[#003363] flex items-center justify-center cursor-pointer transition-opacity group-hover:opacity-90"
+                            onClick={triggerFileInput}
+                          >
+                            <span className="text-4xl sm:text-5xl font-bold text-white">
+                              {profileData?.name?.charAt(0).toUpperCase() || "S"}
+                            </span>
+                          </div>
+                        )}
+                        <div
+                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/30 z-20"
+                          onClick={triggerFileInput}
+                        >
+                          <div className="bg-white/95 rounded-full p-2 sm:p-2.5">
+                            <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-[#003363]" />
+                          </div>
                         </div>
                       </div>
                     </div>
-
-                    <p className="text-sm text-gray-500 mt-4 text-center">
-                      Click image to change
-                    </p>
                   </div>
 
-                  {/* Hidden File Input */}
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -210,50 +254,47 @@ const StudentSettings = () => {
                     className="hidden"
                   />
 
-                  {/* Action Buttons */}
-                  <div className="space-y-3">
-                    <button
-                      onClick={triggerFileInput}
-                      className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-[#003363] text-white rounded-lg hover:bg-[#002347] transition-colors"
-                    >
-                      <Upload className="w-5 h-5" />
-                      <span>Upload New Photo</span>
-                    </button>
-
-                    {imagePreview && (
-                      <button
-                        onClick={handleRemovePhoto}
-                        className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                        <span>Remove Photo</span>
-                      </button>
+                  {/* Student details: responsive typography */}
+                  <div className="mt-4 mb-4 sm:mt-5 sm:mb-5 md:mt-5 md:mb-6 text-center">
+                    <p className="font-bold text-[#003363] text-base sm:text-lg">
+                      {profileData?.name || "Student Name"}
+                    </p>
+                    {programLabel && (
+                      <p className="text-[#E68B00] text-xs sm:text-sm font-medium mt-0.5">
+                        {programLabel}
+                      </p>
+                    )}
+                    {yearLabel && (
+                      <p className="text-[#E68B00] text-xs sm:text-sm font-medium">
+                        {yearLabel}
+                      </p>
                     )}
                   </div>
 
-                  {/* Image Requirements */}
-                  <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                    <p className="text-xs text-gray-600 font-semibold mb-2">
-                      Image Requirements:
-                    </p>
-                    <ul className="text-xs text-gray-600 space-y-1">
-                      <li>• Format: JPG, JPEG, or PNG</li>
-                      <li>• Maximum size: 5MB</li>
-                      <li>• Recommended: Square image</li>
-                    </ul>
-                  </div>
+                  {/* Personal Information button: responsive padding & alignment */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      document.getElementById("personal-information")?.scrollIntoView({ behavior: "smooth" })
+                    }
+                    className="mt-auto -ml-4 sm:-ml-5 md:-ml-6 mb-4 sm:mb-5 md:mb-6 w-full max-w-[280px] sm:max-w-xs pl-4 sm:pl-5 md:pl-6 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-[#003363] text-white flex items-center justify-center gap-2 font-medium hover:bg-[#002347] transition-colors shadow-sm rounded-tr-xl sm:rounded-tr-2xl rounded-br-xl sm:rounded-br-2xl self-start text-sm sm:text-base"
+                  >
+                    <User className="w-4 h-4 sm:w-5 sm:h-5 shrink-0 text-white" />
+                    <span className="text-white">Personal Information</span>
+                  </button>
+
                 </div>
               </div>
 
               {/* Right Side - Personal Information */}
-              <div className="lg:col-span-2">
+              <div id="personal-information" className="md:col-span-2 scroll-mt-24">
                 <div className="bg-gray-50 rounded-xl p-6">
-                  <h2 className="text-lg font-semibold text-[#C5A572] mb-6">
+                  <h2 className="text-lg font-semibold text-[#E68B00] mb-6">
                     Personal Information
                   </h2>
 
                   <div className="space-y-6">
-                    {/* Name Fields */}
+                    {/* Row 1: First Name, Last Name */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -283,7 +324,42 @@ const StudentSettings = () => {
                       </div>
                     </div>
 
-                    {/* Course & Year Level - Combined Dropdown */}
+                    {/* Row 2: Gender, Student Number */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Gender
+                        </label>
+                        <select
+                          value={formData.gender}
+                          onChange={(e) =>
+                            handleFieldChange("gender", e.target.value)
+                          }
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all"
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Student Number
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.studentNumber}
+                          onChange={(e) =>
+                            handleFieldChange("studentNumber", e.target.value)
+                          }
+                          placeholder="e.g., 22-11223"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Row 3: Course & Year Level */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Course & Year Level{" "}
@@ -298,10 +374,10 @@ const StudentSettings = () => {
                       >
                         <option value="">Select Course & Year Level</option>
 
-                        {/* Kindergarten */}
-                        <optgroup label="Kindergarten">
+                        {/* Preschool */}
+                        <optgroup label="Preschool">
                           {courseYearLevelOptions
-                            .filter((opt) => opt.category === "Kindergarten")
+                            .filter((opt) => opt.category === "Preschool")
                             .map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
@@ -320,10 +396,10 @@ const StudentSettings = () => {
                             ))}
                         </optgroup>
 
-                        {/* High School */}
-                        <optgroup label="High School (Grades 7-10)">
+                        {/* Junior High School */}
+                        <optgroup label="Junior High School (Grades 7-10)">
                           {courseYearLevelOptions
-                            .filter((opt) => opt.category === "High School")
+                            .filter((opt) => opt.category === "Junior High School")
                             .map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
@@ -355,36 +431,10 @@ const StudentSettings = () => {
                             ))}
                         </optgroup>
 
-                        {/* Vocational */}
-                        <optgroup label="Vocational Programs">
-                          {courseYearLevelOptions
-                            .filter((opt) => opt.category === "Vocational")
-                            .map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                        </optgroup>
                       </select>
                     </div>
 
-                    {/* Student Number */}
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Student Number
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.studentNumber}
-                        onChange={(e) =>
-                          handleFieldChange("studentNumber", e.target.value)
-                        }
-                        placeholder="e.g., 22-11223"
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all"
-                      />
-                    </div>
-
-                    {/* Email Address */}
+                    {/* Row 4: Email Address */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Email Address
@@ -395,33 +445,6 @@ const StudentSettings = () => {
                         readOnly
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
                       />
-                      <p className="text-xs text-gray-500 mt-2">
-                        Email cannot be changed (linked to Google OAuth)
-                      </p>
-                    </div>
-
-                    {/* Info Note */}
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div className="flex items-start space-x-3">
-                        <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-blue-800 font-semibold">
-                            Information Notice
-                          </p>
-                          <p className="text-xs text-blue-700 mt-1">
-                            Your name and email are managed through your Google
-                            account and cannot be edited here. You can update
-                            your profile picture, course & year level, and
-                            student number.
-                          </p>
-                          <p className="text-xs text-blue-700 mt-2">
-                            <strong>Note:</strong> Your course & year level
-                            determines which uniforms are available to you on
-                            the products page. Select the appropriate education
-                            level to see relevant items.
-                          </p>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -449,7 +472,7 @@ const StudentSettings = () => {
                     disabled={!hasChanges || saving}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${
                       hasChanges && !saving
-                        ? "bg-[#C5A572] text-white hover:bg-[#b8985f]"
+                        ? "bg-[#E68B00] text-white hover:bg-[#d97d00]"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >

@@ -15,8 +15,8 @@ const UserFilters = ({
   onStatusFilterChange,
   onAddUser,
 }) => {
-  const roles = ["All Roles", "student", "property_custodian", "system_admin"];
-  const statuses = ["All Status", "Active", "Inactive", "Pending"];
+  const roles = ["All Roles", "property_custodian", "system_admin", "finance_staff", "accounting_staff", "department_head"];
+  const statuses = ["All Status", "Active", "Inactive"];
 
   return (
     <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center">
@@ -40,7 +40,9 @@ const UserFilters = ({
       >
         {roles.map((role) => (
           <option key={role} value={role}>
-            {role === "All Roles" ? "All Roles" : role.charAt(0).toUpperCase() + role.slice(1).replace("_", " ")}
+            {role === "All Roles" 
+              ? "All Roles" 
+              : role.split("_").map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(" ")}
           </option>
         ))}
       </select>

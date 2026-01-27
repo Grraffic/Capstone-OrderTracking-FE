@@ -96,6 +96,18 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
+        
+        // Check if error is due to inactive account
+        if (error.response?.status === 403 && error.response?.data?.error === "account_inactive") {
+          console.log("🚫 Account is inactive, clearing session...");
+          localStorage.removeItem("authToken");
+          setUser(null);
+          setUserRole(null);
+          setLoading(false);
+          // Don't redirect here - let ProtectedRoute handle it
+          return;
+        }
+        
         // If token is invalid, clear it
         localStorage.removeItem("authToken");
         setUser(null);

@@ -1,26 +1,249 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
+import EligibilityTable from "../components/EligibilityManagement/EligibilityTable";
+import { useEligibility } from "../hooks/useEligibility";
+import { FileCheck, Search, Edit2, X, Save } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 /**
  * EligibilityManagement Page
- * 
- * Placeholder page for eligibility management
+ *
+ * Main page for managing item eligibility across education levels
+ * Features:
+ * - View items with eligibility checkboxes
+ * - Edit mode for updating eligibility
+ * - Search functionality
+ * - Pagination
+ * - Delete items
  */
 const EligibilityManagement = () => {
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const {
+    items,
+    loading,
+    error,
+    pagination,
+    isEditMode,
+    hasChanges,
+    fetchEligibilityData,
+    updateLocalChange,
+    saveChanges,
+    cancelChanges,
+    toggleEditMode,
+    deleteItem,
+    getItemEligibility,
+  } = useEligibility();
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  // Fetch data when search or page changes
+  useEffect(() => {
+    fetchEligibilityData({
+      page: currentPage,
+      limit: 10,
+      search: debouncedSearch,
+    });
+  }, [currentPage, debouncedSearch, fetchEligibilityData]);
+
+  // Initial fetch
+  useEffect(() => {
+    fetchEligibilityData({
+      page: 1,
+      limit: 10,
+      search: "",
+    });
+  }, [fetchEligibilityData]);
+
+  /**
+   * Handle edit table button click
+   */
+  const handleEditTable = () => {
+    toggleEditMode();
+  };
+
+  /**
+   * Handle save changes
+   */
+  const handleSaveChanges = async () => {
+    try {
+      await saveChanges();
+    } catch (error) {
+      // Error already handled in hook
+      console.error("Failed to save changes:", error);
+    }
+  };
+
+  /**
+   * Handle cancel changes
+   */
+  const handleCancelChanges = () => {
+    cancelChanges();
+    toast.success("Changes cancelled");
+  };
+
+  /**
+   * Handle eligibility checkbox change
+   */
+  const handleEligibilityChange = (itemId, eligibility) => {
+    updateLocalChange(itemId, eligibility);
+  };
+
+  /**
+   * Handle delete item
+   */
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await deleteItem(itemId);
+    } catch (error) {
+      // Error already handled in hook
+      console.error("Failed to delete item:", error);
+    }
+  };
+
+  /**
+   * Handle page change
+   */
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
   return (
     <SystemAdminLayout>
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-[#0C2340]">Eligibility Management</h1>
-        <div className="py-12 text-center text-gray-500">
-          Eligibility management features coming soon...
+        {/* Page Header */}
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 bg-[#0C2340] rounded-full flex items-center justify-center">
+            <FileCheck className="text-white" size={32} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-[#0C2340]">
+              Eligibility Management
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Management for the Eligibility of Uniforms
+            </p>
+          </div>
         </div>
+
+        {/* Controls Bar */}
+        <div className="flex items-center justify-between gap-4">
+          {/* Search Bar */}
+          <div className="flex-1 max-w-md relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+            <input
+              type="text"
+              placeholder="Search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+            />
+          </div>
+
+          {/* Edit Table Button */}
+          <button
+            onClick={handleEditTable}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              isEditMode
+                ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                : "bg-[#0C2340] text-white hover:bg-[#0a1d33]"
+            }`}
+          >
+            {isEditMode ? (
+              <>
+                <X size={18} />
+                Cancel Edit
+              </>
+            ) : (
+              <>
+                <Edit2 size={18} />
+                Edit Table
+              </>
+            )}
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            {error}
+          </div>
+        )}
+
+        {/* Eligibility Table */}
+        <EligibilityTable
+          items={items}
+          loading={loading}
+          isEditMode={isEditMode}
+          onEligibilityChange={handleEligibilityChange}
+          onDeleteItem={handleDeleteItem}
+          getItemEligibility={getItemEligibility}
+        />
+
+        {/* Pagination Info */}
+        {pagination.total > 0 && (
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-600">
+              Showing {items.length} of {pagination.total} Items
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Previous
+              </button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= pagination.totalPages}
+                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons (only visible in edit mode) */}
+        {isEditMode && (
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+            <button
+              onClick={handleCancelChanges}
+              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSaveChanges}
+              disabled={!hasChanges}
+              className="px-6 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              <Save size={18} />
+              Save Changes
+            </button>
+          </div>
+        )}
       </div>
     </SystemAdminLayout>
   );
 };
 
 export default EligibilityManagement;
-
-
-
-

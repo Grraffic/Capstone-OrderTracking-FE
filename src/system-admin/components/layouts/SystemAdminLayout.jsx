@@ -32,7 +32,7 @@ const SystemAdminLayout = ({ children, noPadding = false }) => {
           sidebarOpen ? "left-64" : "left-20"
         }`}
       >
-        <div className={noPadding ? "" : "p-8"}>{children}</div>
+        <div className={noPadding ? "" : "p-4 sm:p-6 lg:p-8"}>{children}</div>
       </main>
     </div>
   );
@@ -43,3 +43,4 @@ export default SystemAdminLayout;
 
 
 
+  

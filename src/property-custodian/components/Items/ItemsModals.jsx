@@ -94,7 +94,7 @@ const ItemsModals = ({
     modalState
   );
 
-  // Grade level options override (use existing values, custom labels)
+  // Education level options override (use existing values, custom labels)
   const gradeLevelOptions = useMemo(
     () =>
       EDUCATION_LEVELS.filter(
@@ -1062,11 +1062,11 @@ const ItemsModals = ({
               onBlur={() => setFocusedSection(null)}
             >
               <div className="space-y-4">
-                {/* Row: Grade Level & Grade Level Category */}
+                {/* Row: Education Level & Grade Level Category (Category within Education Level) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">
-                      Grade Level
+                      Education Level
                     </label>
                     <select
                       name="educationLevel"
@@ -1075,7 +1075,7 @@ const ItemsModals = ({
                       required
                       className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
-                      <option value="">Select Grade Level</option>
+                      <option value="">Select Education Level</option>
                       {gradeLevelOptions.map((level) => (
                         <option key={level.value} value={level.value}>
                           {level.label}

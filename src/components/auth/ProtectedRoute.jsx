@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { Loader2 } from 'lucide-react';
+import InactiveUserOverlay from '../common/InactiveUserOverlay';
 
 const ProtectedRoute = ({ children, requiredRoles = [] }) => {
   const { user, userRole, loading } = useAuth();
@@ -22,6 +23,11 @@ const ProtectedRoute = ({ children, requiredRoles = [] }) => {
   // Redirect to login if not authenticated
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check if user is inactive - block access
+  if (user.is_active === false) {
+    return <InactiveUserOverlay userName={user.displayName || user.email?.split("@")[0]} email={user.email} />;
   }
 
   // Check if user has required role

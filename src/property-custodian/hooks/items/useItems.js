@@ -71,13 +71,20 @@ export const useItems = () => {
 
   /**
    * Fetch items from API
+   * @param {string} userEducationLevel - Optional user education level for eligibility filtering
    */
-  const fetchItems = useCallback(async () => {
+  const fetchItems = useCallback(async (userEducationLevel = null) => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${API_BASE_URL}/items`);
+      // Build URL with optional userEducationLevel parameter for eligibility filtering
+      let url = `${API_BASE_URL}/items`;
+      if (userEducationLevel) {
+        url += `?userEducationLevel=${encodeURIComponent(userEducationLevel)}`;
+      }
+
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error("Failed to fetch items");
@@ -128,8 +135,12 @@ export const useItems = () => {
 
   /**
    * Fetch items on component mount
+   * Note: Components that need eligibility filtering should call fetchItems(userEducationLevel) explicitly
+   * This auto-fetch is for components that don't need filtering (like property custodian views)
    */
   useEffect(() => {
+    // Auto-fetch items on mount for components that don't need eligibility filtering
+    // Components that need filtering (like student AllProducts) should call fetchItems(userEducationLevel) manually
     fetchItems();
   }, [fetchItems]);
 
@@ -252,7 +263,13 @@ export const useItems = () => {
       // Apply education level filter - show both uniforms and accessories for this level
       // Map the filter value to the actual database value
       const mappedFilter = mapTabLabelToEducationLevel(educationLevelFilter);
-      result = result.filter((item) => item.educationLevel === mappedFilter);
+      result = result.filter((item) => {
+        // Check both educationLevel and education_level fields for compatibility
+        // Use case-insensitive comparison to handle any case mismatches
+        const itemEducationLevel = (item.educationLevel || item.education_level || "").trim();
+        const normalizedFilter = (mappedFilter || "").trim();
+        return itemEducationLevel.toLowerCase() === normalizedFilter.toLowerCase();
+      });
     }
     // When "All" is selected, show all items including accessories
 
@@ -711,6 +728,7 @@ export const useItems = () => {
     // Filters
     educationLevelFilter,
     setEducationLevelFilter,
+    mapTabLabelToEducationLevel,
     itemTypeFilter,
     setItemTypeFilter,
     // Item Adjustment Modal

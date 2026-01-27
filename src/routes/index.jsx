@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+import MaintenanceBlock from "../components/auth/MaintenanceBlock";
 import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
 import AuthCallback from "../pages/AuthCallback";
@@ -14,7 +15,9 @@ import Settings from "../property-custodian/pages/Settings";
 // System Admin Pages
 import SystemAdminDashboard from "../system-admin/pages/SystemAdminDashboard";
 import UserManagement from "../system-admin/pages/UserManagement";
+import StudentList from "../system-admin/pages/StudentList";
 import EligibilityManagement from "../system-admin/pages/EligibilityManagement";
+import ItemApproval from "../system-admin/pages/ItemApproval";
 import SystemSettings from "../system-admin/pages/SystemSettings";
 
 // Student Pages
@@ -143,10 +146,26 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/system-admin/students"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <StudentList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/system-admin/eligibility"
         element={
           <ProtectedRoute requiredRoles={["system_admin"]}>
             <EligibilityManagement />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-admin/item-approval"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <ItemApproval />
           </ProtectedRoute>
         }
       />
@@ -159,12 +178,14 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Student Routes - Protected to student role */}
+      {/* Student Routes - Protected to student role and blocked during maintenance */}
       <Route
         path="/student-dashboard"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <StudentDashboard />
+            <MaintenanceBlock>
+              <StudentDashboard />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -172,7 +193,9 @@ const AppRoutes = () => {
         path="/all-products"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <AllProducts />
+            <MaintenanceBlock>
+              <AllProducts />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -180,7 +203,9 @@ const AppRoutes = () => {
         path="/products/:productId"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <ProductDetailsPage />
+            <MaintenanceBlock>
+              <ProductDetailsPage />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -188,7 +213,9 @@ const AppRoutes = () => {
         path="/student/cart"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <MyCart />
+            <MaintenanceBlock>
+              <MyCart />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -196,7 +223,9 @@ const AppRoutes = () => {
         path="/student/checkout"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <CheckoutPage />
+            <MaintenanceBlock>
+              <CheckoutPage />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -204,7 +233,9 @@ const AppRoutes = () => {
         path="/student/profile"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <StudentProfile />
+            <MaintenanceBlock>
+              <StudentProfile />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -212,7 +243,9 @@ const AppRoutes = () => {
         path="/student/settings"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <StudentSettings />
+            <MaintenanceBlock>
+              <StudentSettings />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />
@@ -220,7 +253,9 @@ const AppRoutes = () => {
         path="/student/order-success"
         element={
           <ProtectedRoute requiredRoles={["student"]}>
-            <OrderSuccessPage />
+            <MaintenanceBlock>
+              <OrderSuccessPage />
+            </MaintenanceBlock>
           </ProtectedRoute>
         }
       />

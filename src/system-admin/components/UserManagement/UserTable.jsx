@@ -1,12 +1,12 @@
 import React from "react";
-import { Edit } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 
 /**
  * UserTable Component
  * 
  * Displays users in a table format with all columns from the design
  */
-const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser }) => {
+const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser, onDeleteUser, onToggleActive }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -21,22 +21,30 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
     }
   };
 
-  const getStatusBadge = (isActive, role) => {
-    // Determine status based on is_active and potentially other factors
-    // For now, we'll use is_active to determine Active/Inactive
-    // Pending status might need additional logic
-    let status = isActive ? "Active" : "Inactive";
-    let bgColor = isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800";
-
-    // You can add logic here to determine "Pending" status if needed
-    // For example, if a user was just created but not yet activated
-
+  const ToggleSwitch = ({ isActive, userId, onToggle }) => {
     return (
-      <span
-        className={`px-3 py-1 rounded-full text-xs font-medium ${bgColor}`}
+      <button
+        type="button"
+        onClick={() => onToggle(userId, isActive)}
+        className={`relative inline-flex h-5 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:ring-offset-2 px-1 ${
+          isActive ? "bg-green-500" : "bg-gray-300"
+        }`}
       >
-        {status}
-      </span>
+        {/* Text - positioned away from handle */}
+        <span className={`absolute text-xs font-bold whitespace-nowrap z-10 ${
+          isActive 
+            ? "text-white left-2" 
+            : "text-gray-700 right-2"
+        }`}>
+          {isActive ? "Yes" : "No"}
+        </span>
+        {/* Handle - positioned on opposite side from text */}
+        <span
+          className={`absolute inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+            isActive ? "right-0.5" : "left-0.5"
+          }`}
+        />
+      </button>
     );
   };
 
@@ -55,30 +63,30 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
+      <table className="w-full border-separate border-spacing-y-2">
         <thead>
-          <tr className="border-b border-gray-200 bg-gray-50">
-            <th className="px-4 py-3 text-left">
+          <tr className="bg-[#003363]">
+            <th className="px-4 py-3 text-left rounded-tl-lg">
               <input
                 type="checkbox"
                 checked={selectedUsers.length === users.length && users.length > 0}
                 onChange={onSelectAll}
-                className="rounded border-gray-300 text-[#0C2340] focus:ring-[#0C2340]"
+                className="rounded border-gray-300 text-white focus:ring-white"
               />
             </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">Name</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">Username</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">Email</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">User Role</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">Status</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">Last Login</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-[#0C2340]">Action</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Name</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Username</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Email</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">User Role</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Is Active</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Last Login</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white rounded-tr-lg">Action</th>
           </tr>
         </thead>
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
+              <td colSpan="8" className="px-4 py-8 text-center text-gray-500 bg-white border border-gray-200 rounded-lg">
                 No users found
               </td>
             </tr>
@@ -86,9 +94,9 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
             users.map((user) => (
               <tr
                 key={user.id}
-                className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                className="bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
               >
-                <td className="px-4 py-4">
+                <td className="px-4 py-4 rounded-l-lg">
                   <input
                     type="checkbox"
                     checked={selectedUsers.includes(user.id)}
@@ -96,23 +104,39 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
                     className="rounded border-gray-300 text-[#0C2340] focus:ring-[#0C2340]"
                   />
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-900">{user.name || "N/A"}</td>
-                <td className="px-4 py-4 text-sm text-gray-900">{getUsername(user.email)}</td>
-                <td className="px-4 py-4 text-sm text-gray-900 max-w-[300px] break-words leading-tight">{user.email || "N/A"}</td>
-                <td className="px-4 py-4 text-sm text-gray-900">{getRoleDisplay(user.role)}</td>
+                <td className="px-4 py-4 text-sm text-[#003363]">{user.name || "N/A"}</td>
+                <td className="px-4 py-4 text-sm text-[#003363]">{getUsername(user.email)}</td>
+                <td className="px-4 py-4 text-sm text-[#003363] max-w-[300px] break-words leading-tight line-clamp-2">{user.email || "N/A"}</td>
+                <td className="px-4 py-4 text-sm text-[#003363]">{getRoleDisplay(user.role)}</td>
                 <td className="px-4 py-4">
-                  {getStatusBadge(user.is_active, user.role)}
+                  <ToggleSwitch
+                    isActive={user.is_active}
+                    userId={user.id}
+                    onToggle={onToggleActive}
+                  />
                 </td>
-                <td className="px-4 py-4 text-sm text-gray-600">
+                <td className="px-4 py-4 text-sm text-[#003363]">
                   {formatDate(user.last_login || user.updated_at)}
                 </td>
-                <td className="px-4 py-4">
-                  <button
-                    onClick={() => onEditUser(user)}
-                    className="text-[#0C2340] hover:text-[#e68b00] transition-colors font-medium text-sm"
-                  >
-                    Edit
-                  </button>
+                <td className="px-4 py-4 rounded-r-lg">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => onEditUser(user)}
+                      className="text-[#0C2340] hover:text-[#e68b00] transition-colors font-medium text-sm flex items-center gap-1"
+                      title="Edit user"
+                    >
+                      <Edit size={16} />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDeleteUser(user.id)}
+                      className="text-red-600 hover:text-red-800 transition-colors font-medium text-sm flex items-center gap-1"
+                      title="Delete user"
+                    >
+                      <Trash2 size={16} />
+                      Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))
