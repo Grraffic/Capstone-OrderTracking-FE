@@ -1,6 +1,8 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route } from "react-router-dom";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import MaintenanceBlock from "../components/auth/MaintenanceBlock";
+import StudentOnboardingGuard from "../components/auth/StudentOnboardingGuard";
 import LandingPage from "../pages/LandingPage";
 import LoginPage from "../pages/LoginPage";
 import AuthCallback from "../pages/AuthCallback";
@@ -20,15 +22,15 @@ import EligibilityManagement from "../system-admin/pages/EligibilityManagement";
 import ItemApproval from "../system-admin/pages/ItemApproval";
 import SystemSettings from "../system-admin/pages/SystemSettings";
 
-// Student Pages
-import StudentDashboard from "../student/pages/StudentDashboard";
-import AllProducts from "../student/pages/AllProducts";
-import ProductDetailsPage from "../student/pages/ProductDetailsPage";
-import MyCart from "../student/pages/MyCart";
-import CheckoutPage from "../student/pages/CheckoutPage";
-import StudentProfile from "../student/pages/StudentProfile";
-import StudentSettings from "../student/pages/StudentSettings";
-import OrderSuccessPage from "../student/pages/OrderSuccessPage";
+// Student Pages - lazy-loaded for smaller initial bundle
+const StudentDashboard = lazy(() => import("../student/pages/StudentDashboard"));
+const AllProducts = lazy(() => import("../student/pages/AllProducts"));
+const ProductDetailsPage = lazy(() => import("../student/pages/ProductDetailsPage"));
+const MyCart = lazy(() => import("../student/pages/MyCart"));
+const CheckoutPage = lazy(() => import("../student/pages/CheckoutPage"));
+const StudentProfile = lazy(() => import("../student/pages/StudentProfile"));
+const StudentSettings = lazy(() => import("../student/pages/StudentSettings"));
+const OrderSuccessPage = lazy(() => import("../student/pages/OrderSuccessPage"));
 
 /**
  * Application Routes
@@ -36,9 +38,16 @@ import OrderSuccessPage from "../student/pages/OrderSuccessPage";
  * Centralized route configuration for the application.
  * Separated from App.jsx for better organization and maintainability.
  */
+const RouteFallback = () => (
+  <div className="min-h-[50vh] flex items-center justify-center text-gray-500">
+    Loading…
+  </div>
+);
+
 const AppRoutes = () => {
   return (
-    <Routes>
+    <Suspense fallback={<RouteFallback />}>
+      <Routes>
       {/* Public Routes */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
@@ -194,7 +203,9 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRoles={["student"]}>
             <MaintenanceBlock>
-              <AllProducts />
+              <StudentOnboardingGuard>
+                <AllProducts />
+              </StudentOnboardingGuard>
             </MaintenanceBlock>
           </ProtectedRoute>
         }
@@ -204,7 +215,9 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRoles={["student"]}>
             <MaintenanceBlock>
-              <ProductDetailsPage />
+              <StudentOnboardingGuard>
+                <ProductDetailsPage />
+              </StudentOnboardingGuard>
             </MaintenanceBlock>
           </ProtectedRoute>
         }
@@ -214,7 +227,9 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRoles={["student"]}>
             <MaintenanceBlock>
-              <MyCart />
+              <StudentOnboardingGuard>
+                <MyCart />
+              </StudentOnboardingGuard>
             </MaintenanceBlock>
           </ProtectedRoute>
         }
@@ -224,7 +239,9 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRoles={["student"]}>
             <MaintenanceBlock>
-              <CheckoutPage />
+              <StudentOnboardingGuard>
+                <CheckoutPage />
+              </StudentOnboardingGuard>
             </MaintenanceBlock>
           </ProtectedRoute>
         }
@@ -260,6 +277,7 @@ const AppRoutes = () => {
         }
       />
     </Routes>
+    </Suspense>
   );
 };
 

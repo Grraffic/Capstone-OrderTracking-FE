@@ -1,10 +1,12 @@
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Camera, ArrowLeft, AlertCircle, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import Footer from "../../components/common/Footer";
 import { useStudentSettings } from "../hooks";
+import { useAuth } from "../../context/AuthContext";
 import { getCourseBannerStyle } from "../utils/courseBanner";
+import { splitDisplayName } from "../../utils/displayName";
 
 /**
  * StudentSettings Component
@@ -16,10 +18,51 @@ import { getCourseBannerStyle } from "../utils/courseBanner";
  *
  * All business logic is extracted to useStudentSettings hook.
  */
+// Inline onboarding card – appears right below the field to fill, so the user gets a clear clue
+const OnboardingStepCard = ({
+  step,
+  totalSteps,
+  title,
+  description,
+  onSkip,
+  onContinue,
+  isLastStep = false,
+}) => {
+  return (
+    <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50/80 shadow-md p-4" aria-label="Onboarding guide">
+      <p className="text-xs font-semibold text-[#003363] mb-1">Step {step} of {totalSteps}</p>
+      <h2 className="text-base font-bold text-[#003363] mb-1">{title}</h2>
+      <p className="text-sm text-gray-700 mb-4">{description}</p>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onSkip}
+          className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
+        >
+          Skip
+        </button>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="px-5 py-2 bg-[#003363] text-white rounded-lg hover:bg-[#002347] transition-colors font-medium text-sm"
+        >
+          {isLastStep ? "Finish" : "Continue"}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const StudentSettings = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+  const { user } = useAuth();
+
+  // Step-based onboarding state (first-time students)
+  const [onboardingStep, setOnboardingStep] = useState(1); // 1: gender, 2: student no., 3: course/year, 4: student type
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
 
   // Fetch settings data and functions from hook
   const {
@@ -35,6 +78,64 @@ const StudentSettings = () => {
     handleSaveChanges,
     handleDiscardChanges,
   } = useStudentSettings();
+
+  const isFirstTimeStudent =
+    user?.role === "student" && user?.onboardingCompleted !== true;
+  const isOnboardingFieldsComplete =
+    Boolean(formData.gender && String(formData.gender).trim()) &&
+    Boolean(formData.studentNumber && String(formData.studentNumber).trim()) &&
+    Boolean(formData.courseYearLevel && String(formData.courseYearLevel).trim()) &&
+    Boolean(formData.studentType && String(formData.studentType).trim());
+
+  const shouldShowGuide =
+    isFirstTimeStudent && !onboardingDismissed && !isOnboardingFieldsComplete;
+
+  const ONBOARDING_STEPS = useMemo(
+    () => [
+      {
+        id: 1,
+        field: "gender",
+        anchorId: "onboard-gender",
+        title: "Gender",
+        description: "Select your gender so we can show the right uniforms for you.",
+      },
+      {
+        id: 2,
+        field: "studentNumber",
+        anchorId: "onboard-student-number",
+        title: "Student Number",
+        description: "Enter your student number so we can verify and track your orders.",
+      },
+      {
+        id: 3,
+        field: "courseYearLevel",
+        anchorId: "onboard-course-year",
+        title: "Course & Year Level",
+        description: "Choose your course and year level so we can show only the uniforms you are eligible for.",
+      },
+      {
+        id: 4,
+        field: "studentType",
+        anchorId: "onboard-student-type",
+        title: "Student Type",
+        description: "Tell us if you are a new or old student to apply the right ordering rules.",
+      },
+    ],
+    []
+  );
+
+  const scrollToId = (id) => {
+    const el = document.getElementById(id);
+    if (el?.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  // When the active onboarding step changes, scroll the corresponding field into view
+  useEffect(() => {
+    if (!shouldShowGuide) return;
+    const current = ONBOARDING_STEPS.find((s) => s.id === onboardingStep);
+    if (!current) return;
+    scrollToId(current.anchorId);
+  }, [onboardingStep, shouldShowGuide, ONBOARDING_STEPS]);
 
   // Course & Year Level options - Combined dropdown
   const courseYearLevelOptions = [
@@ -119,6 +220,24 @@ const StudentSettings = () => {
 
   const courseLevel = formData.courseYearLevel || profileData?.courseYearLevel;
   const bannerStyle = getCourseBannerStyle(courseLevel);
+
+  // Split Google account name for First/Last display (read-only fields)
+  const nameParts = useMemo(
+    () => splitDisplayName(profileData?.name ?? ""),
+    [profileData?.name]
+  );
+
+  // Display name from Google account (read-only; used for card and avatar)
+  const displayNameForCard = nameParts.displayName || profileData?.name?.trim() || "Student Name";
+  const avatarInitial = (displayNameForCard.charAt(0) || "?").toUpperCase();
+
+  // Reset image load error when a new image URL is set (e.g. after upload or refetch)
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [imagePreview]);
+
+  // Always show a visible initial when there's no working image (handles failed load, missing URL, or broken production URL)
+  const showImage = Boolean(imagePreview && imagePreview.trim() && !imageLoadError);
 
   const programDisplayNames = {
     BSIS: "BS in Information Systems",
@@ -217,20 +336,23 @@ const StudentSettings = () => {
                         </div>
                       )}
                       <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-[#E68B00] shadow-xl group">
-                        {imagePreview ? (
+                        {showImage ? (
                           <img
                             src={imagePreview}
                             alt="Profile"
                             className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-90"
                             onClick={triggerFileInput}
+                            onError={() => setImageLoadError(true)}
                           />
                         ) : (
                           <div
-                            className="absolute inset-0 bg-[#003363] flex items-center justify-center cursor-pointer transition-opacity group-hover:opacity-90"
+                            className="absolute inset-0 min-w-full min-h-full bg-[#003363] flex items-center justify-center cursor-pointer transition-opacity group-hover:opacity-90"
                             onClick={triggerFileInput}
+                            role="img"
+                            aria-label={displayNameForCard ? `Profile for ${displayNameForCard}` : "Profile picture"}
                           >
-                            <span className="text-4xl sm:text-5xl font-bold text-white">
-                              {profileData?.name?.charAt(0).toUpperCase() || "S"}
+                            <span className="text-4xl sm:text-5xl font-bold text-white select-none" aria-hidden>
+                              {avatarInitial}
                             </span>
                           </div>
                         )}
@@ -257,7 +379,7 @@ const StudentSettings = () => {
                   {/* Student details: responsive typography */}
                   <div className="mt-4 mb-4 sm:mt-5 sm:mb-5 md:mt-5 md:mb-6 text-center">
                     <p className="font-bold text-[#003363] text-base sm:text-lg">
-                      {profileData?.name || "Student Name"}
+                      {displayNameForCard}
                     </p>
                     {programLabel && (
                       <p className="text-[#E68B00] text-xs sm:text-sm font-medium mt-0.5">
@@ -294,7 +416,7 @@ const StudentSettings = () => {
                   </h2>
 
                   <div className="space-y-6">
-                    {/* Row 1: First Name, Last Name */}
+                    {/* Row 1: First Name, Last Name – read-only from Google account */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -302,24 +424,24 @@ const StudentSettings = () => {
                         </label>
                         <input
                           type="text"
-                          value={profileData?.name?.split(" ")[0] || ""}
+                          value={nameParts.firstName ?? ""}
                           readOnly
+                          placeholder="First name"
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                          aria-label="First name from Google (read-only)"
                         />
                       </div>
-
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Last Name
                         </label>
                         <input
                           type="text"
-                          value={
-                            profileData?.name?.split(" ").slice(1).join(" ") ||
-                            ""
-                          }
+                          value={nameParts.lastName ?? ""}
                           readOnly
+                          placeholder="Last name"
                           className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+                          aria-label="Last name from Google (read-only)"
                         />
                       </div>
                     </div>
@@ -331,16 +453,32 @@ const StudentSettings = () => {
                           Gender
                         </label>
                         <select
+                          id="onboard-gender"
                           value={formData.gender}
                           onChange={(e) =>
                             handleFieldChange("gender", e.target.value)
                           }
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all"
+                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                            shouldShowGuide && onboardingStep === 1 && !formData.gender
+                              ? "ring-2 ring-[#E68B00]"
+                              : ""
+                          }`}
                         >
                           <option value="">Select Gender</option>
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                         </select>
+                        {shouldShowGuide && onboardingStep === 1 && (
+                          <OnboardingStepCard
+                            step={1}
+                            totalSteps={4}
+                            title="Gender"
+                            description="Select your gender so we can show the right uniforms for you."
+                            onSkip={() => setOnboardingStep(2)}
+                            onContinue={() => setOnboardingStep(2)}
+                            isLastStep={false}
+                          />
+                        )}
                       </div>
 
                       <div>
@@ -348,14 +486,32 @@ const StudentSettings = () => {
                           Student Number
                         </label>
                         <input
+                          id="onboard-student-number"
                           type="text"
                           value={formData.studentNumber}
                           onChange={(e) =>
                             handleFieldChange("studentNumber", e.target.value)
                           }
                           placeholder="e.g., 22-11223"
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all"
+                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                            shouldShowGuide &&
+                            onboardingStep === 2 &&
+                            !String(formData.studentNumber || "").trim()
+                              ? "ring-2 ring-[#E68B00]"
+                              : ""
+                          }`}
                         />
+                        {shouldShowGuide && onboardingStep === 2 && (
+                          <OnboardingStepCard
+                            step={2}
+                            totalSteps={4}
+                            title="Student Number"
+                            description="Enter your student number so we can verify and track your orders."
+                            onSkip={() => setOnboardingStep(3)}
+                            onContinue={() => setOnboardingStep(3)}
+                            isLastStep={false}
+                          />
+                        )}
                       </div>
                     </div>
 
@@ -366,11 +522,16 @@ const StudentSettings = () => {
                         <span className="text-red-500">*</span>
                       </label>
                       <select
+                        id="onboard-course-year"
                         value={formData.courseYearLevel}
                         onChange={(e) =>
                           handleFieldChange("courseYearLevel", e.target.value)
                         }
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all"
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                          shouldShowGuide && onboardingStep === 3 && !formData.courseYearLevel
+                            ? "ring-2 ring-[#E68B00]"
+                            : ""
+                        }`}
                       >
                         <option value="">Select Course & Year Level</option>
 
@@ -432,9 +593,57 @@ const StudentSettings = () => {
                         </optgroup>
 
                       </select>
+                      {shouldShowGuide && onboardingStep === 3 && (
+                        <OnboardingStepCard
+                          step={3}
+                          totalSteps={4}
+                          title="Course & Year Level"
+                          description="Choose your course and year level so we can show only the uniforms you are eligible for."
+                          onSkip={() => setOnboardingStep(4)}
+                          onContinue={() => setOnboardingStep(4)}
+                          isLastStep={false}
+                        />
+                      )}
                     </div>
 
-                    {/* Row 4: Email Address */}
+                    {/* Row 4: Student Type (New/Old) */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Student Type <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        id="onboard-student-type"
+                        value={formData.studentType}
+                        onChange={(e) =>
+                          handleFieldChange("studentType", e.target.value)
+                        }
+                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                          shouldShowGuide && onboardingStep === 4 && !formData.studentType
+                            ? "ring-2 ring-[#E68B00]"
+                            : ""
+                        }`}
+                      >
+                        <option value="">Select Student Type</option>
+                        <option value="new">New Student</option>
+                        <option value="old">Old Student</option>
+                      </select>
+                      {shouldShowGuide && onboardingStep === 4 && (
+                        <OnboardingStepCard
+                          step={4}
+                          totalSteps={4}
+                          title="Student Type"
+                          description="Tell us if you are a new or old student to apply the right ordering rules."
+                          onSkip={() => setOnboardingDismissed(true)}
+                          onContinue={() => setOnboardingDismissed(true)}
+                          isLastStep
+                        />
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        This helps determine your allowed order quantities.
+                      </p>
+                    </div>
+
+                    {/* Email Address */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Email Address
@@ -468,6 +677,7 @@ const StudentSettings = () => {
                   </button>
 
                   <button
+                    id="onboard-save"
                     onClick={handleSaveChanges}
                     disabled={!hasChanges || saving}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${

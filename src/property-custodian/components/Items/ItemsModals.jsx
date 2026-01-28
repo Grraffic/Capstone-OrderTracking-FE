@@ -19,7 +19,12 @@ import { useItemsModalForm } from "../../hooks";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { EDUCATION_LEVELS, ITEM_TYPES } from "../../constants/inventoryOptions";
-import { orderAPI } from "../../../services/api";
+import {
+  ITEM_MASTER_LIST,
+  EDUCATION_LEVEL_ITEM_NAMES,
+  EDUCATION_LEVEL_LABELS,
+} from "../../constants/itemMasterList";
+import { orderAPI, itemsAPI } from "../../../services/api";
 import { HexColorPicker, HexColorInput } from "react-colorful";
 
 /**
@@ -52,6 +57,10 @@ const ItemsModals = ({
   const [checkingPreOrders, setCheckingPreOrders] = useState(false);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#E68B00");
+  const [itemNameDropdownOpen, setItemNameDropdownOpen] = useState(false);
+  const [curatedNameSuggestions, setCuratedNameSuggestions] = useState([]);
+  const [loadingNameSuggestions, setLoadingNameSuggestions] = useState(false);
+  const itemNameDropdownRef = useRef(null);
   // Local-only UI state for variants
   const [variants, setVariants] = useState([
     {
@@ -62,6 +71,7 @@ const ItemsModals = ({
   const [variantPrices, setVariantPrices] = useState(["", ""]);
   const [variantStocks, setVariantStocks] = useState(["", ""]); // Stock per variant
   const [selectedVariantIndices, setSelectedVariantIndices] = useState([0]); // Multiple selection
+  const [existingVariantCount, setExistingVariantCount] = useState(0); // In edit mode, number of variants loaded from item (these are disabled)
   // State for accessories (no sizes)
   const [accessoryStocks, setAccessoryStocks] = useState([""]);
   const [accessoryPrices, setAccessoryPrices] = useState([""]);
@@ -93,6 +103,39 @@ const ItemsModals = ({
     onClose,
     modalState
   );
+
+  // Fetch curated item name suggestions from backend (admin-approved list)
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchSuggestions = async () => {
+      // Only relevant for Add mode (Edit is read-only for name)
+      if (!modalState.isOpen || modalState.mode !== "add") return;
+
+      try {
+        setLoadingNameSuggestions(true);
+        const res = await itemsAPI.getNameSuggestions({
+          educationLevel: formData.educationLevel || undefined,
+          limit: 500,
+        });
+
+        const names = res?.data?.data;
+        if (!cancelled) {
+          setCuratedNameSuggestions(Array.isArray(names) ? names : []);
+        }
+      } catch (err) {
+        // Safe fallback to static lists if backend is unavailable or table doesn't exist yet
+        if (!cancelled) setCuratedNameSuggestions([]);
+      } finally {
+        if (!cancelled) setLoadingNameSuggestions(false);
+      }
+    };
+
+    fetchSuggestions();
+    return () => {
+      cancelled = true;
+    };
+  }, [modalState.isOpen, modalState.mode, formData.educationLevel]);
 
   // Education level options override (use existing values, custom labels)
   const gradeLevelOptions = useMemo(
@@ -161,6 +204,46 @@ const ItemsModals = ({
     const key = formData.educationLevel || "All Education Levels";
     return map[key] || [];
   }, [formData.educationLevel]);
+
+  // Item name suggestions: merge static defaults + curated admin suggestions
+  const suggestedItemNames = useMemo(() => {
+    const level = formData.educationLevel;
+
+    const staticNames =
+      level && EDUCATION_LEVEL_ITEM_NAMES[level]
+        ? EDUCATION_LEVEL_ITEM_NAMES[level]
+        : ITEM_MASTER_LIST;
+
+    const combined = [...staticNames, ...(curatedNameSuggestions || [])];
+
+    const seen = new Map(); // normalized -> original
+    for (const n of combined) {
+      const name = (n || "").toString().trim();
+      if (!name) continue;
+      const key = name.toLowerCase().trim().replace(/\s+/g, " ");
+      if (!seen.has(key)) seen.set(key, name);
+    }
+
+    return Array.from(seen.values()).sort((a, b) =>
+      a.localeCompare(b, undefined, { sensitivity: "base" })
+    );
+  }, [formData.educationLevel, curatedNameSuggestions]);
+
+  // Close item name dropdown on click outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        itemNameDropdownRef.current &&
+        !itemNameDropdownRef.current.contains(e.target)
+      ) {
+        setItemNameDropdownOpen(false);
+      }
+    };
+    if (itemNameDropdownOpen) {
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }
+  }, [itemNameDropdownOpen]);
 
   // Check for pre-orders when adding a new item with stock > 0
   useEffect(() => {
@@ -338,8 +421,76 @@ const ItemsModals = ({
         console.error("Error adding item:", error);
         // Don't close modal on error so user can see the issue
       }
+    }
+    // Edit mode + Uniforms: build full sizeVariations (existing + new sizes) so new sizes show in Item Details
+    else if (
+      isUniforms &&
+      modalState.mode === "edit" &&
+      selectedItem
+    ) {
+      syncEditorToForm();
+      let existingNoteData = null;
+      if (selectedItem.note) {
+        try {
+          const p = JSON.parse(selectedItem.note);
+          if (
+            p?._type === "sizeVariations" &&
+            Array.isArray(p.sizeVariations)
+          ) {
+            existingNoteData = p.sizeVariations;
+          }
+        } catch (_) {}
+      }
+      const sizeVariations = variants[0].values
+        .map((sizeVal, index) => {
+          const stock = Number(variantStocks[index]) || 0;
+          const price =
+            Number(variantPrices[index]) || Number(formData.price) || 0;
+          const existing = existingNoteData?.[index];
+          const beginning_inventory =
+            index < existingVariantCount && existing?.beginning_inventory != null
+              ? Number(existing.beginning_inventory) || 0
+              : stock;
+          const size = (
+            sizeVal ||
+            (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "")
+          ).trim();
+          return size
+            ? { size, stock, price, beginning_inventory }
+            : null;
+        })
+        .filter(Boolean);
+      if (sizeVariations.length === 0) {
+        handleFormSubmit(e);
+        return;
+      }
+      const sizeString = sizeVariations.map((v) => v.size).join(", ");
+      const totalStock = sizeVariations.reduce(
+        (s, v) => s + (Number(v.stock) || 0),
+        0
+      );
+      const firstPrice = sizeVariations[0]?.price ?? formData.price ?? 0;
+      const itemToUpdate = {
+        ...formData,
+        id: selectedItem.id,
+        descriptionText:
+          editorRef.current?.innerHTML ?? formData.descriptionText,
+        size: sizeString || "N/A",
+        stock: totalStock,
+        price: Number(firstPrice) || 0,
+        note: JSON.stringify({
+          sizeVariations,
+          _type: "sizeVariations",
+        }),
+      };
+      try {
+        onUpdate(itemToUpdate);
+        setTimeout(() => onClose(), 500);
+      } catch (err) {
+        console.error("Error updating item:", err);
+      }
     } else {
-      // For edit mode or single item, use normal submission
+      // For edit (non-Uniforms) or single item, use normal submission
       handleFormSubmit(e);
     }
   };
@@ -418,6 +569,7 @@ const ItemsModals = ({
       }
 
       if (sizeVariations && sizeVariations.length > 0) {
+        setExistingVariantCount(sizeVariations.length);
         // Initialize from sizeVariations data
         const maxLength = Math.max(sizeVariations.length, 2);
         const initialPrices = [];
@@ -451,36 +603,75 @@ const ItemsModals = ({
           },
         ]);
       } else {
-        // Fallback: Initialize first variant price with the item's price
-        setVariantPrices((prev) => {
-          if (prev[0] === "" && selectedItem.price) {
-            return [String(selectedItem.price), prev[1] || ""];
+        // Fallback: if item has comma-separated sizes in size field but no JSON sizeVariations,
+        // prefill variant values so Small, Medium, etc. all show in the Variants section
+        if (
+          selectedItem.size &&
+          selectedItem.size !== "N/A" &&
+          selectedItem.size.includes(",")
+        ) {
+          const sizes = selectedItem.size.split(",").map((s) => s.trim()).filter(Boolean);
+          if (sizes.length > 0) {
+            setExistingVariantCount(sizes.length);
+            const maxLength = Math.max(sizes.length, 2);
+            const initialValues = [...sizes];
+            while (initialValues.length < maxLength) initialValues.push("");
+            const initialPrices = sizes.map(
+              () => String(selectedItem.price || "")
+            );
+            while (initialPrices.length < maxLength) initialPrices.push("");
+            const stockPerSize = sizes.length > 0
+              ? Math.floor((Number(selectedItem.stock) || 0) / sizes.length)
+              : 0;
+            const initialStocks = sizes.map(() => String(stockPerSize));
+            while (initialStocks.length < maxLength) initialStocks.push("");
+            setVariantPrices(initialPrices);
+            setVariantStocks(initialStocks);
+            setSelectedVariantIndices(sizes.map((_, i) => i));
+            setVariants([
+              { name: "", values: initialValues.length > 0 ? initialValues : ["", ""] },
+            ]);
+          } else {
+            setExistingVariantCount(0);
+            setVariantPrices((prev) =>
+              prev[0] === "" && selectedItem.price
+                ? [String(selectedItem.price), prev[1] || ""]
+                : prev
+            );
+            setSelectedVariantIndices([0]);
           }
-          return prev;
-        });
-        // Initialize selected indices based on size field
-        if (selectedItem.size && selectedItem.size !== "N/A") {
-          const sizes = selectedItem.size.split(",").map((s) => s.trim());
-          const selectedIndices = variants[0].values
-            .map((val, idx) => {
-              const normalizedVal =
-                val || (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
-              return sizes.some(
-                (size) =>
-                  normalizedVal.includes(size) || size.includes(normalizedVal)
-              )
-                ? idx
-                : null;
-            })
-            .filter((idx) => idx !== null);
-          setSelectedVariantIndices(
-            selectedIndices.length > 0 ? selectedIndices : [0]
-          );
         } else {
-          setSelectedVariantIndices([0]);
+          setExistingVariantCount(0);
+          setVariantPrices((prev) => {
+            if (prev[0] === "" && selectedItem.price) {
+              return [String(selectedItem.price), prev[1] || ""];
+            }
+            return prev;
+          });
+          if (selectedItem.size && selectedItem.size !== "N/A") {
+            const sizes = selectedItem.size.split(",").map((s) => s.trim());
+            const selectedIndices = variants[0].values
+              .map((val, idx) => {
+                const normalizedVal =
+                  val || (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
+                return sizes.some(
+                  (size) =>
+                    normalizedVal.includes(size) || size.includes(normalizedVal)
+                )
+                  ? idx
+                  : null;
+              })
+              .filter((idx) => idx !== null);
+            setSelectedVariantIndices(
+              selectedIndices.length > 0 ? selectedIndices : [0]
+            );
+          } else {
+            setSelectedVariantIndices([0]);
+          }
         }
       }
     } else if (modalState.isOpen && modalState.mode === "add") {
+      setExistingVariantCount(0);
       // Reset variant prices and stocks for add mode
       setVariantPrices(["", ""]);
       setVariantStocks(["", ""]);
@@ -495,6 +686,7 @@ const ItemsModals = ({
   }, [
     modalState.isOpen,
     modalState.mode,
+    selectedItem?.id,
     selectedItem?.price,
     selectedItem?.size,
     selectedItem?.note,
@@ -581,6 +773,9 @@ const ItemsModals = ({
   }, [isAccessories, isUniforms, modalState.isOpen]);
 
   if (!modalState.isOpen) return null;
+
+  const isEditMode = modalState.mode === "edit";
+  const isExistingVariant = (index) => isEditMode && index < existingVariantCount;
 
   // Delete Confirmation Modal
   if (modalState.mode === "delete") {
@@ -1020,14 +1215,16 @@ const ItemsModals = ({
               {/* Centered upload image under item name/type */}
               <div className="flex justify-center">
                 <div
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDrop}
-                  onClick={handleBrowseClick}
-                  className={`w-24 h-24 rounded-2xl border-2 flex items-center justify-center cursor-pointer transition bg-gray-50 overflow-hidden ${
-                    isDragging
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-dashed border-gray-300 hover:border-gray-400"
+                  onDragOver={isEditMode ? undefined : handleDragOver}
+                  onDragLeave={isEditMode ? undefined : handleDragLeave}
+                  onDrop={isEditMode ? undefined : handleDrop}
+                  onClick={isEditMode ? undefined : handleBrowseClick}
+                  className={`w-24 h-24 rounded-2xl border-2 flex items-center justify-center transition bg-gray-50 overflow-hidden ${
+                    isEditMode
+                      ? "border-gray-200 cursor-not-allowed opacity-60"
+                      : isDragging
+                        ? "border-blue-500 bg-blue-50 cursor-pointer"
+                        : "border-dashed border-gray-300 hover:border-gray-400 cursor-pointer"
                   }`}
                 >
                   {imagePreview ? (
@@ -1073,7 +1270,8 @@ const ItemsModals = ({
                       value={formData.educationLevel}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isEditMode}
+                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     >
                       <option value="">Select Education Level</option>
                       {gradeLevelOptions.map((level) => (
@@ -1098,7 +1296,8 @@ const ItemsModals = ({
                       value={formData.category}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isEditMode}
+                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     >
                       <option value="">Select Grade Level Category</option>
                       {gradeLevelCategoryOptions.map((opt) => (
@@ -1115,18 +1314,71 @@ const ItemsModals = ({
 
                 {/* Row: Item Name & Item Type */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 relative" ref={itemNameDropdownRef}>
                     <label className="text-sm font-medium text-gray-700">
                       Item Name
                     </label>
+                    {formData.educationLevel &&
+                      EDUCATION_LEVEL_LABELS[formData.educationLevel] && (
+                        <p className="text-xs text-blue-600">
+                          Suggestions for{" "}
+                          {EDUCATION_LEVEL_LABELS[formData.educationLevel]}
+                        </p>
+                    )}
                     <input
                       type="text"
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      placeholder="Kinder Dress"
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onFocus={() => !isEditMode && setItemNameDropdownOpen(true)}
+                      placeholder={
+                        formData.educationLevel
+                          ? "e.g. Kinder Dress"
+                          : "Select education level first for suggestions"
+                      }
+                      disabled={isEditMode}
+                      readOnly={isEditMode}
+                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     />
+                    {(() => {
+                      const filtered = suggestedItemNames.filter((n) =>
+                        (formData.name || "").trim() === ""
+                          ? true
+                          : n
+                              .toLowerCase()
+                              .includes(
+                                (formData.name || "").toLowerCase().trim()
+                              )
+                      );
+                      return (
+                        itemNameDropdownOpen &&
+                        filtered.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                            {loadingNameSuggestions && (
+                              <div className="px-3 py-2 text-xs text-gray-500">
+                                Loading suggestions...
+                              </div>
+                            )}
+                            {filtered.map((n) => (
+                            <button
+                              key={n}
+                              type="button"
+                              className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleInputChange({
+                                  target: { name: "name", value: n },
+                                });
+                                setItemNameDropdownOpen(false);
+                              }}
+                            >
+                              {n}
+                            </button>
+                            ))}
+                          </div>
+                        )
+                      );
+                    })()}
                   </div>
 
                   <div className="space-y-1.5">
@@ -1138,7 +1390,8 @@ const ItemsModals = ({
                       value={formData.itemType}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={isEditMode}
+                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
                     >
                       <option value="">Select Item Type</option>
                       {ITEM_TYPES.map((type) => (
@@ -1150,6 +1403,25 @@ const ItemsModals = ({
                     {errors.itemType && (
                       <p className="text-red-500 text-xs">{errors.itemType}</p>
                     )}
+                  </div>
+                </div>
+
+                {/* Row: Gender */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium text-gray-700">
+                      Gender
+                    </label>
+                    <select
+                      name="forGender"
+                      value={formData.forGender || "Unisex"}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="Unisex">For Both (Male & Female)</option>
+                      <option value="Female">For Female</option>
+                      <option value="Male">For Male</option>
+                    </select>
                   </div>
                 </div>
 
@@ -1337,34 +1609,17 @@ const ItemsModals = ({
                       Variants
                     </p>
 
-                    {/* Top card: Option Name / Option Value */}
+                    {/* Top card: Option Value (sizes) */}
                     <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 space-y-3">
                       {variants.slice(0, 1).map((variant, vIndex) => (
-                        <div
-                          key={vIndex}
-                          className="grid grid-cols-1 md:grid-cols-2 gap-4"
-                        >
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-gray-600">
-                              Option Name
-                            </label>
-                            <input
-                              type="text"
-                              value={variant.name}
-                              onChange={(e) =>
-                                handleVariantNameChange(vIndex, e.target.value)
-                              }
-                              placeholder="Size Choices"
-                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-gray-600">
-                              Option Value
-                            </label>
-                            <div className="space-y-2">
-                              {variant.values.map((value, valIndex) => (
+                        <div key={vIndex} className="space-y-1.5">
+                          <label className="text-xs font-medium text-gray-600">
+                            Option Value
+                          </label>
+                          <div className="space-y-2">
+                            {variant.values.map((value, valIndex) => {
+                              const existing = isExistingVariant(valIndex);
+                              return (
                                 <div
                                   key={valIndex}
                                   className="flex items-center gap-2"
@@ -1384,9 +1639,15 @@ const ItemsModals = ({
                                         ? "Small (S)"
                                         : "Medium (M)"
                                     }
-                                    className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    disabled={existing}
+                                    readOnly={existing}
+                                    className={`flex-1 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                                      existing
+                                        ? "bg-gray-50 cursor-not-allowed border-gray-200"
+                                        : "border-gray-300 bg-white"
+                                    }`}
                                   />
-                                  {variant.values.length > 1 && (
+                                  {variant.values.length > 1 && !existing && (
                                     <button
                                       type="button"
                                       onClick={() =>
@@ -1402,16 +1663,17 @@ const ItemsModals = ({
                                     </button>
                                   )}
                                 </div>
-                              ))}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleAddVariantValue(vIndex)}
-                              className="mt-1 text-xs font-medium text-orange-500 hover:text-orange-600"
-                            >
-                              + Add another option value
-                            </button>
+                              );
+                            })}
                           </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleAddVariantValue(vIndex)}
+                            className="mt-1 text-xs font-medium text-orange-500 hover:text-orange-600"
+                          >
+                            + Add another option value
+                          </button>
                         </div>
                       ))}
                     </div>
@@ -1424,16 +1686,19 @@ const ItemsModals = ({
                         <span>Unit Price</span>
                       </div>
                       <div className="px-4 py-3 space-y-2 text-sm">
-                        {variants[0].values.map((value, index) => (
-                          <div
-                            key={index}
-                            className="grid grid-cols-3 gap-4 items-center"
-                          >
+                        {variants[0].values.map((value, index) => {
+                          const existing = isExistingVariant(index);
+                          return (
+                            <div
+                              key={index}
+                              className="grid grid-cols-3 gap-4 items-center"
+                            >
                             <div className="flex items-center gap-2">
                               <input
                                 type="checkbox"
                                 checked={selectedVariantIndices.includes(index)}
                                 onChange={(e) => {
+                                  if (existing) return;
                                   if (e.target.checked) {
                                     // Add to selected indices
                                     setSelectedVariantIndices((prev) => {
@@ -1506,7 +1771,8 @@ const ItemsModals = ({
                                     });
                                   }
                                 }}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                disabled={existing}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
                               <span className="text-gray-800">
                                 {value ||
@@ -1524,7 +1790,9 @@ const ItemsModals = ({
                                 setVariantStocks(next);
                               }}
                               placeholder="0"
-                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={existing}
+                              readOnly={existing}
+                              className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
                             />
                             <input
                               type="number"
@@ -1550,10 +1818,13 @@ const ItemsModals = ({
                                 }
                               }}
                               placeholder="Php 0.00"
-                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              disabled={existing}
+                              readOnly={existing}
+                              className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
                             />
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

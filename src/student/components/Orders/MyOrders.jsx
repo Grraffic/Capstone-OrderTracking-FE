@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   FileText,
   ShoppingCart,
@@ -133,8 +134,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
 
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-2 sm:p-4 pt-20 sm:pt-24"
+      className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[9999] p-2 sm:p-4"
       onClick={onClose}
+      aria-modal="true"
+      role="dialog"
+      aria-label="QR code for order"
     >
       <div
         className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-lg w-full p-4 sm:p-6 md:p-8 relative mt-4 sm:mt-6 md:mt-8 max-h-[90vh] overflow-y-auto"
@@ -872,24 +876,33 @@ const MyOrders = () => {
               </button>
             </div>
 
-            {/* Product Grid */}
+            {/* Product Grid - items from your orders, so all show "Already ordered" (view details only) */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
               {suggestedProducts.map((product, index) => (
                 <div
                   key={index}
+                  onClick={() => navigate("/all-products")}
                   className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden group cursor-pointer"
                 >
                   {/* Product Image */}
-                  <div className="aspect-square bg-gray-100 overflow-hidden">
+                  <div className="relative aspect-square bg-gray-100 overflow-hidden">
                     <img
                       src={product.image}
                       alt={product.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                      decoding="async"
                       onError={(e) => {
                         e.target.src =
                           'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
                       }}
                     />
+                    {/* Already ordered overlay - these products are from your orders */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
+                      <span className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-full shadow-lg">
+                        Already ordered
+                      </span>
+                    </div>
                   </div>
 
                   {/* Product Info */}
@@ -901,7 +914,7 @@ const MyOrders = () => {
                       ({product.educationLevel})
                     </p>
                     {product.itemType && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {product.itemType}
                       </p>
                     )}
@@ -1015,6 +1028,8 @@ const MyOrders = () => {
                                   src={item.image}
                                   alt={item.name || order.item}
                                   className="w-full h-full object-cover"
+                                  loading="lazy"
+                                  decoding="async"
                                   onError={(e) => {
                                     e.target.src =
                                       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
@@ -1199,17 +1214,19 @@ const MyOrders = () => {
         )}
       </div>
 
-      {/* QR Modal */}
-      {showQRModal && (
-        <QRCodeModal
-          order={selectedOrder}
-          profileData={user}
-          onClose={() => {
-            setShowQRModal(false);
-            setSelectedOrder(null);
-          }}
-        />
-      )}
+      {/* QR Modal - portaled to body so overlay sits above header and blurs it */}
+      {showQRModal &&
+        createPortal(
+          <QRCodeModal
+            order={selectedOrder}
+            profileData={user}
+            onClose={() => {
+              setShowQRModal(false);
+              setSelectedOrder(null);
+            }}
+          />,
+          document.body
+        )}
     </>
   );
 };

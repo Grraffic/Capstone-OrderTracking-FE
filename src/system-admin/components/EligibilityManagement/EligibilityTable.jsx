@@ -111,14 +111,23 @@ const EligibilityTable = ({
           ) : (
             items.map((item) => {
               const eligibility = getItemEligibility(item);
+              const isPlaceholder = item._placeholder === true;
+              const canEdit = isEditMode && !isPlaceholder;
               return (
                 <tr
                   key={item.id}
-                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                  className={`border-b border-gray-100 transition-colors ${
+                    isPlaceholder ? "bg-gray-50/50" : "hover:bg-gray-50"
+                  }`}
                 >
                   {/* Item Name */}
                   <td className="px-4 py-4 text-sm text-gray-900 font-medium">
                     {item.name}
+                    {isPlaceholder && (
+                      <span className="ml-2 text-xs text-gray-500 font-normal">
+                        (not in inventory yet)
+                      </span>
+                    )}
                   </td>
 
                   {/* Preschool Checkbox */}
@@ -133,7 +142,7 @@ const EligibilityTable = ({
                           e.target.checked
                         )
                       }
-                      disabled={!isEditMode}
+                      disabled={!canEdit}
                       className="eligibility-checkbox"
                     />
                   </td>
@@ -150,7 +159,7 @@ const EligibilityTable = ({
                           e.target.checked
                         )
                       }
-                      disabled={!isEditMode}
+                      disabled={!canEdit}
                       className="eligibility-checkbox"
                     />
                   </td>
@@ -167,7 +176,7 @@ const EligibilityTable = ({
                           e.target.checked
                         )
                       }
-                      disabled={!isEditMode}
+                      disabled={!canEdit}
                       className="eligibility-checkbox"
                     />
                   </td>
@@ -184,7 +193,7 @@ const EligibilityTable = ({
                           e.target.checked
                         )
                       }
-                      disabled={!isEditMode}
+                      disabled={!canEdit}
                       className="eligibility-checkbox"
                     />
                   </td>
@@ -201,21 +210,25 @@ const EligibilityTable = ({
                           e.target.checked
                         )
                       }
-                      disabled={!isEditMode}
+                      disabled={!canEdit}
                       className="eligibility-checkbox"
                     />
                   </td>
 
-                  {/* Delete Button (only in edit mode) */}
+                  {/* Delete Button (only in edit mode, and only for items in inventory) */}
                   {isEditMode && (
                     <td className="px-4 py-4 text-center">
-                      <button
-                        onClick={() => handleDelete(item.id, item.name)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        title="Delete item"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      {isPlaceholder ? (
+                        <span className="text-gray-400" title="Add this item in Property Custodian to manage eligibility">—</span>
+                      ) : (
+                        <button
+                          onClick={() => handleDelete(item.id, item.name)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="Delete item"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>

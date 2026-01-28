@@ -112,6 +112,14 @@ export const useInventoryAtReorderPoint = (educationLevel = "College") => {
     fetchData();
   }, [fetchData]);
 
+  useEffect(() => {
+    const onReorderPointUpdated = () => {
+      fetchData();
+    };
+    window.addEventListener("inventory-reorder-point-updated", onReorderPointUpdated);
+    return () => window.removeEventListener("inventory-reorder-point-updated", onReorderPointUpdated);
+  }, [fetchData]);
+
   return {
     data,
     loading,

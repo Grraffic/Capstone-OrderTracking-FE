@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, Search, ShoppingCart, Minus, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -14,6 +14,7 @@ import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
 import { useAuth } from "../../context/AuthContext";
 import { itemsAPI, authAPI } from "../../services/api";
+import { normalizeItemName, resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../utils/maxQuantityKeys";
 
 /**
  * ProductDetailsPage Component
@@ -24,8 +25,9 @@ import { itemsAPI, authAPI } from "../../services/api";
 const ProductDetailsPage = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { items: allProducts } = useItems();
-  const { addToCart } = useCart();
+  const location = useLocation();
+  const { items: allProducts, fetchItems } = useItems();
+  const { addToCart, items: cartItems } = useCart();
   const { setDirectCheckoutItems } = useCheckout();
   const { user } = useAuth();
 
@@ -37,6 +39,13 @@ const ProductDetailsPage = () => {
   const [availableSizesData, setAvailableSizesData] = useState([]);
   const [loadingSizes, setLoadingSizes] = useState(false);
   const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [maxQuantities, setMaxQuantities] = useState({});
+  const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
+  const [maxQuantitiesProfileIncomplete, setMaxQuantitiesProfileIncomplete] = useState(false);
+  const [limitsLoaded, setLimitsLoaded] = useState(false);
+  const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
 
   // Size mapping: Maps customer-facing sizes to database sizes
   const sizeMapping = {
@@ -54,7 +63,7 @@ const ProductDetailsPage = () => {
     Object.entries(sizeMapping).map(([key, value]) => [value, key])
   );
 
-  // Fetch user education level
+  // Fetch user education level and max-quantities (for students)
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (user) {
@@ -69,6 +78,109 @@ const ProductDetailsPage = () => {
     };
     fetchUserProfile();
   }, [user]);
+
+  // Fetch items filtered by eligibility (system-admin "checked" per education level)
+  // so "Other Products" only shows items checked for this user's level in item_eligibility
+  useEffect(() => {
+    if (!fetchItems) return;
+    const eligibilityLevel =
+      userEducationLevel === "Vocational" ? "College" : userEducationLevel;
+    if (eligibilityLevel) {
+      fetchItems(eligibilityLevel);
+    } else {
+      fetchItems();
+    }
+  }, [userEducationLevel, fetchItems]);
+
+  // Refetch limits when an order was just created (e.g. after checkout) or when tab regains focus.
+  // When visible and logged in, always refetch so "already ordered" is up to date (e.g. checkout in another tab).
+  // On pageshow persisted (bfcache): page was restored via Back button; refetch so item stays disabled.
+  useEffect(() => {
+    const onOrderCreated = () => setLimitsRefreshTrigger((t) => t + 1);
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        if (sessionStorage.getItem("limitsNeedRefresh")) setLimitsRefreshTrigger((t) => t + 1);
+      } catch (_) {}
+      if (user) setLimitsRefreshTrigger((t) => t + 1);
+    };
+    const onPageShow = (e) => {
+      if (e.persisted && user) setLimitsRefreshTrigger((t) => t + 1);
+    };
+    window.addEventListener("order-created", onOrderCreated);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("order-created", onOrderCreated);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [user]);
+
+  // On mount / when user is set: refetch limits so "already ordered" disables Add/Order (e.g. after checkout)
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("limitsNeedRefresh")) setLimitsRefreshTrigger((t) => t + 1);
+    } catch (_) {}
+    // Refetch limits when we land on product details as a logged-in user,
+    // so after checkout the same item stays disabled (like when it was in cart).
+    if (user) setLimitsRefreshTrigger((t) => t + 1);
+  }, [user]);
+
+  // When we navigate to this product page (e.g. back from order-success), refetch limits so "already ordered" is up to date
+  useEffect(() => {
+    if (user && productId && /\/products\//.test(location.pathname)) {
+      setLimitsRefreshTrigger((t) => t + 1);
+    }
+  }, [location.pathname, user, productId]);
+
+  // Fetch max-quantities per item for students (used to cap quantity selector)
+  // Disable Add to Cart / Order until we know alreadyOrdered, so we don't allow duplicates
+  useEffect(() => {
+    const fetchMaxQuantities = async () => {
+      if (!user) {
+        setMaxQuantitiesProfileIncomplete(false);
+        setLimitsLoaded(true);
+        return;
+      }
+      setLimitsLoaded(false);
+      try {
+        const res = await authAPI.getMaxQuantities();
+        setMaxQuantities(res.data?.maxQuantities ?? {});
+        setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
+        setMaxQuantitiesProfileIncomplete(res.data?.profileIncomplete === true);
+        setLimitsLoaded(true);
+        try {
+          sessionStorage.removeItem("limitsNeedRefresh");
+        } catch (_) {}
+      } catch (err) {
+        if (err?.response?.status === 400) {
+          setMaxQuantitiesProfileIncomplete(true);
+          setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
+          setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
+          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
+        } else if (err?.response?.status !== 403) {
+          console.error("Error fetching max quantities:", err);
+          setMaxQuantitiesProfileIncomplete(false);
+          setAlreadyOrdered({});
+          setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
+          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
+        } else {
+          setMaxQuantitiesProfileIncomplete(false);
+          setAlreadyOrdered({});
+          setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
+          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? 0);
+        }
+        setLimitsLoaded(true);
+      }
+    };
+    fetchMaxQuantities();
+  }, [user, limitsRefreshTrigger]);
 
   // Load product data
   useEffect(() => {
@@ -109,10 +221,18 @@ const ProductDetailsPage = () => {
         }
 
         console.log("Product found:", foundProduct.name);
-        setProduct(foundProduct);
+        // Ensure forGender is included in product data
+        const productWithGender = {
+          ...foundProduct,
+          forGender: foundProduct.forGender || foundProduct.for_gender || "Unisex",
+          for_gender: foundProduct.for_gender || foundProduct.forGender || "Unisex",
+        };
+        setProduct(productWithGender);
         setSelectedSize("");
         setQuantity(1);
         setSizeConfirmed(false);
+        // Refetch limits when viewing this product so "already ordered" is up to date (avoids enabling Add/Order when they have it in My Orders)
+        setLimitsRefreshTrigger((t) => t + 1);
       } else {
         console.log("Product not found, redirecting to all products");
         // Product not found, redirect to all products
@@ -231,6 +351,103 @@ const ProductDetailsPage = () => {
     fetchAvailableSizes();
   }, [product]);
 
+  // Derive values and run clamp effect before any conditional return (Rules of Hooks)
+  const requiresSizeSelection = product
+    ? (product.itemType === "Uniform" ||
+        product.itemType === "PE Uniform" ||
+        product.itemType?.toLowerCase().includes("uniform") ||
+        product.category?.toLowerCase().includes("uniform") ||
+        product.name?.toLowerCase().includes("jersey") ||
+        product.name?.toLowerCase().includes("shirt") ||
+        product.name?.toLowerCase().includes("polo") ||
+        product.itemType?.toLowerCase().includes("jersey"))
+    : false;
+
+  const availableSizes = requiresSizeSelection
+    ? ["XS", "S", "M", "L", "XL", "XXL"]
+    : [];
+
+  const selectedSizeData = availableSizesData.find(
+    (s) => s.size === selectedSize
+  );
+
+  // Old students: only allowed items (new logo patch, number patch per level) have max > 0; others are disallowed.
+  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+
+  // Resolve product name to the key used by GET /auth/max-quantities (e.g. "jogging pants" -> 1 for Kindergarten)
+  const maxQuantityKey = product ? resolveItemKeyForMaxQuantity(product.name) : "";
+  let resolvedMaxKey = maxQuantityKey;
+  if (product && maxQuantities[maxQuantityKey] == null && Object.keys(maxQuantities).length > 0) {
+    const norm = normalizeItemName(product.name);
+    const matchingKeys = Object.keys(maxQuantities).filter((k) => norm.includes(k));
+    resolvedMaxKey = matchingKeys.sort((a, b) => b.length - a.length)[0] ?? maxQuantityKey;
+  }
+  const keyNotInMaxQuantities = product && (maxQuantities[resolvedMaxKey] === undefined || maxQuantities[resolvedMaxKey] === null);
+  const maxForItem =
+    product && maxQuantities[resolvedMaxKey] != null
+      ? maxQuantities[resolvedMaxKey]
+      : isOldStudent && keyNotInMaxQuantities
+        ? 0
+        : DEFAULT_MAX_WHEN_UNKNOWN;
+  const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities;
+  const effectiveStock = product
+    ? (requiresSizeSelection
+        ? (selectedSizeData?.stock ?? product?.stock ?? 999)
+        : (product?.stock ?? 999))
+    : 999;
+  const productResolvedKey = product ? resolveItemKeyForMaxQuantity(product.name) : "";
+  const alreadyInCart = (cartItems || []).reduce(
+    (sum, i) =>
+      resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === productResolvedKey
+        ? sum + (Number(i.quantity) || 0)
+        : sum,
+    0
+  );
+  // System-admin "max items per order" = distinct item types (slots). Each type counts as 1.
+  const cartSlotKeys = useMemo(() => {
+    const set = new Set();
+    (cartItems || []).forEach((i) => {
+      const k = resolveItemKeyForMaxQuantity(i.inventory?.name || i.name);
+      if (k) set.add(k);
+    });
+    return set;
+  }, [cartItems]);
+  const cartSlotCount = cartSlotKeys.size;
+  const isNewItemType = productResolvedKey && !cartSlotKeys.has(productResolvedKey);
+  const slotsLeftForThisOrder =
+    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0
+      ? Math.max(0, Number(maxItemsPerOrder) - (Number(slotsUsedFromPlacedOrders) || 0))
+      : 0;
+  const slotsFullForNewType =
+    maxItemsPerOrder != null &&
+    Number(maxItemsPerOrder) > 0 &&
+    isNewItemType &&
+    cartSlotCount >= slotsLeftForThisOrder;
+  const limitNotSet =
+    user &&
+    limitsLoaded &&
+    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
+  // Use resolved key; if product name contains "jogging pants" also count alreadyOrdered["jogging pants"] to avoid duplication
+  const baseAlready = product ? (Number(alreadyOrdered[productResolvedKey]) || 0) : 0;
+  const joggingFallback =
+    product && normalizeItemName(product.name || "").includes("jogging pants")
+      ? (Number(alreadyOrdered["jogging pants"]) || 0)
+      : 0;
+  const alreadyOrderedForItem = Math.max(baseAlready, joggingFallback);
+  const effectiveMax = product
+    ? Math.min(
+        Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem),
+        effectiveStock || 999
+      )
+    : DEFAULT_MAX_WHEN_UNKNOWN;
+
+  // Clamp quantity when effectiveMax decreases (e.g. after maxQuantities loads)
+  useEffect(() => {
+    if (product) {
+      setQuantity((q) => Math.min(q, effectiveMax));
+    }
+  }, [product?.id, effectiveMax]);
+
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -242,35 +459,10 @@ const ProductDetailsPage = () => {
     );
   }
 
-  // Check if product requires size selection (case-insensitive check)
-  const requiresSizeSelection =
-    product.itemType === "Uniform" ||
-    product.itemType === "PE Uniform" ||
-    product.itemType?.toLowerCase().includes("uniform") ||
-    product.category?.toLowerCase().includes("uniform") ||
-    product.name?.toLowerCase().includes("jersey") ||
-    product.name?.toLowerCase().includes("shirt") ||
-    product.name?.toLowerCase().includes("polo") ||
-    product.itemType?.toLowerCase().includes("jersey");
-
-  console.log("Requires size selection:", requiresSizeSelection);
-
-  // Always show all standard sizes for uniform items
-  const availableSizes = requiresSizeSelection
-    ? ["XS", "S", "M", "L", "XL", "XXL"]
-    : [];
-
-  // Find the selected size data to check its stock
-  const selectedSizeData = availableSizesData.find(
-    (s) => s.size === selectedSize
-  );
-
-  // Determine if the selected size is out of stock
+  // These depend on product existing (used only after the return in JSX)
   const isSelectedSizeOutOfStock = selectedSizeData
     ? selectedSizeData.stock === 0
     : false;
-
-  // Determine if the entire product is out of stock (no sizes available)
   const isOutOfStock = requiresSizeSelection
     ? availableSizesData.length > 0 &&
       availableSizesData.every((s) => s.stock === 0)
@@ -278,19 +470,22 @@ const ProductDetailsPage = () => {
       product.status === "Out of Stock" ||
       product.status === "out_of_stock" ||
       product.status?.toLowerCase() === "out of stock";
-
+  // Check if item is gender-specific and if user's gender matches
+  const itemGender = product?.forGender || product?.for_gender || "Unisex";
+  const isGenderSpecific = itemGender !== "Unisex";
+  const userGender = user?.gender || null;
+  const genderMismatch = isGenderSpecific && userGender && userGender !== itemGender;
+  
   const isOrderDisabled =
-    // Only disable if size is required but not selected/confirmed
-    requiresSizeSelection && (!selectedSize || !sizeConfirmed);
-
-  // Get related products (same education level or item type)
-  const relatedProducts = allProducts
-    .filter(
-      (p) =>
-        p.id !== product.id &&
-        (p.educationLevel === product.educationLevel ||
-          p.itemType === product.itemType)
-    )
+    requiresSizeSelection && (!selectedSize || !sizeConfirmed) || genderMismatch;
+  // Other products: eligibility-filtered; also filter by gender so we only show what the user can order.
+  const relatedProducts = (allProducts || [])
+    .filter((p) => p.id !== product?.id)
+    .filter((p) => {
+      if (!user?.gender) return true;
+      const fg = (p.for_gender || p.forGender || "Unisex").toString().trim();
+      return fg === "Unisex" || fg === user.gender;
+    })
     .slice(0, 3);
 
   const handleSizeSelect = (size) => {
@@ -303,13 +498,17 @@ const ProductDetailsPage = () => {
   };
 
   const handleQuantityChange = (newQuantity) => {
-    if (newQuantity >= 1) {
-      setQuantity(newQuantity);
-    }
+    const capped = Math.max(
+      1,
+      Math.min(newQuantity, effectiveMax, effectiveStock || 999)
+    );
+    setQuantity(capped);
   };
 
   const handleAddToCart = async () => {
     if (isOrderDisabled) return;
+    const qtyToAdd = Math.min(quantity, Math.max(0, effectiveMax));
+    if (qtyToAdd < 1) return;
 
     try {
       // Convert customer-facing size to database size
@@ -324,7 +523,7 @@ const ProductDetailsPage = () => {
       await addToCart({
         inventoryId: product.id,
         size: dbSize,
-        quantity: quantity,
+        quantity: qtyToAdd,
       });
       // Success toast is handled by CartContext
     } catch (error) {
@@ -562,6 +761,22 @@ const ProductDetailsPage = () => {
 
                   {/* Product Info (includes Education Level Badge, Back Button, FREE Label, Title, Description) */}
                   <ProductInfo product={product} onClose={handleBackClick} />
+                  
+                  {/* Gender Label - Show if item is gender-specific */}
+                  {isGenderSpecific && (
+                    <p className="text-sm text-gray-600 font-medium">
+                      For {itemGender}
+                    </p>
+                  )}
+                  
+                  {/* Gender Mismatch Message */}
+                  {genderMismatch && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                      <p className="font-medium">
+                        This item is for {itemGender} only. Add to Cart and Order Now are disabled.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Size Selector - Fixed height to prevent layout shift */}
                   <div className="min-h-[150px] sm:min-h-[180px]">
@@ -574,6 +789,8 @@ const ProductDetailsPage = () => {
                         sizeConfirmed={sizeConfirmed}
                         onSizeConfirm={handleSizeConfirm}
                         loadingSizes={loadingSizes}
+                        disabled={effectiveMax < 1}
+                        disabledReason={null}
                       />
                     )}
                   </div>
@@ -581,6 +798,38 @@ const ProductDetailsPage = () => {
 
                 {/* Bottom Section - Fixed at Bottom */}
                 <div className="mt-auto pt-4 space-y-3 border-t border-gray-200">
+                  {/* Already ordered — message removed per design
+                  {effectiveMax < 1 && alreadyOrderedForItem > 0 && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                      <p className="font-medium">This item is already in your orders.</p>
+                      <p className="mt-1 text-amber-700">Add to Cart and Order Now are disabled for this item, same as when it is in your cart. You have already ordered the maximum. You can only claim it when your order is ready.</p>
+                      <p className="mt-1 text-amber-700">You can still order other allowed items where you have remaining quota (e.g. for Preschool: 1 Kinder Dress, 1 Kinder Necktie, 1 Jersey, 1 ID Lace each, if not yet used).</p>
+                    </div>
+                  )}
+                  */}
+                  {/* Max item types per order: system admin limit is distinct item types (slots). */}
+                  {slotsFullForNewType && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                      <p className="font-medium">Item type limit for this order reached.</p>
+                      <p className="mt-1 text-amber-700">
+                        You have {slotsLeftForThisOrder} item type{slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max {maxItemsPerOrder} total; {slotsUsedFromPlacedOrders} already used in placed orders). Your cart has {cartSlotCount}. Only placed orders count—cart does not. Adding this item would exceed the limit. You can add more quantity of any item type already in your cart (up to its per-item max).
+                      </p>
+                      <p className="mt-1 text-amber-700">After you place your order, you must wait the lockout period set by the system admin before placing another order.</p>
+                    </div>
+                  )}
+                  {/* Order limit not set: student cannot add to cart or place order until admin sets Max Items Per Order. */}
+                  {limitNotSet && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                      <p className="font-medium">Your order limit has not been set. Ask your administrator to set Max Items Per Order before you can add or place orders.</p>
+                    </div>
+                  )}
+                  {/* Old students: this item is not in the allowed list (new logo patch, number patch per level only). */}
+                  {notAllowedForStudentType && (
+                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                      <p className="font-medium">This item is only available for New Students.</p>
+                      <p className="mt-1 text-amber-700">As an Old Student you can only order: New Logo Patch (max 3) and, for Elementary/Junior High/Senior High, Number Patch per grade (max 3).</p>
+                    </div>
+                  )}
                   {/* Quantity Selector */}
                   <div className="space-y-2 sm:space-y-3">
                     <h3 className="text-xs sm:text-sm font-semibold text-gray-700">
@@ -601,18 +850,28 @@ const ProductDetailsPage = () => {
 
                       <button
                         onClick={() => handleQuantityChange(quantity + 1)}
-                        className="p-2 sm:p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                        disabled={quantity >= effectiveMax}
+                        className="p-2 sm:p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                        title={`Max ${maxForItem} per student`}
                       >
                         <Plus className="w-4 h-4 text-gray-700" />
                       </button>
                     </div>
+                    {user && maxQuantitiesProfileIncomplete && (
+                      <p className="text-xs text-amber-600">
+                        Complete your profile (gender) to see order limits.
+                      </p>
+                    )}
                   </div>
 
                   {/* Action Buttons - Stack on Mobile */}
+                  {user && !limitsLoaded && (
+                    <p className="text-xs text-gray-500 mb-1">Checking order limits…</p>
+                  )}
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button
                       onClick={handleAddToCart}
-                      disabled={isOrderDisabled}
+                      disabled={isOrderDisabled || effectiveMax < 1 || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType}
                       className="w-full sm:w-auto px-5 py-2 bg-white border-2 border-[#003363] text-[#003363] font-semibold rounded-full hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md text-sm"
                     >
                       <ShoppingCart className="w-4 h-4" /> Add to Cart
@@ -620,7 +879,7 @@ const ProductDetailsPage = () => {
 
                     <button
                       onClick={handleOrderNow}
-                      disabled={isOrderDisabled}
+                      disabled={isOrderDisabled || effectiveMax < 1 || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType}
                       className="w-full sm:w-auto px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
                     >
                       {requiresSizeSelection && selectedSize
@@ -647,14 +906,16 @@ const ProductDetailsPage = () => {
           </div>
         </div>
 
-        {/* Other Products Section - Completely Separate */}
-        <div className=" rounded-2xl shadow-lg p-6 md:p-8">
-          <ProductCarousel
-            products={relatedProducts}
-            onProductClick={handleProductSwitch}
-            currentProductId={product.id}
-          />
-        </div>
+        {/* Other Products Section - only products for the user's education level */}
+        {userEducationLevel != null && relatedProducts.length > 0 && (
+          <div className=" rounded-2xl shadow-lg p-6 md:p-8">
+            <ProductCarousel
+              products={relatedProducts}
+              onProductClick={handleProductSwitch}
+              currentProductId={product.id}
+            />
+          </div>
+        )}
       </div>
 
       {/* Footer */}

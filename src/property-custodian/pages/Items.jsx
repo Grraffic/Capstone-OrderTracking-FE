@@ -10,15 +10,17 @@ import {
   Trash2,
   Eye,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
-import { subDays } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
-import DateRangePicker from "../components/common/DateRangePicker";
 import { InventoryHealth } from "../components/shared";
 import { ItemsStatsCards } from "../components/shared/stats";
 import ItemsModals from "../components/Items/ItemsModals";
 import ItemDetailsModal from "../components/Items/ItemDetailsModal";
+import ItemVariantEditModal from "../components/Items/ItemVariantEditModal";
 import ItemAdjustmentModal from "../components/Items/ItemAdjustmentModal";
+import ItemsFilterDropdown from "../components/Items/ItemsFilterDropdown";
 import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
 import { ItemsSkeleton } from "../components/Skeleton";
 import { groupItemsByVariations } from "../../utils/groupItems";
@@ -53,14 +55,23 @@ import {
  */
 const Items = () => {
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "list"
-  // Date range state - initialize to "Last 7 days"
-  const today = new Date();
-  const [startDate, setStartDate] = useState(subDays(today, 6));
-  const [endDate, setEndDate] = useState(today);
   // Local state for the horizontal education level tabs
   const [selectedLevel, setSelectedLevel] = useState("All");
-  const [showFilters, setShowFilters] = useState(true);
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [appliedFilters, setAppliedFilters] = useState({
+    itemStatus: null,
+    datePreset: null,
+    startDate: null,
+    endDate: null,
+  });
   const [openMenuId, setOpenMenuId] = useState(null); // Track which item's menu is open
+  const [selectedListRowKey, setSelectedListRowKey] = useState(null); // Orange highlight follows clicked row in list view
+  const [variantEdit, setVariantEdit] = useState({
+    isOpen: false,
+    parent: null,
+    variation: null,
+    variations: [],
+  });
   const menuRef = useRef(null);
   // Note: AdminLayout handles sidebar state internally
 
@@ -81,7 +92,7 @@ const Items = () => {
     };
   }, [openMenuId]);
 
-  // Inventory data and operations
+  // Inventory data and operations — itemStatus from filter (active/archived/deleted)
   const {
     items,
     paginatedItems,
@@ -97,6 +108,7 @@ const Items = () => {
     addItem,
     updateItem,
     deleteItem,
+    archiveItem,
     // Filters
     educationLevelFilter,
     setEducationLevelFilter,
@@ -111,61 +123,22 @@ const Items = () => {
     closeAdjustmentModal,
     // API state
     loading,
+    isInitialLoading,
     // Pagination
     currentPage,
-  } = useItems();
-
-  // Apply date filtering to filtered items
-  const dateFilteredItems = useMemo(() => {
-    if (!startDate) {
-      return filteredItems;
-    }
-
-    // If only startDate is selected (no endDate), treat it as a single day
-    const effectiveEndDate = endDate || startDate;
-
-    // Normalize dates to start and end of day for proper comparison
-    const startOfStartDate = new Date(startDate);
-    startOfStartDate.setHours(0, 0, 0, 0);
-
-    const endOfEndDate = new Date(effectiveEndDate);
-    endOfEndDate.setHours(23, 59, 59, 999);
-
-    return filteredItems.filter((item) => {
-      if (!item.createdAt) {
-        return false; // Exclude items without creation date
-      }
-
-      // Parse the item's creation date and normalize to start of day for comparison
-      const itemDate = new Date(item.createdAt);
-      const itemDateOnly = new Date(
-        itemDate.getFullYear(),
-        itemDate.getMonth(),
-        itemDate.getDate()
-      );
-      
-      const startDateOnly = new Date(
-        startOfStartDate.getFullYear(),
-        startOfStartDate.getMonth(),
-        startOfStartDate.getDate()
-      );
-      
-      const endDateOnly = new Date(
-        endOfEndDate.getFullYear(),
-        endOfEndDate.getMonth(),
-        endOfEndDate.getDate()
-      );
-      
-      // Check if item date is within the selected range (inclusive)
-      return itemDateOnly >= startDateOnly && itemDateOnly <= endDateOnly;
-    });
-  }, [filteredItems, startDate, endDate]);
+    goToPage,
+  } = useItems({
+    itemStatus: appliedFilters.itemStatus ?? "active",
+    startDate: appliedFilters.startDate ?? null,
+    endDate: appliedFilters.endDate ?? null,
+  });
 
   // Group filtered items by name and item_type to avoid duplicates.
   // When a specific education level tab is selected, keep only groups that have at least
   // one variation matching that level (so College tab never shows Pre-Kindergarten items).
+  // No date filtering: show all items.
   const groupedItems = useMemo(() => {
-    const grouped = groupItemsByVariations(dateFilteredItems);
+    const grouped = groupItemsByVariations(filteredItems);
     if (educationLevelFilter === "All" || educationLevelFilter === "Accessories") {
       return grouped;
     }
@@ -188,15 +161,18 @@ const Items = () => {
         id: g.variations[0]?.id ?? g.id,
         price: g.variations[0]?.price ?? g.price,
       }));
-  }, [dateFilteredItems, educationLevelFilter, mapTabLabelToEducationLevel]);
+  }, [filteredItems, educationLevelFilter, mapTabLabelToEducationLevel]);
 
-  // Paginate grouped items
-  const itemsPerPage = 12; // Match the itemsPerPage from useItems hook
+  // Paginate grouped items (max 8 per page for grid and list)
+  const itemsPerPage = 8;
   const paginatedGroupedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return groupedItems.slice(startIndex, endIndex);
   }, [groupedItems, currentPage, itemsPerPage]);
+
+  const totalPagesGrouped = Math.max(1, Math.ceil(groupedItems.length / itemsPerPage));
+  const hasPagination = groupedItems.length > itemsPerPage;
 
   // Item Details Modal (new enhanced view modal)
   const {
@@ -258,7 +234,7 @@ const Items = () => {
 
   return (
     <AdminLayout title="Items">
-      {loading ? (
+      {isInitialLoading ? (
         <ItemsSkeleton viewMode={viewMode} />
       ) : (
         <>
@@ -274,19 +250,6 @@ const Items = () => {
           {/* Inventory Health Section */}
           <div className="mb-8">
             <InventoryHealth stats={inventoryHealthStats} />
-          </div>
-
-          {/* Date Range Selector */}
-          <div className="mb-6 flex justify-end">
-            <DateRangePicker
-              startDate={startDate}
-              endDate={endDate}
-              onDateRangeChange={(start, end) => {
-                setStartDate(start);
-                setEndDate(end);
-              }}
-              className="w-auto"
-            />
           </div>
 
           {/* Horizontal Level Selection Tabs - Desktop / Dropdown - Mobile */}
@@ -403,58 +366,42 @@ const Items = () => {
                   />
                 </div>
 
-                {/* Filter Button */}
-                <button
-                  type="button"
-                  onClick={() => setShowFilters((prev) => !prev)}
-                  className="flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
-                >
-                  <Filter size={18} />
-                  <span>Filters</span>
-                </button>
+                {/* Filter Button - opens Filter dropdown below */}
+                <div className="relative inline-block">
+                  <button
+                    type="button"
+                    onClick={() => setFilterDropdownOpen((prev) => !prev)}
+                    className="flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+                  >
+                    <Filter size={18} />
+                    <span>Filters</span>
+                  </button>
+                  <ItemsFilterDropdown
+                    isOpen={filterDropdownOpen}
+                    onClose={() => setFilterDropdownOpen(false)}
+                    onApply={(filters) => {
+                      setAppliedFilters({
+                        itemStatus: filters.itemStatus ?? null,
+                        datePreset: filters.datePreset ?? null,
+                        startDate: filters.startDate ?? null,
+                        endDate: filters.endDate ?? null,
+                      });
+                    }}
+                    initialFilters={appliedFilters}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Expandable Filters Row */}
-            {showFilters && (
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-end">
-                {/* Grade Level Filter */}
-                <select
-                  value={gradeLevelFilter}
-                  onChange={(e) => setGradeLevelFilter(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                  title="Filter by grade level"
-                  aria-label="Grade Level"
-                >
-                  {getGradeLevelOptions(educationLevelFilter).map((grade) => (
-                    <option key={grade} value={grade}>
-                      {grade === "All" ? "Grade Level" : grade}
-                    </option>
-                  ))}
-                </select>
-
-                {/* Item Type Filter */}
-                <select
-                  value={itemTypeFilter}
-                  onChange={(e) => setItemTypeFilter(e.target.value)}
-                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-                  title="Filter by item type"
-                  aria-label="Item Type"
-                >
-                  <option value="All Types">Item Type</option>
-                  <option value="All Types">All Types</option>
-                  <option value="Uniforms">Uniform</option>
-                  <option value="Accessories">Accessories</option>
-                </select>
-              </div>
-            )}
-
-            {/* View Mode Toggles - Below Filters */}
+            {/* View Mode Toggles */}
             <div className="flex justify-end">
               <div className="inline-flex items-center rounded-lg border border-gray-300 bg-white overflow-hidden">
                 <button
                   type="button"
-                  onClick={() => setViewMode("grid")}
+                  onClick={() => {
+                    setViewMode("grid");
+                    setSelectedListRowKey(null);
+                  }}
                   className={`px-3 py-2 flex items-center gap-1 text-xs font-medium transition-colors ${
                     viewMode === "grid"
                       ? "bg-[#0C2340] text-white"
@@ -536,16 +483,29 @@ const Items = () => {
                                   openEditModal(representativeItem);
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg transition-colors"
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors"
                               >
                                 Edit Item
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  setOpenMenuId(null);
+                                  try {
+                                    await archiveItem(representativeItem.id);
+                                  } catch (_) {
+                                    // Error already set in hook
+                                  }
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                              >
+                                Archive Item
                               </button>
                               <button
                                 onClick={() => {
                                   openDeleteModal(representativeItem);
                                   setOpenMenuId(null);
                                 }}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 last:rounded-b-lg transition-colors"
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors"
                               >
                                 Delete Item
                               </button>
@@ -633,15 +593,25 @@ const Items = () => {
                       </p>
                     </div>
                   ) : (
-                    paginatedGroupedItems.map((group, index) => {
+                    paginatedGroupedItems.map((group) => {
                       // Use first variation as representative item for operations
                       const representativeItem = group.variations[0];
+                      const isSelected = selectedListRowKey === group.groupKey;
 
                       return (
                         <div
                           key={group.groupKey}
-                          className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 hover:bg-[#FFF8E7] transition-colors ${
-                            index === 0 ? "bg-[#FFF5E0]" : "bg-white"
+                          role="row"
+                          tabIndex={0}
+                          onClick={() => setSelectedListRowKey(group.groupKey)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedListRowKey(group.groupKey);
+                            }
+                          }}
+                          className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 transition-colors cursor-pointer ${
+                            isSelected ? "bg-[#FFF5E0]" : "bg-white hover:bg-[#FFF8E7]"
                           }`}
                         >
                           {/* Image */}
@@ -806,6 +776,37 @@ const Items = () => {
             </div>
           )}
 
+          {/* Pagination: Previous / Next */}
+          {hasPagination && (
+            <div className="mt-6 flex items-center justify-between gap-4 flex-wrap">
+              <div className="text-sm text-gray-600">
+                Page {currentPage} of {totalPagesGrouped}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={18} />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goToPage(currentPage + 1)}
+                  disabled={currentPage >= totalPagesGrouped}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  aria-label="Next page"
+                >
+                  Next
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Results Info */}
           {searchTerm && (
             <div className="mt-4 text-sm text-gray-600">
@@ -858,13 +859,43 @@ const Items = () => {
             totalStock={totalStock}
             onClose={closeItemDetailsModal}
             onSelectVariation={selectVariation}
-            onEdit={(item) => {
+            onEditItem={() => {
               closeItemDetailsModal();
-              openEditModal(item);
+              // Use current item from list by id so edit modal gets latest note with all sizeVariations (Small, Medium, etc.)
+              const itemToEdit =
+                detailsSelectedItem?.id != null
+                  ? items.find((i) => i.id === detailsSelectedItem.id) ??
+                    detailsSelectedItem
+                  : detailsSelectedItem;
+              openEditModal(itemToEdit);
+            }}
+            onEdit={(variation) => {
+              setVariantEdit({
+                isOpen: true,
+                parent: detailsSelectedItem,
+                variation,
+                variations,
+              });
+              closeItemDetailsModal();
             }}
             onDelete={(item) => {
               closeItemDetailsModal();
               openDeleteModal(item);
+            }}
+          />
+
+          {/* Edit-per-variant modal (from Item Details → Edit on a variation) */}
+          <ItemVariantEditModal
+            isOpen={variantEdit.isOpen}
+            parentItem={variantEdit.parent}
+            variation={variantEdit.variation}
+            variations={variantEdit.variations}
+            onClose={() =>
+              setVariantEdit((prev) => ({ ...prev, isOpen: false }))
+            }
+            onSave={async (payload) => {
+              await updateItem(payload);
+              setVariantEdit((prev) => ({ ...prev, isOpen: false }));
             }}
           />
         </>

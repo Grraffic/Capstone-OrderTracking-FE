@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 
 /**
  * useItemDetailsModal Hook
@@ -353,6 +353,16 @@ export const useItemDetailsModal = (allItems = []) => {
     },
     [allItems]
   );
+
+  /**
+   * When allItems changes while the modal is open (e.g. after an item edit),
+   * refetch variations so the new sizes show without closing/reopening.
+   */
+  useEffect(() => {
+    if (isOpen && selectedItem && allItems?.length) {
+      fetchVariations(selectedItem);
+    }
+  }, [allItems, isOpen, selectedItem, fetchVariations]);
 
   /**
    * Open the modal with a specific item

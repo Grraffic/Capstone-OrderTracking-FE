@@ -29,6 +29,14 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
+        // If we landed with token in URL (OAuth callback), store it first so we don't
+        // miss it (AuthCallback runs after this effect; reading URL here avoids "login twice").
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get("token");
+        if (tokenFromUrl) {
+          localStorage.setItem("authToken", tokenFromUrl);
+        }
+
         const storedToken = localStorage.getItem("authToken");
         if (storedToken) {
           const response = await authAPI.getProfile();
@@ -65,6 +73,18 @@ export const AuthProvider = ({ children }) => {
               userData.avatar_url ||
               userData.picture ||
               userData.image ||
+              null,
+            // Include profile fields used by student limits and settings
+            gender: userData.gender ?? null,
+            educationLevel: userData.educationLevel ?? userData.education_level ?? null,
+            studentType: userData.studentType ?? userData.student_type ?? null,
+            onboardingCompleted:
+              userData.onboardingCompleted ??
+              userData.onboarding_completed ??
+              null,
+            onboardingCompletedAt:
+              userData.onboardingCompletedAt ??
+              userData.onboarding_completed_at ??
               null,
           };
 

@@ -13,15 +13,17 @@ export const eligibilityAPI = {
    * @param {number} params.page - Page number
    * @param {number} params.limit - Items per page
    * @param {string} params.search - Search term
+   * @param {string} params.filter - "all" | "without_eligibility"
    * @returns {Promise} API response
    */
   getEligibilityData: async (params = {}) => {
-    const { page = 1, limit = 10, search = "" } = params;
+    const { page = 1, limit = 10, search = "", filter = "all" } = params;
     return api.get("/system-admin/eligibility", {
       params: {
         page,
         limit,
         search,
+        filter,
       },
     });
   },

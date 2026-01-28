@@ -1,5 +1,5 @@
 import React from "react";
-import { ShoppingCart, Bell } from "lucide-react";
+import { useAuth } from "../../../../context/AuthContext";
 
 /**
  * ProductCarousel Component
@@ -8,6 +8,8 @@ import { ShoppingCart, Bell } from "lucide-react";
  * Allows users to switch between products without closing the modal
  */
 const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
+  const { user } = useAuth();
+  
   if (!products || products.length === 0) {
     return null;
   }
@@ -30,14 +32,22 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
         {displayProducts.map((product) => {
           const isCurrentProduct = product.id === currentProductId;
           const isOutOfStock = product.status === "out_of_stock";
+          
+          // Check if item is gender-specific and if user's gender matches
+          const itemGender = product.forGender || product.for_gender || "Unisex";
+          const isGenderSpecific = itemGender !== "Unisex";
+          const userGender = user?.gender || null;
+          const genderMismatch = isGenderSpecific && userGender && userGender !== itemGender && !isCurrentProduct;
 
           return (
             <div
               key={product.id}
-              onClick={() => !isCurrentProduct && onProductClick(product)}
-              className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 flex flex-col h-full ${
+              onClick={() => !isCurrentProduct && !genderMismatch && onProductClick(product)}
+              className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 flex flex-col h-full relative ${
                 isCurrentProduct
                   ? "ring-4 ring-[#F28C28] opacity-75 cursor-default"
+                  : genderMismatch
+                  ? "cursor-not-allowed opacity-60"
                   : "hover:shadow-2xl hover:scale-105 cursor-pointer"
               }`}
             >
@@ -47,6 +57,8 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
                   src={product.image}
                   alt={product.name}
                   className="w-full h-full object-cover"
+                  loading="lazy"
+                  decoding="async"
                   onError={(e) => {
                     e.target.src =
                       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"%3E%3Crect fill="%23f3f4f6" width="200" height="200"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="14" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
@@ -74,62 +86,31 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
 
               {/* Product Info */}
               <div className="p-4 flex flex-col flex-grow">
-                {/* Product Name */}
-                <h3 className="text-base font-bold text-[#003363] mb-1 line-clamp-2 min-h-[3rem]">
+                {/* Product Name - no min-height so gap to (College) matches All Products */}
+                <h3 className="text-base font-bold text-[#003363] mb-0.5 line-clamp-2 leading-tight">
                   {product.name}
                 </h3>
 
-                {/* Education Level */}
+                {/* Education Level - gap matches All Products ProductCard */}
                 {product.educationLevel && (
-                  <p className="text-sm text-[#F28C28] font-semibold mb-3">
+                  <p className="text-sm text-[#F28C28] font-semibold mt-0.5">
                     ({product.educationLevel})
                   </p>
                 )}
 
-                {/* Spacer to push buttons to bottom */}
-                <div className="flex-grow"></div>
+                {/* Gender Label - Show if item is gender-specific */}
+                {isGenderSpecific && (
+                  <p className="text-xs text-gray-600 font-medium mt-1">
+                    For {itemGender}
+                  </p>
+                )}
 
-                {/* Action Buttons - Matching ProductCard.jsx */}
-                {!isCurrentProduct && (
-                  <div className="flex items-center justify-between gap-2 mt-3">
-                    {/* Left side - Out of Stock status or Add to Cart icon */}
-                    <div className="flex items-center gap-2">
-                      {isOutOfStock ? (
-                        <div className="flex flex-col">
-                          <span className="text-xs text-red-600 font-semibold">
-                            Out of Stock
-                          </span>
-                          <button className="flex items-center gap-1 text-xs text-[#003363] hover:text-[#F28C28] transition-colors mt-1">
-                            <Bell size={12} />
-                            <span>Remind me</span>
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onProductClick(product);
-                          }}
-                          className="p-2 rounded-lg border border-gray-300 hover:border-[#F28C28] hover:bg-orange-50 transition-all duration-200"
-                          title="Add to Cart"
-                        >
-                          <ShoppingCart className="w-5 h-5 text-gray-600 hover:text-[#F28C28]" />
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Right side - Order Now button */}
-                    {!isOutOfStock && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onProductClick(product);
-                        }}
-                        className="px-5 py-2 bg-[#F28C28] text-white text-sm font-semibold rounded-full hover:bg-[#d97a1f] transition-all duration-200 shadow-sm hover:shadow-md"
-                      >
-                        Order Now
-                      </button>
-                    )}
+                {/* Gender Mismatch Overlay */}
+                {genderMismatch && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60 z-10">
+                    <span className="px-4 py-2 bg-gray-500 text-white text-sm font-semibold rounded-full shadow-lg">
+                      For {itemGender} only
+                    </span>
                   </div>
                 )}
               </div>

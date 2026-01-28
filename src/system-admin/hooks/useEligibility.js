@@ -1,7 +1,91 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { eligibilityAPI } from "../../services/eligibility.service";
 import { convertDBToUI, convertUIToDB } from "../utils/eligibilityMapper";
+import { ITEM_MASTER_LIST } from "../../property-custodian/constants/itemMasterList";
 import { toast } from "react-hot-toast";
+
+/** Normalize item name for comparison: lowercase, collapse spaces, trim */
+function normName(s) {
+  return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Merge canonical item names with API items:
+ * - Display all canonical names; use API data when property custodian has added that item.
+ * - Append any API items whose name is not in the canonical list (new items from property custodian).
+ * Placeholder rows (not yet in inventory) have _placeholder: true and are read-only.
+ * @param {Array} apiItems - Items returned by the API
+ * @param {string} [search] - If non-empty, only include canonical/API items whose name matches (case-insensitive)
+ */
+function mergeCanonicalWithApiItems(apiItems, search = "") {
+  const raw = Array.isArray(apiItems) ? apiItems : [];
+  const searchNorm = normName(search);
+  const searchActive = searchNorm.length > 0;
+
+  // When searching, only consider canonical names and API items that match the search
+  const canonicalNames = searchActive
+    ? ITEM_MASTER_LIST.filter((name) => normName(name).includes(searchNorm))
+    : ITEM_MASTER_LIST;
+  const rawFiltered = searchActive
+    ? raw.filter((it) => normName(it.name).includes(searchNorm))
+    : raw;
+
+  const canonicalNormSet = new Set(ITEM_MASTER_LIST.map(normName));
+  const result = [];
+  const matchedNorm = new Set();
+
+  // One row per matching canonical name: use API item if exists, else placeholder
+  for (const canonicalName of canonicalNames) {
+    const n = normName(canonicalName);
+    const apiItem = rawFiltered.find((it) => normName(it.name) === n);
+    if (apiItem) {
+      result.push(apiItem);
+      matchedNorm.add(n);
+    } else {
+      result.push({
+        id: `canonical-${n.replace(/\s+/g, "-")}`,
+        name: canonicalName,
+        itemIds: [],
+        isPreschoolEligible: false,
+        isElementaryEligible: false,
+        isJHSEligible: false,
+        isSHSEligible: false,
+        isCollegeEligible: false,
+        eligibleLevels: [],
+        _placeholder: true,
+      });
+    }
+  }
+
+  // Append API items not in canonical list (new names added by property custodian)
+  const seenNew = new Set();
+  for (const item of rawFiltered) {
+    const n = normName(item.name);
+    if (canonicalNormSet.has(n)) continue;
+    if (seenNew.has(n)) continue;
+    seenNew.add(n);
+    result.push(item);
+  }
+
+  // Sort: items with at least one eligibility checked first, then unchecked last; within each group keep canonical/name order
+  const hasAnyEligibility = (item) =>
+    !!(item.isPreschoolEligible || item.isElementaryEligible || item.isJHSEligible || item.isSHSEligible || item.isCollegeEligible);
+  const orderOf = (name) => {
+    const i = ITEM_MASTER_LIST.findIndex((c) => normName(c) === normName(name));
+    return i >= 0 ? i : 9999;
+  };
+  result.sort((a, b) => {
+    const hasA = hasAnyEligibility(a);
+    const hasB = hasAnyEligibility(b);
+    if (hasA !== hasB) return hasB ? 1 : -1; // checked first (hasA first -> return -1 when hasA)
+    const oa = orderOf(a.name);
+    const ob = orderOf(b.name);
+    if (oa !== ob) return oa - ob;
+    return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+  });
+
+  return result;
+}
 
 /**
  * useEligibility Hook
@@ -28,36 +112,55 @@ export const useEligibility = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [localChanges, setLocalChanges] = useState({}); // Track changes before saving
   const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const lastFetchParamsRef = useRef({ search: "", limit: 200, filter: "all" });
 
   /**
-   * Fetch eligibility data with filters and pagination
+   * Fetch eligibility data with filters and pagination.
+   * @param {Object} params - Fetch params (page, limit, search, filter)
+   * @param {boolean} [params.silent] - If true, do not set loading state (for background refetch after save)
    */
   const fetchEligibilityData = useCallback(
     async (params = {}) => {
-      try {
-        setLoading(true);
-        setError(null);
+      const silent = params.silent === true;
+      const search = params.search !== undefined ? params.search : lastFetchParamsRef.current.search;
+      const limit = params.limit !== undefined ? params.limit : lastFetchParamsRef.current.limit;
+      const filter = params.filter !== undefined ? params.filter : lastFetchParamsRef.current.filter;
+      lastFetchParamsRef.current = { search, limit, filter };
 
-        const pageToFetch = params.page || pagination.page;
-        const limitToUse = params.limit || 10;
+      try {
+        if (!silent) {
+          setLoading(true);
+          setError(null);
+        }
+
+        const pageToFetch = params.page ?? pagination.page;
+        const limitToUse = limit || 10;
 
         const response = await eligibilityAPI.getEligibilityData({
           page: pageToFetch,
           limit: limitToUse,
-          search: params.search || "",
+          search: search || "",
+          filter: filter || "all",
         });
 
         if (response.data && response.data.success) {
-          setItems(response.data.data || []);
+          const rawItems = response.data.data || [];
+          const searchTerm = (search || "").trim();
+          setItems(mergeCanonicalWithApiItems(rawItems, searchTerm));
           const newPagination = response.data.pagination || pagination;
           setPagination(newPagination);
         }
       } catch (err) {
         console.error("Error fetching eligibility data:", err);
         setError(err.message || "Failed to fetch eligibility data");
-        toast.error(err.message || "Failed to fetch eligibility data");
+        if (!silent) {
+          toast.error(err.message || "Failed to fetch eligibility data");
+        }
       } finally {
-        setLoading(false);
+        if (!silent) {
+          setLoading(false);
+        }
       }
     },
     [pagination.page]
@@ -97,7 +200,7 @@ export const useEligibility = () => {
    */
   const bulkUpdateEligibility = useCallback(async (updates) => {
     try {
-      setLoading(true);
+      setSaving(true);
       setError(null);
 
       // Validate updates
@@ -141,8 +244,12 @@ export const useEligibility = () => {
       const response = await eligibilityAPI.bulkUpdateEligibility(dbUpdates);
 
       if (response.data && response.data.success) {
-        // Refresh data after bulk update
-        await fetchEligibilityData({ page: pagination.page });
+        // Refresh data in background without showing "Loading items..."
+        await fetchEligibilityData({
+          ...lastFetchParamsRef.current,
+          page: 1,
+          silent: true,
+        });
         toast.success("Eligibility updated successfully");
         return response.data.data;
       } else {
@@ -160,9 +267,9 @@ export const useEligibility = () => {
       toast.error(errorMessage);
       throw err;
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
-  }, [fetchEligibilityData, pagination.page]);
+  }, [fetchEligibilityData]);
 
   /**
    * Delete an item
@@ -290,9 +397,30 @@ export const useEligibility = () => {
     [localChanges]
   );
 
+  // Order: items with at least one eligibility checked first, unchecked last (uses effective eligibility including local changes)
+  const itemsSortedByEligibility = useMemo(() => {
+    const hasAny = (item) => {
+      const e = localChanges[item.id] ?? {
+        isPreschoolEligible: item.isPreschoolEligible,
+        isElementaryEligible: item.isElementaryEligible,
+        isJHSEligible: item.isJHSEligible,
+        isSHSEligible: item.isSHSEligible,
+        isCollegeEligible: item.isCollegeEligible,
+      };
+      return !!(e.isPreschoolEligible || e.isElementaryEligible || e.isJHSEligible || e.isSHSEligible || e.isCollegeEligible);
+    };
+    return [...items].sort((a, b) => {
+      const hasA = hasAny(a);
+      const hasB = hasAny(b);
+      if (hasA !== hasB) return hasB ? 1 : -1;
+      return (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" });
+    });
+  }, [items, localChanges]);
+
   return {
-    items,
+    items: itemsSortedByEligibility,
     loading,
+    saving,
     error,
     pagination,
     isEditMode,

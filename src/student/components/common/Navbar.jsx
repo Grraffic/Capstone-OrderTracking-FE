@@ -15,6 +15,7 @@ import { useAuth } from "../../../context/AuthContext";
 import { useCart } from "../../../context/CartContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { useNavigate } from "react-router-dom";
+import { splitDisplayName } from "../../../utils/displayName";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -27,8 +28,9 @@ const Navbar = () => {
   const dropdownRef = useRef(null);
   const notificationRef = useRef(null);
 
-  // Get user display name, email, and photo
-  const userName = user?.displayName || user?.name || "Student";
+  // Get user display name (formatted: "Leorenzbien Rodriguez" from "leorenzbien.rodriguez" or "Rafael Ramos"), email, and photo
+  const rawName = user?.displayName || user?.name || "";
+  const userName = rawName ? splitDisplayName(rawName).displayName : "Student";
   const userEmail = user?.email || "";
   const userPhoto = user?.photoURL || user?.photo_url || null;
 

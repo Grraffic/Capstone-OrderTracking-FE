@@ -31,11 +31,12 @@ export const useStudentSettings = () => {
   const [originalImageUrl, setOriginalImageUrl] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
-  // Editable form fields - Combined course and year level
+  // Editable form fields - Name comes from Google account (read-only in UI)
   const [formData, setFormData] = useState({
     courseYearLevel: "", // Combined field (e.g., "BSIS 1st Year", "Grade 10")
     studentNumber: "",
     gender: "",
+    studentType: "", // "new" or "old" - used for max-order-per-item segment
   });
 
   const fetchProfileData = useCallback(async () => {
@@ -46,6 +47,7 @@ export const useStudentSettings = () => {
       const response = await authAPI.getProfile();
       const userData = response.data;
 
+      const rawStudentType = userData.studentType ?? userData.student_type ?? user?.studentType ?? user?.student_type ?? "";
       const profile = {
         id: userData.id || user?.id,
         name: userData.name || user?.displayName || user?.name || "Student",
@@ -58,19 +60,25 @@ export const useStudentSettings = () => {
         courseYearLevel:
           userData.courseYearLevel || userData.course_year_level || "N/A",
         gender: userData.gender || user?.gender || "",
+        studentType: rawStudentType,
+        onboardingCompleted:
+          userData.onboardingCompleted ?? userData.onboarding_completed ?? false,
+        onboardingCompletedAt:
+          userData.onboardingCompletedAt ?? userData.onboarding_completed_at ?? null,
       };
 
       setProfileData(profile);
       setImagePreview(profile.photoURL);
       setOriginalImageUrl(profile.photoURL);
 
-      // Initialize form data with current profile values
+      // Initialize form data (name is read-only from Google, not in form)
       setFormData({
         courseYearLevel:
           profile.courseYearLevel !== "N/A" ? profile.courseYearLevel : "",
         studentNumber:
           profile.studentNumber !== "N/A" ? profile.studentNumber : "",
         gender: profile.gender || "",
+        studentType: (rawStudentType || "").toLowerCase() || "",
       });
     } catch (err) {
       console.error("Error fetching profile:", err);
@@ -79,13 +87,14 @@ export const useStudentSettings = () => {
       if (user) {
         const fallbackProfile = {
           id: user.id,
-          name: user.displayName || user.name || "Student",
+          name: user.displayName || user.name || user.email?.split("@")[0] || "Student",
           email: user.email || "",
           photoURL: user.photoURL || null,
           role: user.role || "student",
           studentNumber: "N/A",
           courseYearLevel: "N/A",
           gender: "",
+          studentType: "",
         };
         setProfileData(fallbackProfile);
         setImagePreview(fallbackProfile.photoURL);
@@ -93,6 +102,7 @@ export const useStudentSettings = () => {
           courseYearLevel: "",
           studentNumber: "",
           gender: "",
+          studentType: "",
         });
       }
     } finally {
@@ -202,9 +212,24 @@ export const useStudentSettings = () => {
     try {
       setSaving(true);
 
-      // Validate course & year level is selected
+      // Validate required fields for onboarding
+      if (!formData.gender) {
+        toast.error("Please select your gender before saving.");
+        setSaving(false);
+        return;
+      }
+      if (!formData.studentNumber || !String(formData.studentNumber).trim()) {
+        toast.error("Please enter your student number before saving.");
+        setSaving(false);
+        return;
+      }
       if (!formData.courseYearLevel) {
         toast.error("Please select your course & year level before saving.");
+        setSaving(false);
+        return;
+      }
+      if (!formData.studentType || !String(formData.studentType).trim()) {
+        toast.error("Please select your student type before saving.");
         setSaving(false);
         return;
       }
@@ -212,12 +237,13 @@ export const useStudentSettings = () => {
       // Calculate education level from course & year level
       const educationLevel = getEducationLevel(formData.courseYearLevel);
 
-      // Prepare update data
+      // Name is read-only from Google; do not overwrite it from this form
       const updateData = {
         courseYearLevel: formData.courseYearLevel,
         studentNumber: formData.studentNumber || null,
         gender: formData.gender || null,
         educationLevel: educationLevel,
+        studentType: formData.studentType && formData.studentType.trim() ? formData.studentType.trim().toLowerCase() : null,
       };
 
       // Upload image if changed
@@ -235,29 +261,50 @@ export const useStudentSettings = () => {
       }
 
       // Update profile via API
-      await authAPI.updateProfile(updateData);
+      const res = await authAPI.updateProfile(updateData);
+      const updated = res?.data;
 
       // Update local state
       setOriginalImageUrl(imageUrl);
       setImageFile(null);
       setHasChanges(false);
 
-      // Update auth context to refresh navbar
+      // Update auth context with returned profile (including gender, studentType) so it persists in session
       if (updateUser) {
+        const onboardingCompleted =
+          updated?.onboardingCompleted ?? updated?.onboarding_completed ?? null;
+        const onboardingCompletedAt =
+          updated?.onboardingCompletedAt ?? updated?.onboarding_completed_at ?? null;
         updateUser({
           ...user,
-          photoURL: imageUrl,
+          photoURL: imageUrl ?? user?.photoURL,
+          gender: updated?.gender ?? user?.gender,
+          educationLevel: updated?.educationLevel ?? user?.educationLevel,
+          studentType: updated?.studentType ?? user?.studentType ?? null,
+          onboardingCompleted: onboardingCompleted ?? user?.onboardingCompleted ?? null,
+          onboardingCompletedAt: onboardingCompletedAt ?? user?.onboardingCompletedAt ?? null,
         });
+      }
+
+      // Sync form/profile from response so saved gender and studentType show immediately
+      if (updated) {
+        setProfileData((prev) => (prev ? { ...prev, gender: updated.gender ?? prev.gender, studentType: updated.studentType ?? prev.studentType } : prev));
+        setFormData((prev) => ({ ...prev, gender: updated.gender ?? prev.gender ?? "", studentType: (updated.studentType ?? prev.studentType ?? "").toLowerCase() }));
       }
 
       toast.success("Profile updated successfully!");
 
-      // Refresh profile data
+      // Refresh profile data from server
       await fetchProfileData();
 
-      // Navigate to profile page after successful save
+      // Navigate after successful save:
+      // - If onboarding just became complete, go to products page
+      // - Otherwise, go to student profile
       setTimeout(() => {
-        navigate("/student/profile");
+        const wasCompleted = user?.onboardingCompleted === true;
+        const nowCompleted =
+          (updated?.onboardingCompleted ?? updated?.onboarding_completed) === true;
+        navigate(!wasCompleted && nowCompleted ? "/all-products" : "/student/profile");
       }, 1000); // Small delay to show success toast
     } catch (err) {
       console.error("Error saving changes:", err);
@@ -282,7 +329,7 @@ export const useStudentSettings = () => {
     setImageFile(null);
     setImagePreview(originalImageUrl);
 
-    // Reset form data to original profile values
+    // Reset form data to original profile values (name is read-only from Google)
     setFormData({
       courseYearLevel:
         profileData?.courseYearLevel !== "N/A"
@@ -291,6 +338,7 @@ export const useStudentSettings = () => {
       studentNumber:
         profileData?.studentNumber !== "N/A" ? profileData?.studentNumber : "",
       gender: profileData?.gender || "",
+      studentType: (profileData?.studentType || "").toLowerCase() || "",
     });
 
     setHasChanges(false);

@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
  * Displays size selection buttons with measurements
  * Handles size selection and confirmation
  * Shows availability status for each size
+ * When disabled (e.g. student already ordered max), sizes are shown for reference but not selectable
  */
 const SizeSelector = ({
   availableSizes,
@@ -16,6 +17,8 @@ const SizeSelector = ({
   sizeConfirmed,
   onSizeConfirm,
   loadingSizes = false,
+  disabled = false,
+  disabledReason,
 }) => {
   // Size measurement guide
   const sizeMeasurements = {
@@ -67,15 +70,21 @@ const SizeSelector = ({
 
   return (
     <div className="space-y-3 sm:space-y-4">
-      {/* Size Choices Label */}
-      <div>
-        <h3 className="text-sm sm:text-base font-bold text-[#F28C28] mb-2 sm:mb-3">
-          Size Choices:
-        </h3>
+      {disabled && disabledReason !== null && (disabledReason || "This item is no longer available to order.") && (
+        <p className="text-sm text-amber-700 font-medium">
+          {disabledReason || "This item is no longer available to order."}
+        </p>
+      )}
+      <div className={disabled ? "opacity-60 pointer-events-none select-none" : ""}>
+        {/* Size Choices Label */}
+        <div>
+          <h3 className="text-sm sm:text-base font-bold text-[#F28C28] mb-2 sm:mb-3">
+            Size Choices:
+          </h3>
 
-        {/* Size Buttons */}
-        <div className="flex flex-wrap gap-2">
-          {loadingSizes ? (
+          {/* Size Buttons */}
+          <div className="flex flex-wrap gap-2">
+            {loadingSizes ? (
             <div className="text-xs sm:text-sm text-gray-500">Loading sizes...</div>
           ) : (
             availableSizes.map((size) => {
@@ -178,7 +187,7 @@ const SizeSelector = ({
       )}
 
       {/* Size Confirmed Message */}
-      {selectedSize && sizeConfirmed && (
+      {selectedSize && sizeConfirmed && !disabled && (
         <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
           <Check className="w-5 h-5 text-green-600" />
           <span className="text-sm text-green-700 font-medium">
@@ -186,6 +195,7 @@ const SizeSelector = ({
           </span>
         </div>
       )}
+      </div>
     </div>
   );
 };

@@ -298,6 +298,44 @@ export const useItemApproval = () => {
     }
   }, [fetchStats]);
 
+  /**
+   * Promote an item's name to curated suggestions
+   * POST /api/system-admin/items/:id/promote-name
+   */
+  const promoteItemName = useCallback(async (itemId) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${API_BASE_URL}/system-admin/items/${itemId}/promote-name`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${getAuthToken()}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(result?.message || "Failed to add name to suggestions");
+      }
+
+      if (result?.success) {
+        toast.success(result.message || "Item name added to suggestions");
+        return result;
+      }
+
+      throw new Error(result?.message || "Failed to add name to suggestions");
+    } catch (err) {
+      console.error("Promote item name error:", err);
+      toast.error(err.message || "Failed to add name to suggestions");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     items,
     loading,
@@ -309,5 +347,6 @@ export const useItemApproval = () => {
     approveItem,
     approveItems,
     rejectItem,
+    promoteItemName,
   };
 };

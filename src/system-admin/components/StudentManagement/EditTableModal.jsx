@@ -10,6 +10,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
   const [formData, setFormData] = useState({
     maxItemsPerOrder: "",
     orderLockoutPeriod: "",
+    orderLockoutUnit: "months",
   });
 
   const [errors, setErrors] = useState({});
@@ -20,6 +21,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
       setFormData({
         maxItemsPerOrder: "",
         orderLockoutPeriod: "",
+        orderLockoutUnit: "months",
       });
       setErrors({});
     }
@@ -89,6 +91,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
     }
     if (formData.orderLockoutPeriod) {
       updateData.order_lockout_period = parseInt(formData.orderLockoutPeriod);
+      updateData.order_lockout_unit = formData.orderLockoutUnit || "months";
     }
 
     onSave(updateData);
@@ -134,7 +137,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
                 type="text"
                 value={formData.maxItemsPerOrder}
                 onChange={(e) => handleInputChange("maxItemsPerOrder", e.target.value)}
-                placeholder="Set Max Items Per Order"
+                placeholder="e.g. 5"
                 className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] ${
                   errors.maxItemsPerOrder ? "border-red-500" : "border-gray-300"
                 }`}
@@ -163,11 +166,19 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
                 type="text"
                 value={formData.orderLockoutPeriod}
                 onChange={(e) => handleInputChange("orderLockoutPeriod", e.target.value)}
-                placeholder="Set Order Lockout Period"
-                className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] ${
+                placeholder="e.g. 2"
+                className={`flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] ${
                   errors.orderLockoutPeriod ? "border-red-500" : "border-gray-300"
                 }`}
               />
+              <select
+                value={formData.orderLockoutUnit}
+                onChange={(e) => setFormData((prev) => ({ ...prev, orderLockoutUnit: e.target.value }))}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white min-w-[140px]"
+              >
+                <option value="months">Months</option>
+                <option value="academic_years">Academic Years</option>
+              </select>
               <button
                 type="button"
                 onClick={() => handleIncrement("orderLockoutPeriod")}
@@ -180,7 +191,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
             {errors.orderLockoutPeriod && (
               <p className="text-red-600 text-xs mt-1">{errors.orderLockoutPeriod}</p>
             )}
-            <p className="text-xs text-gray-500 mt-1">Number of days before student can order again</p>
+            <p className="text-xs text-gray-500 mt-1">How long the student is ineligible after a successful claim</p>
           </div>
         </div>
 

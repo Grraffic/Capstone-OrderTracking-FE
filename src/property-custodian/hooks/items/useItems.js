@@ -32,12 +32,26 @@ const API_BASE_URL =
  *   updateItem,
  *   deleteItem,
  * } = useItems();
+ *
+ * @param {Object} [options] - Optional configuration
+ * @param {boolean} [options.skipInitialFetch] - If true, do not fetch on mount. Consumer must call fetchItems() (e.g. with userEducationLevel when ready).
+ * @param {string} [options.itemStatus] - "active" | "archived" | "deleted". When "archived"/"deleted", list shows only those; default "active".
+ * @param {Date|string|null} [options.startDate] - Start of date range for created_at filter.
+ * @param {Date|string|null} [options.endDate] - End of date range for created_at filter.
  */
-export const useItems = () => {
+export const useItems = (options = {}) => {
+  const {
+    skipInitialFetch = false,
+    itemStatus: itemStatusFilter = "active",
+    startDate: startDateFilter = null,
+    endDate: endDateFilter = null,
+  } = options;
+
   // State for items (fetched from API)
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedItem, setSelectedItem] = useState(null);
@@ -75,14 +89,33 @@ export const useItems = () => {
    */
   const fetchItems = useCallback(async (userEducationLevel = null) => {
     try {
-      setLoading(true);
+      if (!hasFetchedOnce) setLoading(true);
       setError(null);
 
-      // Build URL with optional userEducationLevel parameter for eligibility filtering
-      let url = `${API_BASE_URL}/items`;
+      const params = new URLSearchParams();
       if (userEducationLevel) {
-        url += `?userEducationLevel=${encodeURIComponent(userEducationLevel)}`;
+        params.set("userEducationLevel", userEducationLevel);
       }
+      if (itemStatusFilter && itemStatusFilter !== "active") {
+        params.set("itemStatus", itemStatusFilter);
+      }
+      if (startDateFilter) {
+        const start =
+          typeof startDateFilter === "string"
+            ? startDateFilter
+            : startDateFilter?.toISOString?.() ?? "";
+        if (start) params.set("startDate", start);
+      }
+      if (endDateFilter) {
+        const end =
+          typeof endDateFilter === "string"
+            ? endDateFilter
+            : endDateFilter?.toISOString?.() ?? "";
+        if (end) params.set("endDate", end);
+      }
+      params.set("limit", "10000");
+      params.set("page", "1");
+      const url = `${API_BASE_URL}/items?${params.toString()}`;
 
       const response = await fetch(url);
 
@@ -100,6 +133,8 @@ export const useItems = () => {
           educationLevel: item.education_level,
           category: item.category,
           itemType: item.item_type,
+          forGender: item.for_gender || "Unisex",
+          for_gender: item.for_gender || "Unisex", // Also include snake_case for compatibility
           description: item.description,
           descriptionText: item.description_text,
           material: item.material,
@@ -130,19 +165,17 @@ export const useItems = () => {
       setItems([]); // Set empty array on error
     } finally {
       setLoading(false);
+      setHasFetchedOnce(true);
     }
-  }, []);
+  }, [itemStatusFilter, startDateFilter, endDateFilter, hasFetchedOnce]);
 
   /**
-   * Fetch items on component mount
-   * Note: Components that need eligibility filtering should call fetchItems(userEducationLevel) explicitly
-   * This auto-fetch is for components that don't need filtering (like property custodian views)
+   * Fetch items on mount and when itemStatus or date range filter changes
    */
   useEffect(() => {
-    // Auto-fetch items on mount for components that don't need eligibility filtering
-    // Components that need filtering (like student AllProducts) should call fetchItems(userEducationLevel) manually
+    if (skipInitialFetch) return;
     fetchItems();
-  }, [fetchItems]);
+  }, [fetchItems, skipInitialFetch, itemStatusFilter, startDateFilter, endDateFilter]);
 
   /**
    * Listen for real-time item updates via Socket.IO
@@ -252,34 +285,33 @@ export const useItems = () => {
 
   /**
    * Filter items based on search term and filters
+   * When viewing archived/deleted, only apply search — show all archived/deleted items regardless of tab
    */
   const filteredItems = useMemo(() => {
     let result = items;
 
-    // Handle "Accessories" tab - filter by item type instead of education level
-    if (educationLevelFilter === "Accessories") {
-      result = result.filter((item) => item.itemType === "Accessories");
-    } else if (educationLevelFilter !== "All") {
-      // Apply education level filter - show both uniforms and accessories for this level
-      // Map the filter value to the actual database value
-      const mappedFilter = mapTabLabelToEducationLevel(educationLevelFilter);
-      result = result.filter((item) => {
-        // Check both educationLevel and education_level fields for compatibility
-        // Use case-insensitive comparison to handle any case mismatches
-        const itemEducationLevel = (item.educationLevel || item.education_level || "").trim();
-        const normalizedFilter = (mappedFilter || "").trim();
-        return itemEducationLevel.toLowerCase() === normalizedFilter.toLowerCase();
-      });
-    }
-    // When "All" is selected, show all items including accessories
+    // When viewing archived or deleted, skip tab filters so all archived/deleted items show
+    if (itemStatusFilter !== "archived" && itemStatusFilter !== "deleted") {
+      // Handle "Accessories" tab - filter by item type instead of education level
+      if (educationLevelFilter === "Accessories") {
+        result = result.filter((item) => item.itemType === "Accessories");
+      } else if (educationLevelFilter !== "All") {
+        // Apply education level filter - show both uniforms and accessories for this level
+        const mappedFilter = mapTabLabelToEducationLevel(educationLevelFilter);
+        result = result.filter((item) => {
+          const itemEducationLevel = (item.educationLevel || item.education_level || "").trim();
+          const normalizedFilter = (mappedFilter || "").trim();
+          return itemEducationLevel.toLowerCase() === normalizedFilter.toLowerCase();
+        });
+      }
 
-    // Apply item type filter - this will narrow down to uniforms or accessories if selected
-    if (itemTypeFilter !== "All Types") {
-      result = result.filter((item) => item.itemType === itemTypeFilter);
-    }
+      // Apply item type filter
+      if (itemTypeFilter !== "All Types") {
+        result = result.filter((item) => item.itemType === itemTypeFilter);
+      }
 
-    // Apply grade level filter (filter by category)
-    if (gradeLevelFilter !== "All") {
+      // Apply grade level filter (filter by category)
+      if (gradeLevelFilter !== "All") {
       result = result.filter((item) => {
         // Map grade level filter to possible category values
         const categoryMap = {
@@ -303,8 +335,9 @@ export const useItems = () => {
         return item.category === gradeLevelFilter;
       });
     }
+    }
 
-    // Apply search term filter
+    // Apply search term filter (always, including when archived/deleted)
     if (searchTerm.trim()) {
       const lowerSearch = searchTerm.toLowerCase();
       result = result.filter(
@@ -324,6 +357,7 @@ export const useItems = () => {
     educationLevelFilter,
     itemTypeFilter,
     gradeLevelFilter,
+    itemStatusFilter,
     mapTabLabelToEducationLevel,
   ]);
 
@@ -386,6 +420,7 @@ export const useItems = () => {
           education_level: newItem.educationLevel,
           category: newItem.category,
           item_type: newItem.itemType,
+          for_gender: newItem.forGender || "Unisex",
           size:
             newItem.size && newItem.size.trim() !== ""
               ? newItem.size.trim()
@@ -443,6 +478,8 @@ export const useItems = () => {
             educationLevel: result.data.education_level,
             category: result.data.category,
             itemType: result.data.item_type,
+            forGender: result.data.for_gender || "Unisex",
+            for_gender: result.data.for_gender || "Unisex", // Also include snake_case for compatibility
             size: result.data.size || "N/A",
             description: result.data.description,
             descriptionText: result.data.description_text,
@@ -517,6 +554,7 @@ export const useItems = () => {
           education_level: updatedItem.educationLevel,
           category: updatedItem.category,
           item_type: updatedItem.itemType,
+          for_gender: updatedItem.forGender || "Unisex",
           size: updatedItem.size || "N/A",
           description: updatedItem.description,
           description_text: updatedItem.descriptionText,
@@ -556,6 +594,8 @@ export const useItems = () => {
             educationLevel: result.data.education_level,
             category: result.data.category,
             itemType: result.data.item_type,
+            forGender: result.data.for_gender || "Unisex",
+            for_gender: result.data.for_gender || "Unisex", // Also include snake_case for compatibility
             size: result.data.size || "N/A",
             description: result.data.description,
             descriptionText: result.data.description_text,
@@ -631,6 +671,33 @@ export const useItems = () => {
       }
     },
     [closeModal]
+  );
+
+  /**
+   * Archive item (disappears from default list; show when filter "Archived")
+   * @param {string} itemId - ID of item to archive
+   */
+  const archiveItem = useCallback(
+    async (itemId) => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/items/${itemId}/archive`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+        });
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.message || "Failed to archive item");
+        }
+
+        await fetchItems();
+      } catch (err) {
+        console.error("Archive item error:", err);
+        setError(err.message);
+        throw err;
+      }
+    },
+    [fetchItems]
   );
 
   // Calculate paginated items
@@ -714,9 +781,11 @@ export const useItems = () => {
     addItem,
     updateItem,
     deleteItem,
+    archiveItem,
     getStockStatus,
     // API state
     loading,
+    isInitialLoading: loading && !hasFetchedOnce,
     error,
     fetchItems,
     // Pagination

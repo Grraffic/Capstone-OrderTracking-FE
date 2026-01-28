@@ -1,4 +1,4 @@
-import { X, Info, MoreHorizontal } from "lucide-react";
+import { X, Info, MoreHorizontal, Pencil } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -24,7 +24,8 @@ import { createPortal } from "react-dom";
  * - totalStock: Total stock across all variations
  * - onClose: Function to close modal
  * - onSelectVariation: Function to select a variation
- * - onEdit: Function to edit an item
+ * - onEditItem: Function to edit the whole item (all variants) — opens full item edit form
+ * - onEdit: Function to edit a single variant — opens variant edit modal
  * - onDelete: Function to delete an item
  */
 const ItemDetailsModal = ({
@@ -38,6 +39,7 @@ const ItemDetailsModal = ({
   totalStock = 0, // Available but not currently used in UI
   onClose,
   onSelectVariation,
+  onEditItem,
   onEdit,
   onDelete,
 }) => {
@@ -113,13 +115,24 @@ const ItemDetailsModal = ({
               {selectedItem.itemType || "Uniform"}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
-            aria-label="Close modal"
-          >
-            <X size={18} className="text-white" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onEditItem?.(selectedItem)}
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E68B00] text-white text-sm font-medium hover:bg-[#d67a00] transition-colors"
+              aria-label="Edit all variants"
+            >
+              <Pencil size={16} />
+              <span>Edit</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+              aria-label="Close modal"
+            >
+              <X size={18} className="text-white" />
+            </button>
+          </div>
         </div>
 
         {/* Content - Scrollable */}

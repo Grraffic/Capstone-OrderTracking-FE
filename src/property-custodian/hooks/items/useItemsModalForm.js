@@ -54,6 +54,7 @@ export const useItemsModalForm = (
     descriptionText: "", // Additional description field
     material: "", // Material/Type field
     itemType: "",
+    forGender: "Unisex", // Gender field: Male, Female, or Unisex
     stock: 0,
     price: 0,
     image: "/assets/image/card1.png",
@@ -85,6 +86,7 @@ export const useItemsModalForm = (
           descriptionText: selectedItem.descriptionText || "",
           material: selectedItem.material || "",
           itemType: selectedItem.itemType || "",
+          forGender: selectedItem.forGender || selectedItem.for_gender || "Unisex",
           stock: selectedItem.stock || 0,
           price: selectedItem.price || 0,
           image: selectedItem.image || "/assets/image/card1.png",
@@ -107,6 +109,7 @@ export const useItemsModalForm = (
           descriptionText: "",
           material: "",
           itemType: "",
+          forGender: "Unisex",
           stock: 0,
           price: 0,
           image: "/assets/image/card1.png",

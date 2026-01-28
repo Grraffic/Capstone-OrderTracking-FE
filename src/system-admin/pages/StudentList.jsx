@@ -3,6 +3,7 @@ import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import StudentTable from "../components/StudentManagement/StudentTable";
 import StudentFilters from "../components/StudentManagement/StudentFilters";
 import EditTableModal from "../components/StudentManagement/EditTableModal";
+import EditStudentOrderLimitsModal from "../components/StudentManagement/EditStudentOrderLimitsModal";
 import UserModal from "../components/UserManagement/UserModal";
 import { useUsers } from "../hooks/useUsers";
 import { userAPI } from "../../services/user.service";
@@ -26,6 +27,7 @@ const StudentList = () => {
   const [gradeLevel, setGradeLevel] = useState("Grade Level");
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [isEditTableModalOpen, setIsEditTableModalOpen] = useState(false);
+  const [isOrderLimitsModalOpen, setIsOrderLimitsModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -184,7 +186,28 @@ const StudentList = () => {
       console.error("Error fetching student details:", error);
       setEditingStudent(student);
     }
-    setIsUserModalOpen(true);
+    setIsOrderLimitsModalOpen(true);
+  };
+
+  const handleSaveOrderLimits = async (updateData) => {
+    if (!editingStudent) return;
+    try {
+      const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
+      const refreshParams = {
+        page: currentPage,
+        search: search || "",
+        role: "student",
+        education_level: mapEducationLevelToDB(educationLevel),
+        course_year_level: mapGradeLevelToDB(gradeLevel),
+        school_year: schoolYearPrefix,
+      };
+      await updateUser(editingStudent.id, updateData, refreshParams);
+      toast.success("Order limits updated successfully");
+      setIsOrderLimitsModalOpen(false);
+      setEditingStudent(null);
+    } catch (error) {
+      toast.error(error.message || "Failed to update order limits");
+    }
   };
 
   const handleSaveStudent = async (studentData) => {
@@ -403,7 +426,7 @@ const StudentList = () => {
           </>
         )}
 
-        {/* Edit Table Modal */}
+        {/* Edit Table Modal (bulk) */}
         <EditTableModal
           isOpen={isEditTableModalOpen}
           onClose={() => setIsEditTableModalOpen(false)}
@@ -411,7 +434,18 @@ const StudentList = () => {
           onSave={handleBulkUpdate}
         />
 
-        {/* User Modal (for editing individual students) */}
+        {/* Edit Order Limits Modal (single student, row pencil) */}
+        <EditStudentOrderLimitsModal
+          isOpen={isOrderLimitsModalOpen}
+          onClose={() => {
+            setIsOrderLimitsModalOpen(false);
+            setEditingStudent(null);
+          }}
+          student={editingStudent}
+          onSave={handleSaveOrderLimits}
+        />
+
+        {/* User Modal (for editing user details; not opened from row pencil) */}
         <UserModal
           isOpen={isUserModalOpen}
           onClose={() => {

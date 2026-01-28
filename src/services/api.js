@@ -54,6 +54,9 @@ export const authAPI = {
   getProfile: async () => {
     return api.get("/auth/profile");
   },
+  getMaxQuantities: async () => {
+    return api.get("/auth/max-quantities");
+  },
   updateProfile: async (profileData) => {
     return api.put("/auth/profile", profileData);
   },
@@ -150,6 +153,15 @@ export const itemsAPI = {
     const encodedName = encodeURIComponent(name);
     const encodedEducationLevel = encodeURIComponent(educationLevel);
     return api.get(`/items/sizes/${encodedName}/${encodedEducationLevel}`);
+  },
+  getNameSuggestions: async ({ educationLevel, search, limit } = {}) => {
+    return api.get("/items/name-suggestions", {
+      params: {
+        ...(educationLevel ? { educationLevel } : {}),
+        ...(search ? { search } : {}),
+        ...(limit ? { limit } : {}),
+      },
+    });
   },
 };
 

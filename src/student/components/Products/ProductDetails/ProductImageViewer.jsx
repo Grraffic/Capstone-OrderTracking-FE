@@ -60,6 +60,8 @@ const ProductImageViewer = ({ product, selectedSize }) => {
           src={product.image}
           alt={product.name}
           className="relative z-10 w-full h-full max-h-[300px] sm:max-h-[400px] md:max-h-[500px] lg:max-h-[600px] xl:max-h-[750px] max-w-[300px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px] xl:max-w-[750px] object-contain transition-transform duration-300 drop-shadow-2xl scale-100 sm:scale-110 md:scale-115 lg:scale-125"
+          loading="lazy"
+          decoding="async"
           onError={handleImageError}
         />
 

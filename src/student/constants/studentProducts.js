@@ -188,6 +188,42 @@ export const PRODUCT_CATEGORIES = [
   },
 ];
 
+/** Item types that count as PE Uniform (Jersey and Jogging Pants only) */
+export const PE_UNIFORM_ITEM_TYPES = ["Jersey", "Jogging Pants"];
+
+/** Item types that count as accessories (Other Items) */
+export const ACCESSORY_ITEM_TYPES = [
+  "ID Lace",
+  "Number Patch",
+  "Logo Patch",
+  "Kinder Necktie",
+  "Ordinary Necktie",
+  "Necktie Girls",
+  "Necktie Boys",
+];
+
+/**
+ * Derive category from item type (and optionally product name) for sidebar filtering.
+ * - PE Uniform: Jersey and Jogging Pants only (includes "Small Jogging Pants", "Elementary Jersey", etc.)
+ * - Other Items: accessories (ID Lace, patches, neckties, etc.)
+ * - School Uniform: everything else
+ * @param {string} itemType - item_type from API (e.g. "Jersey", "Jogging Pants", "Small Jogging Pants")
+ * @param {string} [name] - product name; used as fallback when itemType is empty or doesn't match (e.g. "Small Jogging Pants")
+ * @returns {"pe_uniform"|"other_items"|"school_uniform"}
+ */
+export function categoryFromItemType(itemType, name = "") {
+  const norm = (s) => (typeof s === "string" ? s.trim().toLowerCase() : "");
+  const it = norm(itemType);
+  const nm = norm(name);
+  // PE Uniform: any item type or name that contains "Jersey" or "Jogging Pants"
+  if (it && (it.includes("jersey") || it.includes("jogging pants"))) return "pe_uniform";
+  if (nm && (nm.includes("jersey") || nm.includes("jogging pants"))) return "pe_uniform";
+  if (it && ACCESSORY_ITEM_TYPES.some((t) => t.toLowerCase() === it || it.includes(t.toLowerCase())))
+    return "other_items";
+  if (nm && ACCESSORY_ITEM_TYPES.some((t) => nm.includes(t.toLowerCase()))) return "other_items";
+  return "school_uniform";
+}
+
 export const PRODUCT_STATUS = {
   in_stock: { label: "In Stock", color: "bg-green-100 text-green-800" },
   out_of_stock: { label: "Out of Stock", color: "bg-red-100 text-red-800" },

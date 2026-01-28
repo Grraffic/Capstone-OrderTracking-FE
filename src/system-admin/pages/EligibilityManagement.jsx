@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import EligibilityTable from "../components/EligibilityManagement/EligibilityTable";
 import { useEligibility } from "../hooks/useEligibility";
@@ -16,14 +16,18 @@ import { toast } from "react-hot-toast";
  * - Pagination
  * - Delete items
  */
+const ITEMS_PER_PAGE = 8;
+
 const EligibilityManagement = () => {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filter, setFilter] = useState("all");
 
   const {
     items,
     loading,
+    saving,
     error,
     pagination,
     isEditMode,
@@ -46,23 +50,36 @@ const EligibilityManagement = () => {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Fetch data when search or page changes
-  useEffect(() => {
-    fetchEligibilityData({
-      page: currentPage,
-      limit: 10,
-      search: debouncedSearch,
-    });
-  }, [currentPage, debouncedSearch, fetchEligibilityData]);
-
-  // Initial fetch
+  // Fetch data when search changes. Use high limit so we get all items to merge with canonical list; we paginate the merged list on the frontend.
   useEffect(() => {
     fetchEligibilityData({
       page: 1,
-      limit: 10,
-      search: "",
+      limit: 200,
+      search: debouncedSearch,
+      filter: "all",
     });
-  }, [fetchEligibilityData]);
+  }, [debouncedSearch, fetchEligibilityData]);
+
+  // Frontend pagination: max 8 items per table page
+  const totalDisplayPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
+  const paginatedItems = useMemo(
+    () =>
+      items.slice(
+        (currentPage - 1) * ITEMS_PER_PAGE,
+        currentPage * ITEMS_PER_PAGE
+      ),
+    [items, currentPage]
+  );
+
+  // Reset to page 1 when total items shrink and we're past the last page
+  useEffect(() => {
+    if (
+      items.length > 0 &&
+      (currentPage - 1) * ITEMS_PER_PAGE >= items.length
+    ) {
+      setCurrentPage(1);
+    }
+  }, [items.length, currentPage]);
 
   /**
    * Handle edit table button click
@@ -136,20 +153,22 @@ const EligibilityManagement = () => {
         </div>
 
         {/* Controls Bar */}
-        <div className="flex items-center justify-between gap-4">
-          {/* Search Bar */}
-          <div className="flex-1 max-w-md relative">
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
-            <input
-              type="text"
-              placeholder="Search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
-            />
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          {/* Search */}
+          <div className="flex items-center gap-3 flex-1 flex-wrap">
+            <div className="max-w-md relative flex-1 min-w-[200px]">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <input
+                type="text"
+                placeholder="Search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+              />
+            </div>
           </div>
 
           {/* Edit Table Button */}
@@ -182,9 +201,9 @@ const EligibilityManagement = () => {
           </div>
         )}
 
-        {/* Eligibility Table */}
+        {/* Eligibility Table (max 8 items per page) */}
         <EligibilityTable
-          items={items}
+          items={paginatedItems}
           loading={loading}
           isEditMode={isEditMode}
           onEligibilityChange={handleEligibilityChange}
@@ -193,10 +212,13 @@ const EligibilityManagement = () => {
         />
 
         {/* Pagination Info */}
-        {pagination.total > 0 && (
+        {items.length > 0 && (
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
-              Showing {items.length} of {pagination.total} Items
+              Showing{" "}
+              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+              {Math.min(currentPage * ITEMS_PER_PAGE, items.length)} of{" "}
+              {items.length} items
             </div>
 
             {/* Pagination Controls */}
@@ -209,11 +231,11 @@ const EligibilityManagement = () => {
                 Previous
               </button>
               <span className="text-sm text-gray-600">
-                Page {currentPage} of {pagination.totalPages}
+                Page {currentPage} of {totalDisplayPages}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= pagination.totalPages}
+                disabled={currentPage >= totalDisplayPages}
                 className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Next
@@ -233,11 +255,11 @@ const EligibilityManagement = () => {
             </button>
             <button
               onClick={handleSaveChanges}
-              disabled={!hasChanges}
+              disabled={!hasChanges || saving}
               className="px-6 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <Save size={18} />
-              Save Changes
+              {saving ? "Saving…" : "Save Changes"}
             </button>
           </div>
         )}

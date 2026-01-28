@@ -244,7 +244,7 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
           <Menu size={24} className="text-[#0C2340]" />
         </button>
 
-        <h2 className="text-base sm:text-lg font-semibold text-[#0C2340] truncate max-w-[120px] sm:max-w-none">
+        <h2 className="text-base sm:text-lg font-sf-medium font-medium text-[#003363] truncate max-w-[120px] sm:max-w-none">
           Finance and Accounting Department
         </h2>
       </div>

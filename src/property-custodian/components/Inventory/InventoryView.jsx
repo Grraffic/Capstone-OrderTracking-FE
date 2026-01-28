@@ -23,6 +23,7 @@ const InventoryView = ({
   gradeLevel,
   onGradeLevelChange,
   onUpdateQuantityClick,
+  onSetReorderPointClick,
   inventoryData,
   loading = false,
 }) => {
@@ -43,6 +44,7 @@ const InventoryView = ({
         gradeLevel={gradeLevel}
         onGradeLevelChange={onGradeLevelChange}
         onUpdateQuantityClick={onUpdateQuantityClick}
+        onSetReorderPointClick={onSetReorderPointClick}
       />
 
       {/* Inventory Table with loading overlay */}

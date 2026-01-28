@@ -82,6 +82,44 @@ class InventoryService {
   }
 
   /**
+   * Set item reorder point
+   * @param {string} itemId - Item ID (items.id)
+   * @param {number} reorderPoint - Reorder point threshold (>= 0)
+   * @param {string} [variant] - Optional size/variant for items with size variations; when provided, updates that variant in note
+   * @returns {Promise} Updated item data
+   */
+  async setReorderPoint(itemId, reorderPoint, variant = null) {
+    try {
+      const value = Number(reorderPoint);
+      if (isNaN(value) || value < 0) {
+        throw new Error("Reorder point must be a non-negative number");
+      }
+      const body = { reorder_point: value };
+      if (variant != null && String(variant).trim() !== "") {
+        body.variant = String(variant).trim();
+      }
+      const response = await fetch(`${API_BASE_URL}/items/${itemId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to set reorder point");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Set reorder point error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Reset beginning inventory manually
    * @param {string} itemId - Item ID
    * @returns {Promise} Updated item data

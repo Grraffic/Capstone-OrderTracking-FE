@@ -85,6 +85,16 @@ const Inventory = () => {
   // Update Quantity Modal state
   const [isUpdateQuantityModalOpen, setIsUpdateQuantityModalOpen] =
     useState(false);
+  // Set item reorder point Modal state
+  const [isSetReorderPointModalOpen, setIsSetReorderPointModalOpen] =
+    useState(false);
+  const [setReorderPointForm, setSetReorderPointForm] = useState({
+    itemName: "",
+    variant: "",
+    reorderPoint: "",
+  });
+  const [setReorderPointSaving, setSetReorderPointSaving] = useState(false);
+  const [setReorderPointError, setSetReorderPointError] = useState(null);
   const [updateQuantityForm, setUpdateQuantityForm] = useState({
     itemName: "",
     fieldToEdit: "",
@@ -130,6 +140,16 @@ const Inventory = () => {
     console.log("[Inventory] 🔄 Transaction refresh triggered");
   }, []);
 
+  // Map Inventory grade-level dropdown values to DB education_level (so filter matches Items)
+  const gradeLevelToEducationLevel = {
+    all: null,
+    kinder: "Kindergarten",
+    elementary: "Elementary",
+    junior: "Junior High School",
+    senior: "Senior High School",
+    college: "College",
+  };
+
   // Fetch inventory data - wrapped in useCallback to fix initialization order
   const fetchInventoryData = useCallback(async () => {
     try {
@@ -140,7 +160,9 @@ const Inventory = () => {
       );
 
       const filters = {
-        educationLevel: gradeLevel !== "all" ? gradeLevel : null,
+        educationLevel:
+          gradeLevelToEducationLevel[gradeLevel] ??
+          (gradeLevel !== "all" ? gradeLevel : null),
         search: searchQuery || null,
       };
 
@@ -293,23 +315,19 @@ const Inventory = () => {
               }
             }
 
-            // Check if this order contains the item
-            const hasItem = orderItems.some((orderItem) => {
-              // Normalize sizes - handle "Small (S)" vs "Small" vs "S"
-              const normalizeSize = (size) => {
-                if (!size) return "";
-                // Extract base size from "Small (S)" format
-                const match = size.match(/^(.+?)\s*\([A-Z]\)$/i);
-                if (match) return match[1].trim();
-                return size.trim();
-              };
+            // Normalize sizes - handle "Small (S)" vs "Small" vs "S"
+            const normalizeSize = (size) => {
+              if (!size) return "";
+              const match = size.match(/^(.+?)\s*\([A-Z]\)$/i);
+              if (match) return match[1].trim();
+              return size.trim();
+            };
 
-              // Match by name (case-insensitive)
+            // Sum quantity of matching items in this order (Unreleased/Released = total quantity, not order count)
+            const matchingQuantity = orderItems.reduce((sum, orderItem) => {
               const nameMatch =
                 orderItem.name?.toLowerCase().trim() ===
                 itemName?.toLowerCase().trim();
-
-              // Match by size (normalize both for comparison)
               const normalizedOrderSize = normalizeSize(orderItem.size);
               const normalizedItemSize = normalizeSize(itemSize);
               const sizeMatch =
@@ -317,25 +335,24 @@ const Inventory = () => {
                   normalizedItemSize.toLowerCase() ||
                 orderItem.size?.toLowerCase().trim() ===
                   itemSize?.toLowerCase().trim();
-
               if (nameMatch && sizeMatch) {
                 matchLog.push({
                   orderIndex,
                   orderStatus: order.status,
-                  orderItem: { name: orderItem.name, size: orderItem.size },
+                  orderItem: { name: orderItem.name, size: orderItem.size, quantity: orderItem.quantity },
                   inventoryItem: { name: itemName, size: itemSize },
                 });
+                return sum + (Number(orderItem.quantity) || 0);
               }
+              return sum;
+            }, 0);
 
-              return nameMatch && sizeMatch;
-            });
-
-            if (hasItem) {
+            if (matchingQuantity > 0) {
               const status = order.status?.toLowerCase();
               if (status === "pending" || status === "processing") {
-                unreleasedCount++;
+                unreleasedCount += matchingQuantity;
               } else if (status === "claimed") {
-                releasedCount++;
+                releasedCount += matchingQuantity;
               }
             }
           });
@@ -428,6 +445,7 @@ const Inventory = () => {
           const transformedItem = {
             no: index + 1,
             id: item.id || item.item_id || `${item.name}-${item.size}-${index}`, // Use unique id from backend
+            item_id: item.item_id || item.id, // Actual item id for API (set reorder point, etc.)
             item: item.name,
             size: item.size,
             beginningInventory: beginningInventory,
@@ -883,13 +901,13 @@ const Inventory = () => {
 
   return (
     <AdminLayout showTitle={false} noPadding={true}>
-      {/* Inventory Content */}
-      <div className="p-4 sm:p-5 md:p-6 lg:p-8">
+      {/* Inventory Content - SF Pro Medium font */}
+      <div className="p-4 sm:p-5 md:p-6 lg:p-8 font-sf-medium">
         {/* Page Header - Title with Search */}
         <div className="mb-4 sm:mb-5 md:mb-6">
           {/* Desktop Layout: Title left, Tabs and Search right */}
           <div className="hidden lg:flex lg:items-center lg:justify-between">
-            <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight">
+            <h1 className="text-4xl xl:text-5xl font-sf-semibold font-semibold tracking-tight">
               <span className="text-[#0C2340]">Inven</span>
               <span className="text-[#E68B00]">tory</span>
             </h1>
@@ -948,7 +966,7 @@ const Inventory = () => {
           {/* Mobile/Tablet Layout: Stacked */}
           <div className="lg:hidden">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-sf-semibold font-semibold tracking-tight">
                 <span className="text-[#0C2340]">Inven</span>
                 <span className="text-[#E68B00]">tory</span>
               </h1>
@@ -1022,6 +1040,7 @@ const Inventory = () => {
             gradeLevel={gradeLevel}
             onGradeLevelChange={setGradeLevel}
             onUpdateQuantityClick={() => setIsUpdateQuantityModalOpen(true)}
+            onSetReorderPointClick={() => setIsSetReorderPointModalOpen(true)}
             inventoryData={paginatedInventoryData}
             loading={loading}
           />
@@ -1106,6 +1125,162 @@ const Inventory = () => {
         }}
         onSubmit={handleUpdateQuantity}
       />
+
+      {/* Set item reorder point Modal */}
+      {isSetReorderPointModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col font-sf-medium">
+            <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 flex-shrink-0">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl sm:text-2xl font-semibold text-[#0C2340]">
+                  Set Item Reorder Point
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSetReorderPointModalOpen(false);
+                    setSetReorderPointForm({
+                      itemName: "",
+                      variant: "",
+                      reorderPoint: "",
+                    });
+                    setSetReorderPointError(null);
+                  }}
+                  className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors flex-shrink-0"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <form
+              className="flex-1 overflow-y-auto px-4 sm:px-6 py-4"
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setSetReorderPointError(null);
+                setSetReorderPointSaving(true);
+                try {
+                  const row = inventoryData.find(
+                    (r) => r.item === setReorderPointForm.itemName && r.size === setReorderPointForm.variant
+                  );
+                  const itemId = row ? row.item_id || row.id : null;
+                  if (!itemId) {
+                    throw new Error("Please select an item and variant");
+                  }
+                  await inventoryService.setReorderPoint(
+                    itemId,
+                    setReorderPointForm.reorderPoint,
+                    setReorderPointForm.variant || undefined
+                  );
+                  setIsSetReorderPointModalOpen(false);
+                  setSetReorderPointForm({ itemName: "", variant: "", reorderPoint: "" });
+                  fetchInventoryData();
+                  window.dispatchEvent(new CustomEvent("inventory-reorder-point-updated"));
+                } catch (err) {
+                  setSetReorderPointError(err.message || "Failed to set reorder point");
+                } finally {
+                  setSetReorderPointSaving(false);
+                }
+              }}
+            >
+              {setReorderPointError && (
+                <div className="mb-4 px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                  {setReorderPointError}
+                </div>
+              )}
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Item Name</label>
+                  <select
+                    value={setReorderPointForm.itemName}
+                    onChange={(e) => {
+                      setSetReorderPointForm((prev) => ({
+                        ...prev,
+                        itemName: e.target.value,
+                        variant: "",
+                      }));
+                    }}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent"
+                    required
+                  >
+                    <option value="">Enter Item Name</option>
+                    {[...new Set(inventoryData.map((r) => r.item))].sort().map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Variant</label>
+                  <select
+                    value={setReorderPointForm.variant}
+                    onChange={(e) =>
+                      setSetReorderPointForm((prev) => ({ ...prev, variant: e.target.value }))
+                    }
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent"
+                    required
+                    disabled={!setReorderPointForm.itemName}
+                  >
+                    <option value="">Choose Variant</option>
+                    {setReorderPointForm.itemName &&
+                      [...new Set(
+                        inventoryData
+                          .filter((r) => r.item === setReorderPointForm.itemName)
+                          .map((r) => r.size)
+                      )].sort().map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">Reorder Point</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={setReorderPointForm.reorderPoint}
+                    onChange={(e) =>
+                      setSetReorderPointForm((prev) => ({
+                        ...prev,
+                        reorderPoint: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter Reorder Point"
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 sm:gap-3 mt-6 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSetReorderPointModalOpen(false);
+                    setSetReorderPointForm({ itemName: "", variant: "", reorderPoint: "" });
+                    setSetReorderPointError(null);
+                  }}
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
+                  disabled={setReorderPointSaving}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2.5 bg-[#E68B00] text-white rounded-lg hover:bg-[#D67A00] text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={setReorderPointSaving}
+                >
+                  {setReorderPointSaving ? "Saving…" : "Save"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

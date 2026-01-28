@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
 import { useOrder } from "../../context/OrderContext";
 import { useAuth } from "../../context/AuthContext";
 import { useActivity } from "../../context/ActivityContext";
-import { itemsAPI } from "../../services/api";
+import { itemsAPI, authAPI } from "../../services/api";
 import { groupCartItemsByVariations } from "../../utils/groupCartItems";
 import { generateOrderReceiptQRData } from "../../utils/qrCodeGenerator";
 import Navbar from "../components/common/Navbar";
@@ -37,6 +37,28 @@ const CheckoutPage = () => {
   const { trackCheckout } = useActivity();
   const [submitting, setSubmitting] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
+  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [limitsLoaded, setLimitsLoaded] = useState(false);
+
+  useEffect(() => {
+    const fetchMaxQuantities = async () => {
+      if (!user) return;
+      try {
+        const res = await authAPI.getMaxQuantities();
+        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+      } catch (_) {
+        setMaxItemsPerOrder(null);
+      } finally {
+        setLimitsLoaded(true);
+      }
+    };
+    fetchMaxQuantities();
+  }, [user]);
+
+  const limitNotSet =
+    user &&
+    limitsLoaded &&
+    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
 
   // Determine which items to display: direct checkout items or cart items
   const items = isDirectCheckout ? checkoutItems : cartItems;
@@ -70,6 +92,13 @@ const CheckoutPage = () => {
     if (!user) {
       toast.error("Please log in to place an order");
       navigate("/login");
+      return;
+    }
+
+    if (limitNotSet) {
+      toast.error(
+        "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders."
+      );
       return;
     }
 
@@ -513,6 +542,12 @@ const CheckoutPage = () => {
         } else {
           await clearCart(user.uid);
         }
+        // Signal that limits (maxQuantities / alreadyOrdered) must be refetched so
+        // Add to Cart / Order stay disabled for items already in My Orders
+        window.dispatchEvent(new CustomEvent("order-created"));
+        try {
+          sessionStorage.setItem("limitsNeedRefresh", "1");
+        } catch (_) {}
       }
 
       // Show appropriate success message
@@ -681,12 +716,23 @@ const CheckoutPage = () => {
             </div>
           </div>
 
+          {/* Order limit not set: student cannot place order until admin sets Max Items Per Order. */}
+          {items.length > 0 && limitNotSet && (
+            <div className="px-4 sm:px-6 lg:px-8 pb-2">
+              <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                <p className="font-medium">
+                  Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Checkout Button - Fixed at Bottom */}
           {items.length > 0 && (
             <div className="p-4 sm:p-6 lg:p-8 pt-0">
               <button
                 onClick={handleCheckout}
-                disabled={loading || submitting}
+                disabled={loading || submitting || limitNotSet}
+                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders." : undefined}
                 className="w-full py-3 sm:py-4 bg-[#F28C28] text-white font-bold text-base sm:text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting

@@ -1,5 +1,32 @@
-import React from "react";
-import { Edit, Trash2, MoreVertical, User, Calendar, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Edit, Trash2, MoreVertical, User, Calendar } from "lucide-react";
+import { splitDisplayName } from "../../../utils/displayName";
+
+/**
+ * Avatar cell with fallback when image fails to load
+ */
+const AvatarCell = ({ student, getAvatarUrl }) => {
+  const [imgFailed, setImgFailed] = useState(false);
+  const url = getAvatarUrl(student);
+  const { displayName } = splitDisplayName(student.name || "");
+  const initial = (displayName || "S").charAt(0).toUpperCase();
+
+  if (!url || imgFailed) {
+    return (
+      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+        <span className="text-xs font-medium text-gray-600">{initial}</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={url}
+      alt={student.name || "Student"}
+      className="w-6 h-6 rounded-full object-cover shrink-0"
+      onError={() => setImgFailed(true)}
+    />
+  );
+};
 
 /**
  * StudentTable Component
@@ -34,6 +61,17 @@ const StudentTable = ({
     return student.avatar_url || student.photo_url || null;
   };
 
+  // Effective max items: admin override if set, else derived from student_type (8 new, 2 old) after profile setup
+  const getEffectiveMaxItemsPerOrder = (student) => {
+    if (student.max_items_per_order != null && Number(student.max_items_per_order) > 0) {
+      return { value: Number(student.max_items_per_order), isOverride: true };
+    }
+    const st = (student.student_type || "").toLowerCase();
+    if (st === "new") return { value: 8, isOverride: false };
+    if (st === "old") return { value: 2, isOverride: false };
+    return { value: null, isOverride: false };
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
@@ -50,6 +88,7 @@ const StudentTable = ({
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student ID</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Name</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Grade Level</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Type</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Max Items Per Order</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Order Lockout Period</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Action</th>
@@ -58,7 +97,7 @@ const StudentTable = ({
         <tbody>
           {students.length === 0 ? (
             <tr>
-              <td colSpan="7" className="px-4 py-12">
+              <td colSpan="8" className="px-4 py-12">
                 <div className="flex flex-col items-center justify-center text-center">
                   {isFutureSchoolYear ? (
                     <>
@@ -111,27 +150,53 @@ const StudentTable = ({
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   <div className="flex items-center gap-2">
-                    {getAvatarUrl(student) ? (
-                      <img
-                        src={getAvatarUrl(student)}
-                        alt={student.name || "Student"}
-                        className="w-6 h-6 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-                        <User size={14} className="text-gray-500" />
-                      </div>
-                    )}
-                    <span>{student.name || "N/A"}</span>
+                    <AvatarCell student={student} getAvatarUrl={getAvatarUrl} />
+                    <span>{splitDisplayName(student.name || "").displayName || "N/A"}</span>
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {student.course_year_level || "N/A"}
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
-                  {student.max_items_per_order !== null && student.max_items_per_order !== undefined
-                    ? student.max_items_per_order
+                  {student.student_type
+                    ? (
+                        <span className="capitalize">
+                          {String(student.student_type).toLowerCase() === "new" ? "New Student" : "Old Student"}
+                        </span>
+                      )
                     : "N/A"}
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-900">
+                  {(() => {
+                    const { value: max, isOverride } = getEffectiveMaxItemsPerOrder(student);
+                    if (max == null) {
+                      return (
+                        <span className="inline-flex items-center gap-2">
+                          <span>N/A</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                            Set limit
+                          </span>
+                        </span>
+                      );
+                    }
+                    const used = Number(student.slots_used_from_placed_orders) || 0;
+                    const left = Math.max(0, max - used);
+                    return used > 0
+                      ? (
+                          <span className="inline-flex flex-col gap-0.5">
+                            <span>{max} max{!isOverride && <span className="text-gray-500 font-normal"> (default)</span>}</span>
+                            <span className="text-xs text-gray-600">
+                              {left} left ({used} used)
+                            </span>
+                          </span>
+                        )
+                      : (
+                          <span>
+                            {max}
+                            {!isOverride && <span className="text-gray-500 font-normal"> (default)</span>}
+                          </span>
+                        );
+                  })()}
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {student.order_lockout_period !== null && student.order_lockout_period !== undefined

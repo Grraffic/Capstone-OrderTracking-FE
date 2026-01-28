@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { Menu, Bell } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 import { useSocket } from "../../../context/SocketContext";
+import { splitDisplayName } from "../../../utils/displayName";
 import { toast } from "react-hot-toast";
 import NotificationDropdown from "../../../property-custodian/components/common/NotificationDropdown";
 import { orderAPI } from "../../../services/api";
@@ -64,12 +65,19 @@ const SystemAdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const notificationRef = useRef(null);
 
-  const displayName = user?.displayName || user?.name || "System Admin";
+  const rawName = user?.displayName || user?.name || "";
+  const displayName = rawName ? splitDisplayName(rawName).displayName : "System Admin";
   const userEmail = user?.email || "";
-  // Use Cloudinary URL from user profile, fallback to placeholder
-  const userAvatar = user?.photoURL || "/default-avatar.png";
+  const userAvatar = user?.photoURL || null;
+  const avatarInitial = (rawName ? splitDisplayName(rawName).displayName : "S").charAt(0).toUpperCase() || "S";
+
+  // Reset image load error when user photo URL changes
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [user?.photoURL]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -279,11 +287,21 @@ const SystemAdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
           </div>
 
           <div className="flex items-center gap-1">
-            <img
-              src={userAvatar}
-              alt={displayName}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-[#e68b00]"
-            />
+            {userAvatar && !imageLoadError ? (
+              <img
+                src={userAvatar}
+                alt={displayName}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-[#e68b00]"
+                onError={() => setImageLoadError(true)}
+              />
+            ) : (
+              <div
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#003363] flex items-center justify-center border-2 border-[#e68b00] text-white text-sm font-semibold shrink-0"
+                aria-label={displayName}
+              >
+                {avatarInitial}
+              </div>
+            )}
           </div>
         </div>
       </div>

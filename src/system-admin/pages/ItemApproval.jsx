@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
 import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import { useItemApproval } from "../hooks/useItemApproval";
-import { CheckCircle2, XCircle, Search, CheckSquare, Square } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  Search,
+  CheckSquare,
+  Square,
+  PlusCircle,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 
 /**
@@ -33,6 +40,7 @@ const ItemApproval = () => {
     approveItem,
     approveItems,
     rejectItem,
+    promoteItemName,
   } = useItemApproval();
 
   // Debounce search input
@@ -96,6 +104,17 @@ const ItemApproval = () => {
       } catch (error) {
         // Error already handled in hook
       }
+    }
+  };
+
+  /**
+   * Promote item name to curated suggestions
+   */
+  const handlePromoteName = async (itemId) => {
+    try {
+      await promoteItemName(itemId);
+    } catch (error) {
+      // Error already handled in hook
     }
   };
 
@@ -382,15 +401,33 @@ const ItemApproval = () => {
                               <XCircle size={18} />
                               Reject
                             </button>
+                            <button
+                              onClick={() => handlePromoteName(item.id)}
+                              className="text-[#0C2340] hover:text-[#e68b00] flex items-center gap-1"
+                              title="Add this item name to suggestions"
+                            >
+                              <PlusCircle size={18} />
+                              Promote Name
+                            </button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleRejectItem(item.id)}
-                            className="text-red-600 hover:text-red-900 flex items-center gap-1"
-                          >
-                            <XCircle size={18} />
-                            Unapprove
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handlePromoteName(item.id)}
+                              className="text-[#0C2340] hover:text-[#e68b00] flex items-center gap-1"
+                              title="Add this item name to suggestions"
+                            >
+                              <PlusCircle size={18} />
+                              Promote Name
+                            </button>
+                            <button
+                              onClick={() => handleRejectItem(item.id)}
+                              className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                            >
+                              <XCircle size={18} />
+                              Unapprove
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

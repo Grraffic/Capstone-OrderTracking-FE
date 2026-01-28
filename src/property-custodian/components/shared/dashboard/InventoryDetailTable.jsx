@@ -130,7 +130,7 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse">
-          <thead className="bg-[#0C2340]">
+          <thead className="bg-[rgba(46,143,234,0.83)]">
             <tr>
               <th className="px-4 py-3 text-left text-sm font-semibold text-white">
                 Item Name
@@ -170,15 +170,15 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
                     itemIndex % 2 === 0 ? "bg-[#FFF8F0]" : "bg-white"
                   } hover:bg-gray-50 transition-colors`}
                 >
-                  <td className="px-4 py-4 text-sm text-gray-900 font-medium border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm text-[#003363] font-medium border-b border-gray-100">
                     {item.itemName}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm text-[#003363] border-b border-gray-100">
                     <div className="relative">
                       <select
                         value={selectedSize}
                         onChange={(e) => handleVariantChange(item, e.target.value)}
-                        className="w-full px-2 py-1 text-xs font-semibold rounded-md border border-[#E68B00] bg-white focus:outline-none focus:ring-2 focus:ring-[#E68B00] appearance-none pr-8 cursor-pointer"
+                        className="w-full px-2 py-1 text-xs font-semibold rounded-md border border-[#E68B00] bg-white focus:outline-none focus:ring-2 focus:ring-[#E68B00] appearance-none pr-8 cursor-pointer text-[#003363]"
                       >
                         {getAvailableVariants(item).map((v) => (
                           <option key={v} value={v}>
@@ -192,22 +192,22 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
                       />
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-sm font-semibold text-[#E68B00] border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm font-semibold text-[#003363] border-b border-gray-100">
                     {selectedVariantData.beginningInventory || 0}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm text-[#003363] border-b border-gray-100">
                     {selectedVariantData.purchase || 0}
                   </td>
-                  <td className="px-4 py-4 text-sm font-semibold text-[#4A90E2] border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm font-semibold text-[#003363] border-b border-gray-100">
                     {selectedVariantData.releases || 0}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm text-[#003363] border-b border-gray-100">
                     {selectedVariantData.returns || 0}
                   </td>
-                  <td className="px-4 py-4 text-sm font-semibold text-[#E68B00] border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm font-semibold text-[#003363] border-b border-gray-100">
                     {selectedVariantData.endingInventory || 0}
                   </td>
-                  <td className="px-4 py-4 text-sm text-gray-900 border-b border-gray-100">
+                  <td className="px-4 py-4 text-sm text-[#003363] border-b border-gray-100">
                     P{Number(selectedVariantData.unit || 0).toFixed(2)}
                   </td>
                 </tr>
@@ -231,7 +231,7 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
               }`}
             >
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-semibold text-gray-900">
+                <h3 className="text-sm font-semibold text-[#003363]">
                   {item.itemName}
                 </h3>
                 <div className="relative">
@@ -255,33 +255,33 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
                   <span className="text-gray-600">Beginning Inventory:</span>
-                  <span className="ml-2 font-semibold text-[#E68B00]">
+                  <span className="ml-2 font-semibold text-[#003363]">
                     {selectedVariantData.beginningInventory || 0}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Purchase:</span>
-                  <span className="ml-2">{selectedVariantData.purchase || 0}</span>
+                  <span className="ml-2 text-[#003363]">{selectedVariantData.purchase || 0}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Releases:</span>
-                  <span className="ml-2 font-semibold text-[#4A90E2]">
+                  <span className="ml-2 font-semibold text-[#003363]">
                     {selectedVariantData.releases || 0}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Returns:</span>
-                  <span className="ml-2">{selectedVariantData.returns || 0}</span>
+                  <span className="ml-2 text-[#003363]">{selectedVariantData.returns || 0}</span>
                 </div>
                 <div>
                   <span className="text-gray-600">Ending Inventory:</span>
-                  <span className="ml-2 font-semibold text-[#E68B00]">
+                  <span className="ml-2 font-semibold text-[#003363]">
                     {selectedVariantData.endingInventory || 0}
                   </span>
                 </div>
                 <div>
                   <span className="text-gray-600">Unit:</span>
-                  <span className="ml-2">P{Number(selectedVariantData.unit || 0).toFixed(2)}</span>
+                  <span className="ml-2 text-[#003363]">P{Number(selectedVariantData.unit || 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>

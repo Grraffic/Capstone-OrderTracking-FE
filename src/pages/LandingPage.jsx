@@ -2,7 +2,6 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { useScrollOnState } from "../hooks/useScrollOnState";
 import Header from "../components/common/Header";
-import Footer from "../components/common/Footer";
 import ContactForm from "../components/common/ContactForm";
 import FeatureCarousel from "../constants/carouselSlides";
 
@@ -35,21 +34,21 @@ export default function LandingPage() {
           </div>
 
           {/* Right Content (Social Media Preview) */}
-          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg relative flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-0">
+          <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg relative flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6 lg:gap-4 pb-16 sm:pb-14 lg:pb-14 min-h-0 overflow-hidden">
             <img
               src="../../assets/image/page.png"
               alt="La Verdad Christian College Facebook"
-              className="w-full sm:w-[200px] md:w-[280px] lg:w-[320px] h-auto rounded-lg shadow-md flex-shrink-0"
+              className="w-full sm:w-[200px] md:w-[280px] lg:w-[200px] xl:w-[240px] h-auto rounded-lg shadow-md flex-shrink-0 object-contain"
             />
-            <div className="sm:ml-4 md:ml-6 lg:ml-8 text-center sm:text-left w-full sm:w-auto">
-              <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[#163869] leading-tight">
+            <div className="text-center sm:text-left w-full sm:w-auto min-w-0 flex flex-col items-center sm:items-start lg:items-start flex-1">
+              <h2 className="text-lg sm:text-xl md:text-xl font-bold text-[#163869] leading-tight">
                 Follow us on our <br className="hidden sm:block" />
                 <span className="text-[#E68B00]">Social Media</span>
               </h2>
               <p className="mt-2 text-base sm:text-lg text-[#235292] font-semibold">
                 La Verdad Christian College
               </p>
-              <p className="text-sm sm:text-base text-orange-600">
+              <p className="text-sm sm:text-base text-orange-600 mt-0">
                 Apalit, Pampanga
               </p>
             </div>
@@ -57,9 +56,9 @@ export default function LandingPage() {
               href="https://www.facebook.com/lvcc.apalit"
               target="_blank"
               rel="noopener noreferrer"
-              className="absolute bottom-4 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              className="absolute bottom-2 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center z-10"
             >
-              <button className="bg-yellow-400 rounded-lg p-3 shadow flex items-center hover:bg-yellow-500 transition">
+              <button className="rounded-lg p-3 shadow flex items-center transition bg-[#E68B00]/70 hover:bg-[#E68B00]/90">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-5 w-5 text-white"
@@ -89,67 +88,182 @@ export default function LandingPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {/* Card 1 */}
-            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-lg transition">
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                Senior High Uniforms
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-4">
-                are now Available!
-              </p>
-              <img
-                src="../../assets/image/card1.png"
-                alt="Senior High Uniforms"
-                className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
-              />
-              <div>
-                <Link
-                  to="/all-products"
-                  className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
-                >
-                  Click here to Order →
-                </Link>
+            <div className="flex flex-col h-full">
+              <div
+                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, rgba(243, 243, 243, 1) 0%, rgba(249, 240, 227, 0.97) 11%, rgba(203, 123, 0, 0.7) 60%, rgba(1, 109, 211, 0.7) 100%)",
+                }}
+              >
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                  Senior High <br /> Uniforms
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
+                  are now Available!
+                </p>
+                <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                  {/* Background text under the image (watermark) */}
+                  <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                    <div
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                      style={{
+                        letterSpacing: "0.05em",
+                        lineHeight: "0.85",
+                        margin: 0,
+                        padding: 0,
+                        display: "block",
+                      }}
+                    >
+                      Senior
+                    </div>
+                    <div
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                      style={{
+                        letterSpacing: "0.05em",
+                        lineHeight: "0.85",
+                        margin: 0,
+                        padding: 0,
+                        display: "block",
+                        marginTop: "-0.1em",
+                      }}
+                    >
+                      High School
+                    </div>
+                  </div>
+
+                  <img
+                    src="../../assets/image/SHS BLOUSE.png"
+                    alt="Senior High Uniforms"
+                    className="relative z-10 w-full h-full object-contain"
+                  />
+                </div>
               </div>
+              <Link
+                to="/all-products"
+                className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
+              >
+               → Click here to Order
+              </Link>
             </div>
 
             {/* Card 2 */}
-            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-lg transition">
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                Basic Education Uniforms
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-4">
-                are now Available!
-              </p>
-              <img
-                src="../../assets/image/card2.png"
-                alt="Basic Education Uniforms"
-                className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
-              />
+            <div className="flex flex-col h-full">
+              <div
+                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, rgba(243, 243, 243, 1) 0%, rgba(249, 240, 227, 0.97) 11%, rgba(203, 123, 0, 0.7) 60%, rgba(1, 109, 211, 0.7) 100%)",
+                }}
+              >
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                  Basic Education Uniforms
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
+                  are now in stock!
+                </p>
+                <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                  {/* Background text under the image (watermark) */}
+                  <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                    <div
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                      style={{
+                        letterSpacing: "0.05em",
+                        lineHeight: "0.85",
+                        margin: 0,
+                        padding: 0,
+                        display: "block",
+                      }}
+                    >
+                      Basic
+                    </div>
+                    <div
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                      style={{
+                        letterSpacing: "0.05em",
+                        lineHeight: "0.85",
+                        margin: 0,
+                        padding: 0,
+                        display: "block",
+                        marginTop: "-0.1em",
+                      }}
+                    >
+                      Education
+                    </div>
+                  </div>
+
+                  <img
+                    src="../../assets/image/ELEMENTARY BLOUSE.png"
+                    alt="Basic Education Uniforms"
+                    className="relative z-10 w-full h-full object-contain"
+                  />
+                </div>
+              </div>
               <Link
                 to="/all-products"
-                className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
+                className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
               >
-                Click here to Order →
+               → Click here to Order 
               </Link>
             </div>
 
             {/* Card 3 */}
-            <div className="bg-white p-4 sm:p-6 rounded-xl shadow-md hover:shadow-lg transition sm:col-span-2 lg:col-span-1">
-              <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                Notebooks
-              </h3>
-              <p className="text-sm sm:text-base text-gray-600 mb-4">
-                are now Available!
-              </p>
-              <img
-                src="../../assets/image/card3.png"
-                alt="Notebooks"
-                className="w-full h-40 sm:h-48 lg:h-56 object-cover rounded-lg mb-4"
-              />
+            <div className="flex flex-col h-full sm:col-span-2 lg:col-span-1">
+              <div
+                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden"
+                style={{
+                  background:
+                    "linear-gradient(to bottom, rgba(243, 243, 243, 1) 0%, rgba(249, 240, 227, 0.97) 11%, rgba(203, 123, 0, 0.7) 60%, rgba(1, 109, 211, 0.7) 100%)",
+                }}
+              >
+                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                  PE Uniforms are
+                </h3>
+                <p className="text-sm sm:text-base text-gray-600 mb-4">
+                  are now Available!
+                </p>
+                <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                  {/* Background text under the image (watermark) */}
+                  <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                    <div
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                      style={{
+                        letterSpacing: "0.05em",
+                        lineHeight: "0.85",
+                        margin: 0,
+                        padding: 0,
+                        display: "block",
+                      }}
+                    >
+                      PE
+                    </div>
+                    <div
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                      style={{
+                        letterSpacing: "0.05em",
+                        lineHeight: "0.85",
+                        margin: 0,
+                        padding: 0,
+                        display: "block",
+                        marginTop: "-0.1em",
+                      }}
+                    >
+                      Uniform
+                    </div>
+                  </div>
+
+                  <img
+                    src="../../assets/image/JERSEY.png"
+                    alt="PE Uniforms"
+                    className="relative z-10 w-full h-full object-contain"
+                  />
+                </div>
+              </div>
               <Link
                 to="/all-products"
-                className="text-orange-500 font-semibold text-sm sm:text-base hover:underline min-h-[44px] flex items-center"
+                className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
               >
-                Click here to Order →
+               → Click here to Order
               </Link>
             </div>
           </div>
@@ -307,8 +421,6 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

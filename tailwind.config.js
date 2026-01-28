@@ -71,6 +71,10 @@ export default {
         SFPro: ["SF-Pro", "sans-serif"],
         SFRegular: ["SF-ProRegular", "sans-serif"],
         Tolkien: ["Tolkien"],
+        SFSemibold: ["SF-ProSemibold"],
+        "sf-medium": ["SF Pro Display Medium", "SF Pro", "ui-sans-serif", "sans-serif"],
+        "sf-semibold": ["SF Pro Semibold", "Semibold", "ui-sans-serif", "sans-serif"],
+        "sf-regular": ["Regular", "SF Pro", "ui-sans-serif", "sans-serif"],
       },
       spacing: {
         18: "4.5rem",

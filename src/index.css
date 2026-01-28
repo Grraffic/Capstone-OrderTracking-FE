@@ -5,17 +5,37 @@
 @tailwind utilities;
 
 @font-face {
+  font-family: "SF Pro Display Medium";
+  src: local("SF Pro Display Medium"), url("/assets/font/SFPRODISPLAYMEDIUM.OTF") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
   font-family: "Medium";
-  src: local("SFPro") url("../assets/font/SFPRODISPLAYMEDIUM.OTF")
-    format("truetype");
+  src: local("SFPro") url("/assets/font/SFPRODISPLAYMEDIUM.OTF") format("opentype");
+}
 
+@font-face {
   font-family: "Regular";
-  src: local("SFPro") url("../public//assets/font/SFPRODISPLAYREGULAR.OTF")
-    format("truetype");
+  src: local("SFPro") url("/assets/font/SFPRODISPLAYREGULAR.OTF") format("opentype");
+}
 
-  font-family: ("Tolkien");
-  src: local("Tolkien") url("../public/assets/font/Tolkien.ttf")
-    format("truetype");
+@font-face {
+  font-family: "Tolkien";
+  src: local("Tolkien") url("/assets/font/Tolkien.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "SF Pro Semibold";
+  src: local("SF Pro Semibold"), url("/assets/font/SFPROSEMIBOLD.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Semibold";
+  src: local("SFPro") url("/assets/font/SFPROSEMIBOLD.ttf") format("truetype");
 }
 
 @layer base {

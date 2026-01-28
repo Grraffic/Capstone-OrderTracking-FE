@@ -62,14 +62,11 @@ const AtReorderPointSection = ({ totalAtReorderPoint }) => {
   }
 
   return (
-    <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 ease-in-out">
+    <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 ease-in-out font-sf-medium">
       {/* Header */}
       <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-[#0C2340]">
-              At Reorder Point - {selectedEducationLevel} Level
-            </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
             <div className="flex items-center gap-3">
               <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
                 Education Level:

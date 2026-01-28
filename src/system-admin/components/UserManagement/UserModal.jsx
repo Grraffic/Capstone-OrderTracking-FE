@@ -93,13 +93,33 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
   useEffect(() => {
     if (user) {
       // Split name into first and last name if editing
-      const nameParts = (user.name || "").split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-      
+      const rawName = (user.name || "").trim();
+      let firstName = "";
+      let lastName = "";
+
+      if (rawName) {
+        const spaceParts = rawName.split(/\s+/);
+        if (spaceParts.length >= 2) {
+          // "John Doe" or "John Doe Smith" -> first = first word, last = rest
+          firstName = spaceParts[0] || "";
+          lastName = spaceParts.slice(1).join(" ") || "";
+        } else if (spaceParts.length === 1 && spaceParts[0].includes(".")) {
+          // Single part with a dot, e.g. "leorenzbien.rodriguez" (common for email-style names)
+          const dotParts = spaceParts[0].split(".");
+          if (dotParts.length >= 2) {
+            firstName = dotParts[0] || "";
+            lastName = dotParts.slice(1).join(".") || "";
+          } else {
+            firstName = spaceParts[0] || "";
+          }
+        } else {
+          firstName = spaceParts[0] || "";
+        }
+      }
+
       setFormData({
-        firstName: firstName,
-        lastName: lastName,
+        firstName,
+        lastName,
         email: user.email || "",
         role: user.role || "",
       });

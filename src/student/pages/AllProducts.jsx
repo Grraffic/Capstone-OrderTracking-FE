@@ -10,7 +10,10 @@ import Footer from "../../components/common/Footer";
 import { useItems } from "../../property-custodian/hooks/items/useItems";
 import { useSearchDebounce, useProductPagination } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
+import { useCart } from "../../context/CartContext";
 import { authAPI } from "../../services/api";
+import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../utils/maxQuantityKeys";
+import { categoryFromItemType } from "../constants/studentProducts";
 
 /**
  * AllProducts Component
@@ -35,9 +38,16 @@ const AllProducts = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Desktop sidebar collapse to icons
   const [userEducationLevel, setUserEducationLevel] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [maxQuantities, setMaxQuantities] = useState({});
+  const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
+  const [limitsLoaded, setLimitsLoaded] = useState(false);
+  const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
 
-  // Get user from auth context
+  // Get user from auth context and cart for "already in cart" check
   const { user } = useAuth();
+  const { items: cartItems } = useCart();
 
   // Fetch user profile to get education level
   useEffect(() => {
@@ -62,21 +72,90 @@ const AllProducts = () => {
     }
   }, [user]);
 
-  // Fetch items data using existing hook with user education level for eligibility filtering
-  const { items, loading, error, fetchItems } = useItems();
-  
-  // Fetch items when user education level is available.
-  // Treat "Vocational" as "College" for eligibility (ACT is part of College).
+  // Refetch limits when an order was just created (e.g. after checkout) or when tab regains focus.
+  // When visible and logged in, always refetch so "already ordered" is up to date (e.g. checkout in another tab).
+  // On pageshow persisted (bfcache): page restored via Back button; refetch so item stays disabled.
+  useEffect(() => {
+    const onOrderCreated = () => setLimitsRefreshTrigger((t) => t + 1);
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      try {
+        if (sessionStorage.getItem("limitsNeedRefresh")) setLimitsRefreshTrigger((t) => t + 1);
+      } catch (_) {}
+      if (user) setLimitsRefreshTrigger((t) => t + 1);
+    };
+    const onPageShow = (e) => {
+      if (e.persisted && user) setLimitsRefreshTrigger((t) => t + 1);
+    };
+    window.addEventListener("order-created", onOrderCreated);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("order-created", onOrderCreated);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [user]);
+
+  // On mount, if we came back after checkout (or landing as logged-in user), refetch limits so "already ordered" is up to date
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem("limitsNeedRefresh")) setLimitsRefreshTrigger((t) => t + 1);
+    } catch (_) {}
+    if (user) setLimitsRefreshTrigger((t) => t + 1);
+  }, [user]);
+
+  // Fetch max-quantities and alreadyOrdered so we can disable add/order for items already at limit (e.g. jogging pants in orders)
+  useEffect(() => {
+    const fetchMaxQuantities = async () => {
+      if (!user) {
+        setLimitsLoaded(false);
+        return;
+      }
+      setLimitsLoaded(false);
+      try {
+        const res = await authAPI.getMaxQuantities();
+        setMaxQuantities(res.data?.maxQuantities ?? {});
+        setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
+        try {
+          sessionStorage.removeItem("limitsNeedRefresh");
+        } catch (_) {}
+        setLimitsLoaded(true);
+      } catch (err) {
+        if (err?.response?.status === 400) {
+          setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
+          setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
+          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
+        } else if (err?.response?.status !== 403) {
+          console.error("Error fetching max quantities:", err);
+        }
+        setLimitsLoaded(true);
+      }
+    };
+    fetchMaxQuantities();
+  }, [user, limitsRefreshTrigger]);
+
+  // Fetch items with skipInitialFetch so we don't show all products before profile loads.
+  // Only fetch once we have profile (or know user is logged out), then use eligibility level.
+  const { items, loading, error, fetchItems } = useItems({
+    skipInitialFetch: true,
+  });
+
   const eligibilityLevel =
     userEducationLevel === "Vocational" ? "College" : userEducationLevel;
 
   useEffect(() => {
-    if (eligibilityLevel && fetchItems) {
+    if (!fetchItems) return;
+    if (user && profileLoading) return;
+    if (eligibilityLevel) {
       fetchItems(eligibilityLevel);
-    } else if (fetchItems) {
-      fetchItems(); // Fetch all items if no education level
+    } else {
+      fetchItems();
     }
-  }, [eligibilityLevel, fetchItems]);
+  }, [user, profileLoading, eligibilityLevel, fetchItems]);
 
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);
@@ -115,19 +194,21 @@ const AllProducts = () => {
         status = "limited_stock";
       }
 
+      const itemType = baseItem.itemType ?? baseItem.item_type ?? "";
+      const productName = baseItem.name ?? "";
       return {
         id: baseItem.id,
         name: baseItem.name,
         type: baseItem.itemType?.toLowerCase() || "other",
-        category:
-          baseItem.category?.toLowerCase().replace(/\s+/g, "_") ||
-          "other_items",
+        category: categoryFromItemType(itemType, productName),
         status: status,
         image: baseItem.image || "/images/products/placeholder.jpg",
         price: 0, // FREE for students - price hidden
         description: baseItem.description || baseItem.descriptionText || "",
         educationLevel: baseItem.educationLevel,
         itemType: baseItem.itemType,
+        forGender: baseItem.forGender || baseItem.for_gender || "Unisex",
+        for_gender: baseItem.for_gender || baseItem.forGender || "Unisex", // Also include snake_case for compatibility
         stock: totalStock, // Use total stock across all sizes
         sizes: group.items.map((i) => i.size).filter((s) => s !== "N/A"), // Collect all sizes
         // Keep original item data for order submission
@@ -178,12 +259,21 @@ const AllProducts = () => {
       );
     }
 
+    // Filter by user gender: only show Unisex or items for the user's gender
+    if (user?.gender) {
+      filtered = filtered.filter((p) => {
+        const fg = (p.for_gender || p.forGender || "Unisex").toString().trim();
+        return fg === "Unisex" || fg === user.gender;
+      });
+    }
+
     return filtered;
   }, [
     transformedProducts,
     selectedCategory,
     debouncedSearch,
     userEducationLevel,
+    user?.gender,
   ]);
 
   // Pagination
@@ -198,21 +288,82 @@ const AllProducts = () => {
     canGoPrev,
   } = useProductPagination(filteredProducts, 8);
 
+  // Cart slot count = distinct item types (system-admin "max items per order" is slot limit)
+  const cartSlotKeys = useMemo(() => {
+    const set = new Set();
+    (cartItems || []).forEach((i) => {
+      const k = resolveItemKeyForMaxQuantity(i.inventory?.name || i.name || "");
+      if (k) set.add(k);
+    });
+    return set;
+  }, [cartItems]);
+  const cartSlotCount = cartSlotKeys.size;
+  const slotsLeftForThisOrder =
+    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0
+      ? Math.max(0, Number(maxItemsPerOrder) - (Number(slotsUsedFromPlacedOrders) || 0))
+      : 0;
+
+  // Old students: only allowed items (new logo patch, number patch per level) have max > 0; others are disallowed.
+  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+
+  // Enrich products with "already at order limit" and "slots full for new type"
+  // Only placed orders count toward the limit—cart does not.
+  const productsWithLimit = useMemo(() => {
+    let list = paginatedItems.map((p) => {
+      const key = resolveItemKeyForMaxQuantity(p.name);
+      const max =
+        isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
+          ? 0
+          : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
+      const notAllowedForStudentType = isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null);
+      const alreadyOrd = alreadyOrdered[key] ?? 0;
+      const inCart = (cartItems || []).filter(
+        (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
+      ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+      const effectiveMax = Math.max(0, max - inCart - alreadyOrd);
+      const isNewItemType = key && !cartSlotKeys.has(key);
+      const slotsFullForNewType =
+        maxItemsPerOrder != null &&
+        Number(maxItemsPerOrder) > 0 &&
+        isNewItemType &&
+        cartSlotCount >= slotsLeftForThisOrder;
+      return {
+        ...p,
+        _orderLimitReached: effectiveMax < 1,
+        _slotsFullForNewType: slotsFullForNewType,
+        _notAllowedForStudentType: notAllowedForStudentType,
+      };
+    });
+    // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).
+    return list;
+  }, [paginatedItems, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, maxItemsPerOrder, slotsLeftForThisOrder, isOldStudent]);
+
+  const limitNotSet =
+    user &&
+    limitsLoaded &&
+    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
+
   // Event handlers
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     setIsSidebarOpen(false); // Close mobile sidebar after selection
   };
 
-  // Loading state
-  if (loading) {
+  // Don't show products until we've fetched with the user's education level (avoids flash of all products on reload)
+  // When logged in, also wait for order limits so we don't show "can add" before we know alreadyOrdered
+  const isWaitingForProfile = user && profileLoading;
+  const isWaitingForFilteredItems = user && userEducationLevel != null && loading;
+  const isWaitingForLimits = user && !limitsLoaded;
+  if (isWaitingForProfile || isWaitingForFilteredItems || isWaitingForLimits || loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
         <div className="pt-16 flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading products...</p>
+            <p className="text-gray-600">
+              {isWaitingForProfile ? "Loading your profile..." : isWaitingForLimits ? "Checking order limits..." : "Loading products..."}
+            </p>
           </div>
         </div>
       </div>
@@ -243,14 +394,14 @@ const AllProducts = () => {
       {/* Hero Section – "Item Card" at middle bottom */}
       <HeroSection heading="Item Card" align="bottom-center" />
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-16">
+      {/* Main Content – white card close to hero/building */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-28">
         {/* Main Container - White card */}
-        <div className="bg-white rounded-3xl shadow-gray-800 shadow-md mb-8">
-          {/* Sticky Header (unchanged) */}
-          <div className=" z-20 rounded-t-3xl px-6 md:px-8 lg:px-10 pt-6 md:pt-8 lg:pt-10 pb-6 border-b border-gray-100 shadow-sm">
-            {/* Header Content */}
-            <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+        <div className="bg-white rounded-3xl shadow-gray-800 shadow-md mb-8 relative">
+          {/* Header – compact, centered; ~139px height */}
+          <div className="z-20 rounded-t-3xl px-6 md:px-8 lg:px-10 py-4 md:py-5 border-b border-gray-100 shadow-sm min-h-[139px] flex flex-col justify-center items-center">
+            {/* Header Content – full width so layout is preserved */}
+            <div className="w-full flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 md:gap-6">
               {/* Left: Hamburger + Title */}
               <div className="flex items-center gap-4">
                 {/* Hamburger Button */}
@@ -315,22 +466,6 @@ const AllProducts = () => {
               </div>
             </div>
 
-            {/* Education Level Alerts */}
-            {userEducationLevel && (
-              <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3">
-                <Info className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="text-sm text-blue-800 font-semibold">
-                    Showing products for: {userEducationLevel}
-                  </p>
-                  <p className="text-xs text-blue-700 mt-0.5">
-                    Products are filtered based on your year level. General
-                    items are always visible.
-                  </p>
-                </div>
-              </div>
-            )}
-
             {!userEducationLevel && !profileLoading && (
               <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
                 <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
@@ -341,6 +476,17 @@ const AllProducts = () => {
                   <p className="text-xs text-yellow-700 mt-0.5">
                     Set your year level in Settings to filter products for your
                     education level.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {limitNotSet && (
+              <div className="mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800 font-semibold">
+                    Your order limit has not been set. Contact your administrator to set Max Items Per Order before ordering.
                   </p>
                 </div>
               </div>
@@ -379,18 +525,7 @@ const AllProducts = () => {
               }`}
               style={{ transition: "all 0.3s ease-in-out" }}
             >
-              <div className="mb-6">
-                <p className="text-sm text-gray-600">
-                  Showing {paginatedItems.length} of {filteredProducts.length}{" "}
-                  products
-                  {debouncedSearch && ` for "${debouncedSearch}"`}
-                </p>
-                <p className="text-xs text-[#F28C28] font-semibold mt-1">
-                  ✨ All items are FREE for students
-                </p>
-              </div>
-
-              <ProductGrid products={paginatedItems} />
+              <ProductGrid products={productsWithLimit} />
 
               {filteredProducts.length > 0 && (
                 <Pagination

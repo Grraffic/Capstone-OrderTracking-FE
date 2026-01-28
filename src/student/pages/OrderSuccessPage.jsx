@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../components/common/Navbar';
@@ -9,6 +9,13 @@ import OrderSuccessCard from '../components/order/OrderSuccessCard';
 const OrderSuccessPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  // Ensure limits (alreadyOrdered) are refetched when user leaves for product/cart so item stays disabled
+  useEffect(() => {
+    try {
+      sessionStorage.setItem("limitsNeedRefresh", "1");
+    } catch (_) {}
+  }, []);
 
   // Extract user's first name from user data
   const getUserName = () => {
