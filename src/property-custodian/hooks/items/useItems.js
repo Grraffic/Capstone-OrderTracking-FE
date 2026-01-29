@@ -619,6 +619,8 @@ export const useItems = (options = {}) => {
               item.id === updatedItem.id ? transformedData : item
             )
           );
+          // Refetch items so Item Details and list always show latest note (e.g. new size XSmall)
+          await fetchItems();
           closeModal();
         } else {
           throw new Error(result.message || "Failed to update item");
@@ -631,7 +633,7 @@ export const useItems = (options = {}) => {
         setLoading(false);
       }
     },
-    [closeModal]
+    [closeModal, fetchItems]
   );
 
   /**

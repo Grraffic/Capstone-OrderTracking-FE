@@ -138,6 +138,30 @@ export const useItemDetailsModal = (allItems = []) => {
               `[useItemDetailsModal] Creating variations from JSON sizeVariations for item ${matchingItem.id}`
             );
             sizeVariationsData.forEach((variationData, index) => {
+              const begInv =
+                variationData.beginning_inventory !== undefined &&
+                variationData.beginning_inventory !== null
+                  ? Number(variationData.beginning_inventory) || 0
+                  : matchingItem.beginning_inventory || 0;
+              const storedStock =
+                variationData.stock !== undefined &&
+                variationData.stock !== null
+                  ? Number(variationData.stock) || 0
+                  : matchingItem.stock || 0;
+              // Per-size purchases only: use variant's value or derive from this size's stock - beginning_inventory.
+              // Never use item-level purchases for a specific size (so Medium stays 0 when only Small got +10).
+              const purch =
+                variationData.purchases !== undefined &&
+                variationData.purchases !== null
+                  ? Number(variationData.purchases) || 0
+                  : (variationData.stock !== undefined && variationData.stock !== null)
+                    ? Math.max(0, storedStock - begInv)
+                    : 0;
+              // Display stock as max(stored, beginning_inventory + purchases) so it's never inconsistent
+              const displayStock = Math.max(
+                storedStock,
+                begInv + purch
+              );
               allVariations.push({
                 ...matchingItem,
                 // Keep original ID for edit/delete operations
@@ -145,28 +169,15 @@ export const useItemDetailsModal = (allItems = []) => {
                 size: variationData.size || matchingItem.size || "N/A",
                 // Add a unique key for React rendering and selection
                 _variationKey: `${matchingItem.id}-json-${index}`,
-                // Use per-size stock and price from JSON
-                stock:
-                  variationData.stock !== undefined &&
-                  variationData.stock !== null
-                    ? Number(variationData.stock) || 0
-                    : matchingItem.stock || 0,
+                // Use per-size stock (display = stored or beginning_inventory + purchases)
+                stock: displayStock,
                 price:
                   variationData.price !== undefined &&
                   variationData.price !== null
                     ? Number(variationData.price) || 0
                     : matchingItem.price || 0,
-                // Use per-size beginning_inventory and purchases from JSON
-                beginning_inventory:
-                  variationData.beginning_inventory !== undefined &&
-                  variationData.beginning_inventory !== null
-                    ? Number(variationData.beginning_inventory) || 0
-                    : matchingItem.beginning_inventory || 0,
-                purchases:
-                  variationData.purchases !== undefined &&
-                  variationData.purchases !== null
-                    ? Number(variationData.purchases) || 0
-                    : matchingItem.purchases || 0,
+                beginning_inventory: begInv,
+                purchases: purch,
               });
             });
           } else if (hasCommaSeparatedSizes) {
@@ -185,6 +196,23 @@ export const useItemDetailsModal = (allItems = []) => {
                 return vSize === currentSize;
               });
 
+              const begInv =
+                variationData?.beginning_inventory !== undefined &&
+                variationData?.beginning_inventory !== null
+                  ? Number(variationData.beginning_inventory) || 0
+                  : matchingItem.beginning_inventory || 0;
+              const storedStock =
+                variationData?.stock ?? matchingItem.stock;
+              const storedNum = Number(storedStock) || 0;
+              // Per-size purchases only; never use item-level for a specific size
+              const purch =
+                variationData?.purchases !== undefined &&
+                variationData?.purchases !== null
+                  ? Number(variationData.purchases) || 0
+                  : (variationData?.stock !== undefined && variationData?.stock !== null)
+                    ? Math.max(0, storedNum - begInv)
+                    : 0;
+              const displayStock = Math.max(storedNum, begInv + purch);
               allVariations.push({
                 ...matchingItem,
                 // Keep original ID for edit/delete operations
@@ -192,20 +220,10 @@ export const useItemDetailsModal = (allItems = []) => {
                 size: size, // Each variation gets its own size
                 // Add a unique key for React rendering and selection
                 _variationKey: `${matchingItem.id}-${index}`,
-                // Use per-size stock and price if available, otherwise use item defaults
-                stock: variationData?.stock ?? matchingItem.stock,
+                stock: displayStock,
                 price: variationData?.price ?? matchingItem.price,
-                // Use per-size beginning_inventory and purchases if available, otherwise use item-level
-                beginning_inventory:
-                  variationData?.beginning_inventory !== undefined &&
-                  variationData?.beginning_inventory !== null
-                    ? Number(variationData.beginning_inventory) || 0
-                    : matchingItem.beginning_inventory || 0,
-                purchases:
-                  variationData?.purchases !== undefined &&
-                  variationData?.purchases !== null
-                    ? Number(variationData.purchases) || 0
-                    : matchingItem.purchases || 0,
+                beginning_inventory: begInv,
+                purchases: purch,
               });
             });
           } else {
@@ -288,15 +306,19 @@ export const useItemDetailsModal = (allItems = []) => {
             });
 
             if (existingVariation) {
-              // Check if this is the same item (same ID) or a different item with same size
+              // Same item with duplicate size (e.g. two "Small" in note.sizeVariations) -> merge stock and purchases
               if (existingVariation.id === variation.id) {
-                // Same item, definitely skip
+                const begInv = Number(existingVariation.beginning_inventory) || 0;
+                existingVariation.stock = (Number(existingVariation.stock) || 0) + (Number(variation.stock) || 0);
+                existingVariation.purchases = (Number(existingVariation.purchases) || 0) + (Number(variation.purchases) || 0);
+                // Keep display consistent: purchases = stock - beginning_inventory when we merged
+                const combinedStock = Number(existingVariation.stock) || 0;
+                existingVariation.purchases = Math.max(0, combinedStock - begInv);
                 console.log(
-                  `[useItemDetailsModal] ⚠️ Skipping duplicate (same ID): ${variation.name} ${rawSize} (ID: ${variation.id})`
+                  `[useItemDetailsModal] ✅ Merged duplicate size (same ID): ${variation.name} ${rawSize} -> stock=${existingVariation.stock}, purchases=${existingVariation.purchases}`
                 );
               } else {
-                // Different items with same size - this shouldn't happen if items are created correctly
-                // But keep the first one (already in uniqueVariations)
+                // Different items with same size - keep the first one
                 console.log(
                   `[useItemDetailsModal] ⚠️ Skipping duplicate size (different ID): ${variation.name} ${rawSize} (ID: ${variation.id}) - keeping first entry (ID: ${existingVariation.id})`
                 );

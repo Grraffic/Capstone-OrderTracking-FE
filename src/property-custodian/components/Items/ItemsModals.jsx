@@ -79,6 +79,10 @@ const ItemsModals = ({
   const editorRef = useRef(null);
   const isEditorInitialized = useRef(false);
   const colorPickerRef = useRef(null);
+  // Only run edit-form init once per modal open per item so user-added rows (e.g. XSmall) are not wiped when effect re-runs
+  const lastInitializedItemIdRef = useRef(null);
+  // Keep latest variant state so edit submit always sends what the user sees (avoids stale closure)
+  const variantStateRef = useRef({ values: [], stocks: [], prices: [] });
 
   const {
     formData,
@@ -354,81 +358,119 @@ const ItemsModals = ({
         console.error("Error adding item:", error);
       }
     }
-    // Handle Uniforms with sizes (existing logic)
-    else if (
-      isUniforms &&
-      modalState.mode === "add" &&
-      selectedVariantIndices.length > 0
-    ) {
-      // Calculate total stock from all selected variants
-      const totalStock = selectedVariantIndices.reduce((sum, index) => {
-        return sum + (Number(variantStocks[index]) || 0);
-      }, 0);
+    // Handle Uniforms add: same logic as edit — all rows with option value or stock/price, merge by size, so ItemDetailsModal displays correctly
+    else if (isUniforms && modalState.mode === "add") {
+      const normalizedSize = (s) =>
+        (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)\s*/g, "").trim();
+      const valuesForSubmit = variants[0]?.values?.length
+        ? variants[0].values
+        : ["", ""];
+      const len = valuesForSubmit.length;
+      const stocksForSubmit = Array.from(
+        { length: len },
+        (_, i) => variantStocks[i] ?? ""
+      );
+      const pricesForSubmit = Array.from(
+        { length: len },
+        (_, i) => variantPrices[i] ?? ""
+      );
 
-      // Use the first selected variant's price, or formData.price as fallback
-      const firstSelectedIndex = selectedVariantIndices[0];
-      const itemPrice =
-        variantPrices[firstSelectedIndex] || formData.price || 0;
-
-      // The size field is already set by the checkbox handler with comma-separated values
-      // But ensure it's properly formatted
-      const sizeValues = selectedVariantIndices
-        .map((index) => {
-          const val = variants[0].values[index];
-          return (
-            val || (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "")
-          );
+      const rawVariations = valuesForSubmit
+        .map((sizeVal, index) => {
+          const stock = Number(stocksForSubmit[index]) || 0;
+          const price =
+            Number(pricesForSubmit[index]) || Number(formData.price) || 0;
+          let size = (
+            sizeVal ||
+            (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "")
+          ).trim();
+          if (!size && (stock > 0 || price > 0)) {
+            size = `Size ${index + 1}`;
+          }
+          const beginning_inventory = stock;
+          const purchases = 0;
+          return size
+            ? { size, stock, price, beginning_inventory, purchases }
+            : null;
         })
         .filter(Boolean);
-      const sizeString = sizeValues.join(", ");
 
-      // Store per-size stock and price information in note field as JSON
-      const sizeVariations = selectedVariantIndices.map((index) => {
-        const sizeValue =
-          variants[0].values[index] ||
-          (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "");
-        const variantStock = Number(variantStocks[index]) || 0;
-        return {
-          size: sizeValue.trim(),
-          stock: variantStock,
-          price: Number(variantPrices[index]) || Number(itemPrice) || 0,
-          // Set beginning_inventory equal to stock for each variant
-          // This ensures each size has its own beginning inventory, not the sum
-          beginning_inventory: variantStock,
-        };
+      if (rawVariations.length === 0) {
+        handleFormSubmit(e);
+        return;
+      }
+
+      const mergedBySize = new Map();
+      rawVariations.forEach((v) => {
+        const key = normalizedSize(v.size);
+        if (!mergedBySize.has(key)) {
+          mergedBySize.set(key, {
+            size: v.size,
+            stock: Number(v.stock) || 0,
+            price: v.price,
+            beginning_inventory: Number(v.beginning_inventory) ?? 0,
+            purchases: Math.max(
+              0,
+              (Number(v.stock) || 0) - (Number(v.beginning_inventory) ?? 0)
+            ),
+          });
+        } else {
+          const prev = mergedBySize.get(key);
+          const combinedStock = (Number(prev.stock) || 0) + (Number(v.stock) || 0);
+          const begInv = Number(prev.beginning_inventory) ?? 0;
+          mergedBySize.set(key, {
+            ...prev,
+            stock: combinedStock,
+            purchases: Math.max(0, combinedStock - begInv),
+          });
+        }
       });
 
-      // Create a single item with all selected sizes
+      const sizeVariations = Array.from(mergedBySize.values());
+      const sizeString = sizeVariations.map((v) => v.size).join(", ");
+      const totalStock = sizeVariations.reduce(
+        (s, v) => s + (Number(v.stock) || 0),
+        0
+      );
+      const firstPrice = sizeVariations[0]?.price ?? formData.price ?? 0;
+
       const itemToAdd = {
         ...formData,
-        size: sizeString || formData.size || "N/A",
-        stock: totalStock, // Total stock for backward compatibility
-        price: Number(itemPrice) || 0, // Default price for backward compatibility
+        size: sizeString || "N/A",
+        stock: totalStock,
+        price: Number(firstPrice) || 0,
         note: JSON.stringify({
-          sizeVariations: sizeVariations,
-          _type: "sizeVariations", // Marker to identify this as size variation data
+          sizeVariations,
+          _type: "sizeVariations",
         }),
       };
 
-      // Add the single item
       try {
         onAdd(itemToAdd);
-        // Close modal after a short delay to allow item to be added
-        setTimeout(() => {
-          onClose();
-        }, 500);
+        setTimeout(() => onClose(), 500);
       } catch (error) {
         console.error("Error adding item:", error);
-        // Don't close modal on error so user can see the issue
       }
     }
-    // Edit mode + Uniforms: build full sizeVariations (existing + new sizes) so new sizes show in Item Details
+    // Edit mode + Uniforms: same logic as add (all rows, fallback size, merge by size, purchases) so new option values show in ItemDetailsModal
     else if (
       isUniforms &&
       modalState.mode === "edit" &&
       selectedItem
     ) {
       syncEditorToForm();
+      // Sync ref from current state so payload always includes latest rows (e.g. XSmall) even if closure was stale
+      const currentValues = variants[0]?.values ?? [];
+      const currentStocks = Array.isArray(variantStocks) ? variantStocks : [];
+      const currentPrices = Array.isArray(variantPrices) ? variantPrices : [];
+      variantStateRef.current = {
+        values: [...currentValues],
+        stocks: [...currentStocks],
+        prices: [...currentPrices],
+      };
+      const refState = variantStateRef.current;
+      const normalizedSize = (s) =>
+        (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)\s*/g, "").trim();
       let existingNoteData = null;
       if (selectedItem.note) {
         try {
@@ -441,29 +483,84 @@ const ItemsModals = ({
           }
         } catch (_) {}
       }
-      const sizeVariations = variants[0].values
+      const findExistingBySize = (sizeStr) => {
+        if (!existingNoteData || !sizeStr) return null;
+        const target = normalizedSize(sizeStr);
+        return existingNoteData.find(
+          (v) => normalizedSize(v.size) === target
+        ) || null;
+      };
+
+      const valuesForSubmit = refState.values?.length ? refState.values : currentValues.length ? currentValues : ["", ""];
+      const len = valuesForSubmit.length;
+      const stocksForSubmit = Array.from(
+        { length: len },
+        (_, i) => refState.stocks[i] ?? currentStocks[i] ?? ""
+      );
+      const pricesForSubmit = Array.from(
+        { length: len },
+        (_, i) => refState.prices[i] ?? currentPrices[i] ?? ""
+      );
+
+      const rawVariations = valuesForSubmit
         .map((sizeVal, index) => {
-          const stock = Number(variantStocks[index]) || 0;
+          const stock = Number(stocksForSubmit[index]) || 0;
           const price =
-            Number(variantPrices[index]) || Number(formData.price) || 0;
-          const existing = existingNoteData?.[index];
-          const beginning_inventory =
-            index < existingVariantCount && existing?.beginning_inventory != null
-              ? Number(existing.beginning_inventory) || 0
-              : stock;
-          const size = (
+            Number(pricesForSubmit[index]) || Number(formData.price) || 0;
+          let size = (
             sizeVal ||
             (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "")
           ).trim();
+          if (!size && (stock > 0 || price > 0)) {
+            size = `Size ${index + 1}`;
+          }
+          const existing = findExistingBySize(size);
+          const beginning_inventory =
+            existing?.beginning_inventory != null
+              ? Number(existing.beginning_inventory) || 0
+              : stock;
+          const purchases = Math.max(
+            0,
+            (Number(stock) || 0) - (Number(beginning_inventory) || 0)
+          );
           return size
-            ? { size, stock, price, beginning_inventory }
+            ? { size, stock, price, beginning_inventory, purchases }
             : null;
         })
         .filter(Boolean);
-      if (sizeVariations.length === 0) {
+
+      if (rawVariations.length === 0) {
         handleFormSubmit(e);
         return;
       }
+
+      const mergedBySize = new Map();
+      rawVariations.forEach((v) => {
+        const key = normalizedSize(v.size);
+        if (!mergedBySize.has(key)) {
+          mergedBySize.set(key, {
+            size: v.size,
+            stock: Number(v.stock) || 0,
+            price: v.price,
+            beginning_inventory: Number(v.beginning_inventory) ?? 0,
+            purchases: Math.max(
+              0,
+              (Number(v.stock) || 0) - (Number(v.beginning_inventory) ?? 0)
+            ),
+          });
+        } else {
+          const prev = mergedBySize.get(key);
+          const combinedStock = (Number(prev.stock) || 0) + (Number(v.stock) || 0);
+          const begInv = Number(prev.beginning_inventory) ?? 0;
+          mergedBySize.set(key, {
+            ...prev,
+            stock: combinedStock,
+            purchases: Math.max(0, combinedStock - begInv),
+          });
+        }
+      });
+
+      const sizeVariations = Array.from(mergedBySize.values());
       const sizeString = sizeVariations.map((v) => v.size).join(", ");
       const totalStock = sizeVariations.reduce(
         (s, v) => s + (Number(v.stock) || 0),
@@ -484,8 +581,8 @@ const ItemsModals = ({
         }),
       };
       try {
-        onUpdate(itemToUpdate);
-        setTimeout(() => onClose(), 500);
+        await onUpdate(itemToUpdate);
+        onClose();
       } catch (err) {
         console.error("Error updating item:", err);
       }
@@ -545,12 +642,27 @@ const ItemsModals = ({
     }
   }, [modalState.isOpen]);
 
-  // Initialize variant prices and stocks when editing an item
+  // Keep ref in sync so edit submit always has latest variant state (including new option value rows)
   useEffect(() => {
+    if (variants[0]?.values && Array.isArray(variants[0].values)) {
+      variantStateRef.current = {
+        values: [...variants[0].values],
+        stocks: Array.isArray(variantStocks) ? [...variantStocks] : [],
+        prices: Array.isArray(variantPrices) ? [...variantPrices] : [],
+      };
+    }
+  }, [variants, variantStocks, variantPrices]);
+
+  // Initialize variant prices and stocks when editing an item (only once per open per item so user-added rows are not wiped)
+  useEffect(() => {
+    if (!modalState.isOpen) {
+      lastInitializedItemIdRef.current = null;
+      return;
+    }
     if (
-      modalState.isOpen &&
       modalState.mode === "edit" &&
-      selectedItem
+      selectedItem &&
+      selectedItem.id !== lastInitializedItemIdRef.current
     ) {
       // Try to parse sizeVariations from note field
       let sizeVariations = null;
@@ -670,6 +782,7 @@ const ItemsModals = ({
           }
         }
       }
+      lastInitializedItemIdRef.current = selectedItem.id;
     } else if (modalState.isOpen && modalState.mode === "add") {
       setExistingVariantCount(0);
       // Reset variant prices and stocks for add mode
@@ -1693,14 +1806,13 @@ const ItemsModals = ({
                               key={index}
                               className="grid grid-cols-3 gap-4 items-center"
                             >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <input
                                 type="checkbox"
                                 checked={selectedVariantIndices.includes(index)}
                                 onChange={(e) => {
                                   if (existing) return;
                                   if (e.target.checked) {
-                                    // Add to selected indices
                                     setSelectedVariantIndices((prev) => {
                                       const newIndices = [...prev, index];
                                       // Update size field with selected sizes
@@ -1726,7 +1838,6 @@ const ItemsModals = ({
                                           },
                                         });
                                       }
-                                      // Sync this variant's price to the item's price field if it's the first selected
                                       if (
                                         variantPrices[index] &&
                                         prev.length === 0
@@ -1741,12 +1852,10 @@ const ItemsModals = ({
                                       return newIndices;
                                     });
                                   } else {
-                                    // Remove from selected indices
                                     setSelectedVariantIndices((prev) => {
                                       const newIndices = prev.filter(
                                         (i) => i !== index
                                       );
-                                      // Update size field
                                       const updatedSizes = newIndices
                                         .map((idx) => {
                                           const val = variants[0].values[idx];
@@ -1774,10 +1883,36 @@ const ItemsModals = ({
                                 disabled={existing}
                                 className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
                               />
-                              <span className="text-gray-800">
-                                {value ||
-                                  (index === 0 ? "Small (S)" : "Medium (M)")}
-                              </span>
+                              {existing ? (
+                                <span className="text-gray-800">
+                                  {value ||
+                                    (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : `Size ${index + 1}`)}
+                                </span>
+                              ) : (
+                                <>
+                                  <input
+                                    type="text"
+                                    value={value}
+                                    onChange={(e) =>
+                                      handleVariantValueChange(0, index, e.target.value)
+                                    }
+                                    placeholder={
+                                      index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "e.g. Large (L), XSmall (XS)"
+                                    }
+                                    className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  />
+                                  {variants[0].values.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleRemoveVariantValue(0, index)}
+                                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg shrink-0"
+                                      title="Remove this option value"
+                                    >
+                                      <Trash2 size={16} />
+                                    </button>
+                                  )}
+                                </>
+                              )}
                             </div>
                             <input
                               type="number"
