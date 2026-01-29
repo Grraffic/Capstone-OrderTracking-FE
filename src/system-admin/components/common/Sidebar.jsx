@@ -1,5 +1,5 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
   Users,
@@ -22,6 +22,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   // Auto-close sidebar on mobile/tablet when route changes
   useEffect(() => {
@@ -42,14 +43,14 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
     { to: "/system-admin/settings", label: "System Settings", icon: Settings },
   ];
 
-  // Handle logout
+  // Handle logout (called after confirmation)
   const handleLogout = async () => {
     try {
+      setShowLogoutConfirm(false);
       await logout();
       navigate("/login");
     } catch (error) {
       console.error("Logout failed:", error);
-      // Still navigate to login even if logout fails
       navigate("/login");
     }
   };
@@ -100,6 +101,36 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
 
   return (
     <>
+      {/* Logout Confirmation Modal */}
+      {showLogoutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black bg-opacity-50 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+            aria-hidden="true"
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-8 transform transition-all">
+            <p className="text-gray-600 text-center mb-8">
+              Are you sure you want to log out?
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowLogoutConfirm(false)}
+                className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex-1 px-6 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg"
+              >
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Backdrop overlay for mobile when sidebar is open */}
       {isOpen && (
         <div
@@ -161,7 +192,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
         }`}
       >
         <button
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className={`group relative flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-all duration-200 ${
             !isOpen ? "justify-center" : "w-full"
           }`}

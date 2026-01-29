@@ -39,6 +39,7 @@ const CheckoutPage = () => {
   const [expandedGroups, setExpandedGroups] = useState(new Set());
   const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
   const [limitsLoaded, setLimitsLoaded] = useState(false);
+  const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
   useEffect(() => {
     const fetchMaxQuantities = async () => {
@@ -46,8 +47,10 @@ const CheckoutPage = () => {
       try {
         const res = await authAPI.getMaxQuantities();
         setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
-      } catch (_) {
+        setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
+      } catch (err) {
         setMaxItemsPerOrder(null);
+        setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
       } finally {
         setLimitsLoaded(true);
       }
@@ -99,6 +102,11 @@ const CheckoutPage = () => {
       toast.error(
         "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders."
       );
+      return;
+    }
+
+    if (blockedDueToVoid) {
+      toast.error("You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.");
       return;
     }
 
@@ -571,8 +579,13 @@ const CheckoutPage = () => {
         );
       }
 
-      // Navigate to Order Success page
-      navigate("/student/order-success");
+      // Navigate to Order Success page; pass first order id for 10-second claim confirmation
+      const firstOrder = createdOrders[0];
+      navigate("/student/order-success", {
+        state: firstOrder?.order?.id
+          ? { orderId: firstOrder.order.id, orderNumber: firstOrder.orderNumber || firstOrder.order?.order_number }
+          : undefined,
+      });
     } catch (error) {
       console.error("Checkout error:", error);
       console.error("Error response:", error.response?.data);
@@ -726,13 +739,22 @@ const CheckoutPage = () => {
               </div>
             </div>
           )}
+          {items.length > 0 && blockedDueToVoid && (
+            <div className="px-4 sm:px-6 lg:px-8 pb-2">
+              <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                <p className="font-medium">
+                  You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Checkout Button - Fixed at Bottom */}
           {items.length > 0 && (
             <div className="p-4 sm:p-6 lg:p-8 pt-0">
               <button
                 onClick={handleCheckout}
-                disabled={loading || submitting || limitNotSet}
-                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders." : undefined}
+                disabled={loading || submitting || limitNotSet || blockedDueToVoid}
+                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders." : blockedDueToVoid ? "You cannot place new orders because a previous order was not claimed in time and was voided." : undefined}
                 className="w-full py-3 sm:py-4 bg-[#F28C28] text-white font-bold text-base sm:text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting

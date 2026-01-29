@@ -12,7 +12,8 @@ import { useAuth } from "../../../context/AuthContext";
 import QRCode from "react-qr-code";
 import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
-import { orderAPI, itemsAPI } from "../../../services/api";
+import { orderAPI, itemsAPI, authAPI } from "../../../services/api";
+import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../../utils/maxQuantityKeys";
 
 /**
  * Helper function to download SVG as PNG
@@ -257,21 +258,34 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
  * Overview: Category buttons + Suggested products
  * Detail: Order list when category is clicked
  */
-const MyOrders = () => {
+/** Get order date for sorting (created_at, orderDate, or updated_at) */
+const getOrderDate = (order) => {
+  const raw =
+    order.created_at ||
+    order.createdAt ||
+    order.orderDate ||
+    order.updated_at ||
+    order.updatedAt;
+  return raw ? new Date(raw).getTime() : 0;
+};
+
+const MyOrders = ({ sortOrder = "newest", variant }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { orders, loading, error } = useOrder();
+  const isHistoryView = variant === "history";
+
+  const { orders, loading, error, fetchOrders } = useOrder();
   const { user } = useAuth();
 
   // Safety check: ensure orders is always an array
   const safeOrders = Array.isArray(orders) ? orders : [];
 
-  // Initialize state from location state if available (for navigation from checkout)
+  // When variant="history", show claimed orders in detail view only (Order History)
   const [viewMode, setViewMode] = useState(
-    location.state?.viewMode || "overview"
-  ); // "overview" or "detail"
+    isHistoryView ? "detail" : (location.state?.viewMode || "overview")
+  );
   const [activeCategory, setActiveCategory] = useState(
-    location.state?.activeCategory || "orders"
+    isHistoryView ? "claimed" : (location.state?.activeCategory || "orders")
   );
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -280,9 +294,31 @@ const MyOrders = () => {
   const [orderAvailability, setOrderAvailability] = useState({}); // { orderId: boolean }
   const [checkingAvailability, setCheckingAvailability] = useState({}); // { orderId: boolean }
   const [convertingOrders, setConvertingOrders] = useState({}); // { orderId: boolean }
+  const [cancellingOrders, setCancellingOrders] = useState({}); // { orderId: boolean }
+  const [maxQuantities, setMaxQuantities] = useState({});
+  const [alreadyOrdered, setAlreadyOrdered] = useState({});
 
-  // Update state when location state changes (e.g., navigation from checkout)
+  // Fetch max quantities and already-ordered counts for Order History "Order Again" (disable when max reached)
   useEffect(() => {
+    if (!isHistoryView || !user) return;
+    const fetchMaxQuantities = async () => {
+      try {
+        const res = await authAPI.getMaxQuantities();
+        setMaxQuantities(res.data?.maxQuantities ?? {});
+        setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+      } catch (err) {
+        if (err?.response?.data?.maxQuantities != null)
+          setMaxQuantities(err.response.data.maxQuantities);
+        if (err?.response?.data?.alreadyOrdered != null)
+          setAlreadyOrdered(err.response.data.alreadyOrdered);
+      }
+    };
+    fetchMaxQuantities();
+  }, [isHistoryView, user]);
+
+  // Update state when location state changes (e.g., navigation from checkout). Skip when history variant.
+  useEffect(() => {
+    if (isHistoryView) return;
     if (location.state?.viewMode) {
       setViewMode(location.state.viewMode);
     }
@@ -293,7 +329,7 @@ const MyOrders = () => {
     if (location.state) {
       window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, isHistoryView]);
 
   // Count orders by category
   const getOrderCounts = () => {
@@ -353,13 +389,15 @@ const MyOrders = () => {
 
   const suggestedProducts = getSuggestedProducts();
 
-  // Filter orders based on active category
+  // Filter orders based on active category, then sort by date (oldest/newest/all)
   const filteredOrders = React.useMemo(() => {
+    let list;
     switch (activeCategory) {
       case "preOrders":
-        return orders.filter((order) => order.order_type === "pre-order");
+        list = orders.filter((order) => order.order_type === "pre-order");
+        break;
       case "orders":
-        return orders.filter(
+        list = orders.filter(
           (order) =>
             order.order_type !== "pre-order" &&
             (order.status === "pending" ||
@@ -367,22 +405,62 @@ const MyOrders = () => {
               order.status === "ready" ||
               order.status === "payment_pending")
         );
+        break;
       case "claimed":
-        return orders.filter(
+        list = orders.filter(
           (order) =>
             order.order_type !== "pre-order" &&
             (order.status === "completed" || order.status === "claimed")
         );
+        break;
       default:
-        return orders;
+        list = [...orders];
     }
-  }, [orders, activeCategory]);
+    // Sort by date: oldest first (asc), newest first (desc), all = newest first
+    if (sortOrder === "oldest") {
+      list = [...list].sort(
+        (a, b) => getOrderDate(a) - getOrderDate(b)
+      );
+    } else if (sortOrder === "newest" || sortOrder === "all") {
+      list = [...list].sort(
+        (a, b) => getOrderDate(b) - getOrderDate(a)
+      );
+    }
+    return list;
+  }, [orders, activeCategory, sortOrder]);
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  // Order History: flatten claimed orders into one card per item (for history card layout)
+  const historyCards = React.useMemo(() => {
+    if (!isHistoryView) return [];
+    const cards = [];
+    filteredOrders.forEach((order) => {
+      if (order.items && order.items.length > 0) {
+        order.items.forEach((item) => {
+          cards.push({ order, item });
+        });
+      } else {
+        cards.push({
+          order,
+          item: {
+            name: order.item || "Item",
+            image: order.image,
+            quantity: order.quantity || 1,
+            size: order.size,
+            education_level: order.type || order.education_level,
+          },
+        });
+      }
+    });
+    return cards;
+  }, [isHistoryView, filteredOrders]);
+
+  // Pagination: for history use flattened cards, otherwise orders
+  const listForPagination = isHistoryView ? historyCards : filteredOrders;
+  const totalPages = Math.ceil(listForPagination.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+  const paginatedHistoryCards = historyCards.slice(startIndex, endIndex);
 
   // Handle category click - switch to detail view
   const handleCategoryClick = (category) => {
@@ -410,8 +488,9 @@ const MyOrders = () => {
     }
   };
 
-  // Get dynamic title based on active category
+  // Get dynamic title based on active category (Order History when variant=history)
   const getCategoryTitle = () => {
+    if (isHistoryView) return { first: "Order", second: "History" };
     switch (activeCategory) {
       case "preOrders":
         return { first: "Pre", second: "Orders" };
@@ -722,6 +801,33 @@ const MyOrders = () => {
     }
   }, [convertingOrders]);
 
+  // Cancel order (student self-cancel); inventory is restored on the backend
+  const handleCancelOrder = useCallback(async (order) => {
+    const orderId = order.id || order._original?.id;
+    if (!orderId) return;
+    if (cancellingOrders[orderId]) return;
+
+    setCancellingOrders((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const response = await orderAPI.updateOrderStatus(orderId, "cancelled");
+      if (response.data?.success) {
+        await fetchOrders();
+      } else {
+        throw new Error(response.data?.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      console.error("Error cancelling order:", err);
+      const message = err.response?.data?.message || err.message || "Failed to cancel order";
+      alert(message);
+    } finally {
+      setCancellingOrders((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    }
+  }, [cancellingOrders, fetchOrders]);
+
   // Category button component
   const CategoryButton = ({ category, icon: Icon, label, count, onClick }) => {
     const [showTooltip, setShowTooltip] = useState(false);
@@ -824,8 +930,8 @@ const MyOrders = () => {
     );
   }
 
-  // OVERVIEW VIEW - Category buttons + Suggested products
-  if (viewMode === "overview") {
+  // OVERVIEW VIEW - Category buttons + Suggested products (skip when history variant)
+  if (viewMode === "overview" && !isHistoryView) {
     return (
       <div className="space-y-12">
         {/* Title */}
@@ -928,55 +1034,54 @@ const MyOrders = () => {
     );
   }
 
-  // DETAIL VIEW - Order list
+  // DETAIL VIEW - Order list (claimed orders when variant=history)
   return (
     <>
       <div className="space-y-6">
-        {/* Header with Back Button (left) and Navigation Tabs (right) */}
-        <div className="flex items-start justify-between mb-6">
-          {/* Left side: Back button */}
-          <button
-            onClick={handleBackToOverview}
-            className="p-3 hover:bg-gray-100 rounded-full transition-colors"
-            aria-label="Go back"
-          >
-            <span className="text-2xl text-[#003363]">←</span>
-          </button>
-
-          {/* Right side: Navigation Tabs */}
-          <div className="flex items-center gap-8">
+        {/* Header: Back button + Category tabs (hidden in history variant) */}
+        {!isHistoryView && (
+          <div className="flex items-start justify-between mb-6">
             <button
-              onClick={() => setActiveCategory("preOrders")}
-              className={`text-sm font-semibold pb-1 transition-colors ${
-                activeCategory === "preOrders"
-                  ? "text-[#003363] border-b-2 border-[#F28C28]"
-                  : "text-gray-600 hover:text-[#003363]"
-              }`}
+              onClick={handleBackToOverview}
+              className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+              aria-label="Go back"
             >
-              Pre-Orders
+              <span className="text-2xl text-[#003363]">←</span>
             </button>
-            <button
-              onClick={() => setActiveCategory("orders")}
-              className={`text-sm font-semibold pb-1 transition-colors ${
-                activeCategory === "orders"
-                  ? "text-[#F28C28] border-b-2 border-[#F28C28]"
-                  : "text-gray-600 hover:text-[#003363]"
-              }`}
-            >
-              Orders
-            </button>
-            <button
-              onClick={() => setActiveCategory("claimed")}
-              className={`text-sm font-semibold pb-1 transition-colors ${
-                activeCategory === "claimed"
-                  ? "text-[#F28C28] border-b-2 border-[#F28C28]"
-                  : "text-gray-600 hover:text-[#003363]"
-              }`}
-            >
-              Claimed
-            </button>
+            <div className="flex items-center gap-8">
+              <button
+                onClick={() => setActiveCategory("preOrders")}
+                className={`text-sm font-semibold pb-1 transition-colors ${
+                  activeCategory === "preOrders"
+                    ? "text-[#003363] border-b-2 border-[#F28C28]"
+                    : "text-gray-600 hover:text-[#003363]"
+                }`}
+              >
+                Pre-Orders
+              </button>
+              <button
+                onClick={() => setActiveCategory("orders")}
+                className={`text-sm font-semibold pb-1 transition-colors ${
+                  activeCategory === "orders"
+                    ? "text-[#F28C28] border-b-2 border-[#F28C28]"
+                    : "text-gray-600 hover:text-[#003363]"
+                }`}
+              >
+                Orders
+              </button>
+              <button
+                onClick={() => setActiveCategory("claimed")}
+                className={`text-sm font-semibold pb-1 transition-colors ${
+                  activeCategory === "claimed"
+                    ? "text-[#F28C28] border-b-2 border-[#F28C28]"
+                    : "text-gray-600 hover:text-[#003363]"
+                }`}
+              >
+                Claimed
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Title Row with Dynamic Title and Info Icon */}
         <div className="flex items-center justify-between mb-4">
@@ -989,11 +1094,112 @@ const MyOrders = () => {
           </button>
         </div>
 
-        {/* Orders List */}
-        {filteredOrders.length === 0 ? (
+        {/* Orders List (or Order History card grid) */}
+        {listForPagination.length === 0 ? (
           <div className="bg-white rounded-lg border-2 border-gray-200 p-12 text-center">
             <p className="text-gray-500">No orders found in this category</p>
           </div>
+        ) : isHistoryView ? (
+          /* Order History: card layout – image, title, View Details, Order Again only (no 1pc, FREE, Show QR) */
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {paginatedHistoryCards.map(({ order, item }, cardIndex) => {
+                const itemName = item.name || order.item || "Item";
+                const educationLevel = getEducationLevel(item, order);
+                const imageUrl = item.image || order.image;
+                const maxQuantityKey = resolveItemKeyForMaxQuantity(itemName);
+                const maxForItem = maxQuantities[maxQuantityKey] ?? DEFAULT_MAX_WHEN_UNKNOWN;
+                const alreadyOrderedForItem = alreadyOrdered[maxQuantityKey] ?? 0;
+                const canOrderAgain = Number(maxForItem) > 0 && alreadyOrderedForItem < Number(maxForItem);
+                return (
+                  <div
+                    key={`${order.id || cardIndex}-${item.name || cardIndex}`}
+                    className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                  >
+                    <div className="aspect-square bg-gray-100 overflow-hidden rounded-t-xl">
+                      {imageUrl ? (
+                        <img
+                          src={imageUrl}
+                          alt={itemName}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.src =
+                              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
+                          No Image
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h4 className="text-base font-bold text-[#003363] mb-1 line-clamp-2">
+                        {itemName}
+                      </h4>
+                      <p className="text-sm text-[#F28C28] font-semibold mb-4">
+                        ({educationLevel})
+                      </p>
+                      <div className="flex items-center justify-between gap-2 sm:gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleShowQR(order)}
+                          className="shrink-0 px-2.5 py-1.5 sm:px-4 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap hover:bg-[#003363] hover:text-white transition-colors"
+                        >
+                          View Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => canOrderAgain && navigate("/all-products")}
+                          disabled={!canOrderAgain}
+                          title={canOrderAgain ? "Order this item again" : "You have reached your max item per order"}
+                          className={`shrink-0 px-2.5 py-1.5 sm:px-4 sm:py-2 border-2 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+                            canOrderAgain
+                              ? "border-[#F28C28] text-[#F28C28] hover:bg-[#F28C28] hover:text-white cursor-pointer"
+                              : "border-gray-300 text-gray-400 cursor-not-allowed opacity-70"
+                          }`}
+                        >
+                          Order Again
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {listForPagination.length > itemsPerPage && (
+              <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
+                <span className="text-sm text-gray-600 mr-4">
+                  Page {currentPage} of {totalPages}
+                </span>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                    className={`px-6 py-2.5 rounded-lg font-semibold text-sm ${
+                      currentPage === 1
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages}
+                    className={`px-6 py-2.5 rounded-lg font-semibold text-sm ${
+                      currentPage >= totalPages
+                        ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        : "bg-[#003363] text-white hover:bg-[#002347]"
+                    }`}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <>
             {/* Single Border Container */}
@@ -1158,13 +1364,25 @@ const MyOrders = () => {
                           : "Not Available"}
                       </button>
                     ) : (
-                      <button
-                        onClick={() => handleShowQR(order)}
-                        className="px-6 py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-sm transition-colors hover:bg-[#003363] hover:text-white"
-                        title="Show QR code"
-                      >
-                        Show QR
-                      </button>
+                      <div className="flex items-center gap-3">
+                        {activeCategory === "orders" && (
+                          <button
+                            onClick={() => handleCancelOrder(order)}
+                            disabled={cancellingOrders[order.id || order._original?.id]}
+                            className="px-6 py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Cancel this order so you can place a new one"
+                          >
+                            {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleShowQR(order)}
+                          className="px-6 py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-sm transition-colors hover:bg-[#003363] hover:text-white"
+                          title="Show QR code"
+                        >
+                          Show QR
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -1173,7 +1391,7 @@ const MyOrders = () => {
             </div>
 
             {/* Pagination Controls */}
-            {filteredOrders.length > itemsPerPage && (
+            {listForPagination.length > itemsPerPage && (
               <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
                 <div className="flex items-center space-x-4">
                   {/* Page Info */}

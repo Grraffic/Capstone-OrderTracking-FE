@@ -1,5 +1,6 @@
 import React from "react";
-import { ShoppingCart, Package, CheckCircle, Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ShoppingCart, Package, CheckCircle, Bell, ChevronLeft } from "lucide-react";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import Footer from "../../components/common/Footer";
@@ -19,6 +20,8 @@ import { useStudentProfile, useActivityFeed } from "../hooks";
  * - Styled pagination with Back/Next buttons
  */
 const StudentProfile = () => {
+  const navigate = useNavigate();
+
   // State for hamburger menu toggle
   const [isProfileVisible, setIsProfileVisible] = React.useState(true);
 
@@ -223,10 +226,23 @@ const StudentProfile = () => {
           <div className="lg:col-span-3">
             {/* Single Background Container for Tabs + Activities */}
             <div className="bg-gray-50 rounded-xl pl-8 min-h-[500px]">
-              {/* Tabs Bar - Scrolls with content */}
+              {/* Tabs Bar - Back left, Tabs centered, Filter right */}
               <div className="pb-4 mb-4 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex space-x-2">
+                <div className="flex items-center">
+                  {/* Left: Back to All Products (circle button) */}
+                  <div className="flex-1 flex justify-start">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/all-products")}
+                      aria-label="Back to All Products"
+                      className="w-10 h-10 rounded-full border-2 border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white flex items-center justify-center transition-colors"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Center: Activities, Orders, History tabs */}
+                  <div className="flex-shrink-0 flex space-x-2">
                     {[
                       { key: "activities", label: "Activities", icon: Bell },
                       { key: "orders", label: "Orders", icon: ShoppingCart },
@@ -235,7 +251,7 @@ const StudentProfile = () => {
                       const isActive = activeTab === tab.key;
                       const isHovered = hoveredTab === tab.key;
                       const showUnderline = isActive || isHovered;
-                      
+
                       return (
                         <button
                           key={tab.key}
@@ -248,7 +264,7 @@ const StudentProfile = () => {
                               : "bg-transparent text-gray-600 hover:bg-[#0C2340] hover:text-white"
                           }`}
                         >
-                          <div 
+                          <div
                             ref={(el) => (tabRefs.current[tab.key] = el)}
                             className="flex items-center space-x-2"
                             style={{ pointerEvents: "none" }}
@@ -270,17 +286,22 @@ const StudentProfile = () => {
                     })}
                   </div>
 
-                  {/* Filter Dropdown */}
-                  <div className="relative">
-                    <select
-                      value={filter}
-                      onChange={(e) => handleFilterChange(e.target.value)}
-                      className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C5A572] focus:border-transparent cursor-pointer"
-                    >
-                      <option value="all">Show All</option>
-                      <option value="newest">Newest</option>
-                      <option value="oldest">Oldest</option>
-                    </select>
+                  {/* Right: Filter dropdown */}
+                  <div className="flex-1 flex justify-end">
+                    {(activeTab === "activities" || activeTab === "orders" || activeTab === "history") && (
+                      <div className="relative z-10">
+                        <select
+                          value={filter}
+                          onChange={(e) => handleFilterChange(e.target.value)}
+                          className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C5A572] focus:border-transparent cursor-pointer"
+                          aria-label="Sort activities"
+                        >
+                          <option value="all">Show All</option>
+                          <option value="newest">Newest</option>
+                          <option value="oldest">Oldest</option>
+                        </select>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -351,16 +372,14 @@ const StudentProfile = () => {
               {/* My Orders View */}
               {activeTab === "orders" && (
                 <div className="py-4">
-                  <MyOrders />
+                  <MyOrders sortOrder={filter} />
                 </div>
               )}
 
-              {/* History View - Placeholder */}
+              {/* History View - Claimed orders (Order History) */}
               {activeTab === "history" && (
-                <div className="text-center text-gray-500 py-16">
-                  <Package className="mx-auto h-24 w-24 text-gray-300 mb-4" />
-                  <p className="text-lg font-semibold">Order History</p>
-                  <p className="text-sm mt-2">Coming soon...</p>
+                <div className="py-4">
+                  <MyOrders sortOrder={filter} variant="history" />
                 </div>
               )}
             </div>

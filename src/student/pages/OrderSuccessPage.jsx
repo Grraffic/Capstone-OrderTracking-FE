@@ -1,14 +1,25 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../components/common/Navbar';
 import HeroSection from '../components/common/HeroSection';
 import Footer from "../../components/common/Footer";
 import OrderSuccessCard from '../components/order/OrderSuccessCard';
+import { orderAPI } from '../../services/api';
+import toast from 'react-hot-toast';
+
+const CLAIM_WINDOW_SECONDS = 10;
 
 const OrderSuccessPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  const { orderId, orderNumber } = location.state || {};
+  const [countdown, setCountdown] = useState(orderId ? CLAIM_WINDOW_SECONDS : null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [voided, setVoided] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const countdownRef = useRef(null);
 
   // Ensure limits (alreadyOrdered) are refetched when user leaves for product/cart so item stays disabled
   useEffect(() => {
@@ -16,6 +27,39 @@ const OrderSuccessPage = () => {
       sessionStorage.setItem("limitsNeedRefresh", "1");
     } catch (_) {}
   }, []);
+
+  // 10-second countdown: if not confirmed in time, order is auto-voided by backend
+  useEffect(() => {
+    if (!orderId || confirmed || voided) return;
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev == null || prev <= 1) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setVoided(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, [orderId, confirmed, voided]);
+
+  const handleConfirmOrder = async () => {
+    if (!orderId || confirming || confirmed) return;
+    setConfirming(true);
+    try {
+      await orderAPI.confirmOrder(orderId);
+      setConfirmed(true);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      toast.success('Order confirmed! It will not be voided.');
+    } catch (err) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to confirm order');
+    } finally {
+      setConfirming(false);
+    }
+  };
 
   // Extract user's first name from user data
   const getUserName = () => {
@@ -81,10 +125,44 @@ const OrderSuccessPage = () => {
           }}></div>
 
           {/* Content - On top of gradient */}
-          <div className="relative z-30 flex items-center justify-center min-h-[600px] md:min-h-[700px]">
+          <div className="relative z-30 flex flex-col items-center justify-center min-h-[600px] md:min-h-[700px] gap-6">
+            {orderId && !confirmed && !voided && (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-xl px-6 py-4 text-center shadow-lg">
+                <p className="text-amber-900 font-semibold mb-2">
+                  Confirm your order within {countdown ?? CLAIM_WINDOW_SECONDS} seconds or it will be voided
+                </p>
+                <button
+                  type="button"
+                  onClick={handleConfirmOrder}
+                  disabled={confirming || (countdown !== null && countdown <= 0)}
+                  className="px-6 py-2.5 bg-[#F28C28] text-white font-bold rounded-lg hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {confirming ? 'Confirming…' : 'Confirm order'}
+                </button>
+              </div>
+            )}
+            {orderId && confirmed && (
+              <p className="text-green-700 font-semibold bg-green-50 px-4 py-2 rounded-lg">
+                Order confirmed. It will not be voided.
+              </p>
+            )}
+            {orderId && voided && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl px-6 py-4 text-center">
+                <p className="text-red-800 font-semibold">
+                  Order was voided because it was not confirmed in time. You cannot place another order.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/student/profile', { state: { activeTab: 'orders' } })}
+                  className="mt-3 px-4 py-2 bg-[#003363] text-white rounded-lg hover:bg-[#0C2340]"
+                >
+                  View orders
+                </button>
+              </div>
+            )}
             <OrderSuccessCard 
               userName={getUserName()}
-              onOrderAgain={handleOrderAgain}
+              onOrderAgain={voided ? () => navigate('/student/profile') : handleOrderAgain}
             />
           </div>
         </div>

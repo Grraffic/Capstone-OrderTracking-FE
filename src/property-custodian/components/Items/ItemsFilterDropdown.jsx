@@ -9,7 +9,7 @@ const CUSTOM_DATE_DEBOUNCE_MS = 400;
  * Filter dropdown panel (opens below the Filters button). Arrangement:
  * 1. Filter by Date Range (Last 7 days, Last 30 days)
  * 2. Custom Date Range (Start Date, End Date)
- * 3. Filter by Item Status (Archived, Deleted)
+ * 3. Filter by Item Status (Archived only)
  *
  * Nothing selected by default; user chooses. Clicking the selected option again deselects it (blue disappears).
  * Filters apply immediately so the list updates as you pick (items appear automatically). Custom date range
@@ -254,7 +254,7 @@ const ItemsFilterDropdown = ({
             </div>
           </div>
 
-          {/* 3. Filter by Item Status */}
+          {/* 3. Filter by Item Status (Archived only; Deleted filter removed) */}
           <div>
             <h3 className="text-sm font-semibold text-[#0C2340] mb-2">
               Filter by Item Status
@@ -270,17 +270,6 @@ const ItemsFilterDropdown = ({
                 }`}
               >
                 Archived
-              </button>
-              <button
-                type="button"
-                onClick={() => handleItemStatus("deleted")}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors ${
-                  itemStatus === "deleted"
-                    ? "bg-[#2E8FEA]/15 border-[#2E8FEA] text-[#0C2340]"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                Deleted
               </button>
             </div>
           </div>

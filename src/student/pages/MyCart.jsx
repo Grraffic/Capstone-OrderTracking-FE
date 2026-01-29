@@ -34,6 +34,7 @@ const MyCart = () => {
   const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
+  const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
   // Refetch limits when an order was just created (e.g. after checkout) or when tab regains focus.
   // When visible and logged in, always refetch so "already ordered" is up to date (e.g. checkout in another tab).
@@ -79,6 +80,7 @@ const MyCart = () => {
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
         setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
+        setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
         try {
           sessionStorage.removeItem("limitsNeedRefresh");
         } catch {
@@ -92,6 +94,7 @@ const MyCart = () => {
         setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
         setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
         setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
+        setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
       }
     };
     fetchMaxQuantities();
@@ -212,10 +215,14 @@ const MyCart = () => {
     return { hasOverLimitItems: summary.length > 0, overLimitSummary: summary };
   }, [items, maxQuantities, alreadyOrdered, isOldStudent]);
 
-  // Handle order now (blocked when limit not set, hasOverLimitItems, or over slot limit)
+  // Handle order now (blocked when limit not set, blockedDueToVoid, hasOverLimitItems, or over slot limit)
   const handleOrderNow = () => {
     if (items.length === 0) {
       toast.error("Your cart is empty");
+      return;
+    }
+    if (blockedDueToVoid) {
+      toast.error("You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.");
       return;
     }
     if (limitNotSet) {
@@ -572,10 +579,20 @@ const MyCart = () => {
                 </div>
               </div>
             )}
+            {blockedDueToVoid && (
+              <div className="bg-red-50 border-t border-red-200 px-6 py-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <p className="font-medium text-red-800">
+                    You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="bg-white border-t border-gray-200 p-6 flex justify-end">
               <button
                 onClick={handleOrderNow}
-                disabled={items.length === 0 || loading || hasOverLimitItems || isOverSlotLimit || limitNotSet}
+                disabled={items.length === 0 || loading || hasOverLimitItems || isOverSlotLimit || limitNotSet || blockedDueToVoid}
                 title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders." : undefined}
                 className="px-8 py-3 bg-[#e68b00] text-white font-semibold rounded-lg hover:bg-[#d17d00] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
               >

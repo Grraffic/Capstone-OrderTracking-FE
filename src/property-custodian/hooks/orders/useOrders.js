@@ -123,11 +123,14 @@ export const useOrders = (options = {}) => {
    */
   const updateOrderStatus = useCallback(async (orderId, newStatus) => {
     try {
+      const token = typeof localStorage !== "undefined" ? localStorage.getItem("authToken") : null;
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
       const response = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ status: newStatus }),
       });
 

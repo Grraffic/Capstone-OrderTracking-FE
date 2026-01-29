@@ -29,12 +29,25 @@ const ProductInfo = ({ product, onClose }) => {
 
   const { mainName, suffix } = parseProductName(product.name);
 
+  const price = product.price != null ? Number(product.price) : null;
+  const formattedPrice =
+    price != null && !Number.isNaN(price)
+      ? `₱${price.toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+      : null;
+
   return (
     <div className="space-y-3 sm:space-y-4 relative">
-      {/* FREE Badge - Top Right (Absolute Positioned) */}
-      <span className="absolute top-6 right-0 px-3 py-1 sm:px-4 sm:py-1.5 bg-white border border-[#003363] text-[#003363] rounded-full text-xs sm:text-sm font-bold shadow-sm">
-        FREE
-      </span>
+      {/* Price (crossed out) + FREE Badge - Top Right (Absolute Positioned) */}
+      <div className="absolute top-6 right-0 flex flex-col items-end gap-0.5">
+        {formattedPrice && (
+          <span className="line-through text-gray-500 text-xs sm:text-sm font-medium">
+            {formattedPrice}
+          </span>
+        )}
+        <span className="px-3 py-1 sm:px-4 sm:py-1.5 bg-white border border-[#003363] text-[#003363] rounded-full text-xs sm:text-sm font-bold shadow-sm">
+          FREE
+        </span>
+      </div>
 
       {/* Top Row: Back Button (left) */}
       <div className="flex items-start">

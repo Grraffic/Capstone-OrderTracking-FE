@@ -1,7 +1,7 @@
 import React from "react";
 import ProductCard from "./ProductCard";
 
-const ProductGrid = ({ products }) => {
+const ProductGrid = ({ products, blockedDueToVoid = false }) => {
   if (products.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-12 text-center">
@@ -38,7 +38,7 @@ const ProductGrid = ({ products }) => {
       }}
     >
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product} blockedDueToVoid={blockedDueToVoid} />
       ))}
     </div>
   );

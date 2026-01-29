@@ -8,7 +8,7 @@ import { X } from "lucide-react";
  * Filter modal (opens when Filters is clicked) with correct arrangement:
  * 1. Filter by Date Range (Last 7 days, Last 30 days)
  * 2. Custom Date Range (Start Date, End Date)
- * 3. Filter by Item Status (Archived, Deleted)
+ * 3. Filter by Item Status (Archived only)
  *
  * No Active, All, Cancel, or Apply — filters apply when user selects an option.
  */
@@ -226,7 +226,7 @@ const ItemsFilterModal = ({
             </div>
           </div>
 
-          {/* 3. Filter by Item Status */}
+          {/* 3. Filter by Item Status (Archived only; Deleted filter removed) */}
           <div>
             <h3 className="text-sm font-semibold text-[#0C2340] mb-2">
               Filter by Item Status
@@ -242,17 +242,6 @@ const ItemsFilterModal = ({
                 }`}
               >
                 Archived
-              </button>
-              <button
-                type="button"
-                onClick={() => handleItemStatus("deleted")}
-                className={`px-4 py-2 rounded-lg border text-sm font-medium whitespace-nowrap transition-colors ${
-                  itemStatus === "deleted"
-                    ? "bg-[#2E8FEA]/15 border-[#2E8FEA] text-[#0C2340]"
-                    : "bg-white border-gray-300 text-gray-700 hover:bg-gray-50"
-                }`}
-              >
-                Deleted
               </button>
             </div>
           </div>

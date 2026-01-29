@@ -21,6 +21,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { user, logout } = useAuth();
   const { getCartCount } = useCart();
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotification();
@@ -62,6 +63,9 @@ const Navbar = () => {
 
   const handleLogout = async () => {
     try {
+      setShowLogoutConfirm(false);
+      setIsProfileOpen(false);
+      setIsMenuOpen(false);
       await logout();
       navigate("/login");
     } catch (error) {
@@ -341,7 +345,7 @@ const Navbar = () => {
                   <hr className="my-2" />
 
                   <button
-                    onClick={handleLogout}
+                    onClick={() => setShowLogoutConfirm(true)}
                     className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
@@ -498,12 +502,47 @@ const Navbar = () => {
 
               {/* Logout - Mobile */}
               <button
-                onClick={handleLogout}
+                onClick={() => setShowLogoutConfirm(true)}
                 className="flex items-center space-x-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-colors"
               >
                 <LogOut className="w-5 h-5 text-red-600" />
                 <span className="text-sm font-medium text-red-600">Logout</span>
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Logout Confirmation Modal */}
+        {showLogoutConfirm && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowLogoutConfirm(false)}
+            aria-modal="true"
+            role="dialog"
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 p-6"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <p className="text-gray-800 font-medium mb-4">
+                Are you sure you want to log out?
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                  onClick={() => setShowLogoutConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition-colors"
+                  onClick={handleLogout}
+                >
+                  Log out
+                </button>
+              </div>
             </div>
           </div>
         )}

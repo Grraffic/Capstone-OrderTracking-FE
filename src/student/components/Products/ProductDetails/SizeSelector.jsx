@@ -82,12 +82,9 @@ const SizeSelector = ({
             Size Choices:
           </h3>
 
-          {/* Size Buttons */}
-          <div className="flex flex-wrap gap-2">
-            {loadingSizes ? (
-            <div className="text-xs sm:text-sm text-gray-500">Loading sizes...</div>
-          ) : (
-            availableSizes.map((size) => {
+          {/* Size Buttons - Always show so layout never flickers; dim slightly when loading */}
+          <div className={`flex flex-wrap gap-2 ${loadingSizes ? "opacity-80 pointer-events-none" : ""}`}>
+            {availableSizes.map((size) => {
               const isSelected = selectedSize === size;
               const sizeData = availableSizesData.find((s) => s.size === size);
               // If no data exists for this size, it means stock = 0 (not in inventory)
@@ -118,8 +115,7 @@ const SizeSelector = ({
                  
                 </div>
               );
-            })
-          )}
+            })}
         </div>
       </div>
 

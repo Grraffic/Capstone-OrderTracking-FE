@@ -456,63 +456,65 @@ const Items = () => {
                       key={group.groupKey}
                       className="relative bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
                     >
-                      {/* Three-dot menu (horizontal) */}
-                      <div
-                        className="absolute top-3 right-3"
-                        ref={openMenuId === group.groupKey ? menuRef : null}
-                      >
-                        <div className="relative inline-block">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setOpenMenuId(
-                                openMenuId === group.groupKey
-                                  ? null
-                                  : group.groupKey
-                              )
-                            }
-                            className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                            aria-label="More options"
-                          >
-                            <MoreHorizontal size={18} />
-                          </button>
-                          {openMenuId === group.groupKey && (
-                            <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
-                              <button
-                                onClick={() => {
-                                  openEditModal(representativeItem);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors"
-                              >
-                                Edit Item
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  setOpenMenuId(null);
-                                  try {
-                                    await archiveItem(representativeItem.id);
-                                  } catch (_) {
-                                    // Error already set in hook
-                                  }
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                              >
-                                Archive Item
-                              </button>
-                              <button
-                                onClick={() => {
-                                  openDeleteModal(representativeItem);
-                                  setOpenMenuId(null);
-                                }}
-                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors"
-                              >
-                                Delete Item
-                              </button>
-                            </div>
-                          )}
+                      {/* Three-dot menu (hidden when viewing archived items — archived items stay in archive, no actions) */}
+                      {appliedFilters.itemStatus !== "archived" && (
+                        <div
+                          className="absolute top-3 right-3"
+                          ref={openMenuId === group.groupKey ? menuRef : null}
+                        >
+                          <div className="relative inline-block">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenMenuId(
+                                  openMenuId === group.groupKey
+                                    ? null
+                                    : group.groupKey
+                                )
+                              }
+                              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                              aria-label="More options"
+                            >
+                              <MoreHorizontal size={18} />
+                            </button>
+                            {openMenuId === group.groupKey && (
+                              <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                                <button
+                                  onClick={() => {
+                                    openEditModal(representativeItem);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors"
+                                >
+                                  Edit Item
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    setOpenMenuId(null);
+                                    try {
+                                      await archiveItem(representativeItem.id);
+                                    } catch (_) {
+                                      // Error already set in hook
+                                    }
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                >
+                                  Archive Item
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    openDeleteModal(representativeItem);
+                                    setOpenMenuId(null);
+                                  }}
+                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors"
+                                >
+                                  Delete Item
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
+                      )}
 
                       {/* Product Image */}
                       <div className="mb-4">
@@ -742,7 +744,7 @@ const Items = () => {
                             </span>
                           </p>
 
-                          {/* Actions */}
+                          {/* Actions — no Edit/Delete when viewing archived items */}
                           <div className="mt-2 flex justify-end gap-1.5 sm:gap-2 flex-wrap">
                             <button
                               onClick={() =>
@@ -752,20 +754,24 @@ const Items = () => {
                             >
                               View Details
                             </button>
-                            <button
-                              onClick={() => openEditModal(representativeItem)}
-                              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-blue-50 text-[10px] sm:text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() =>
-                                openDeleteModal(representativeItem)
-                              }
-                              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-red-50 text-[10px] sm:text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
-                            >
-                              Delete
-                            </button>
+                            {appliedFilters.itemStatus !== "archived" && (
+                              <>
+                                <button
+                                  onClick={() => openEditModal(representativeItem)}
+                                  className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-blue-50 text-[10px] sm:text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    openDeleteModal(representativeItem)
+                                  }
+                                  className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-red-50 text-[10px] sm:text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

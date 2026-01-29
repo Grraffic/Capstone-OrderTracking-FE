@@ -61,15 +61,18 @@ const StudentTable = ({
     return student.avatar_url || student.photo_url || null;
   };
 
-  // Effective max items: admin override if set, else derived from student_type (8 new, 2 old) after profile setup
+  // Effective max items: if voided (unclaimed order), show 0; else admin override if set; else derived from student_type (8 new, 2 old)
   const getEffectiveMaxItemsPerOrder = (student) => {
+    if (student.blocked_due_to_void === true) {
+      return { value: 0, isOverride: false, isVoided: true };
+    }
     if (student.max_items_per_order != null && Number(student.max_items_per_order) > 0) {
-      return { value: Number(student.max_items_per_order), isOverride: true };
+      return { value: Number(student.max_items_per_order), isOverride: true, isVoided: false };
     }
     const st = (student.student_type || "").toLowerCase();
-    if (st === "new") return { value: 8, isOverride: false };
-    if (st === "old") return { value: 2, isOverride: false };
-    return { value: null, isOverride: false };
+    if (st === "new") return { value: 8, isOverride: false, isVoided: false };
+    if (st === "old") return { value: 2, isOverride: false, isVoided: false };
+    return { value: null, isOverride: false, isVoided: false };
   };
 
   return (
@@ -168,13 +171,23 @@ const StudentTable = ({
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {(() => {
-                    const { value: max, isOverride } = getEffectiveMaxItemsPerOrder(student);
+                    const { value: max, isOverride, isVoided } = getEffectiveMaxItemsPerOrder(student);
                     if (max == null) {
                       return (
                         <span className="inline-flex items-center gap-2">
                           <span>N/A</span>
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
                             Set limit
+                          </span>
+                        </span>
+                      );
+                    }
+                    if (isVoided) {
+                      return (
+                        <span className="inline-flex items-center gap-2">
+                          <span>0</span>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800 border border-red-200">
+                            Voided (unclaimed)
                           </span>
                         </span>
                       );

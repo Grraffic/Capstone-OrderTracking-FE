@@ -44,6 +44,7 @@ const AllProducts = () => {
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [limitsLoaded, setLimitsLoaded] = useState(false);
   const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
+  const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
   // Get user from auth context and cart for "already in cart" check
   const { user } = useAuth();
@@ -119,6 +120,7 @@ const AllProducts = () => {
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
         setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
+        setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
         try {
           sessionStorage.removeItem("limitsNeedRefresh");
         } catch (_) {}
@@ -491,6 +493,17 @@ const AllProducts = () => {
                 </div>
               </div>
             )}
+
+            {blockedDueToVoid && (
+              <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-red-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-red-800 font-semibold">
+                    You cannot place another order because a previous order was voided for not being claimed in time.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Content Grid */}
@@ -525,7 +538,7 @@ const AllProducts = () => {
               }`}
               style={{ transition: "all 0.3s ease-in-out" }}
             >
-              <ProductGrid products={productsWithLimit} />
+              <ProductGrid products={productsWithLimit} blockedDueToVoid={blockedDueToVoid} />
 
               {filteredProducts.length > 0 && (
                 <Pagination

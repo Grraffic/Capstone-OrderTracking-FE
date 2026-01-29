@@ -129,6 +129,9 @@ export const orderAPI = {
   updateOrderStatus: async (id, status) => {
     return api.patch(`/orders/${id}/status`, { status });
   },
+  confirmOrder: async (id) => {
+    return api.patch(`/orders/${id}/confirm`);
+  },
   updateOrder: async (id, orderData) => {
     return api.put(`/orders/${id}`, orderData);
   },

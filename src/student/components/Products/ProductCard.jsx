@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Bell } from "lucide-react";
 import { PRODUCT_STATUS } from "../../constants/studentProducts";
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const navigate = useNavigate();
   const statusInfo = PRODUCT_STATUS[product.status] || PRODUCT_STATUS.in_stock;
   const isOutOfStock = product.status === "out_of_stock";
@@ -11,10 +11,6 @@ const ProductCard = ({ product }) => {
   const orderLimitReached = product._orderLimitReached === true;
   const slotsFullForNewType = product._slotsFullForNewType === true;
   const notAllowedForStudentType = product._notAllowedForStudentType === true;
-
-  // Item gender (catalog is filtered by user gender elsewhere, so we only show relevant items)
-  const itemGender = product.forGender || product.for_gender || "Unisex";
-  const isGenderSpecific = itemGender !== "Unisex";
 
   const handleProductClick = () => {
     console.log(
@@ -26,20 +22,34 @@ const ProductCard = ({ product }) => {
     navigate(`/products/${product.id}`);
   };
 
+  const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType;
+  // When blocked due to void (unclaimed order), all items are disabled for ordering
+  const isDisabled = isAlreadyOrdered || blockedDueToVoid;
+
   return (
     <div
-      className="relative bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 flex flex-col h-full cursor-pointer"
+      className={`relative rounded-2xl shadow-md overflow-hidden transition-all duration-300 flex flex-col h-full cursor-pointer ${
+        isDisabled
+          ? "bg-gray-100 hover:shadow-md"
+          : "bg-white hover:shadow-xl"
+      }`}
       onClick={handleProductClick}
       style={{
         transition: 'all 0.3s ease-in-out, transform 0.3s ease-in-out'
       }}
     >
       {/* Product Image */}
-      <div className="relative aspect-square bg-gray-50">
+      <div
+        className={`relative aspect-square transition-all duration-300 ${
+          isDisabled ? "bg-gray-200" : "bg-gray-50"
+        }`}
+      >
         <img
           src={product.image}
           alt={product.name}
-          className="w-full h-full object-cover"
+          className={`w-full h-full object-cover transition-all duration-300 ${
+            isDisabled ? "grayscale opacity-70" : ""
+          }`}
           loading="lazy"
           decoding="async"
           onError={(e) => {
@@ -56,14 +66,6 @@ const ProductCard = ({ product }) => {
             </span>
           </div>
         )}
-        {/* Already ordered – at limit, cannot add/order again (avoids duplicate orders) */}
-        {orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
-            <span className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-full shadow-lg">
-              Already ordered
-            </span>
-          </div>
-        )}
         {/* Max item types per order – cart has reached slot limit; cannot add new item type */}
         {slotsFullForNewType && !isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
@@ -72,8 +74,16 @@ const ProductCard = ({ product }) => {
             </span>
           </div>
         )}
-        {/* Pre-Order Button Overlay - Only show when out of stock */}
-        {isOutOfStock && (
+        {/* Blocked due to void: previous order not claimed in time – all items disabled */}
+        {blockedDueToVoid && (
+          <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/70">
+            <span className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">
+              Cannot order
+            </span>
+          </div>
+        )}
+        {/* Pre-Order Button Overlay - Only show when out of stock and not blocked due to void */}
+        {isOutOfStock && !blockedDueToVoid && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
             <button
               type="button"
@@ -104,21 +114,22 @@ const ProductCard = ({ product }) => {
       {/* Product Info */}
       <div className="p-5 flex flex-col flex-grow">
         {/* Product Name - mb-0.5 for tight gap to education level (matches ProductCarousel) */}
-        <h3 className="text-lg font-bold text-[#003363] line-clamp-2 leading-tight mb-0.5">
+        <h3
+          className={`text-lg font-bold line-clamp-2 leading-tight mb-0.5 ${
+            isDisabled ? "text-gray-500" : "text-[#003363]"
+          }`}
+        >
           {product.name}
         </h3>
 
         {/* Education Level */}
         {product.educationLevel && (
-          <p className="text-base text-[#F28C28] font-semibold mt-0.5">
+          <p
+            className={`text-base font-semibold mt-0.5 ${
+              isDisabled ? "text-gray-400" : "text-[#F28C28]"
+            }`}
+          >
             ({product.educationLevel})
-          </p>
-        )}
-
-        {/* Gender Label - Show if item is gender-specific */}
-        {isGenderSpecific && (
-          <p className="text-xs text-gray-600 font-medium mt-1">
-            For {itemGender}
           </p>
         )}
 
