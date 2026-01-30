@@ -104,11 +104,63 @@ const Inventory = () => {
   });
 
   // Handle Update Quantity form submission
-  const handleUpdateQuantity = () => {
-    console.log("Update Quantity Form:", updateQuantityForm);
-    // Handle form submission here - add your API call or logic
+  const handleUpdateQuantity = async () => {
+    const form = updateQuantityForm;
+    if (form.fieldToEdit === "return") {
+      const quantity = Number(form.quantity);
+      if (!quantity || quantity <= 0) {
+        alert("Please enter a valid quantity (greater than 0).");
+        return;
+      }
+      const itemName = (form.itemName || "").trim();
+      if (!itemName) {
+        alert("Please enter the item name for the return.");
+        return;
+      }
+      const variant = (form.variant || "").trim().toLowerCase();
+      const sizeForApi = variant ? form.variant : null;
+      const unitPrice = form.unitPrice ? Number(form.unitPrice) : null;
+
+      const normalizeSize = (s) => (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)/g, "").trim();
+      const match = inventoryData.find((row) => {
+        const nameMatch = (row.item || "").trim().toLowerCase() === itemName.toLowerCase();
+        if (!nameMatch) return false;
+        const rowSize = (row.size || "N/A").trim();
+        if (!variant) return true;
+        return normalizeSize(rowSize) === normalizeSize(variant) || rowSize.toLowerCase() === variant;
+      });
+      if (!match || !match.item_id) {
+        alert("Item not found in current inventory. Please enter an item name from the inventory list and select the correct variant.");
+        return;
+      }
+
+      try {
+        const result = await inventoryService.recordReturn(
+          match.item_id,
+          quantity,
+          sizeForApi,
+          unitPrice
+        );
+        if (result?.success) {
+          setIsUpdateQuantityModalOpen(false);
+          setUpdateQuantityForm({
+            itemName: "",
+            fieldToEdit: "",
+            quantity: "",
+            variant: "",
+            unitPrice: "",
+          });
+          fetchInventoryData();
+          setTransactionRefreshKey((prev) => prev + 1);
+        }
+      } catch (err) {
+        alert(err.message || "Failed to record return.");
+      }
+      return;
+    }
+
+    console.log("Update Quantity Form:", form);
     setIsUpdateQuantityModalOpen(false);
-    // Reset form
     setUpdateQuantityForm({
       itemName: "",
       fieldToEdit: "",
@@ -1042,6 +1094,7 @@ const Inventory = () => {
             onUpdateQuantityClick={() => setIsUpdateQuantityModalOpen(true)}
             onSetReorderPointClick={() => setIsSetReorderPointModalOpen(true)}
             inventoryData={paginatedInventoryData}
+            allInventoryData={inventoryData}
             loading={loading}
           />
         )}

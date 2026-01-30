@@ -37,7 +37,7 @@ const CheckoutPage = () => {
   const { trackCheckout } = useActivity();
   const [submitting, setSubmitting] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
-  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [limitsLoaded, setLimitsLoaded] = useState(false);
   const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
@@ -46,7 +46,7 @@ const CheckoutPage = () => {
       if (!user) return;
       try {
         const res = await authAPI.getMaxQuantities();
-        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
       } catch (err) {
         setMaxItemsPerOrder(null);
@@ -61,7 +61,7 @@ const CheckoutPage = () => {
   const limitNotSet =
     user &&
     limitsLoaded &&
-    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
+    (totalItemLimit == null || totalItemLimit === undefined || Number(totalItemLimit) <= 0);
 
   // Determine which items to display: direct checkout items or cart items
   const items = isDirectCheckout ? checkoutItems : cartItems;
@@ -100,7 +100,7 @@ const CheckoutPage = () => {
 
     if (limitNotSet) {
       toast.error(
-        "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders."
+        "Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders."
       );
       return;
     }
@@ -740,12 +740,12 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Order limit not set: student cannot place order until admin sets Max Items Per Order. */}
+          {/* Order limit not set: student cannot place order until admin sets Total Item Limit. */}
           {items.length > 0 && limitNotSet && (
             <div className="px-4 sm:px-6 lg:px-8 pb-2">
               <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                 <p className="font-medium">
-                  Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders.
+                  Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders.
                 </p>
               </div>
             </div>
@@ -765,7 +765,7 @@ const CheckoutPage = () => {
               <button
                 onClick={handleCheckout}
                 disabled={loading || submitting || limitNotSet || blockedDueToVoid}
-                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders." : blockedDueToVoid ? "You cannot place new orders because a previous order was not claimed in time and was voided." : undefined}
+                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders." : blockedDueToVoid ? "You cannot place new orders because a previous order was not claimed in time and was voided." : undefined}
                 className="w-full py-3 sm:py-4 bg-[#F28C28] text-white font-bold text-base sm:text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {submitting

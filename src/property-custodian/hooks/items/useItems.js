@@ -226,21 +226,21 @@ export const useItems = (options = {}) => {
   }, [isConnected, on, off, fetchItems]);
 
   /**
-   * Calculate stock status based on quantity
-   * NOTE: This is now handled by the backend automatically.
-   * Status is calculated based on stock levels:
+   * Calculate stock status based on quantity and reorder point (matches At Reorder Point table).
    * - "Out of Stock": stock = 0
-   * - "Critical": stock 1-19
-   * - "At Reorder Point": stock 20-49
-   * - "Above Threshold": stock >= 50
+   * - "At Reorder Point": reorder_point > 0 AND stock <= reorder_point
+   * - "Critical": stock 1-10 (when not already at reorder point)
+   * - "Above Threshold": otherwise
    *
    * @param {number} stock - Stock quantity
+   * @param {number|null|undefined} reorderPoint - Reorder point from item (optional)
    * @returns {string} - Status label
    */
-  const getStockStatus = useCallback((stock) => {
+  const getStockStatus = useCallback((stock, reorderPoint) => {
     if (stock === 0) return "Out of Stock";
-    if (stock >= 1 && stock < 20) return "Critical";
-    if (stock >= 20 && stock < 50) return "At Reorder Point";
+    const rp = reorderPoint != null ? Number(reorderPoint) : null;
+    if (rp != null && !Number.isNaN(rp) && rp > 0 && stock <= rp) return "At Reorder Point";
+    if (stock >= 1 && stock <= 10) return "Critical";
     return "Above Threshold";
   }, []);
 

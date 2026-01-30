@@ -83,7 +83,7 @@ const userAPI = {
   /**
    * Bulk update users
    * @param {Array<string>} userIds - Array of user IDs to update
-   * @param {Object} updateData - Data to update (max_items_per_order, order_lockout_period)
+   * @param {Object} updateData - Data to update (total_item_limit, order_lockout_period)
    * @returns {Promise} API response
    */
   bulkUpdateUsers: (userIds, updateData) => {

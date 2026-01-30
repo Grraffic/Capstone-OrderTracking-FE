@@ -1242,10 +1242,10 @@ const ItemsModals = ({
     syncEditorToForm();
   };
 
-  // Add/Edit Item Modal
+  // Add/Edit Item Modal - responsive: Mobile M 375, Mobile L 425, Tablet 768, Laptop 1024
   return createPortal(
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] py-2 pl-[5.5rem] pr-3 mobile-m:pl-[5.5rem] mobile-m:pr-3 mobile-l:py-3 mobile-l:pl-[5.75rem] mobile-l:pr-4 tablet:p-6 tablet:pl-10 tablet:pt-10 tablet:pr-6 tablet:pb-6 laptop:p-5 laptop:pl-5 laptop:pt-5"
       onClick={(e) => {
         // Close modal when clicking backdrop
         if (e.target === e.currentTarget) {
@@ -1254,17 +1254,17 @@ const ItemsModals = ({
       }}
     >
       <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+        className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-full mobile-l:max-w-[405px] tablet:max-w-[600px] laptop:max-w-3xl max-h-[90vh] mobile-l:max-h-[82vh] tablet:max-h-[82vh] laptop:max-h-[90vh] overflow-hidden flex flex-col mt-5 mobile-m:mt-6 mobile-l:mt-6 tablet:mt-8 laptop:mt-0"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Pre-Order Notification Banner - Only for Add mode */}
         {modalState.mode === "add" &&
           preOrderCount > 0 &&
           parseInt(formData.stock || 0) > 0 && (
-            <div className="px-6 py-3 bg-blue-50 border-b border-blue-200">
-              <div className="flex items-center gap-2 text-blue-800">
-                <Users size={18} />
-                <p className="text-sm font-medium">
+            <div className="px-3 py-2 mobile-m:px-4 mobile-l:px-4 mobile-l:py-2.5 tablet:px-6 tablet:py-3 bg-blue-50 border-b border-blue-200">
+              <div className="flex items-center gap-1.5 mobile-l:gap-2 text-blue-800">
+                <Users size={14} className="mobile-l:w-[18px] mobile-l:h-[18px] shrink-0" />
+                <p className="text-xs font-medium mobile-l:text-sm">
                   {checkingPreOrders ? (
                     "Checking for pre-orders..."
                   ) : (
@@ -1282,10 +1282,10 @@ const ItemsModals = ({
         {/* Content - Single Column Centered Card */}
         <form
           onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto bg-gray-50 px-6 pt-4 pb-8"
+          className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-3 pt-3 pb-6 mobile-m:px-4 mobile-m:pt-4 mobile-l:px-4 mobile-l:pt-4 mobile-l:pb-6 tablet:px-5 tablet:pt-4 tablet:pb-8 laptop:px-6 laptop:pb-8"
         >
           {/* Breadcrumb (outside white card) */}
-          <div className="max-w-2xl mx-auto mb-4">
+          <div className="max-w-2xl mx-auto mb-3 mobile-l:mb-4">
             <div className="text-xs text-gray-500">
               <button
                 type="button"
@@ -1299,16 +1299,16 @@ const ItemsModals = ({
             </div>
           </div>
 
-          <div className="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6">
+          <div className="max-w-2xl mx-auto bg-white rounded-xl mobile-l:rounded-2xl shadow-sm border border-gray-100 p-3 mobile-m:p-4 mobile-l:p-4 tablet:p-5 laptop:p-6 space-y-4 mobile-l:space-y-5 tablet:space-y-6">
             {/* Header: Title, Size Guide, and Centered Image Upload */}
-            <div className="space-y-4">
+            <div className="space-y-3 mobile-l:space-y-4">
               {/* Item name + item type with size info on the right */}
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center justify-between gap-2 mobile-l:gap-3">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-xl font-semibold text-[#0C2340] truncate">
+                  <h3 className="text-base font-semibold text-[#0C2340] truncate mobile-m:text-lg mobile-l:text-lg tablet:text-xl">
                     {formData.name || "Item Name"}
                   </h3>
-                  <p className="mt-1 text-sm font-medium text-orange-500">
+                  <p className="mt-0.5 mobile-l:mt-1 text-xs font-medium text-orange-500 mobile-l:text-sm">
                     {formData.itemType || "Item Type"}
                   </p>
                 </div>
@@ -2103,19 +2103,19 @@ const ItemsModals = ({
           </div>
         </form>
 
-        {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-5 border-t bg-white">
+        {/* Footer - responsive padding */}
+        <div className="flex items-center justify-end gap-2 mobile-l:gap-3 px-3 py-4 mobile-m:px-4 mobile-l:px-4 tablet:px-6 tablet:py-5 border-t bg-white flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium"
+            className="px-3 py-1.5 mobile-l:px-4 mobile-l:py-2 text-xs mobile-l:text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium"
           >
             Back
           </button>
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-6 py-2.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 shadow-sm font-semibold transition"
+            className="px-4 py-1.5 mobile-l:px-6 mobile-l:py-2.5 text-xs mobile-l:text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 shadow-sm font-semibold transition"
           >
             Done
           </button>

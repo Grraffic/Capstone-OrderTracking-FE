@@ -300,7 +300,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const [orderToCancel, setOrderToCancel] = useState(null); // order for cancel confirmation
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
-  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
@@ -314,7 +314,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
-        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
       } catch (err) {
@@ -322,8 +322,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
           setMaxQuantities(err.response.data.maxQuantities);
         if (err?.response?.data?.alreadyOrdered != null)
           setAlreadyOrdered(err.response.data.alreadyOrdered);
-        if (err?.response?.data?.maxItemsPerOrder != null)
-          setMaxItemsPerOrder(err.response.data.maxItemsPerOrder);
+        if (err?.response?.data?.totalItemLimit != null)
+          setMaxItemsPerOrder(err.response.data.totalItemLimit);
         if (err?.response?.data?.slotsUsedFromPlacedOrders != null)
           setSlotsUsedFromPlacedOrders(err.response.data.slotsUsedFromPlacedOrders);
         if (err?.response?.data?.blockedDueToVoid != null)
@@ -419,8 +419,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   }, [cartItems]);
   const cartSlotCount = cartSlotKeys.size;
   const slotsLeftForThisOrder =
-    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0
-      ? Math.max(0, Number(maxItemsPerOrder) - (Number(slotsUsedFromPlacedOrders) || 0))
+    totalItemLimit != null && Number(totalItemLimit) > 0
+      ? Math.max(0, Number(totalItemLimit) - (Number(slotsUsedFromPlacedOrders) || 0))
       : 0;
   const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
 
@@ -440,8 +440,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
       const effectiveMax = Math.max(0, max - inCart - alreadyOrd);
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewType =
-        maxItemsPerOrder != null &&
-        Number(maxItemsPerOrder) > 0 &&
+        totalItemLimit != null &&
+        Number(totalItemLimit) > 0 &&
         isNewItemType &&
         cartSlotCount >= slotsLeftForThisOrder;
       return {
@@ -451,7 +451,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         _notAllowedForStudentType: notAllowedForStudentType,
       };
     });
-  }, [rawSuggestedProducts, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, maxItemsPerOrder, slotsLeftForThisOrder, isOldStudent]);
+  }, [rawSuggestedProducts, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
 
   // Filter orders based on active category, then sort by date (oldest/newest/all)
   const filteredOrders = React.useMemo(() => {

@@ -1,6 +1,5 @@
 import React from "react";
 import { createPortal } from "react-dom";
-import { XCircle } from "lucide-react";
 
 /**
  * DisableUserModal Component
@@ -25,10 +24,31 @@ const DisableUserModal = ({ isOpen, onClose, onConfirm, userName }) => {
         className="relative bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 transform transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Icon */}
+        {/* Icon – red triangular warning with white exclamation */}
         <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-full bg-[#e68b00] bg-opacity-20 flex items-center justify-center">
-            <XCircle className="text-[#e68b00]" size={32} />
+          <div className="w-16 h-16 flex items-center justify-center">
+            <svg
+              viewBox="0 0 64 64"
+              className="w-16 h-16 flex-shrink-0"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden
+            >
+              <path
+                d="M32 6L58 54H6L32 6Z"
+                fill="#dc2626"
+                stroke="#dc2626"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M32 20v20"
+                stroke="white"
+                strokeWidth="4"
+                strokeLinecap="round"
+              />
+              <circle cx="32" cy="48" r="3" fill="white" />
+            </svg>
           </div>
         </div>
 

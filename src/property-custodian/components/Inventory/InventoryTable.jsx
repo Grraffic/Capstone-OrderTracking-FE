@@ -6,7 +6,7 @@ import React from "react";
  * Displays inventory data in a table format with columns:
  * - No., Item, Beginning Inventory, Unreleased, Purchases, Released, Returns, Available, Ending Inventory, Unit Price, Total Amount
  */
-const InventoryTable = ({ inventoryData }) => {
+const InventoryTable = ({ inventoryData, allInventoryData }) => {
   /**
    * Calculate total inventory cost per item
    * Formula: (Beginning Inventory × Beginning Inventory Unit Price) + (Purchase₁ × Purchase Unit Price₁) + ... + (Purchaseₙ × Purchase Unit Priceₙ)
@@ -29,14 +29,17 @@ const InventoryTable = ({ inventoryData }) => {
     return (beginningInventory + purchases) * unitPrice;
   };
 
+  // Use all inventory (all pages) for total cost so it's easy to view in one place
+  const dataForTotalCost = allInventoryData && allInventoryData.length > 0 ? allInventoryData : inventoryData;
+
   /**
-   * Calculate total inventory cost (sum of all items)
-   * @returns {number} Total inventory cost across all items
+   * Calculate total inventory cost (sum of all items across all pages)
+   * @returns {number} Total inventory cost across all items (pages 1–6+)
    */
   const calculateTotalInventoryCost = () => {
-    if (!inventoryData || inventoryData.length === 0) return 0;
+    if (!dataForTotalCost || dataForTotalCost.length === 0) return 0;
     
-    return inventoryData.reduce((total, item) => {
+    return dataForTotalCost.reduce((total, item) => {
       const itemCost = calculateTotalInventoryCostPerItem(item);
       return total + (typeof itemCost === 'number' ? itemCost : parseFloat(itemCost) || 0);
     }, 0);
@@ -148,6 +151,20 @@ const InventoryTable = ({ inventoryData }) => {
               </tr>
             ))}
           </tbody>
+          <tfoot className="bg-gray-50 border-t-2 border-[#003363]">
+            <tr>
+              <td colSpan={12} className="px-2 sm:px-3 md:px-3 lg:px-4 py-3 md:py-4 text-right">
+                <div className="flex flex-col items-end gap-0.5">
+                  <span className="text-[10px] sm:text-xs md:text-xs lg:text-sm font-semibold text-[#003363]">
+                    Total Inventory Cost
+                  </span>
+                  <span className="text-sm sm:text-base md:text-base lg:text-lg font-semibold text-[#E68B00]">
+                    P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
@@ -234,11 +251,11 @@ const InventoryTable = ({ inventoryData }) => {
           </div>
         ))}
         
-        {/* Total Inventory Cost - Mobile */}
+        {/* Total Inventory Cost - Mobile (sum of all pages) */}
         <div className="bg-[#003363] border border-gray-200 rounded-lg p-4 shadow-sm font-sf-medium">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-white">Total Inventory Cost:</span>
-            <span className="text-base font-medium text-white">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium text-white">Total Inventory Cost</span>
+            <span className="text-base font-semibold text-[#E68B00]">
               P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
@@ -348,6 +365,18 @@ const InventoryTable = ({ inventoryData }) => {
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-gray-50 border-t-2 border-[#003363]">
+                <tr>
+                  <td colSpan={12} className="px-3 py-3 text-right">
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-xs font-semibold text-[#003363]">Total Inventory Cost</span>
+                      <span className="text-sm font-semibold text-[#E68B00]">
+                        P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>

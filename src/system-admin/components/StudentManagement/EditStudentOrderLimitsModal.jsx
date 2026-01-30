@@ -5,14 +5,11 @@ import { splitDisplayName } from "../../../utils/displayName";
 /**
  * EditStudentOrderLimitsModal Component
  *
- * Modal for editing a single student's max_items_per_order and order_lockout_period
- * (with unit: Months or Academic Years). Used when the row Edit (pencil) is clicked.
+ * Modal for editing a single student's total_item_limit. Used when the row Edit (pencil) is clicked.
  */
 const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
   const [formData, setFormData] = useState({
     maxItemsPerOrder: "",
-    orderLockoutPeriod: "",
-    orderLockoutUnit: "months",
   });
 
   const [errors, setErrors] = useState({});
@@ -22,15 +19,9 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     if (isOpen && student) {
       setFormData({
         maxItemsPerOrder:
-          student.max_items_per_order != null && student.max_items_per_order !== ""
-            ? String(student.max_items_per_order)
+          student.total_item_limit != null && student.total_item_limit !== ""
+            ? String(student.total_item_limit)
             : "",
-        orderLockoutPeriod:
-          student.order_lockout_period != null && student.order_lockout_period !== ""
-            ? String(student.order_lockout_period)
-            : "",
-        orderLockoutUnit:
-          student.order_lockout_unit === "academic_years" ? "academic_years" : "months",
       });
       setErrors({});
     }
@@ -39,20 +30,12 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
   // Reset when closed
   useEffect(() => {
     if (!isOpen) {
-      setFormData({
-        maxItemsPerOrder: "",
-        orderLockoutPeriod: "",
-        orderLockoutUnit: "months",
-      });
+      setFormData({ maxItemsPerOrder: "" });
       setErrors({});
     }
   }, [isOpen]);
 
   const handleInputChange = (field, value) => {
-    if (field === "orderLockoutUnit") {
-      setFormData((prev) => ({ ...prev, [field]: value }));
-      return;
-    }
     const numericValue = value.replace(/[^0-9]/g, "");
     setFormData((prev) => ({
       ...prev,
@@ -73,14 +56,11 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    if (!formData.maxItemsPerOrder && !formData.orderLockoutPeriod) {
-      newErrors.general = "Please fill at least one field";
+    if (!formData.maxItemsPerOrder) {
+      newErrors.general = "Please set Total Item Limit";
     }
     if (formData.maxItemsPerOrder && parseInt(formData.maxItemsPerOrder) < 1) {
       newErrors.maxItemsPerOrder = "Must be at least 1";
-    }
-    if (formData.orderLockoutPeriod && parseInt(formData.orderLockoutPeriod) < 0) {
-      newErrors.orderLockoutPeriod = "Must be 0 or greater";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -91,11 +71,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
 
     const updateData = {};
     if (formData.maxItemsPerOrder) {
-      updateData.max_items_per_order = parseInt(formData.maxItemsPerOrder);
-    }
-    if (formData.orderLockoutPeriod) {
-      updateData.order_lockout_period = parseInt(formData.orderLockoutPeriod);
-      updateData.order_lockout_unit = formData.orderLockoutUnit || "months";
+      updateData.total_item_limit = parseInt(formData.maxItemsPerOrder);
     }
 
     onSave(updateData);
@@ -132,10 +108,10 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
             <div className="text-red-600 text-sm">{errors.general}</div>
           )}
 
-          {/* Max Items Per Order */}
+          {/* Total Item Limit */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Max Items Per Order
+              Total Item Limit
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -163,47 +139,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
               Maximum quantity of any item a student can reserve in a single transaction
             </p>
             <p className="text-xs text-amber-700 mt-1 font-medium">
-              Students cannot place orders until Max Items Per Order is set.
-            </p>
-          </div>
-
-          {/* Order Lockout Period */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Order Lockout Period
-            </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              <input
-                type="text"
-                value={formData.orderLockoutPeriod}
-                onChange={(e) => handleInputChange("orderLockoutPeriod", e.target.value)}
-                placeholder="e.g. 2"
-                className={`flex-1 min-w-0 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] ${
-                  errors.orderLockoutPeriod ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <select
-                value={formData.orderLockoutUnit}
-                onChange={(e) => handleInputChange("orderLockoutUnit", e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white min-w-[140px]"
-              >
-                <option value="months">Months</option>
-                <option value="academic_years">Academic Years</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => handleIncrement("orderLockoutPeriod")}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                title="Increment"
-              >
-                <Plus size={20} className="text-gray-600" />
-              </button>
-            </div>
-            {errors.orderLockoutPeriod && (
-              <p className="text-red-600 text-xs mt-1">{errors.orderLockoutPeriod}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              How long the student is ineligible after a successful claim
+              Students cannot place orders until Total Item Limit is set.
             </p>
           </div>
         </div>

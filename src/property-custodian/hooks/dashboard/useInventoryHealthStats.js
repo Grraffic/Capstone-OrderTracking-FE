@@ -1,17 +1,16 @@
 import { useState, useEffect } from "react";
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import api from "../../../services/api";
 
 /**
  * useInventoryHealthStats Hook
- * 
- * Fetches all items and calculates inventory health statistics:
- * - Total Item Variants (counting all size variations)
- * - At Reorder Point (stock 20-49)
- * - Out of Stock (stock = 0)
- * 
- * This ensures consistent stats across all pages (Dashboard, Items, Inventory)
- * 
+ *
+ * Uses the inventory report API (same source as OutOfStockSection) to compute stats.
+ * One API call, and the Out of Stock count matches exactly what the section displays.
+ *
+ * - Total Item Variants: unique (name, education_level) groups in the report
+ * - At Reorder Point: groups with at least one row "At Reorder Point" and not fully out of stock
+ * - Out of Stock: groups with at least one row "Out of Stock" (same as section list)
+ *
  * @returns {Object} { stats, loading } - stats object with totalItemVariants, atReorderPoint, outOfStock
  */
 export const useInventoryHealthStats = () => {
@@ -26,112 +25,44 @@ export const useInventoryHealthStats = () => {
     const fetchInventoryStats = async () => {
       try {
         setLoading(true);
-        // Fetch all items to calculate stats including variants
-        const params = new URLSearchParams({
-          limit: "1000", // Fetch all items
-        });
-        const response = await fetch(`${API_BASE_URL}/items?${params.toString()}`);
-        if (!response.ok) throw new Error("Failed to fetch items");
-        
-        const result = await response.json();
-        if (result.success && result.data) {
-          let totalItemVariants = 0;
-          let atReorderPoint = 0;
+        // Single call: inventory report (no education filter) = same source as OutOfStockSection
+        const { data: result } = await api.get("/items/inventory-report");
+
+        if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
+          const rows = result.data;
+
+          // Group rows by (name, education_level) - same grouping as OutOfStockSection
+          const groupStatuses = new Map();
+          rows.forEach((row) => {
+            const key = `${row.name || ""}_${row.education_level || ""}`;
+            if (!groupStatuses.has(key)) {
+              groupStatuses.set(key, new Set());
+            }
+            groupStatuses.get(key).add(row.status);
+          });
+
+          let totalItemVariants = groupStatuses.size;
           let outOfStock = 0;
-          
-          // Group items by name and item_type (same as Items page does)
-          // This ensures we count grouped items, not individual size rows
-          const groupedItemsMap = new Map();
-          
-          result.data.forEach((item) => {
-            // Create a unique key for grouping (name + item_type)
-            const groupKey = `${item.name || ''}_${item.item_type || ''}`;
-            
-            if (!groupedItemsMap.has(groupKey)) {
-              groupedItemsMap.set(groupKey, []);
-            }
-            groupedItemsMap.get(groupKey).push(item);
-          });
-          
-          // Process each grouped item (counts as one variant, matches Items list)
-          groupedItemsMap.forEach((itemsInGroup) => {
-            totalItemVariants++;
-            
-            // Use the first item in the group for checking JSON variations
-            const firstItem = itemsInGroup[0];
-            let hasJsonVariations = false;
-            let sizeVariations = [];
-            
-            if (firstItem.note) {
-              try {
-                const parsedNote = JSON.parse(firstItem.note);
-                if (
-                  parsedNote &&
-                  parsedNote._type === "sizeVariations" &&
-                  Array.isArray(parsedNote.sizeVariations)
-                ) {
-                  hasJsonVariations = true;
-                  sizeVariations = parsedNote.sizeVariations;
-                }
-              } catch {
-                // Not JSON, continue with regular processing
-              }
-            }
-            
-            if (hasJsonVariations && sizeVariations.length > 0) {
-              // For items with size variations, check each size for stock status
-              let itemOutOfStock = true;
-              let itemAtReorderPoint = false;
-              
-              sizeVariations.forEach((variant) => {
-                const variantStock = Number(variant.stock) || 0;
-                
-                if (variantStock > 0) {
-                  itemOutOfStock = false;
-                }
-                if (variantStock >= 20 && variantStock < 50) {
-                  itemAtReorderPoint = true;
-                }
-              });
-              
-              if (itemOutOfStock) {
-                outOfStock++;
-              } else if (itemAtReorderPoint) {
-                atReorderPoint++;
-              }
-            } else {
-              // Regular item - check stock from all items in group
-              // Item is out of stock if ALL sizes are out of stock
-              // Item is at reorder point if ANY size is at reorder point
-              let allOutOfStock = true;
-              let anyAtReorderPoint = false;
-              
-              itemsInGroup.forEach((item) => {
-                const itemStock = Number(item.stock) || 0;
-                
-                if (itemStock > 0) {
-                  allOutOfStock = false;
-                }
-                if (itemStock >= 20 && itemStock < 50) {
-                  anyAtReorderPoint = true;
-                }
-              });
-              
-              if (allOutOfStock) {
-                outOfStock++;
-              } else if (anyAtReorderPoint) {
-                atReorderPoint++;
-              }
+          let atReorderPoint = 0;
+
+          groupStatuses.forEach((statuses) => {
+            const hasOutOfStock = statuses.has("Out of Stock");
+            const hasAtReorderPoint = statuses.has("At Reorder Point");
+
+            if (hasOutOfStock) {
+              outOfStock++;
+            } else if (hasAtReorderPoint) {
+              atReorderPoint++;
             }
           });
-          
+
           setStats({
             totalItemVariants,
             atReorderPoint,
             outOfStock,
           });
-          
-          console.log(`[InventoryHealth] Stats calculated:`, {
+
+          console.log(`[InventoryHealth] Stats from report:`, {
             totalItemVariants,
             atReorderPoint,
             outOfStock,

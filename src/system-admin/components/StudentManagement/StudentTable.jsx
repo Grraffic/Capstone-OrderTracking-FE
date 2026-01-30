@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Edit, Trash2, MoreVertical, User, Calendar } from "lucide-react";
+import { Edit, Trash2, User, Calendar } from "lucide-react";
 import { splitDisplayName } from "../../../utils/displayName";
 
 /**
@@ -66,8 +66,8 @@ const StudentTable = ({
     if (student.blocked_due_to_void === true) {
       return { value: 0, isOverride: false, isVoided: true };
     }
-    if (student.max_items_per_order != null && Number(student.max_items_per_order) > 0) {
-      return { value: Number(student.max_items_per_order), isOverride: true, isVoided: false };
+    if (student.total_item_limit != null && Number(student.total_item_limit) > 0) {
+      return { value: Number(student.total_item_limit), isOverride: true, isVoided: false };
     }
     const st = (student.student_type || "").toLowerCase();
     if (st === "new") return { value: 8, isOverride: false, isVoided: false };
@@ -92,8 +92,8 @@ const StudentTable = ({
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Name</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Grade Level</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Type</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Max Items Per Order</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Order Lockout Period</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Total Item Limit</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Total Items Ordered</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Action</th>
           </tr>
         </thead>
@@ -192,21 +192,16 @@ const StudentTable = ({
                         </span>
                       );
                     }
-                    // Show remaining capacity as "X max" — e.g. 5 max, 1 used → 4 max (what they can still order)
-                    const used = Number(student.slots_used_from_placed_orders) || 0;
-                    const left = Math.max(0, max - used);
+                    // Show the stored total item limit (what the admin set)
                     return (
-                      <span>
-                        <span className="font-medium text-gray-900">{left} max</span>
-                        {!isOverride && <span className="text-gray-500 font-normal"> (default)</span>}
-                      </span>
+                      <span className="font-medium text-gray-900">{max}</span>
                     );
                   })()}
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
-                  {student.order_lockout_period !== null && student.order_lockout_period !== undefined
-                    ? student.order_lockout_period
-                    : "N/A"}
+                  {student.slots_used_from_placed_orders != null
+                    ? Number(student.slots_used_from_placed_orders)
+                    : "—"}
                 </td>
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-3">
@@ -223,12 +218,6 @@ const StudentTable = ({
                       title="Delete student"
                     >
                       <Trash2 size={16} />
-                    </button>
-                    <button
-                      className="text-gray-600 hover:text-gray-800 transition-colors"
-                      title="More options"
-                    >
-                      <MoreVertical size={16} />
                     </button>
                   </div>
                 </td>

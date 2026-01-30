@@ -40,7 +40,7 @@ const ProductDetailsPage = () => {
   const [userEducationLevel, setUserEducationLevel] = useState(null);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
-  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [maxQuantitiesProfileIncomplete, setMaxQuantitiesProfileIncomplete] = useState(false);
   const [limitsLoaded, setLimitsLoaded] = useState(false);
@@ -151,7 +151,7 @@ const ProductDetailsPage = () => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
-        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setMaxQuantitiesProfileIncomplete(res.data?.profileIncomplete === true);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
@@ -164,7 +164,7 @@ const ProductDetailsPage = () => {
           setMaxQuantitiesProfileIncomplete(true);
           setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
-          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
           setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
         } else if (err?.response?.status !== 403) {
@@ -172,13 +172,13 @@ const ProductDetailsPage = () => {
           setMaxQuantitiesProfileIncomplete(false);
           setAlreadyOrdered({});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
-          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
         } else {
           setMaxQuantitiesProfileIncomplete(false);
           setAlreadyOrdered({});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
-          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? 0);
         }
         setLimitsLoaded(true);
@@ -421,7 +421,7 @@ const ProductDetailsPage = () => {
         : sum,
     0
   );
-  // System-admin "max items per order" = distinct item types (slots). Each type counts as 1.
+  // System-admin "total item limit" = distinct item types (slots). Each type counts as 1.
   const cartSlotKeys = useMemo(() => {
     const set = new Set();
     (cartItems || []).forEach((i) => {
@@ -433,18 +433,18 @@ const ProductDetailsPage = () => {
   const cartSlotCount = cartSlotKeys.size;
   const isNewItemType = productResolvedKey && !cartSlotKeys.has(productResolvedKey);
   const slotsLeftForThisOrder =
-    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0
-      ? Math.max(0, Number(maxItemsPerOrder) - (Number(slotsUsedFromPlacedOrders) || 0))
+    totalItemLimit != null && Number(totalItemLimit) > 0
+      ? Math.max(0, Number(totalItemLimit) - (Number(slotsUsedFromPlacedOrders) || 0))
       : 0;
   const slotsFullForNewType =
-    maxItemsPerOrder != null &&
-    Number(maxItemsPerOrder) > 0 &&
+    totalItemLimit != null &&
+    Number(totalItemLimit) > 0 &&
     isNewItemType &&
     cartSlotCount >= slotsLeftForThisOrder;
   const limitNotSet =
     user &&
     limitsLoaded &&
-    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
+    (totalItemLimit == null || totalItemLimit === undefined || Number(totalItemLimit) <= 0);
   // Use resolved key; if product name contains "jogging pants" also count alreadyOrdered["jogging pants"] to avoid duplication
   const baseAlready = product ? (Number(alreadyOrdered[productResolvedKey]) || 0) : 0;
   const joggingFallback =
@@ -491,8 +491,8 @@ const ProductDetailsPage = () => {
       const effectiveMaxItem = Math.max(0, max - inCart - alreadyOrd);
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewTypeItem =
-        maxItemsPerOrder != null &&
-        Number(maxItemsPerOrder) > 0 &&
+        totalItemLimit != null &&
+        Number(totalItemLimit) > 0 &&
         isNewItemType &&
         cartSlotCount >= slotsLeftForThisOrder;
       const _orderLimitReached = effectiveMaxItem < 1;
@@ -514,7 +514,7 @@ const ProductDetailsPage = () => {
     cartItems,
     cartSlotKeys,
     cartSlotCount,
-    maxItemsPerOrder,
+    totalItemLimit,
     slotsLeftForThisOrder,
     isOldStudent,
     blockedDueToVoid,
@@ -894,10 +894,10 @@ const ProductDetailsPage = () => {
                       <p className="font-medium">You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.</p>
                     </div>
                   )}
-                  {/* Order limit not set: student cannot add to cart or place order until admin sets Max Items Per Order. Hide when cause is voided (red banner shows instead). */}
+                  {/* Order limit not set: student cannot add to cart or place order until admin sets Total Item Limit. Hide when cause is voided (red banner shows instead). */}
                   {limitNotSet && !blockedDueToVoid && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                      <p className="font-medium">Your order limit has not been set. Ask your administrator to set Max Items Per Order before you can add or place orders.</p>
+                      <p className="font-medium">Your order limit has not been set. Ask your administrator to set Total Item Limit before you can add or place orders.</p>
                     </div>
                   )}
                   {/* Old students: this item is not in the allowed list (new logo patch, number patch per level only). */}

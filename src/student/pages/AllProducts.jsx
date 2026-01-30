@@ -39,7 +39,7 @@ const AllProducts = () => {
   const [profileLoading, setProfileLoading] = useState(true);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
-  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [limitsLoaded, setLimitsLoaded] = useState(false);
   const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
@@ -117,7 +117,7 @@ const AllProducts = () => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
-        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
         try {
@@ -128,7 +128,7 @@ const AllProducts = () => {
         if (err?.response?.status === 400) {
           setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
-          setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+          setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
           setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
         } else if (err?.response?.status !== 403) {
@@ -290,7 +290,7 @@ const AllProducts = () => {
     canGoPrev,
   } = useProductPagination(filteredProducts, 8);
 
-  // Cart slot count = distinct item types (system-admin "max items per order" is slot limit)
+  // Cart slot count = distinct item types (system-admin "total item limit" is slot limit)
   const cartSlotKeys = useMemo(() => {
     const set = new Set();
     (cartItems || []).forEach((i) => {
@@ -301,8 +301,8 @@ const AllProducts = () => {
   }, [cartItems]);
   const cartSlotCount = cartSlotKeys.size;
   const slotsLeftForThisOrder =
-    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0
-      ? Math.max(0, Number(maxItemsPerOrder) - (Number(slotsUsedFromPlacedOrders) || 0))
+    totalItemLimit != null && Number(totalItemLimit) > 0
+      ? Math.max(0, Number(totalItemLimit) - (Number(slotsUsedFromPlacedOrders) || 0))
       : 0;
 
   // Old students: only allowed items (new logo patch, number patch per level) have max > 0; others are disallowed.
@@ -325,8 +325,8 @@ const AllProducts = () => {
       const effectiveMax = Math.max(0, max - inCart - alreadyOrd);
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewType =
-        maxItemsPerOrder != null &&
-        Number(maxItemsPerOrder) > 0 &&
+        totalItemLimit != null &&
+        Number(totalItemLimit) > 0 &&
         isNewItemType &&
         cartSlotCount >= slotsLeftForThisOrder;
       return {
@@ -338,18 +338,18 @@ const AllProducts = () => {
     });
     // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).
     return list;
-  }, [paginatedItems, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, maxItemsPerOrder, slotsLeftForThisOrder, isOldStudent]);
+  }, [paginatedItems, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
 
   const limitNotSet =
     user &&
     limitsLoaded &&
-    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
+    (totalItemLimit == null || totalItemLimit === undefined || Number(totalItemLimit) <= 0);
 
   const slotLimitReached =
     user &&
     limitsLoaded &&
-    maxItemsPerOrder != null &&
-    Number(maxItemsPerOrder) > 0 &&
+    totalItemLimit != null &&
+    Number(totalItemLimit) > 0 &&
     slotsLeftForThisOrder <= 0;
 
   // Event handlers
@@ -502,7 +502,7 @@ const AllProducts = () => {
                 <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-amber-800 font-semibold">
-                    Your order limit has not been set. Contact your administrator to set Max Items Per Order before ordering.
+                    Your order limit has not been set. Contact your administrator to set Total Item Limit before ordering.
                   </p>
                 </div>
               </div>
@@ -520,13 +520,13 @@ const AllProducts = () => {
               </div>
             )}
 
-            {/* Max items per order banner – in header to inform user */}
+            {/* Total item limit banner – in header to inform user */}
             {slotLimitReached && !blockedDueToVoid && (
               <div className="mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
                 <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-amber-800 font-semibold">
-                    Max items per order reached. You have used all item slots for this order period. Remove existing orders to place new ones.
+                    Total item limit reached. You have used all item slots for this order period. Remove existing orders to place new ones.
                   </p>
                 </div>
               </div>

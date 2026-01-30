@@ -69,7 +69,7 @@ const ItemDetailsModal = ({
     
     const buttonElement = e.currentTarget;
     const rect = buttonElement.getBoundingClientRect();
-    const scrollContainer = buttonElement.closest('.max-h-\\[400px\\]');
+    const scrollContainer = buttonElement.closest('[data-item-details-variations]');
     const containerRect = scrollContainer?.getBoundingClientRect();
     
     // Calculate position - prefer above if near bottom
@@ -103,51 +103,51 @@ const ItemDetailsModal = ({
       : "text-green-600";
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-100 flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-[#0C2340]">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 py-2 pl-[5.5rem] pr-3 mobile-m:pl-[5.5rem] mobile-m:pr-3 mobile-m:pt-12 mobile-l:py-3 mobile-l:pl-[5.75rem] mobile-l:pr-4  mobile-l:pt-10 tablet:p-6 tablet:pl-24 tablet:pt-16 tablet:pr-6 tablet:pb-6 laptop:p-5 laptop:pl-24 laptop:pt-20">
+      <div className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-full mobile-l:max-w-[405px] tablet:max-w-[600px] laptop:max-w-4xl max-h-[90vh] mobile-l:max-h-[82vh] tablet:max-h-[82vh] laptop:max-h-[90vh] overflow-hidden flex flex-col mt-5 mobile-m:mt-6 mobile-l:mt-6 tablet:mt-8 laptop:mt-0">
+        {/* Header - scales with breakpoint: 375 / 425 / 768 / 1024 - tighter at Mobile L and Tablet */}
+        <div className="px-2.5 py-2.5 mobile-m:px-3 mobile-m:py-3 mobile-l:px-3 mobile-l:py-2.5 tablet:px-4 tablet:py-3 laptop:px-6 laptop:py-4 border-b border-gray-100 flex items-start justify-between gap-1.5 mobile-l:gap-2 tablet:gap-3 flex-shrink-0">
+          <div className="min-w-0 flex-1">
+            <h2 className="text-sm font-bold text-[#0C2340] truncate leading-tight mobile-m:text-base mobile-l:text-base tablet:text-lg laptop:text-2xl">
               {selectedItem.name}
             </h2>
-            <span className="text-sm font-medium text-[#e68b00]">
+            <span className="text-[10px] font-medium text-[#e68b00] mobile-m:text-xs tablet:text-sm">
               {selectedItem.itemType || "Uniform"}
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 mobile-l:gap-2 flex-shrink-0">
             <button
               type="button"
               onClick={() => onEditItem?.(selectedItem)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#E68B00] text-white text-sm font-medium hover:bg-[#d67a00] transition-colors"
+              className="flex items-center gap-1 mobile-l:gap-2 px-1.5 py-1 mobile-l:px-2.5 mobile-l:py-1.5 tablet:px-3 tablet:py-2 rounded-lg bg-[#E68B00] text-white text-xs mobile-l:text-sm font-medium hover:bg-[#d67a00] transition-colors"
               aria-label="Edit all variants"
             >
-              <Pencil size={16} />
-              <span>Edit</span>
+              <Pencil size={14} className="tablet:w-4 tablet:h-4" />
+              <span className="hidden tablet:inline">Edit</span>
             </button>
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors"
+              className="w-6 h-6 mobile-l:w-7 mobile-l:h-7 tablet:w-8 tablet:h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors flex-shrink-0"
               aria-label="Close modal"
             >
-              <X size={18} className="text-white" />
+              <X size={14} className="text-white tablet:w-[18px] tablet:h-[18px]" />
             </button>
           </div>
         </div>
 
         {/* Content - Scrollable */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-            {/* Left Section */}
-            <div className="space-y-4">
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="grid grid-cols-1 laptop:grid-cols-2 gap-3 p-2.5 mobile-m:gap-3.5 mobile-m:p-3 mobile-l:gap-3 mobile-l:p-3 tablet:gap-4 tablet:p-4 laptop:gap-6 laptop:p-6">
+            {/* Left Section - scales: 375 / 425 / 768 / 1024 */}
+            <div className="space-y-2 mobile-l:space-y-2 tablet:space-y-3 laptop:space-y-4">
               {/* Unified Card: Image + Item Attributes */}
-              <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="bg-white border border-gray-200 rounded-lg mobile-l:rounded-xl shadow-sm overflow-hidden">
                 {/* Main Product Image with Stock Info Overlay */}
                 <div className="relative bg-[#f8f9fa]">
                   <img
                     src={displayItem.image}
                     alt={displayItem.name}
-                    className="w-full h-64 object-contain"
+                    className="w-full h-28 mobile-m:h-32 mobile-l:h-30 tablet:h-40 laptop:h-64 object-contain"
                     onError={(e) => {
                       e.target.src =
                         "https://via.placeholder.com/400x300?text=No+Image";
@@ -155,24 +155,24 @@ const ItemDetailsModal = ({
                   />
 
                   {/* Stock Information - Left Side */}
-                  <div className="absolute top-3 left-3">
-                    <div className="flex items-baseline gap-1 px-3 py-1.5 ">
-                      <span className="text-sm font-medium text-gray-700">
+                  <div className="absolute top-1.5 left-1.5 mobile-m:top-2 mobile-m:left-2 mobile-l:top-2 mobile-l:left-2 tablet:top-3 tablet:left-3">
+                    <div className="flex items-baseline gap-0.5 mobile-l:gap-1 px-1.5 py-0.5 mobile-m:px-2 mobile-m:py-1 mobile-l:px-2 mobile-l:py-0.5 tablet:px-3 tablet:py-1.5">
+                      <span className="text-[10px] font-medium text-gray-700 mobile-m:text-xs tablet:text-sm">
                         Stock:
                       </span>
-                      <span className={`text-sm font-bold ${stockStatusColor}`}>
+                      <span className={`text-[10px] font-bold mobile-m:text-xs tablet:text-sm ${stockStatusColor}`}>
                         {stockValue}
                       </span>
                     </div>
                   </div>
 
                   {/* Size Guide Tooltip - Right Side */}
-                  <div className="absolute top-3 right-3">
+                  <div className="absolute top-1.5 right-1.5 mobile-m:top-2 mobile-m:right-2 mobile-l:top-2 mobile-l:right-2 tablet:top-3 tablet:right-3">
                     <div className="relative">
                       <button
                         onMouseEnter={() => setShowTooltip(true)}
                         onMouseLeave={() => setShowTooltip(false)}
-                        className="p-1.5  hover:bg-gray-50 transition-colors"
+                        className="p-1 mobile-l:p-1.5 hover:bg-gray-50 transition-colors rounded"
                         aria-label="Size information"
                       >
                         <Info size={14} className="text-gray-400" />
@@ -188,45 +188,45 @@ const ItemDetailsModal = ({
                   </div>
                 </div>
 
-                {/* Item Attributes - Inside Card */}
-                <div className="space-y-3 p-4">
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                {/* Item Attributes - Inside Card - tighter at Mobile L */}
+                <div className="space-y-1 mobile-m:space-y-1.5 mobile-l:space-y-1.5 p-2 mobile-m:p-2.5 mobile-l:p-2.5 tablet:space-y-2.5 tablet:p-3 laptop:space-y-3 laptop:p-4">
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
+                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Item Name:
                     </span>
-                    <span className="text-sm font-semibold text-[#0C2340]">
+                    <span className="text-[10px] font-semibold text-[#0C2340] break-words mobile-m:text-xs tablet:text-sm">
                       {displayItem.name}
                     </span>
                   </div>
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
+                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Item Type:
                     </span>
-                    <span className="text-sm text-[#0C2340]">
+                    <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
                       {displayItem.itemType || "N/A"}
                     </span>
                   </div>
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
+                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Item Size:
                     </span>
-                    <span className="text-sm text-[#0C2340]">
+                    <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
                       {displayItem.size || "N/A"}
                     </span>
                   </div>
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
+                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Grade Level Category:
                     </span>
-                    <span className="text-sm text-[#0C2340]">
+                    <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
                       {displayItem.category || "N/A"}
                     </span>
                   </div>
-                  <div className="flex">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
+                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Education Level:
                     </span>
-                    <span className="text-sm text-[#0C2340]">
+                    <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
                       {(() => {
                         const raw = displayItem.educationLevel || displayItem.education_level || "";
                         const toDisplay = {
@@ -238,11 +238,11 @@ const ItemDetailsModal = ({
                       })()}
                     </span>
                   </div>
-                  <div className="flex pt-3 mt-2 border-t border-gray-100">
-                    <span className="text-sm font-medium text-[#e68b00] w-40">
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5 pt-1.5 mobile-l:pt-1.5 tablet:pt-2 tablet:mt-1.5 laptop:pt-3 laptop:mt-2 border-t border-gray-100">
+                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Cost Summary:
                     </span>
-                    <span className="text-sm font-bold text-[#003363]">
+                    <span className="text-[10px] font-bold text-[#003363] mobile-m:text-xs tablet:text-sm">
                       ₱
                       {(
                         (Number(displayItem.stock) || 0) *
@@ -256,14 +256,14 @@ const ItemDetailsModal = ({
               </div>
             </div>
 
-            {/* Right Section - Variations */}
-            <div className="space-y-5">
+            {/* Right Section - Variations - tighter at Mobile L */}
+            <div className="space-y-2 mobile-l:space-y-2 tablet:space-y-3 laptop:space-y-5">
               {/* Total Cost Summary */}
-              <div className="flex items-center gap-2">
-                <span className="text-base font-medium text-[#0C2340]">
+              <div className="flex flex-wrap items-center gap-1 mobile-l:gap-1 tablet:gap-2">
+                <span className="text-[10px] font-medium text-[#0C2340] mobile-m:text-xs tablet:text-base">
                   Total Cost Summary:
                 </span>
-                <span className="text-xl font-bold text-[#003363]">
+                <span className="text-xs font-bold text-[#003363] mobile-m:text-sm tablet:text-lg laptop:text-xl">
                   ₱
                   {totalCostSummary.toLocaleString("en-PH", {
                     minimumFractionDigits: 2,
@@ -274,16 +274,16 @@ const ItemDetailsModal = ({
               {/* Variations List */}
               <div>
                 {loadingVariations ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <div className="animate-spin w-6 h-6 border-2 border-[#e68b00] border-t-transparent rounded-full mx-auto mb-2"></div>
-                    <p className="text-sm">Loading variations...</p>
+                  <div className="text-center py-4 mobile-l:py-5 tablet:py-6 laptop:py-8 text-gray-500">
+                    <div className="animate-spin w-5 h-5 mobile-l:w-6 mobile-l:h-6 border-2 border-[#e68b00] border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-[10px] mobile-m:text-xs mobile-l:text-sm">Loading variations...</p>
                   </div>
                 ) : variations.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <p className="text-sm">No variations found</p>
+                  <div className="text-center py-4 mobile-l:py-5 tablet:py-6 laptop:py-8 text-gray-500">
+                    <p className="text-[10px] mobile-m:text-xs mobile-l:text-sm">No variations found</p>
                   </div>
                 ) : (
-                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  <div data-item-details-variations className="space-y-1.5 mobile-l:space-y-1.5 tablet:space-y-2 tablet:max-h-[260px] laptop:space-y-2.5 laptop:max-h-[400px] max-h-[180px] mobile-m:max-h-[200px] mobile-l:max-h-[200px] overflow-y-auto pr-1 mobile-l:pr-1.5 tablet:pr-2">
                     {variations.map((variation, index) => {
                       // Use _variationKey for virtual variations, fallback to id
                       // For duplicate items (same name+size), use id + created_at to ensure uniqueness
@@ -301,7 +301,7 @@ const ItemDetailsModal = ({
                       return (
                         <div
                           key={variationKey}
-                          className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                          className={`flex items-center gap-1.5 mobile-m:gap-2 mobile-l:gap-2.5 tablet:gap-3 p-1.5 mobile-m:p-2 mobile-l:p-2.5 tablet:p-3 rounded-md mobile-l:rounded-lg tablet:rounded-xl border-2 transition-all ${
                             isSelected
                               ? "bg-orange-50 border-[#e68b00] shadow-sm"
                               : "bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm"
@@ -310,7 +310,7 @@ const ItemDetailsModal = ({
                           {/* Thumbnail - Clickable to select variation */}
                           <div 
                             onClick={() => onSelectVariation(variation)}
-                            className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer"
+                            className="w-8 h-8 mobile-m:w-9 mobile-m:h-9 mobile-l:w-10 mobile-l:h-10 tablet:w-12 tablet:h-12 laptop:w-14 laptop:h-14 rounded mobile-l:rounded-md tablet:rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 cursor-pointer"
                           >
                             <img
                               src={variation.image}
@@ -328,19 +328,19 @@ const ItemDetailsModal = ({
                             onClick={() => onSelectVariation(variation)}
                             className="flex-1 min-w-0 cursor-pointer"
                           >
-                            <p className="text-sm font-semibold text-[#0C2340] truncate">
+                            <p className="text-[10px] font-semibold text-[#0C2340] truncate mobile-m:text-xs mobile-l:text-sm">
                               {variation.name}
                             </p>
                             <div className="flex flex-col gap-0.5">
-                              <p className="text-xs font-medium text-[#e68b00]">
+                              <p className="text-[9px] font-medium text-[#e68b00] mobile-m:text-[10px] mobile-l:text-xs">
                                 {variation.size || "Standard"}
                               </p>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-xs text-gray-600">
-                                  Beginning Inventory: {variation.beginning_inventory || 0}
+                              <div className="flex items-center gap-0.5 mobile-l:gap-1 tablet:gap-1.5 flex-wrap">
+                                <span className="text-[9px] text-gray-600 mobile-m:text-[10px] mobile-l:text-xs">
+                                  Beginning: {variation.beginning_inventory || 0}
                                 </span>
-                                <span className="text-xs text-gray-400">•</span>
-                                <span className="text-xs text-gray-600">
+                                <span className="text-[9px] mobile-l:text-[10px] text-gray-400 hidden mobile-l:inline">•</span>
+                                <span className="text-[9px] text-gray-600 mobile-m:text-[10px] mobile-l:text-xs">
                                   Purchases: {variation.purchases || 0}
                                 </span>
                               </div>
@@ -350,13 +350,13 @@ const ItemDetailsModal = ({
                           {/* Stock Info - Clickable to select variation */}
                           <div 
                             onClick={() => onSelectVariation(variation)}
-                            className="flex items-center gap-1 cursor-pointer"
+                            className="flex items-center gap-0.5 cursor-pointer flex-shrink-0"
                           >
-                            <span className="text-sm text-gray-600">
+                            <span className="text-[10px] text-gray-600 mobile-m:text-xs mobile-l:text-sm">
                               Stock:
                             </span>
                             <span
-                              className={`text-sm font-bold ${
+                              className={`text-[10px] font-bold mobile-m:text-xs mobile-l:text-sm ${
                                 variation.stock === 0
                                   ? "text-red-600"
                                   : variation.stock < 20
@@ -375,12 +375,12 @@ const ItemDetailsModal = ({
                                 if (el) buttonRefs.current[variationKey] = el;
                               }}
                               onClick={(e) => handleMenuClick(e, variationKey)}
-                              className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                              className="p-0.5 mobile-l:p-1 tablet:p-1.5 rounded hover:bg-gray-100 transition-colors"
                               aria-label="More actions"
                             >
                               <MoreHorizontal
-                                size={18}
-                                className="text-gray-500"
+                                size={14}
+                                className="text-gray-500 tablet:w-[18px] tablet:h-[18px]"
                               />
                             </button>
                           </div>

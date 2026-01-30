@@ -25,6 +25,7 @@ const InventoryView = ({
   onUpdateQuantityClick,
   onSetReorderPointClick,
   inventoryData,
+  allInventoryData,
   loading = false,
 }) => {
   // Only show skeleton on initial load when there's no data
@@ -66,7 +67,7 @@ const InventoryView = ({
             </div>
           </div>
         ) : (
-          <InventoryTable inventoryData={inventoryData} />
+          <InventoryTable inventoryData={inventoryData} allInventoryData={allInventoryData} />
         )}
       </div>
     </div>

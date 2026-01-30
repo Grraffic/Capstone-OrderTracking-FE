@@ -3,14 +3,12 @@ import { X, Plus } from "lucide-react";
 
 /**
  * EditTableModal Component
- * 
- * Modal for bulk updating selected students' max_items_per_order and order_lockout_period
+ *
+ * Modal for bulk updating selected students' total_item_limit
  */
 const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
   const [formData, setFormData] = useState({
     maxItemsPerOrder: "",
-    orderLockoutPeriod: "",
-    orderLockoutUnit: "months",
   });
 
   const [errors, setErrors] = useState({});
@@ -18,11 +16,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
   // Reset form when modal opens/closes
   React.useEffect(() => {
     if (!isOpen) {
-      setFormData({
-        maxItemsPerOrder: "",
-        orderLockoutPeriod: "",
-        orderLockoutUnit: "months",
-      });
+      setFormData({ maxItemsPerOrder: "" });
       setErrors({});
     }
   }, [isOpen]);
@@ -61,19 +55,14 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
       return false;
     }
 
-    // At least one field must be filled
-    if (!formData.maxItemsPerOrder && !formData.orderLockoutPeriod) {
-      newErrors.general = "Please fill at least one field";
+    // Total Item Limit must be filled
+    if (!formData.maxItemsPerOrder) {
+      newErrors.general = "Please set Total Item Limit";
     }
 
     // Validate maxItemsPerOrder if provided
     if (formData.maxItemsPerOrder && parseInt(formData.maxItemsPerOrder) < 1) {
       newErrors.maxItemsPerOrder = "Must be at least 1";
-    }
-
-    // Validate orderLockoutPeriod if provided
-    if (formData.orderLockoutPeriod && parseInt(formData.orderLockoutPeriod) < 0) {
-      newErrors.orderLockoutPeriod = "Must be 0 or greater";
     }
 
     setErrors(newErrors);
@@ -87,11 +76,7 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
 
     const updateData = {};
     if (formData.maxItemsPerOrder) {
-      updateData.max_items_per_order = parseInt(formData.maxItemsPerOrder);
-    }
-    if (formData.orderLockoutPeriod) {
-      updateData.order_lockout_period = parseInt(formData.orderLockoutPeriod);
-      updateData.order_lockout_unit = formData.orderLockoutUnit || "months";
+      updateData.total_item_limit = parseInt(formData.maxItemsPerOrder);
     }
 
     onSave(updateData);
@@ -127,10 +112,10 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
             <div className="text-red-600 text-sm">{errors.general}</div>
           )}
 
-          {/* Max Items Per Order */}
+          {/* Total Item Limit */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Max Items Per Order
+              Total Item Limit
             </label>
             <div className="flex items-center gap-2">
               <input
@@ -154,44 +139,6 @@ const EditTableModal = ({ isOpen, onClose, selectedCount, onSave }) => {
             {errors.maxItemsPerOrder && (
               <p className="text-red-600 text-xs mt-1">{errors.maxItemsPerOrder}</p>
             )}
-          </div>
-
-          {/* Order Lockout Period */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Order Lockout Period
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={formData.orderLockoutPeriod}
-                onChange={(e) => handleInputChange("orderLockoutPeriod", e.target.value)}
-                placeholder="e.g. 2"
-                className={`flex-1 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] ${
-                  errors.orderLockoutPeriod ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <select
-                value={formData.orderLockoutUnit}
-                onChange={(e) => setFormData((prev) => ({ ...prev, orderLockoutUnit: e.target.value }))}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] bg-white min-w-[140px]"
-              >
-                <option value="months">Months</option>
-                <option value="academic_years">Academic Years</option>
-              </select>
-              <button
-                type="button"
-                onClick={() => handleIncrement("orderLockoutPeriod")}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                title="Increment"
-              >
-                <Plus size={20} className="text-gray-600" />
-              </button>
-            </div>
-            {errors.orderLockoutPeriod && (
-              <p className="text-red-600 text-xs mt-1">{errors.orderLockoutPeriod}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">How long the student is ineligible after a successful claim</p>
           </div>
         </div>
 

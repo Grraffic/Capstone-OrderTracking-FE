@@ -30,7 +30,7 @@ const MyCart = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
-  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
   const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
@@ -77,7 +77,7 @@ const MyCart = () => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
-        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
         try {
@@ -91,7 +91,7 @@ const MyCart = () => {
         }
         setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
         setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
-        setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
+        setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
       }
@@ -99,12 +99,12 @@ const MyCart = () => {
     fetchMaxQuantities();
   }, [user, limitsRefreshTrigger]);
 
-  // Max items per order is reduced only when the student places an order (placed orders only; cart does not count).
+  // Total item limit is reduced only when the student places an order (placed orders only; cart does not count).
   const slotsLeftForThisOrder = useMemo(() => {
-    if (maxItemsPerOrder == null || Number(maxItemsPerOrder) <= 0) return 0;
+    if (totalItemLimit == null || Number(totalItemLimit) <= 0) return 0;
     const used = Number(slotsUsedFromPlacedOrders) || 0;
-    return Math.max(0, Number(maxItemsPerOrder) - used);
-  }, [maxItemsPerOrder, slotsUsedFromPlacedOrders]);
+    return Math.max(0, Number(totalItemLimit) - used);
+  }, [totalItemLimit, slotsUsedFromPlacedOrders]);
 
   const cartSlotCount = useMemo(() => {
     const set = new Set();
@@ -115,11 +115,11 @@ const MyCart = () => {
     return set.size;
   }, [items]);
   const isOverSlotLimit =
-    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0 && cartSlotCount > slotsLeftForThisOrder;
+    totalItemLimit != null && Number(totalItemLimit) > 0 && cartSlotCount > slotsLeftForThisOrder;
 
   const limitNotSet =
     user &&
-    (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
+    (totalItemLimit == null || totalItemLimit === undefined || Number(totalItemLimit) <= 0);
 
   // Old students: only allowed items have max > 0; others are disallowed (max 0).
   const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
@@ -226,7 +226,7 @@ const MyCart = () => {
     }
     if (limitNotSet) {
       toast.error(
-        "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders."
+        "Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders."
       );
       return;
     }
@@ -236,7 +236,7 @@ const MyCart = () => {
     }
     if (isOverSlotLimit) {
       toast.error(
-        `You have ${slotsLeftForThisOrder} item type${slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max ${maxItemsPerOrder} total; ${slotsUsedFromPlacedOrders} already in placed orders). Your cart has ${cartSlotCount}. Remove some item types to proceed.`
+        `You have ${slotsLeftForThisOrder} item type${slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max ${totalItemLimit} total; ${slotsUsedFromPlacedOrders} already in placed orders). Your cart has ${cartSlotCount}. Remove some item types to proceed.`
       );
       return;
     }
@@ -318,7 +318,7 @@ const MyCart = () => {
                         {items.length} {items.length === 1 ? "Item" : "Items"}
                       </span>
                     </div>
-                    {maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0 && (
+                    {totalItemLimit != null && Number(totalItemLimit) > 0 && (
                       <span className="text-xs text-gray-600">
                         {cartSlotCount} of {slotsLeftForThisOrder} item type{(cartSlotCount !== 1 || slotsLeftForThisOrder !== 1) ? "s" : ""} left for this order
                       </span>
@@ -562,7 +562,7 @@ const MyCart = () => {
                 <div className="min-w-0">
                   <p className="font-medium text-amber-800">Item type limit for this order reached.</p>
                   <p className="text-sm text-amber-700 mt-1">
-                    You have {slotsLeftForThisOrder} item type{slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max {maxItemsPerOrder} total; {slotsUsedFromPlacedOrders} already used in placed orders). Your cart has {cartSlotCount}. Only placed orders count toward the limit—cart does not. Remove some item types to place your order. After you place, you must wait the lockout period before placing another.
+                    You have {slotsLeftForThisOrder} item type{slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max {totalItemLimit} total; {slotsUsedFromPlacedOrders} already used in placed orders). Your cart has {cartSlotCount}. Only placed orders count toward the limit—cart does not. Remove some item types to place your order. After you place, you must wait the lockout period before placing another.
                   </p>
                 </div>
               </div>
@@ -572,7 +572,7 @@ const MyCart = () => {
                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                 <div className="min-w-0">
                   <p className="font-medium text-amber-800">
-                    Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders.
+                    Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders.
                   </p>
                 </div>
               </div>
@@ -591,7 +591,7 @@ const MyCart = () => {
               <button
                 onClick={handleOrderNow}
                 disabled={items.length === 0 || loading || hasOverLimitItems || isOverSlotLimit || limitNotSet || blockedDueToVoid}
-                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Max Items Per Order in System Admin before you can place orders." : undefined}
+                title={limitNotSet ? "Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders." : undefined}
                 className="px-8 py-3 bg-[#e68b00] text-white font-semibold rounded-lg hover:bg-[#d17d00] transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
               >
                 {loading ? "Processing..." : "Order Now"}

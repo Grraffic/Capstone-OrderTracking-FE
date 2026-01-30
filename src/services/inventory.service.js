@@ -82,6 +82,37 @@ class InventoryService {
   }
 
   /**
+   * Record a return (student returned item). Increases stock only; appears in Returns table.
+   * @param {string} itemId - Item ID
+   * @param {number} quantity - Quantity returned
+   * @param {string} [size] - Optional size/variant for items with size variations
+   * @param {number} [unitPrice] - Optional unit price for transaction metadata
+   * @returns {Promise} Result with success and message
+   */
+  async recordReturn(itemId, quantity, size = null, unitPrice = null) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/items/${itemId}/record-return`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ quantity, size, unitPrice }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to record return");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Record return error:", error);
+      throw error;
+    }
+  }
+
+  /**
    * Set item reorder point
    * @param {string} itemId - Item ID (items.id)
    * @param {number} reorderPoint - Reorder point threshold (>= 0)
