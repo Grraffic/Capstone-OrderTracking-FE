@@ -46,14 +46,11 @@ const Orders = () => {
   // Orders filters management
   const {
     educationLevelFilter,
-    classAndYearFilter,
     statusFilter,
     searchTerm,
     setEducationLevelFilter,
-    setClassAndYearFilter,
     setStatusFilter,
     setSearchTerm,
-    filteredClassAndYearOptions,
   } = useOrdersFilters();
 
   // Debounce search term to avoid excessive API calls
@@ -222,15 +219,8 @@ const Orders = () => {
       });
     }
 
-    // Apply class and year filter
-    if (classAndYearFilter !== "All Class & Year") {
-      filtered = filtered.filter((order) => {
-        return order.gradeOrProgram === classAndYearFilter;
-      });
-    }
-
     return filtered;
-  }, [mockOrders, classAndYearFilter, startDate, endDate]);
+  }, [mockOrders, startDate, endDate]);
 
   // Calculate statistics from all orders (not just current page)
   const stats = useOrdersStats(mockOrders);
@@ -309,7 +299,6 @@ const Orders = () => {
   }, [
     debouncedSearchTerm,
     educationLevelFilter,
-    classAndYearFilter,
     activeStatusTab,
   ]);
 
@@ -522,7 +511,7 @@ const Orders = () => {
 
           {/* Right Side - Filter Dropdowns */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 sm:gap-4">
-            {/* Grade Level Dropdown */}
+            {/* Education Level Dropdown */}
             <select
               value={educationLevelFilter}
               onChange={(e) => setEducationLevelFilter(e.target.value)}
@@ -531,24 +520,8 @@ const Orders = () => {
               aria-label="Education Level"
             >
               {EDUCATION_LEVELS.map((level) => (
-                <option key={level} value={level}>
-                  {level}
-                </option>
-              ))}
-            </select>
-
-            {/* Grade Level Category Dropdown */}
-            <select
-              value={classAndYearFilter}
-              onChange={(e) => setClassAndYearFilter(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={educationLevelFilter === "All Education Levels"}
-              title="Filter by class and year"
-              aria-label="Class & Year"
-            >
-              {filteredClassAndYearOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
+                <option key={level.value} value={level.value}>
+                  {level.label}
                 </option>
               ))}
             </select>
@@ -597,6 +570,7 @@ const Orders = () => {
             onNextPage={nextPage}
             onGoToPage={goToPage}
             onOrderUpdated={refetchOrders}
+            onOpenQRScanner={openQRScanner}
           />
         )}
 

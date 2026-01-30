@@ -417,26 +417,6 @@ const QRCodeScannerModal = ({
             </div>
           )}
 
-          {/* Instructions */}
-          {!scannedData && !error && (
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-xl">
-              <div className="flex items-start gap-3">
-                <Camera className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-semibold text-blue-800 mb-1">
-                    How to scan:
-                  </p>
-                  <ul className="text-xs text-blue-700 space-y-1">
-                    <li>• Point your camera at the QR code</li>
-                    <li>• Keep the code within the orange frame</li>
-                    <li>• Hold steady until the code is detected</li>
-                    <li>• The scanner will automatically process the code</li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Status Indicator */}
           <div className="mt-4 text-center">
             {isScanning && !scannedData && !processing && (

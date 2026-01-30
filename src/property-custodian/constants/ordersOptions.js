@@ -1,17 +1,20 @@
 /**
  * Orders Page Constants
- * 
+ *
  * Contains all dropdown options and cascading logic for the Orders page:
- * - Education Level options (Basic Education, Higher Education)
+ * - Education Level options (Preschool, Elementary School, etc.) for easy filtering
  * - Class and Year options (cascading based on Education Level)
  * - Order status options
  */
 
-// Education Level Options
+// Education Level Options: label = display in dropdown, value = sent to API (matches DB education_level)
 export const EDUCATION_LEVELS = [
-  "All Education Levels",
-  "Basic Education",
-  "Higher Education",
+  { value: "All Education Levels", label: "All Education Levels" },
+  { value: "Kindergarten", label: "Preschool" },
+  { value: "Elementary", label: "Elementary School" },
+  { value: "Junior High School", label: "Junior High School" },
+  { value: "Senior High School", label: "Senior High School" },
+  { value: "College", label: "College" },
 ];
 
 // Class and Year Options for Higher Education
@@ -73,7 +76,7 @@ export const ORDER_STATUS = [
 
 /**
  * Get filtered Class and Year options based on selected Education Level
- * @param {string} educationLevel - Selected education level
+ * @param {string} educationLevel - Selected education level (value sent to API)
  * @returns {Array<string>} Filtered class and year options
  */
 export const getFilteredClassAndYear = (educationLevel) => {
@@ -81,11 +84,16 @@ export const getFilteredClassAndYear = (educationLevel) => {
     return ALL_CLASS_AND_YEAR;
   }
 
-  if (educationLevel === "Higher Education") {
+  if (educationLevel === "College") {
     return HIGHER_EDUCATION_PROGRAMS;
   }
 
-  if (educationLevel === "Basic Education") {
+  if (
+    educationLevel === "Kindergarten" ||
+    educationLevel === "Elementary" ||
+    educationLevel === "Junior High School" ||
+    educationLevel === "Senior High School"
+  ) {
     return BASIC_EDUCATION_LEVELS;
   }
 

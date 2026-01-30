@@ -11,7 +11,7 @@ import { X, Calendar, Package, User, Mail } from "lucide-react";
  */
 import { itemsAPI, orderAPI } from "../../../services/api";
 
-const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
+const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanner }) => {
   const [isEditing, setIsEditing] = useState(false);
   
   // Parse items if they're stored as JSON string
@@ -120,10 +120,10 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
     setEditedItems(updated);
   };
 
-  // Handle release item
+  // Handle release item: close edit modal and open QR scanner to scan student's QR for release
   const handleReleaseItem = () => {
-    // TODO: Implement release item logic
-    console.log("Release item clicked");
+    onClose?.();
+    onOpenQRScanner?.();
   };
 
   // Handle edit toggle / save

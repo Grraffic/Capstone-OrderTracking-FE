@@ -22,12 +22,19 @@ import { createPortal } from "react-dom";
  * - loadingVariations: Boolean for loading state
  * - totalCostSummary: Total cost across all variations
  * - totalStock: Total stock across all variations
+ * - unreleasedCounts: { [itemName|size]: number } — unreleased order quantities per item+size (for Available = stock - unreleased)
  * - onClose: Function to close modal
  * - onSelectVariation: Function to select a variation
  * - onEditItem: Function to edit the whole item (all variants) — opens full item edit form
  * - onEdit: Function to edit a single variant — opens variant edit modal
  * - onDelete: Function to delete an item
  */
+const normalizeSizeForKey = (size) => {
+  if (!size) return "";
+  const match = String(size).match(/^(.+?)\s*\([A-Z]\)$/i);
+  return (match ? match[1].trim() : String(size).trim()).toLowerCase();
+};
+
 const ItemDetailsModal = ({
   isOpen,
   selectedItem,
@@ -37,6 +44,7 @@ const ItemDetailsModal = ({
   totalCostSummary = 0,
   // eslint-disable-next-line no-unused-vars
   totalStock = 0, // Available but not currently used in UI
+  unreleasedCounts = {},
   onClose,
   onSelectVariation,
   onEditItem,
@@ -94,11 +102,20 @@ const ItemDetailsModal = ({
   if (!isOpen || !selectedItem) return null;
 
   const displayItem = selectedVariation || selectedItem;
+  const getUnreleased = (name, size) =>
+    unreleasedCounts[`${(name || "").trim().toLowerCase()}|${normalizeSizeForKey(size)}`] || 0;
+  const getAvailable = (stock, name, size) =>
+    Math.max(0, (Number(stock) || 0) - getUnreleased(name, size));
   const stockValue = displayItem.stock || 0;
+  const availableValue = getAvailable(
+    stockValue,
+    displayItem.name || selectedItem.name,
+    displayItem.size
+  );
   const stockStatusColor =
-    stockValue === 0
+    availableValue === 0
       ? "text-red-600"
-      : stockValue < 20
+      : availableValue < 20
       ? "text-orange-600"
       : "text-green-600";
 
@@ -154,14 +171,14 @@ const ItemDetailsModal = ({
                     }}
                   />
 
-                  {/* Stock Information - Left Side */}
+                  {/* Available (Stock - Unreleased) - Left Side */}
                   <div className="absolute top-1.5 left-1.5 mobile-m:top-2 mobile-m:left-2 mobile-l:top-2 mobile-l:left-2 tablet:top-3 tablet:left-3">
                     <div className="flex items-baseline gap-0.5 mobile-l:gap-1 px-1.5 py-0.5 mobile-m:px-2 mobile-m:py-1 mobile-l:px-2 mobile-l:py-0.5 tablet:px-3 tablet:py-1.5">
                       <span className="text-[10px] font-medium text-gray-700 mobile-m:text-xs tablet:text-sm">
-                        Stock:
+                        Available:
                       </span>
                       <span className={`text-[10px] font-bold mobile-m:text-xs tablet:text-sm ${stockStatusColor}`}>
-                        {stockValue}
+                        {availableValue}
                       </span>
                     </div>
                   </div>
@@ -338,26 +355,30 @@ const ItemDetailsModal = ({
                             </div>
                           </div>
 
-                          {/* Stock Info - Clickable to select variation */}
-                          <div 
-                            onClick={() => onSelectVariation(variation)}
-                            className="flex items-center gap-0.5 cursor-pointer flex-shrink-0"
-                          >
-                            <span className="text-[10px] text-gray-600 mobile-m:text-xs mobile-l:text-sm">
-                              Stock:
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold mobile-m:text-xs mobile-l:text-sm ${
-                                variation.stock === 0
-                                  ? "text-red-600"
-                                  : variation.stock < 20
-                                  ? "text-orange-600"
-                                  : "text-green-600"
-                              }`}
-                            >
-                              {variation.stock || 0}
-                            </span>
-                          </div>
+                          {/* Available (Stock - Unreleased) - Clickable to select variation */}
+                          {(() => {
+                            const unreleased = getUnreleased(variation.name || selectedItem.name, variation.size);
+                            const available = Math.max(0, (variation.stock || 0) - unreleased);
+                            const availColor =
+                              available === 0
+                                ? "text-red-600"
+                                : available < 20
+                                ? "text-orange-600"
+                                : "text-green-600";
+                            return (
+                              <div
+                                onClick={() => onSelectVariation(variation)}
+                                className="flex items-center gap-0.5 cursor-pointer flex-shrink-0"
+                              >
+                                <span className="text-[10px] text-gray-600 mobile-m:text-xs mobile-l:text-sm">
+                                  Available:
+                                </span>
+                                <span className={`text-[10px] font-bold mobile-m:text-xs mobile-l:text-sm ${availColor}`}>
+                                  {available}
+                                </span>
+                              </div>
+                            );
+                          })()}
 
                           {/* Actions Menu Button */}
                           <div className="relative flex-shrink-0">

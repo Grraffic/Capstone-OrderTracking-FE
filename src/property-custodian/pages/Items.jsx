@@ -29,6 +29,7 @@ import {
   useItems,
   useItemDetailsModal,
   useInventoryHealthStats,
+  useOrders,
 } from "../hooks";
 
 /**
@@ -187,6 +188,33 @@ const Items = () => {
     closeModal: closeItemDetailsModal,
     selectVariation,
   } = useItemDetailsModal(items);
+
+  // Fetch orders to compute unreleased counts (for Available = stock - unreleased in ItemDetailsModal)
+  const { orders: allOrders } = useOrders({
+    page: 1,
+    limit: 5000,
+  });
+
+  const unreleasedCounts = useMemo(() => {
+    const counts = {};
+    const normalizeSize = (size) => {
+      if (!size) return "";
+      const match = String(size).match(/^(.+?)\s*\([A-Z]\)$/i);
+      return match ? match[1].trim() : String(size).trim();
+    };
+    (allOrders || []).forEach((order) => {
+      const status = (order.status || "").toLowerCase();
+      if (status !== "pending" && status !== "processing") return;
+      const orderItems = Array.isArray(order.items) ? order.items : [];
+      orderItems.forEach((item) => {
+        const name = (item.name || "").trim().toLowerCase();
+        const size = normalizeSize(item.size || "").toLowerCase();
+        const key = `${name}|${size}`;
+        counts[key] = (counts[key] || 0) + (Number(item.quantity) || 0);
+      });
+    });
+    return counts;
+  }, [allOrders]);
 
   // QR Scanner functionality
   const { qrScannerOpen, closeQRScanner, handleQRCodeScanned } =
@@ -854,6 +882,7 @@ const Items = () => {
             loadingVariations={loadingVariations}
             totalCostSummary={totalCostSummary}
             totalStock={totalStock}
+            unreleasedCounts={unreleasedCounts}
             onClose={closeItemDetailsModal}
             onSelectVariation={selectVariation}
             onEditItem={() => {

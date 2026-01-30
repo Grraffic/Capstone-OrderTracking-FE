@@ -34,6 +34,7 @@ const OrdersTable = ({
   onNextPage,
   onGoToPage,
   onOrderUpdated,
+  onOpenQRScanner,
 }) => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -76,13 +77,12 @@ const OrdersTable = ({
     <div className="space-y-3 sm:space-y-4">
       {/* Table Header Row - Always visible on desktop, hidden on mobile */}
       <div className="hidden lg:block bg-[#0C2340] rounded-xl py-3 sm:py-4 px-4 sm:px-6 shadow-lg">
-        <div className="grid grid-cols-7 gap-3 sm:gap-4 lg:gap-6 items-center">
+        <div className="grid grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-center">
           <div className="text-xs sm:text-sm font-bold text-white">Transaction no.</div>
           <div className="text-xs sm:text-sm font-bold text-white">Item Ordered</div>
           <div className="text-xs sm:text-sm font-bold text-white">Size</div>
           <div className="text-xs sm:text-sm font-bold text-white">Name</div>
-          <div className="text-xs sm:text-sm font-bold text-white">Grade Level</div>
-          <div className="text-xs sm:text-sm font-bold text-white hidden xl:block">Grade Level Category</div>
+          <div className="text-xs sm:text-sm font-bold text-white">Education level</div>
           <div className="text-xs sm:text-sm font-bold text-white text-right">Action</div>
         </div>
       </div>
@@ -133,7 +133,7 @@ const OrdersTable = ({
             }`}
           >
             {/* Desktop Layout - Grid */}
-            <div className="hidden lg:grid lg:grid-cols-7 gap-3 sm:gap-4 lg:gap-6 items-center p-4 sm:p-5 lg:p-6">
+            <div className="hidden lg:grid lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-center p-4 sm:p-5 lg:p-6">
               {/* Transaction No */}
               <div className="text-xs sm:text-sm font-bold text-[#0C2340] truncate">
                 {order.transactionNo}
@@ -172,13 +172,8 @@ const OrdersTable = ({
                 {order.name}
               </div>
 
-              {/* Grade Level */}
+              {/* Education level */}
               <div className="text-xs sm:text-sm font-medium text-blue-600 truncate">
-                {order.gradeOrProgram}
-              </div>
-
-              {/* Grade Level Category - Hidden on smaller screens */}
-              <div className="text-xs sm:text-sm font-medium text-blue-600 truncate hidden xl:block">
                 {order.gradeOrProgram}
               </div>
 
@@ -274,9 +269,9 @@ const OrdersTable = ({
                 </div>
               </div>
 
-              {/* Grade Level */}
+              {/* Education level */}
               <div>
-                <div className="text-xs text-gray-500 font-medium mb-0.5">Grade Level</div>
+                <div className="text-xs text-gray-500 font-medium mb-0.5">Education level</div>
                 <div className="text-sm sm:text-base font-medium text-blue-600 break-words">
                   {order.gradeOrProgram}
                 </div>
@@ -331,6 +326,7 @@ const OrdersTable = ({
         onClose={handleCloseModal}
         order={selectedOrder}
         onOrderUpdated={onOrderUpdated}
+        onOpenQRScanner={onOpenQRScanner}
       />
     </div>
   );
