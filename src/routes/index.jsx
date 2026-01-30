@@ -21,6 +21,7 @@ import StudentList from "../system-admin/pages/StudentList";
 import EligibilityManagement from "../system-admin/pages/EligibilityManagement";
 import ItemApproval from "../system-admin/pages/ItemApproval";
 import SystemSettings from "../system-admin/pages/SystemSettings";
+import ArchiveUsers from "../system-admin/pages/ArchiveUsers";
 
 // Student Pages - lazy-loaded for smaller initial bundle
 const StudentDashboard = lazy(() => import("../student/pages/StudentDashboard"));
@@ -159,6 +160,14 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRoles={["system_admin"]}>
             <StudentList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-admin/archive-users"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <ArchiveUsers />
           </ProtectedRoute>
         }
       />

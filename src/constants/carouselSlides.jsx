@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 const uniforms = [
   {
     id: "uniform-1",
-    src: "../../public/assets/image/PANTS.png",
+    src: "../../assets/image/PANTS.png",
     alt: "Female Uniform",
     text: "Higher Education",
   },

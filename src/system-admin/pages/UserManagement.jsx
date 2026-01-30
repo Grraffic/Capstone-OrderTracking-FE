@@ -300,8 +300,10 @@ const UserManagement = () => {
       <div className="space-y-6">
         {/* Page Title */}
         <div>
-          <h1 className="text-3xl font-bold text-[#0C2340]">Manage Users</h1>
-          <p className="text-sm text-[#e68b00] mt-1">Control User Access and Permissions</p>
+          <h1 className="text-3xl font-bold text-[#0C2340]">
+            List of <span className="text-[#e68b00]">Employees</span>
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">Control user access and permissions for staff</p>
         </div>
 
         {/* Compact Tab Switcher with Icons - Left Aligned */}
