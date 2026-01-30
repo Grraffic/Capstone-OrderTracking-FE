@@ -27,6 +27,18 @@ import {
 import { orderAPI, itemsAPI } from "../../../services/api";
 import { HexColorPicker, HexColorInput } from "react-colorful";
 
+/** Suggested sizes for option value (size) inputs, like item name suggestions */
+const SUGGESTED_SIZES = [
+  "XSmall (XS)",
+  "Small (S)",
+  "Medium (M)",
+  "Large (L)",
+  "XLarge (XL)",
+  "2XLarge (2XL)",
+  "3XLarge (3XL)",
+  "N/A",
+];
+
 /**
  * ItemsModals Component
  *
@@ -61,6 +73,8 @@ const ItemsModals = ({
   const [curatedNameSuggestions, setCuratedNameSuggestions] = useState([]);
   const [loadingNameSuggestions, setLoadingNameSuggestions] = useState(false);
   const itemNameDropdownRef = useRef(null);
+  const [openSizeDropdownIndex, setOpenSizeDropdownIndex] = useState(null);
+  const sizeDropdownRef = useRef(null);
   // Local-only UI state for variants
   const [variants, setVariants] = useState([
     {
@@ -209,6 +223,22 @@ const ItemsModals = ({
     }
   }, [itemNameDropdownOpen]);
 
+  // Close size dropdown on click outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        sizeDropdownRef.current &&
+        !sizeDropdownRef.current.contains(e.target)
+      ) {
+        setOpenSizeDropdownIndex(null);
+      }
+    };
+    if (openSizeDropdownIndex !== null) {
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }
+  }, [openSizeDropdownIndex]);
+
   // Check for pre-orders when adding a new item with stock > 0
   useEffect(() => {
     const checkPreOrders = async () => {
@@ -335,8 +365,10 @@ const ItemsModals = ({
         (_, i) => variantPrices[i] ?? ""
       );
 
+      // Only include variants that are checked (selectedVariantIndices); unchecked sizes like Medium must not be submitted
       const rawVariations = valuesForSubmit
         .map((sizeVal, index) => {
+          if (!selectedVariantIndices.includes(index)) return null;
           const stock = Number(stocksForSubmit[index]) || 0;
           const price =
             Number(pricesForSubmit[index]) || Number(formData.price) || 0;
@@ -462,8 +494,10 @@ const ItemsModals = ({
         (_, i) => refState.prices[i] ?? currentPrices[i] ?? ""
       );
 
+      // Only include variants that are checked (selectedVariantIndices); unchecked sizes must not be saved
       const rawVariations = valuesForSubmit
         .map((sizeVal, index) => {
+          if (!selectedVariantIndices.includes(index)) return null;
           const stock = Number(stocksForSubmit[index]) || 0;
           const price =
             Number(pricesForSubmit[index]) || Number(formData.price) || 0;
@@ -1304,7 +1338,7 @@ const ItemsModals = ({
                     <img
                       src={imagePreview}
                       alt="Preview"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain bg-gray-100"
                     />
                   ) : (
                     <div className="text-center px-2">
@@ -1365,13 +1399,6 @@ const ItemsModals = ({
                     <label className="text-sm font-medium text-gray-700">
                       Item Name
                     </label>
-                    {formData.educationLevel &&
-                      EDUCATION_LEVEL_LABELS[formData.educationLevel] && (
-                        <p className="text-xs text-blue-600">
-                          Suggestions for{" "}
-                          {EDUCATION_LEVEL_LABELS[formData.educationLevel]}
-                        </p>
-                    )}
                     <input
                       type="text"
                       name="name"
@@ -1656,83 +1683,17 @@ const ItemsModals = ({
                       Variants
                     </p>
 
-                    {/* Top card: Option Value (sizes) */}
-                    <div className="rounded-xl border border-gray-200 bg-white px-4 py-3 space-y-3">
-                      {variants.slice(0, 1).map((variant, vIndex) => (
-                        <div key={vIndex} className="space-y-1.5">
-                          <label className="text-xs font-medium text-gray-600">
-                            Option Value
-                          </label>
-                          <div className="space-y-2">
-                            {variant.values.map((value, valIndex) => {
-                              const existing = isExistingVariant(valIndex);
-                              return (
-                                <div
-                                  key={valIndex}
-                                  className="flex items-center gap-2"
-                                >
-                                  <input
-                                    type="text"
-                                    value={value}
-                                    onChange={(e) =>
-                                      handleVariantValueChange(
-                                        vIndex,
-                                        valIndex,
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder={
-                                      valIndex === 0
-                                        ? "Small (S)"
-                                        : "Medium (M)"
-                                    }
-                                    disabled={existing}
-                                    readOnly={existing}
-                                    className={`flex-1 px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                                      existing
-                                        ? "bg-gray-50 cursor-not-allowed border-gray-200"
-                                        : "border-gray-300 bg-white"
-                                    }`}
-                                  />
-                                  {variant.values.length > 1 && !existing && (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        handleRemoveVariantValue(
-                                          vIndex,
-                                          valIndex
-                                        )
-                                      }
-                                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Remove this option value"
-                                    >
-                                      <Trash2 size={16} />
-                                    </button>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleAddVariantValue(vIndex)}
-                            className="mt-1 text-xs font-medium text-orange-500 hover:text-orange-600"
-                          >
-                            + Add another option value
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Bottom card: Option Value / Stock / Unit Price */}
+                    {/* Bottom card: Size / Stock / Unit Price + Add another option value */}
                     <div className="rounded-xl border border-gray-200 bg-white">
                       <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                        <span>Option Value</span>
+                        <span>Size</span>
                         <span>Stock</span>
                         <span>Unit Price</span>
                       </div>
-                      <div className="px-4 py-3 space-y-2 text-sm">
+                      <div
+                        className="px-4 py-3 space-y-2 text-sm"
+                        ref={sizeDropdownRef}
+                      >
                         {variants[0].values.map((value, index) => {
                           const existing = isExistingVariant(index);
                           return (
@@ -1823,18 +1784,56 @@ const ItemsModals = ({
                                     (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : `Size ${index + 1}`)}
                                 </span>
                               ) : (
-                                <>
+                                <div className="relative flex-1 min-w-0 flex items-center gap-2">
                                   <input
                                     type="text"
                                     value={value}
                                     onChange={(e) =>
                                       handleVariantValueChange(0, index, e.target.value)
                                     }
+                                    onFocus={() =>
+                                      setOpenSizeDropdownIndex(index)
+                                    }
                                     placeholder={
                                       index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "e.g. Large (L), XSmall (XS)"
                                     }
                                     className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                   />
+                                  {openSizeDropdownIndex === index && (() => {
+                                    const filtered = SUGGESTED_SIZES.filter(
+                                      (s) =>
+                                        (value || "").trim() === "" ||
+                                        s
+                                          .toLowerCase()
+                                          .includes(
+                                            (value || "").toLowerCase().trim()
+                                          )
+                                    );
+                                    return (
+                                      filtered.length > 0 && (
+                                        <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                                          {filtered.map((s) => (
+                                            <button
+                                              key={s}
+                                              type="button"
+                                              className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                                              onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                handleVariantValueChange(
+                                                  0,
+                                                  index,
+                                                  s
+                                                );
+                                                setOpenSizeDropdownIndex(null);
+                                              }}
+                                            >
+                                              {s}
+                                            </button>
+                                          ))}
+                                        </div>
+                                      )
+                                    );
+                                  })()}
                                   {variants[0].values.length > 1 && (
                                     <button
                                       type="button"
@@ -1845,7 +1844,7 @@ const ItemsModals = ({
                                       <Trash2 size={16} />
                                     </button>
                                   )}
-                                </>
+                                </div>
                               )}
                             </div>
                             <input
@@ -1894,6 +1893,15 @@ const ItemsModals = ({
                           </div>
                           );
                         })}
+                      </div>
+                      <div className="px-4 pb-3">
+                        <button
+                          type="button"
+                          onClick={() => handleAddVariantValue(0)}
+                          className="text-xs font-medium text-orange-500 hover:text-orange-600"
+                        >
+                          + Add another option value
+                        </button>
                       </div>
                     </div>
                   </div>

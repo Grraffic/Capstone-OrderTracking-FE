@@ -149,7 +149,7 @@ const Items = () => {
         ...g,
         variations: g.variations.filter((v) => {
           const vLevel = (v.educationLevel || v.education_level || "").trim().toLowerCase();
-          return vLevel === mappedLevel;
+          return vLevel === mappedLevel || vLevel === "all education levels";
         }),
       }))
       .filter((g) => g.variations.length > 0)
@@ -497,18 +497,9 @@ const Items = () => {
                                       // Error already set in hook
                                     }
                                   }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors"
                                 >
                                   Archive Item
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    openDeleteModal(representativeItem);
-                                    setOpenMenuId(null);
-                                  }}
-                                  className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-b-lg transition-colors"
-                                >
-                                  Delete Item
                                 </button>
                               </div>
                             )}

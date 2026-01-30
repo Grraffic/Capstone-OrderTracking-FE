@@ -508,6 +508,8 @@ const Inventory = () => {
             available: available, // Calculated: Ending Inventory - Unreleased
             endingInventory: endingInventory, // Calculated: Beginning Inventory + Purchases - Released + Returns
             unitPrice: item.unit_price || 0,
+            unitPriceBeginning: item.unit_price_beginning ?? item.unit_price ?? 0,
+            price: item.price != null ? Number(item.price) : undefined,
             totalAmount: item.total_amount || 0,
             status: item.status,
           };

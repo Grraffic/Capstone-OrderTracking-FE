@@ -74,7 +74,7 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
             <button
               type="button"
-              className="px-6 py-3 bg-[#F28C28] text-white font-bold rounded-lg shadow-lg hover:bg-[#E68B00] transition-colors"
+              className="px-6 py-3 bg-[#F28C28] text-white font-bold rounded-xl shadow-lg hover:bg-[#E68B00] transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 // Handle pre-order action

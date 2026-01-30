@@ -33,6 +33,7 @@ const OrdersTable = ({
   onPrevPage,
   onNextPage,
   onGoToPage,
+  onOrderUpdated,
 }) => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -329,6 +330,7 @@ const OrdersTable = ({
         isOpen={editModalOpen}
         onClose={handleCloseModal}
         order={selectedOrder}
+        onOrderUpdated={onOrderUpdated}
       />
     </div>
   );

@@ -5,7 +5,7 @@ import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
 import { useAuth } from "../../context/AuthContext";
 import { authAPI } from "../../services/api";
-import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../utils/maxQuantityKeys";
+import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem, getDefaultMaxByKey } from "../../utils/maxQuantityKeys";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import toast from "react-hot-toast";
@@ -126,7 +126,7 @@ const MyCart = () => {
   const getEffectiveMaxForItem = (key) =>
     isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
       ? 0
-      : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
+      : (maxQuantities[key] ?? getDefaultMaxByKey(key));
 
   // Handle back navigation
   const handleBack = () => {
@@ -165,7 +165,7 @@ const MyCart = () => {
     if (newQuantity < 1) return;
 
     const key = itemName != null ? resolveItemKeyForMaxQuantity(itemName) : "";
-    const maxForItem = key ? getEffectiveMaxForItem(key) : DEFAULT_MAX_WHEN_UNKNOWN;
+    const maxForItem = key ? getEffectiveMaxForItem(key) : getDefaultMaxForItem(itemName ?? "");
     const totalForItem = (items || [])
       .filter((i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key)
       .reduce((s, i) => s + (Number(i.quantity) || 0), 0);
@@ -438,9 +438,6 @@ const MyCart = () => {
                                   <Plus className="w-4 h-4 text-gray-700" />
                                 </button>
                               </div>
-                              <span className={`text-xs ${isOverLimit ? "text-amber-600 font-medium" : "text-gray-500"}`}>
-                                {isOverLimit ? `Over limit (max ${maxForItem})` : `Max ${maxForItem} per student`}
-                              </span>
                             </div>
                           ) : (
                             <span className="text-gray-700 font-medium">{qty}</span>
@@ -542,9 +539,6 @@ const MyCart = () => {
                                 <Plus className="w-3 h-3 text-gray-700" />
                               </button>
                             </div>
-                            <span className={`text-xs ${isOverLimit ? "text-amber-600 font-medium" : "text-gray-500"}`}>
-                              {isOverLimit ? `Over limit (max ${maxForItem})` : `Max ${maxForItem} per student`}
-                            </span>
                           </div>
                         )}
                       </div>

@@ -596,6 +596,7 @@ const Orders = () => {
             onPrevPage={prevPage}
             onNextPage={nextPage}
             onGoToPage={goToPage}
+            onOrderUpdated={refetchOrders}
           />
         )}
 
@@ -750,11 +751,11 @@ const Orders = () => {
                 <CheckCircle size={36} className="text-green-600" />
               </div>
               <p className="text-gray-900 mb-2">
-                <strong>Name ({qrSuccess.studentName ?? "—"})</strong> order has been marked as Released on Date (
+                <strong>{qrSuccess.studentName ?? "—"}</strong> order has been marked as Released on{" "}
                 {qrSuccess.releasedAt
                   ? format(new Date(qrSuccess.releasedAt), "MMMM d, yyyy")
                   : format(new Date(), "MMMM d, yyyy")}
-                ).
+                .
               </p>
               <p className="text-gray-600 text-sm">
                 Inventory and order records have been updated automatically.

@@ -7,6 +7,32 @@
 /** Default max when API/profile hasn't supplied a limit. Every item has a max; use 1 to be conservative. */
 export const DEFAULT_MAX_WHEN_UNKNOWN = 1;
 
+/** Logo patch (not "new logo patch") max per student per spec. */
+export const LOGO_PATCH_MAX_PER_STUDENT = 3;
+
+/**
+ * Default max quantity for an item when API hasn't supplied a limit.
+ * Logo patch only: 3 per student; all other items: 1.
+ * @param {string} name - Item display name
+ * @returns {number}
+ */
+export function getDefaultMaxForItem(name) {
+  const n = normalizeItemName(name || "");
+  return n.includes("logo patch") && !n.includes("new logo patch")
+    ? LOGO_PATCH_MAX_PER_STUDENT
+    : DEFAULT_MAX_WHEN_UNKNOWN;
+}
+
+/**
+ * Default max by canonical item key (from resolveItemKeyForMaxQuantity).
+ * Logo patch: 3; all others: 1.
+ * @param {string} key - Canonical key (e.g. "logo patch", "jogging pants")
+ * @returns {number}
+ */
+export function getDefaultMaxByKey(key) {
+  return key === "logo patch" ? LOGO_PATCH_MAX_PER_STUDENT : DEFAULT_MAX_WHEN_UNKNOWN;
+}
+
 export function normalizeItemName(name) {
   return (name || "")
     .toLowerCase()

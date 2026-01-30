@@ -82,7 +82,8 @@ export const useStudentSettings = () => {
       });
     } catch (err) {
       console.error("Error fetching profile:", err);
-      setError(err.message || "Failed to load profile data");
+      const serverMessage = err.response?.data?.message || err.response?.data?.details;
+      setError(serverMessage || err.message || "Failed to load profile data");
 
       if (user) {
         const fallbackProfile = {
@@ -308,7 +309,9 @@ export const useStudentSettings = () => {
       }, 1000); // Small delay to show success toast
     } catch (err) {
       console.error("Error saving changes:", err);
-      toast.error(err.message || "Failed to save changes");
+      const serverMessage = err.response?.data?.message || err.response?.data?.details;
+      const message = serverMessage || err.message || "Failed to save changes";
+      toast.error(message);
     } finally {
       setSaving(false);
     }

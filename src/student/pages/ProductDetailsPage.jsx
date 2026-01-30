@@ -13,7 +13,7 @@ import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
 import { useAuth } from "../../context/AuthContext";
 import { itemsAPI, authAPI } from "../../services/api";
-import { normalizeItemName, resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../utils/maxQuantityKeys";
+import { normalizeItemName, resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../utils/maxQuantityKeys";
 
 /**
  * ProductDetailsPage Component
@@ -383,9 +383,12 @@ const ProductDetailsPage = () => {
         product.itemType?.toLowerCase().includes("jersey"))
     : false;
 
-  const availableSizes = requiresSizeSelection
-    ? ["XS", "S", "M", "L", "XL", "XXL"]
-    : [];
+  // Base sizes so students always see standard choices (some may be pre-order); append any extra sizes finance added (e.g. 3XL)
+  const baseSizes = ["XS", "S", "M", "L", "XL", "XXL"];
+  const apiSizes = (availableSizesData || []).map((s) => s.size);
+  const extraSizes = apiSizes.filter((size) => !baseSizes.includes(size));
+  const availableSizes =
+    requiresSizeSelection ? [...baseSizes, ...extraSizes] : [];
 
   const selectedSizeData = availableSizesData.find(
     (s) => s.size === selectedSize
@@ -403,20 +406,17 @@ const ProductDetailsPage = () => {
     resolvedMaxKey = matchingKeys.sort((a, b) => b.length - a.length)[0] ?? maxQuantityKey;
   }
   const keyNotInMaxQuantities = product && (maxQuantities[resolvedMaxKey] === undefined || maxQuantities[resolvedMaxKey] === null);
-  // Logo Patch max is 3 per spec; use as fallback when API doesn't return it so plus button works
-  const isLogoPatch = product && (() => {
-    const n = normalizeItemName(product.name || "");
-    return n.includes("logo patch") && !n.includes("new logo patch");
-  })();
+  const productEducationLevelRaw = (product?.educationLevel || product?.education_level || "").toString().trim().toLowerCase();
+  const productIsForAllEducationLevels =
+    productEducationLevelRaw === "all education levels" || productEducationLevelRaw === "general";
+  const treatMainProductAllowedForOldStudent = productIsForAllEducationLevels;
   const maxForItem =
     product && maxQuantities[resolvedMaxKey] != null
       ? maxQuantities[resolvedMaxKey]
-      : isOldStudent && keyNotInMaxQuantities
+      : isOldStudent && keyNotInMaxQuantities && !treatMainProductAllowedForOldStudent
         ? 0
-        : isLogoPatch
-          ? 3
-          : DEFAULT_MAX_WHEN_UNKNOWN;
-  const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities;
+        : getDefaultMaxForItem(product?.name);
+  const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities && !treatMainProductAllowedForOldStudent;
   const effectiveStock = product
     ? (requiresSizeSelection
         ? (selectedSizeData?.stock ?? product?.stock ?? 999)
@@ -466,7 +466,7 @@ const ProductDetailsPage = () => {
         Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem),
         effectiveStock || 999
       )
-    : DEFAULT_MAX_WHEN_UNKNOWN;
+    : getDefaultMaxForItem("");
 
   // Clamp quantity when effectiveMax decreases (e.g. after maxQuantities loads)
   useEffect(() => {
@@ -488,11 +488,17 @@ const ProductDetailsPage = () => {
       .slice(0, 3);
     return filtered.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
+      const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
+      const educationLevelRaw = (p.educationLevel || p.education_level || "").toString().trim().toLowerCase();
+      const isForAllEducationLevels =
+        educationLevelRaw === "all education levels" || educationLevelRaw === "general";
+      const treatAsAllowedForOldStudent = isForAllEducationLevels;
       const max =
-        isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
+        isOldStudent && keyMissing && !treatAsAllowedForOldStudent
           ? 0
-          : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
-      const notAllowedForStudentType = isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null);
+          : (maxQuantities[key] ?? getDefaultMaxForItem(p.name));
+      const notAllowedForStudentType =
+        isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key

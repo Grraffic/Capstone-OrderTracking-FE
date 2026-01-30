@@ -309,12 +309,13 @@ export const useItems = (options = {}) => {
       if (educationLevelFilter === "Accessories") {
         result = result.filter((item) => item.itemType === "Accessories");
       } else if (educationLevelFilter !== "All") {
-        // Apply education level filter - show both uniforms and accessories for this level
+        // Apply education level filter - show items for this level AND "All Education Levels" (e.g. Logo Patch)
         const mappedFilter = mapTabLabelToEducationLevel(educationLevelFilter);
         result = result.filter((item) => {
           const itemEducationLevel = (item.educationLevel || item.education_level || "").trim();
           const normalizedFilter = (mappedFilter || "").trim();
-          return itemEducationLevel.toLowerCase() === normalizedFilter.toLowerCase();
+          const levelLower = itemEducationLevel.toLowerCase();
+          return levelLower === normalizedFilter.toLowerCase() || levelLower === "all education levels";
         });
       }
 
@@ -427,11 +428,18 @@ export const useItems = (options = {}) => {
         setLoading(true);
         setError(null);
 
+        // Category derived from education level / name when missing (no Grade Level Category in UI)
+        const category =
+          newItem.category && String(newItem.category).trim()
+            ? newItem.category.trim()
+            : newItem.educationLevel === "All Education Levels"
+              ? "All Levels"
+              : (newItem.name || "All Levels").trim() || "All Levels";
         // Transform camelCase to snake_case for backend
         const transformedItem = {
           name: newItem.name,
           education_level: newItem.educationLevel,
-          category: newItem.category,
+          category,
           item_type: newItem.itemType,
           for_gender: newItem.forGender || "Unisex",
           size:

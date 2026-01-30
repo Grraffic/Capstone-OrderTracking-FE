@@ -209,9 +209,9 @@ const StudentProfile = () => {
       {/* Hero Section – "User Profile" at bottom-right */}
       <HeroSection heading="User Profile" align="bottom-right" />
 
-      {/* Profile Card – left; Activity – right (original layout) */}
+      {/* Profile Card – left; Activity – right (side-by-side from tablet 768px) */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
           {/* Left Side - Profile Card */}
           <ProfileCard
             profileData={profileData}
@@ -222,78 +222,72 @@ const StudentProfile = () => {
           />
 
           {/* Right Side - Activity Feed */}
-          <div className="lg:col-span-3">
+          <div className="md:col-span-3 min-w-0">
             {/* Single Background Container for Tabs + Activities */}
-            <div className="bg-gray-50 rounded-xl pl-8 min-h-[500px]">
-              {/* Tabs Bar - Back left, Tabs centered, Filter right */}
+            <div className="bg-gray-50 rounded-xl px-4 sm:px-6 md:px-6 min-h-[500px]">
+              {/* Tabs Bar - Arrow button beside Activities; then Orders, History; filter right */}
               <div className="pb-4 mb-4 border-b border-gray-200">
-                <div className="flex items-center">
-                  {/* Left: Back to All Products (button + text) */}
-                  <div className="flex-1 flex justify-start">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-nowrap sm:gap-2 md:gap-5 lg:gap-6">
+                  {/* Arrow + tabs together: [Arrow] [Activities] [Orders] [History] - right */}
+                  <div className="flex items-center justify-center gap-2 min-w-0 sm:flex-1 sm:justify-end">
                     <button
                       type="button"
                       onClick={() => navigate("/all-products")}
-                      aria-label="Back to All Products"
-                      className="flex items-center gap-2 rounded-full border-2 border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white pl-2 pr-4 py-2 transition-colors"
+                      aria-label="Browse all products"
+                      className="flex-shrink-0 flex items-center justify-center rounded-full border-2 border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white p-1.5 transition-colors"
                     >
-                      <ChevronLeft className="w-5 h-5 shrink-0" />
-                      <span className="text-sm font-semibold whitespace-nowrap">Browse all products</span>
+                      <ChevronLeft className="w-4 h-4" />
                     </button>
-                  </div>
+                    <div className="flex items-stretch gap-0 min-w-0 overflow-x-auto overflow-y-hidden sm:overflow-visible">
+                      {[
+                        { key: "activities", label: "Activities", icon: Bell },
+                        { key: "orders", label: "Orders", icon: ShoppingCart },
+                        { key: "history", label: "History", icon: Package },
+                      ].map((tab) => {
+                        const isActive = activeTab === tab.key;
+                        const isHovered = hoveredTab === tab.key;
+                        const showUnderline = isActive || isHovered;
 
-                  {/* Center: Activities, Orders, History tabs */}
-                  <div className="flex-shrink-0 flex space-x-2">
-                    {[
-                      { key: "activities", label: "Activities", icon: Bell },
-                      { key: "orders", label: "Orders", icon: ShoppingCart },
-                      { key: "history", label: "History", icon: Package },
-                    ].map((tab) => {
-                      const isActive = activeTab === tab.key;
-                      const isHovered = hoveredTab === tab.key;
-                      const showUnderline = isActive || isHovered;
-
-                      return (
-                        <button
-                          key={tab.key}
-                          onClick={() => handleTabChange(tab.key)}
-                          onMouseEnter={() => setHoveredTab(tab.key)}
-                          onMouseLeave={() => setHoveredTab(null)}
-                          className={`relative flex flex-col items-center justify-center px-10 py-6 font-semibold text-sm transition-all ${
-                            isActive
-                              ? "bg-[#003363] text-white"
-                              : "bg-transparent text-gray-600 hover:bg-[#0C2340] hover:text-white"
-                          }`}
-                        >
-                          <div
-                            ref={(el) => (tabRefs.current[tab.key] = el)}
-                            className="flex items-center space-x-2"
-                            style={{ pointerEvents: "none" }}
+                        return (
+                          <button
+                            key={tab.key}
+                            onClick={() => handleTabChange(tab.key)}
+                            onMouseEnter={() => setHoveredTab(tab.key)}
+                            onMouseLeave={() => setHoveredTab(null)}
+                            className={`relative flex flex-col items-center justify-center px-3 sm:px-4 md:px-5 lg:px-8 py-3 sm:py-4 md:py-4 lg:py-5 font-semibold text-xs sm:text-sm transition-all whitespace-nowrap rounded-t-lg flex-shrink-0 ${
+                              isActive
+                                ? "bg-[#003363] text-white"
+                                : "bg-transparent text-gray-600 hover:bg-[#0C2340] hover:text-white"
+                            }`}
                           >
-                            <tab.icon className="w-4 h-4" />
-                            <span className="inline-block">
-                              {tab.label}
-                            </span>
-                          </div>
-                          {/* Orange underline for active/hovered tab - based on content width */}
-                          {showUnderline && (
-                            <span
-                              className="block mt-1.5 h-1 bg-[#E68B00] rounded-full transition-all"
-                              style={{ width: underlineWidths[tab.key] || 0 }}
-                            />
-                          )}
-                        </button>
-                      );
-                    })}
+                            <div
+                              ref={(el) => (tabRefs.current[tab.key] = el)}
+                              className="flex items-center space-x-1.5 sm:space-x-2"
+                              style={{ pointerEvents: "none" }}
+                            >
+                              <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                              <span className="inline-block">{tab.label}</span>
+                            </div>
+                            {showUnderline && (
+                              <span
+                                className="block mt-1 sm:mt-1.5 h-0.5 sm:h-1 bg-[#E68B00] rounded-full transition-all"
+                                style={{ width: underlineWidths[tab.key] || 0 }}
+                              />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Right: Filter dropdown */}
-                  <div className="flex-1 flex justify-end">
+                  {/* Filter - below on mobile; right, compact on tablet (768px)+ */}
+                  <div className="flex-shrink-0 sm:flex-1 flex justify-start sm:justify-end md:justify-end min-w-0 order-last sm:order-none md:ml-auto md:pl-6 lg:pl-8">
                     {(activeTab === "activities" || activeTab === "orders" || activeTab === "history") && (
-                      <div className="relative z-10">
+                      <div className="relative z-10 w-full sm:w-auto sm:min-w-0 md:w-[6rem] md:min-w-0">
                         <select
                           value={filter}
                           onChange={(e) => handleFilterChange(e.target.value)}
-                          className="px-4 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C5A572] focus:border-transparent cursor-pointer"
+                          className="w-full sm:w-auto min-w-0 px-3 sm:px-3 md:px-2 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#C5A572] focus:border-transparent cursor-pointer md:text-xs"
                           aria-label="Sort activities"
                         >
                           <option value="all">Show All</option>
@@ -322,10 +316,10 @@ const StudentProfile = () => {
                       activities.map((activity) => (
                         <div
                           key={activity.id}
-                          className="flex items-start space-x-5 pb-4 border-b border-gray-200 last:border-b-0"
+                          className="flex items-start gap-3 sm:gap-5 pb-4 border-b border-gray-200 last:border-b-0"
                         >
                           {/* Activity Icon - Larger */}
-                          <div className="flex-shrink-0 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
+                          <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-full flex items-center justify-center shadow-sm">
                             {getActivityIcon(activity.type)}
                           </div>
 

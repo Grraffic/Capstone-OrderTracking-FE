@@ -3,13 +3,15 @@ import { X, Calendar, Package, User, Mail } from "lucide-react";
 
 /**
  * EditOrderModal Component
- * 
- * A detailed modal for viewing and editing order information
- * Matches the Figma design with two-column layout
+ *
+ * A detailed modal for viewing and editing order information.
+ * When finance changes item size (e.g. Small → Medium at student request), saving
+ * updates the order items, regenerates the student's QR code with the new size, and
+ * unreleased/available inventory automatically reflects the change (old size returned, new size reserved).
  */
-import { itemsAPI } from "../../../services/api";
+import { itemsAPI, orderAPI } from "../../../services/api";
 
-const EditOrderModal = ({ isOpen, onClose, order }) => {
+const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated }) => {
   const [isEditing, setIsEditing] = useState(false);
   
   // Parse items if they're stored as JSON string
@@ -28,6 +30,8 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
 
   const [editedItems, setEditedItems] = useState([]);
   const [itemDetailsMap, setItemDetailsMap] = useState({}); // Stores fetched details per item name
+  const [saveError, setSaveError] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   // Update items when order changes and fetch pricing details
   React.useEffect(() => {
@@ -122,13 +126,36 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
     console.log("Release item clicked");
   };
 
-  // Handle edit toggle
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    if (isEditing) {
-      // Save changes
-      console.log("Saving changes:", editedItems);
-      // TODO: Call API to update order
+  // Handle edit toggle / save
+  const handleEditToggle = async () => {
+    if (!isEditing) {
+      setIsEditing(true);
+      setSaveError(null);
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const totalAmount = (editedItems || []).reduce(
+        (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+        0
+      );
+      const payload = {
+        items: editedItems,
+        total_amount: totalAmount,
+      };
+      const res = await orderAPI.updateOrder(order.id, payload);
+      if (res?.data) {
+        setIsEditing(false);
+        onOrderUpdated?.();
+        onClose?.();
+      } else {
+        setSaveError(res?.message || "Failed to update order");
+      }
+    } catch (err) {
+      setSaveError(err?.response?.data?.message || err?.message || "Failed to update order");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -162,13 +189,14 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
               {/* Edit Order Button */}
               <button
                 onClick={handleEditToggle}
+                disabled={saving}
                 className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
                   isEditing
-                    ? "bg-[#e68b00] text-white hover:bg-[#d97706]"
+                    ? "bg-[#e68b00] text-white hover:bg-[#d97706] disabled:opacity-60"
                     : "border border-gray-300 text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                {isEditing ? "Save Changes" : "Edit Order"}
+                {saving ? "Saving..." : isEditing ? "Save Changes" : "Edit Order"}
               </button>
 
               {/* Close Button */}
@@ -182,6 +210,13 @@ const EditOrderModal = ({ isOpen, onClose, order }) => {
             </div>
           </div>
         </div>
+
+        {/* Save error */}
+        {saveError && (
+          <div className="mx-8 mt-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {saveError}
+          </div>
+        )}
 
         {/* Modal Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-8">

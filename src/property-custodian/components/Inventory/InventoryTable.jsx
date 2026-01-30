@@ -5,27 +5,37 @@ import React from "react";
  *
  * Displays inventory data in a table format with columns:
  * - No., Item, Beginning Inventory, Unreleased, Purchases, Released, Returns, Available, Ending Inventory, Unit Price, Total Amount
+ *
+ * Unit Price follows FIFO (First In, First Out): display the price of the layer that is "first out".
+ * - While beginning inventory has stock: show beginning-inventory unit price (e.g. 110).
+ * - When beginning inventory runs out (0): show purchase unit price. Total Amount remains FIFO (beg×begPrice + purch×purchPrice).
  */
 const InventoryTable = ({ inventoryData, allInventoryData }) => {
   /**
-   * Calculate total inventory cost per item
-   * Formula: (Beginning Inventory × Beginning Inventory Unit Price) + (Purchase₁ × Purchase Unit Price₁) + ... + (Purchaseₙ × Purchase Unit Priceₙ)
-   * 
-   * Since we don't have separate unit prices for beginning inventory vs purchases,
-   * we use the current unit price for both. If purchase prices differ, they would
-   * need to be tracked separately in transactions metadata.
-   * 
-   * @param {object} item - Inventory item data
-   * @returns {number} Total inventory cost for this item
+   * Display unit price for the row using FIFO (First In, First Out).
+   * - Beginning inventory > 0: show beginning unit price (first in = first to be used).
+   * - Beginning inventory = 0: show purchase unit price (beginning ran out; price shown is purchases).
    */
-  const calculateTotalInventoryCostPerItem = (item) => {
+  const getDisplayUnitPrice = (row) => {
+    const beg = row.beginningInventory ?? 0;
+    const unitPrice = row.unitPrice ?? 0;
+    const unitPriceBeginning = row.unitPriceBeginning ?? unitPrice;
+    const itemPrice = row.price != null ? Number(row.price) : undefined;
+    const fallbackPrice = unitPriceBeginning || unitPrice || itemPrice || 0;
+
+    if (beg > 0) return unitPriceBeginning || fallbackPrice; // First in still has stock → show beginning unit price (e.g. 110)
+    return unitPrice || fallbackPrice; // Beginning ran out → show purchase unit price
+  };
+
+  /**
+   * Total inventory cost per item (FIFO): use backend total_amount when available.
+   */
+  const getTotalCostPerItem = (item) => {
+    if (item.totalAmount != null && Number.isFinite(Number(item.totalAmount)))
+      return Number(item.totalAmount);
     const beginningInventory = item.beginningInventory || 0;
     const purchases = item.purchases || 0;
-    const unitPrice = item.unitPrice || 0;
-    
-    // Formula: (Beginning Inventory × Unit Price) + (Purchases × Unit Price)
-    // Simplified: (Beginning Inventory + Purchases) × Unit Price
-    // Note: If purchase prices differ, we'd need to sum individual purchase transactions
+    const unitPrice = getDisplayUnitPrice(item);
     return (beginningInventory + purchases) * unitPrice;
   };
 
@@ -40,7 +50,7 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
     if (!dataForTotalCost || dataForTotalCost.length === 0) return 0;
     
     return dataForTotalCost.reduce((total, item) => {
-      const itemCost = calculateTotalInventoryCostPerItem(item);
+      const itemCost = getTotalCostPerItem(item);
       return total + (typeof itemCost === 'number' ? itemCost : parseFloat(itemCost) || 0);
     }, 0);
   };
@@ -140,13 +150,13 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
                   {row.endingInventory}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-[#0060BA] whitespace-nowrap">
-                  P {row.unitPrice}
+                  P {getDisplayUnitPrice(row)}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-[#0060BA] whitespace-nowrap">
                   P {row.totalAmount.toLocaleString()}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm font-sf-medium font-medium text-[#0060BA] whitespace-nowrap">
-                  P {calculateTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
@@ -237,7 +247,7 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
               <div>
                 <span className="text-gray-600">Unit Price</span>
                 <p className="text-sm font-medium text-[#0060BA] mt-0.5">
-                  P {row.unitPrice}
+                  P {getDisplayUnitPrice(row)}
                 </p>
               </div>
             </div>
@@ -354,13 +364,13 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
                       {row.endingInventory}
                     </td>
                     <td className="px-3 py-3 text-xs text-[#0060BA] whitespace-nowrap">
-                      P {row.unitPrice}
+                      P {getDisplayUnitPrice(row)}
                     </td>
                     <td className="px-3 py-3 text-xs text-[#0060BA] whitespace-nowrap">
                       P {row.totalAmount.toLocaleString()}
                     </td>
                     <td className="px-3 py-3 text-xs font-sf-medium font-medium text-[#0060BA] whitespace-nowrap">
-                      P {calculateTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}

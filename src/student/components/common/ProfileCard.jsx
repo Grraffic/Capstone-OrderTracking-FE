@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Menu } from "lucide-react";
 import { getCourseBannerStyle } from "../../utils/courseBanner";
 
@@ -22,6 +23,7 @@ const ProfileCard = ({
   isProfileVisible,
   toggleProfileVisibility,
 }) => {
+  const navigate = useNavigate();
   const courseLevel = profileData?.courseYearLevel;
   const bannerStyle = getCourseBannerStyle(courseLevel);
 
@@ -163,7 +165,11 @@ const ProfileCard = ({
                     </div>
 
                     {/* Edit Profile Button */}
-                    <button className="w-full bg-[#003363] text-white py-3 rounded-lg font-semibold hover:bg-[#002347] transition-colors shadow-md">
+                    <button
+                      type="button"
+                      onClick={() => navigate("/student/settings")}
+                      className="w-full bg-[#003363] text-white py-3 rounded-lg font-semibold hover:bg-[#002347] transition-colors shadow-md"
+                    >
                       Edit Profile
                     </button>
                   </>

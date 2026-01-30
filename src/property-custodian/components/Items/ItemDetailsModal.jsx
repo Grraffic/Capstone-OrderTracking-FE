@@ -180,8 +180,7 @@ const ItemDetailsModal = ({
                       {showTooltip && (
                         <div className="absolute right-0 top-full mt-2 bg-[#0C2340] text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap z-10 shadow-lg">
                           <p className="font-medium mb-1">Size Guide:</p>
-                          <p>S: 32-34" | M: 36-38"</p>
-                          <p>L: 40-42" | XL: 44-46"</p>
+                          <p>S: 32-34" | L: 40-42" | XL: 44-46"</p>
                         </div>
                       )}
                     </div>
@@ -212,14 +211,6 @@ const ItemDetailsModal = ({
                     </span>
                     <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
                       {displayItem.size || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
-                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
-                      Grade Level Category:
-                    </span>
-                    <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
-                      {displayItem.category || "N/A"}
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">

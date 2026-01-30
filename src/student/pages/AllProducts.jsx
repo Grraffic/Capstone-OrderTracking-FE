@@ -11,7 +11,7 @@ import { useSearchDebounce, useProductPagination } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
 import { authAPI } from "../../services/api";
-import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../utils/maxQuantityKeys";
+import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../utils/maxQuantityKeys";
 import { categoryFromItemType } from "../constants/studentProducts";
 
 /**
@@ -310,14 +310,21 @@ const AllProducts = () => {
 
   // Enrich products with "already at order limit" and "slots full for new type"
   // Only placed orders count toward the limit—cart does not.
+  // Items for "All Education Levels" (or General) are allowed for everyone, including old students—use default max when key missing.
   const productsWithLimit = useMemo(() => {
     let list = paginatedItems.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
+      const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
+      const educationLevelRaw = (p.educationLevel || p.education_level || "").toString().trim().toLowerCase();
+      const isForAllEducationLevels =
+        educationLevelRaw === "all education levels" || educationLevelRaw === "general";
+      const treatAsAllowedForOldStudent = isForAllEducationLevels;
       const max =
-        isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
+        isOldStudent && keyMissing && !treatAsAllowedForOldStudent
           ? 0
-          : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
-      const notAllowedForStudentType = isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null);
+          : (maxQuantities[key] ?? getDefaultMaxForItem(p.name));
+      const notAllowedForStudentType =
+        isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key

@@ -21,7 +21,7 @@ const SizeSelector = ({
   disabledReason,
   isPreOrder = false,
 }) => {
-  // Size measurement guide
+  // Size measurement guide (extensible: add more sizes as needed; display uses whatever API returns)
   const sizeMeasurements = {
     XS: { chest: "32-34", length: "24-26" },
     S: { chest: "34-36", length: "26-28" },
@@ -29,6 +29,7 @@ const SizeSelector = ({
     L: { chest: "42-44", length: "30-32" },
     XL: { chest: "46-48", length: "32-34" },
     XXL: { chest: "50-52", length: "34-36" },
+    "3XL": { chest: "54-56", length: "36-38" },
   };
 
   // Map size abbreviations to full names (matching ItemDetailsModal format)

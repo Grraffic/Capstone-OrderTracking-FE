@@ -14,7 +14,7 @@ import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
 import { orderAPI, itemsAPI, authAPI } from "../../../services/api";
 import { useCart } from "../../../context/CartContext";
-import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../../utils/maxQuantityKeys";
+import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../../utils/maxQuantityKeys";
 import ProductCard from "../Products/ProductCard";
 
 /**
@@ -428,11 +428,17 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const suggestedProductsWithLimit = React.useMemo(() => {
     return rawSuggestedProducts.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
+      const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
+      const educationLevelRaw = (p.educationLevel || p.education_level || "").toString().trim().toLowerCase();
+      const isForAllEducationLevels =
+        educationLevelRaw === "all education levels" || educationLevelRaw === "general";
+      const treatAsAllowedForOldStudent = isForAllEducationLevels;
       const max =
-        isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
+        isOldStudent && keyMissing && !treatAsAllowedForOldStudent
           ? 0
-          : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
-      const notAllowedForStudentType = isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null);
+          : (maxQuantities[key] ?? getDefaultMaxForItem(p.name));
+      const notAllowedForStudentType =
+        isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
@@ -1136,7 +1142,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                 const educationLevel = getEducationLevel(item, order);
                 const imageUrl = item.image || order.image;
                 const maxQuantityKey = resolveItemKeyForMaxQuantity(itemName);
-                const maxForItem = maxQuantities[maxQuantityKey] ?? DEFAULT_MAX_WHEN_UNKNOWN;
+                const maxForItem = maxQuantities[maxQuantityKey] ?? getDefaultMaxForItem(itemName);
                 const alreadyOrderedForItem = alreadyOrdered[maxQuantityKey] ?? 0;
                 const canOrderAgain = Number(maxForItem) > 0 && alreadyOrderedForItem < Number(maxForItem);
                 return (
