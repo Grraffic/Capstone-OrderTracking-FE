@@ -6,6 +6,7 @@ import { useCheckout } from "../../context/CheckoutContext";
 import { useAuth } from "../../context/AuthContext";
 import { authAPI } from "../../services/api";
 import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem, getDefaultMaxByKey } from "../../utils/maxQuantityKeys";
+import { getDisplayPriceForFreeItem } from "../../utils/freeItemDisplayPrice";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import toast from "react-hot-toast";
@@ -373,7 +374,6 @@ const MyCart = () => {
                     const educationLevel = item.inventory?.education_level || item.inventory?.educationLevel || item.inventory?.item_type || item.inventory?.itemType || "";
                     const image = item.inventory?.image || item.image || null;
                     const price = item.inventory?.price ?? item.price ?? 0;
-                    const isLogoPatch = (n) => (n || "").toLowerCase().includes("logo patch") && !(n || "").toLowerCase().includes("new logo patch");
                     const maxForItem = getEffectiveMaxForItem(key);
                     const qty = item.quantity || 1;
                     const totalForItem = (items || []).filter(
@@ -444,14 +444,20 @@ const MyCart = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          {isLogoPatch(name) && Number(price) > 0 ? (
-                            <div className="flex flex-col items-end">
-                              <span className="text-sm text-gray-500 line-through">₱{Number(price).toFixed(2)}</span>
-                              <span className="text-gray-700 font-medium">Free</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-700 font-medium">Free</span>
-                          )}
+                          {(() => {
+                            const displayUnitPrice = getDisplayPriceForFreeItem(name, price);
+                            const lineTotal = displayUnitPrice * (Number(qty) || 1);
+                            return (
+                              <div className="flex flex-col items-end">
+                                {lineTotal > 0 && (
+                                  <span className="text-sm text-gray-500 line-through">
+                                    ₱{lineTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                  </span>
+                                )}
+                                <span className="text-gray-700 font-medium">Free</span>
+                              </div>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );
@@ -468,7 +474,6 @@ const MyCart = () => {
                 const educationLevel = item.inventory?.education_level || item.inventory?.educationLevel || item.inventory?.item_type || item.inventory?.itemType || "";
                 const image = item.inventory?.image || item.image || null;
                 const price = item.inventory?.price ?? item.price ?? 0;
-                const isLogoPatch = (n) => (n || "").toLowerCase().includes("logo patch") && !(n || "").toLowerCase().includes("new logo patch");
                 const maxForItem = getEffectiveMaxForItem(key);
                 const qty = item.quantity || 1;
                 const totalForItem = (items || []).filter(
@@ -506,14 +511,20 @@ const MyCart = () => {
                           <span className="text-sm text-gray-600 font-medium">
                             Size: {item.size || "N/A"}
                           </span>
-                          {isLogoPatch(name) && Number(price) > 0 ? (
-                            <div className="flex flex-col items-end">
-                              <span className="text-xs text-gray-500 line-through">₱{Number(price).toFixed(2)}</span>
-                              <span className="text-gray-700 font-medium">Free</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-700 font-medium">Free</span>
-                          )}
+                          {(() => {
+                            const displayUnitPrice = getDisplayPriceForFreeItem(name, price);
+                            const lineTotal = displayUnitPrice * (Number(qty) || 1);
+                            return (
+                              <div className="flex flex-col items-end">
+                                {lineTotal > 0 && (
+                                  <span className="text-xs text-gray-500 line-through">
+                                    ₱{lineTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                  </span>
+                                )}
+                                <span className="text-gray-700 font-medium">Free</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                         <div className="text-sm text-gray-600 mb-2">
                           <span className="font-medium">Qty:</span> {qty}

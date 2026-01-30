@@ -379,14 +379,19 @@ const CheckoutPage = () => {
 
       // Add regular order for available items
       if (availableItems.length > 0) {
-        const regularOrderItems = availableItems.map((item) => ({
-          name: item.inventory?.name || "Unknown Item",
-          size: item.size || "N/A",
-          quantity: item.quantity || 1,
-          item_type: item.inventory?.item_type || item.inventory?.itemType || "Uniform",
-          education_level: item.inventory?.education_level || item.inventory?.educationLevel || "General",
-          image: item.inventory?.image || null,
-        }));
+        const regularOrderItems = availableItems.map((item) => {
+          const invPrice = item.inventory?.price ?? item.price;
+          const productPrice = Number(invPrice) || 0;
+          return {
+            name: item.inventory?.name || "Unknown Item",
+            size: item.size || "N/A",
+            quantity: item.quantity || 1,
+            price: productPrice,
+            item_type: item.inventory?.item_type || item.inventory?.itemType || "Uniform",
+            education_level: item.inventory?.education_level || item.inventory?.educationLevel || "General",
+            image: item.inventory?.image || null,
+          };
+        });
 
         const regularOrderNumber = `ORD-${Date.now()}-${Math.random()
           .toString(36)
@@ -429,14 +434,19 @@ const CheckoutPage = () => {
 
       // Add pre-order for unavailable items
       if (unavailableItems.length > 0) {
-        const preOrderItems = unavailableItems.map((item) => ({
-          name: item.inventory?.name || "Unknown Item",
-          size: item.size || "N/A",
-          quantity: item.quantity || 1,
-          item_type: item.inventory?.item_type || item.inventory?.itemType || "Uniform",
-          education_level: item.inventory?.education_level || item.inventory?.educationLevel || "General",
-          image: item.inventory?.image || null,
-        }));
+        const preOrderItems = unavailableItems.map((item) => {
+          const invPrice = item.inventory?.price ?? item.price;
+          const productPrice = Number(invPrice) || 0;
+          return {
+            name: item.inventory?.name || "Unknown Item",
+            size: item.size || "N/A",
+            quantity: item.quantity || 1,
+            price: productPrice,
+            item_type: item.inventory?.item_type || item.inventory?.itemType || "Uniform",
+            education_level: item.inventory?.education_level || item.inventory?.educationLevel || "General",
+            image: item.inventory?.image || null,
+          };
+        });
 
         // Generate unique order number for pre-order (add small delay to ensure uniqueness)
         const preOrderNumber = `ORD-${Date.now() + 1}-${Math.random()

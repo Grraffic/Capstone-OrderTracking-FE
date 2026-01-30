@@ -15,6 +15,7 @@ import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates"
 import { orderAPI, itemsAPI, authAPI } from "../../../services/api";
 import { useCart } from "../../../context/CartContext";
 import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../../utils/maxQuantityKeys";
+import { getDisplayPriceForFreeItem } from "../../../utils/freeItemDisplayPrice";
 import ProductCard from "../Products/ProductCard";
 
 /**
@@ -1168,18 +1169,18 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                         </div>
                       )}
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 min-w-0">
                       <h4 className="text-base font-bold text-[#003363] mb-1 line-clamp-2">
                         {itemName}
                       </h4>
                       <p className="text-sm text-[#F28C28] font-semibold mb-4">
                         ({educationLevel})
                       </p>
-                      <div className="flex items-center justify-between gap-2 sm:gap-3">
+                      <div className="flex items-center gap-2 w-full min-w-0">
                         <button
                           type="button"
                           onClick={() => handleShowQR(order)}
-                          className="shrink-0 px-2.5 py-1.5 sm:px-4 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap hover:bg-[#003363] hover:text-white transition-colors"
+                          className="flex-1 min-w-0 py-1.5 px-2 border-2 border-[#003363] text-[#003363] rounded-lg font-semibold text-xs text-center hover:bg-[#003363] hover:text-white transition-colors"
                         >
                           View Details
                         </button>
@@ -1188,7 +1189,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                           onClick={() => canOrderAgain && navigate("/all-products")}
                           disabled={!canOrderAgain}
                           title={canOrderAgain ? "Order this item again" : "You have reached your max item per order"}
-                          className={`shrink-0 px-2.5 py-1.5 sm:px-4 sm:py-2 border-2 rounded-xl font-semibold text-xs sm:text-sm whitespace-nowrap transition-colors ${
+                          className={`flex-1 min-w-0 py-1.5 px-2 border-2 rounded-lg font-semibold text-xs text-center transition-colors ${
                             canOrderAgain
                               ? "border-[#F28C28] text-[#F28C28] hover:bg-[#F28C28] hover:text-white cursor-pointer"
                               : "border-gray-300 text-gray-400 cursor-not-allowed opacity-70"
@@ -1307,11 +1308,24 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                                 )}
                             </div>
 
-                            {/* Price */}
+                            {/* Price: same as MyCart – strikethrough product price above Free (logo patch etc. use display price when 0) */}
                             <div className="flex-shrink-0 text-right">
-                              <div className="text-xl font-bold text-[#003363]">
-                                FREE
-                              </div>
+                              {(() => {
+                                const itemName = item.name || order.item || "";
+                                const displayUnitPrice = getDisplayPriceForFreeItem(itemName, item.price);
+                                const qty = Number(item.quantity) || 1;
+                                const itemTotal = displayUnitPrice * qty;
+                                return (
+                                  <div className="flex flex-col items-end text-xl font-bold text-[#003363]">
+                                    {itemTotal > 0 && (
+                                      <span className="line-through text-gray-500 font-semibold text-base">
+                                        ₱{itemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                      </span>
+                                    )}
+                                    <span className={itemTotal > 0 ? "mt-0.5" : ""}>FREE</span>
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
 
@@ -1355,10 +1369,26 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                             {getEducationLevel({}, order)}
                           </p>
                         </div>
+                        {/* Price: same as MyCart – strikethrough order total above Free (logo patch etc. use display price when 0) */}
                         <div className="flex-shrink-0 text-right">
-                          <div className="text-xl font-bold text-[#003363]">
-                            FREE
-                          </div>
+                          {(() => {
+                            const orderItemName = order.item || "";
+                            const storedTotal = Number(order.total_amount) || 0;
+                            const qty = Number(order.quantity) || 1;
+                            const storedUnit = qty > 0 ? storedTotal / qty : 0;
+                            const displayUnitPrice = getDisplayPriceForFreeItem(orderItemName, storedUnit);
+                            const displayTotal = displayUnitPrice * qty;
+                            return (
+                              <div className="flex flex-col items-end text-xl font-bold text-[#003363]">
+                                {displayTotal > 0 && (
+                                  <span className="line-through text-gray-500 font-semibold text-base">
+                                    ₱{displayTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                  </span>
+                                )}
+                                <span className={displayTotal > 0 ? "mt-0.5" : ""}>FREE</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     )}
