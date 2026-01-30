@@ -1,7 +1,19 @@
 import axios from "axios";
 
 // Export API base URL for use in services that don't use axios
-export const API_BASE_URL = import.meta.env.VITE_API_URL;
+// Dev: fallback to local backend if VITE_API_URL not set. Prod: warn if missing (set in deployment e.g. Vercel).
+let API_BASE_URL = import.meta.env.VITE_API_URL;
+if (!API_BASE_URL) {
+  if (import.meta.env.DEV) {
+    API_BASE_URL = "http://localhost:5000/api";
+  } else {
+    console.warn(
+      "VITE_API_URL is not set; API requests may fail. Set it in your deployment environment (e.g. Vercel)."
+    );
+    API_BASE_URL = "";
+  }
+}
+export { API_BASE_URL };
 
 // Create axios instance with base configuration
 const api = axios.create({
