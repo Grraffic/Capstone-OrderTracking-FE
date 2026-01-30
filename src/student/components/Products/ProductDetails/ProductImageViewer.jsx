@@ -7,7 +7,7 @@ import React from "react";
  * Handles image loading errors with fallback
  * Shows selected size on the image
  */
-const ProductImageViewer = ({ product, selectedSize }) => {
+const ProductImageViewer = ({ product, selectedSize, isDisabled = false }) => {
   const handleImageError = (e) => {
     e.target.src =
       'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"%3E%3Crect fill="%23f3f4f6" width="400" height="400"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="24" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
@@ -54,12 +54,18 @@ const ProductImageViewer = ({ product, selectedSize }) => {
 
   return (
     <div className="relative rounded-2xl overflow-hidden h-full">
-      {/* Product Image Container */}
-      <div className="relative flex items-center justify-center p-1 sm:p-2 min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px] h-full">
+      {/* Product Image Container - same disabled styling as ProductCard; no transition when disabled to avoid blink */}
+      <div
+        className={`relative flex items-center justify-center p-1 sm:p-2 min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px] h-full ${
+          isDisabled ? "bg-gray-200" : "transition-all duration-300"
+        }`}
+      >
         <img
           src={product.image}
           alt={product.name}
-          className="relative z-10 w-full h-full max-h-[300px] sm:max-h-[400px] md:max-h-[500px] lg:max-h-[600px] xl:max-h-[750px] max-w-[300px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px] xl:max-w-[750px] object-contain transition-transform duration-300 drop-shadow-2xl scale-100 sm:scale-110 md:scale-115 lg:scale-125"
+          className={`relative z-10 w-full h-full max-h-[300px] sm:max-h-[400px] md:max-h-[500px] lg:max-h-[600px] xl:max-h-[750px] max-w-[300px] sm:max-w-[400px] md:max-w-[500px] lg:max-w-[600px] xl:max-w-[750px] object-contain drop-shadow-2xl scale-100 sm:scale-110 md:scale-115 lg:scale-125 ${
+            isDisabled ? "grayscale opacity-70" : "transition-all duration-300"
+          }`}
           loading="lazy"
           decoding="async"
           onError={handleImageError}

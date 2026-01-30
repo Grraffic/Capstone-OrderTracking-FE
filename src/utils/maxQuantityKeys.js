@@ -37,6 +37,10 @@ const ITEM_ALIASES_FOR_MAX_QUANTITY = {
   "prekindergarten jogging pants": "jogging pants",
   "logo patch (kindergarten)": "logo patch",
   "logo patch - kindergarten": "logo patch",
+  "logo patch (preschool)": "logo patch",
+  "logo patch - preschool": "logo patch",
+  "logo patch (prekindergarten)": "logo patch",
+  "logo patch - prekindergarten": "logo patch",
   "logo patch (elementary)": "logo patch",
   "logo patch - elementary": "logo patch",
   "logo patch (junior high school)": "logo patch",
@@ -113,5 +117,7 @@ export function resolveItemKeyForMaxQuantity(name) {
   if (n && n.includes("jogging pants")) return "jogging pants";
   // "New Logo Patch" variants (old-student allowed item) map to "new logo patch"
   if (n && n.includes("new logo patch")) return "new logo patch";
+  // Any other "Logo Patch" (e.g. "Logo Patch (Prekindergarten)") maps to "logo patch" to match backend
+  if (n && n.includes("logo patch")) return "logo patch";
   return ITEM_ALIASES_FOR_MAX_QUANTITY[n] ?? n;
 }

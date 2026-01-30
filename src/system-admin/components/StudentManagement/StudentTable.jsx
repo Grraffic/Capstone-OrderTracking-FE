@@ -192,23 +192,15 @@ const StudentTable = ({
                         </span>
                       );
                     }
+                    // Show remaining capacity as "X max" — e.g. 5 max, 1 used → 4 max (what they can still order)
                     const used = Number(student.slots_used_from_placed_orders) || 0;
                     const left = Math.max(0, max - used);
-                    return used > 0
-                      ? (
-                          <span className="inline-flex flex-col gap-0.5">
-                            <span>{max} max{!isOverride && <span className="text-gray-500 font-normal"> (default)</span>}</span>
-                            <span className="text-xs text-gray-600">
-                              {left} left ({used} used)
-                            </span>
-                          </span>
-                        )
-                      : (
-                          <span>
-                            {max}
-                            {!isOverride && <span className="text-gray-500 font-normal"> (default)</span>}
-                          </span>
-                        );
+                    return (
+                      <span>
+                        <span className="font-medium text-gray-900">{left} max</span>
+                        {!isOverride && <span className="text-gray-500 font-normal"> (default)</span>}
+                      </span>
+                    );
                   })()}
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">

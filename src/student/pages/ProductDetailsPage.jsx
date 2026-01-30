@@ -4,7 +4,6 @@ import { ArrowLeft, Search, ShoppingCart, Minus, Plus } from "lucide-react";
 import toast from "react-hot-toast";
 
 import Navbar from "../components/common/Navbar";
-import Footer from "../../components/common/Footer";
 import ProductImageViewer from "../components/Products/ProductDetails/ProductImageViewer";
 import ProductInfo from "../components/Products/ProductDetails/ProductInfo";
 import SizeSelector from "../components/Products/ProductDetails/SizeSelector";
@@ -467,6 +466,60 @@ const ProductDetailsPage = () => {
     }
   }, [product?.id, effectiveMax]);
 
+  // Other products: eligibility-filtered; filter by gender; enrich with same disabled flags as All Products.
+  // Must be above the early return so hooks run in the same order every render.
+  const relatedProducts = useMemo(() => {
+    const filtered = (allProducts || [])
+      .filter((p) => p.id !== product?.id)
+      .filter((p) => {
+        if (!user?.gender) return true;
+        const fg = (p.for_gender || p.forGender || "Unisex").toString().trim();
+        return fg === "Unisex" || fg === user.gender;
+      })
+      .slice(0, 3);
+    return filtered.map((p) => {
+      const key = resolveItemKeyForMaxQuantity(p.name);
+      const max =
+        isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
+          ? 0
+          : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
+      const notAllowedForStudentType = isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null);
+      const alreadyOrd = alreadyOrdered[key] ?? 0;
+      const inCart = (cartItems || []).filter(
+        (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
+      ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+      const effectiveMaxItem = Math.max(0, max - inCart - alreadyOrd);
+      const isNewItemType = key && !cartSlotKeys.has(key);
+      const slotsFullForNewTypeItem =
+        maxItemsPerOrder != null &&
+        Number(maxItemsPerOrder) > 0 &&
+        isNewItemType &&
+        cartSlotCount >= slotsLeftForThisOrder;
+      const _orderLimitReached = effectiveMaxItem < 1;
+      const _isDisabled = _orderLimitReached || blockedDueToVoid || slotsFullForNewTypeItem || notAllowedForStudentType;
+      return {
+        ...p,
+        _orderLimitReached,
+        _slotsFullForNewType: slotsFullForNewTypeItem,
+        _notAllowedForStudentType: notAllowedForStudentType,
+        _isDisabled,
+      };
+    });
+  }, [
+    allProducts,
+    product?.id,
+    user?.gender,
+    maxQuantities,
+    alreadyOrdered,
+    cartItems,
+    cartSlotKeys,
+    cartSlotCount,
+    maxItemsPerOrder,
+    slotsLeftForThisOrder,
+    isOldStudent,
+    blockedDueToVoid,
+  ]);
+
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -497,15 +550,15 @@ const ProductDetailsPage = () => {
   
   const isOrderDisabled =
     requiresSizeSelection && (!selectedSize || !sizeConfirmed) || genderMismatch;
-  // Other products: eligibility-filtered; also filter by gender so we only show what the user can order.
-  const relatedProducts = (allProducts || [])
-    .filter((p) => p.id !== product?.id)
-    .filter((p) => {
-      if (!user?.gender) return true;
-      const fg = (p.for_gender || p.forGender || "Unisex").toString().trim();
-      return fg === "Unisex" || fg === user.gender;
-    })
-    .slice(0, 3);
+  // Same disabled treatment as All Products card: grayscale image + gray text when item cannot be ordered
+  const isDisabled =
+    (!user || limitsLoaded) &&
+    (effectiveMax < 1 ||
+      blockedDueToVoid ||
+      slotsFullForNewType ||
+      limitNotSet ||
+      notAllowedForStudentType ||
+      genderMismatch);
 
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
@@ -655,35 +708,48 @@ const ProductDetailsPage = () => {
         <div className="rounded-r-3xl shadow-2xl mb-8">
           <div className="bg-white rounded-r-3xl overflow-hidden">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-0 h-auto md:h-[500px] lg:h-[700px]">
-              {/* Left Column: Product Image with Gradient Background */}
+              {/* Left Column: Product Image; gray when disabled (same as ProductCard), gradient otherwise; no transition on bg to avoid blink */}
               <div
-                className="relative p-4 sm:p-6 md:p-8 h-[400px] sm:h-[450px] md:h-full flex items-center md:col-span-1 lg:col-span-2 overflow-hidden"
-                style={{
-                  background: `linear-gradient(
+                className={`relative p-4 sm:p-6 md:p-8 h-[400px] sm:h-[450px] md:h-full flex items-center md:col-span-1 lg:col-span-2 overflow-hidden ${
+                  isDisabled ? "bg-gray-100" : ""
+                }`}
+                style={
+                  isDisabled
+                    ? undefined
+                    : {
+                        background: `linear-gradient(
       to bottom,
       rgba(243, 243, 243, 1) 0%,
       rgba(249, 240, 227, 0.97) 11%,
       rgba(203, 123, 0, 0.7) 60%,
       rgba(1, 109, 211, 0.7) 100%
     )`,
-                }}
+                      }
+                }
               >
-                {/* Logo and Education Level Badge - Top Left Overlay */}
+                {/* Logo and Education Level Badge - Top Left Overlay (gray when disabled) */}
                 <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-10 flex items-center gap-2 sm:gap-3">
                   <img
                     src="../../../assets/image/LV Logo.png"
                     alt="La Verdad Logo"
-                    className="h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg"
+                    className={`h-12 w-12 sm:h-14 sm:w-14 rounded-full shadow-lg ${
+                      isDisabled ? "opacity-70" : ""
+                    }`}
                   />
-                  <h2 className="text-lg sm:text-xl font-bold text-[#003363]  ">
+                  <h2
+                    className={`text-lg sm:text-xl font-bold ${
+                      isDisabled ? "text-gray-500" : "text-[#003363]"
+                    }`}
+                  >
                     {product?.educationLevel?.toLowerCase().includes("college")
                       ? "Higher Education"
                       : "Basic Education"}
                   </h2>
                 </div>
 
-                {/* Background Education Level Text - At corners with no spacing */}
-                {product?.educationLevel &&
+                {/* Background Education Level Text - At corners; hide when disabled (gray panel) */}
+                {!isDisabled &&
+                  product?.educationLevel &&
                   (() => {
                     const level = product.educationLevel.toLowerCase();
                     let textLines = [];
@@ -748,6 +814,7 @@ const ProductDetailsPage = () => {
                   <ProductImageViewer
                     product={product}
                     selectedSize={selectedSize}
+                    isDisabled={isDisabled}
                   />
                 </div>
               </div>
@@ -779,7 +846,7 @@ const ProductDetailsPage = () => {
                   </div>
 
                   {/* Product Info (includes Education Level Badge, Back Button, FREE Label, Title, Description) */}
-                  <ProductInfo product={product} onClose={handleBackClick} />
+                  <ProductInfo product={product} onClose={handleBackClick} isDisabled={isDisabled} />
                   
                   {/* Gender Mismatch Message */}
                   {genderMismatch && (
@@ -803,6 +870,7 @@ const ProductDetailsPage = () => {
                         loadingSizes={loadingSizes}
                         disabled={effectiveMax < 1}
                         disabledReason={null}
+                        isPreOrder={!(selectedSizeData && selectedSizeData.stock > 0)}
                       />
                     )}
                   </div>
@@ -820,23 +888,14 @@ const ProductDetailsPage = () => {
                   )}
                   */}
                   {/* Max item types per order: system admin limit is distinct item types (slots). */}
-                  {slotsFullForNewType && (
-                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                      <p className="font-medium">Item type limit for this order reached.</p>
-                      <p className="mt-1 text-amber-700">
-                        You have {slotsLeftForThisOrder} item type{slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max {maxItemsPerOrder} total; {slotsUsedFromPlacedOrders} already used in placed orders). Your cart has {cartSlotCount}. Only placed orders count—cart does not. Adding this item would exceed the limit. You can add more quantity of any item type already in your cart (up to its per-item max).
-                      </p>
-                      <p className="mt-1 text-amber-700">After you place your order, you must wait the lockout period set by the system admin before placing another order.</p>
-                    </div>
-                  )}
                   {/* Blocked due to auto-void: student cannot place new orders after an unclaimed order was voided. */}
                   {blockedDueToVoid && (
                     <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
                       <p className="font-medium">You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.</p>
                     </div>
                   )}
-                  {/* Order limit not set: student cannot add to cart or place order until admin sets Max Items Per Order. */}
-                  {limitNotSet && (
+                  {/* Order limit not set: student cannot add to cart or place order until admin sets Max Items Per Order. Hide when cause is voided (red banner shows instead). */}
+                  {limitNotSet && !blockedDueToVoid && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                       <p className="font-medium">Your order limit has not been set. Ask your administrator to set Max Items Per Order before you can add or place orders.</p>
                     </div>
@@ -933,8 +992,6 @@ const ProductDetailsPage = () => {
         )}
       </div>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

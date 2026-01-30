@@ -2,7 +2,6 @@ import React, { useRef, useState, useMemo, useEffect } from "react";
 import { Camera, ArrowLeft, AlertCircle, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
-import Footer from "../../components/common/Footer";
 import { useStudentSettings } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { getCourseBannerStyle } from "../utils/courseBanner";
@@ -18,7 +17,52 @@ import { splitDisplayName } from "../../utils/displayName";
  *
  * All business logic is extracted to useStudentSettings hook.
  */
-// Inline onboarding card – appears right below the field to fill, so the user gets a clear clue
+// Circular step button with hover tooltip (same style as My Orders CategoryButton)
+const OnboardingStepButton = ({
+  step,
+  title,
+  description,
+  isActive,
+  hoverBg,
+  hoverBorder,
+  tooltipBg,
+  tooltipArrow,
+  onClick,
+}) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      className="flex flex-col items-center gap-3 group relative"
+      aria-label={`Step ${step}: ${title}`}
+    >
+      <div
+        className={`relative w-20 h-20 rounded-full flex items-center justify-center bg-white border-2 transition-all duration-300 group-hover:shadow-lg ${
+          isActive ? "border-[#E68B00] bg-orange-50/50" : "border-gray-300"
+        } ${hoverBorder} ${hoverBg}`}
+      >
+        <span className="text-xl font-bold text-[#003363]">{step}</span>
+      </div>
+      <span className="text-sm font-semibold text-[#003363]">{title}</span>
+      {showTooltip && (
+        <div
+          className={`absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 ${tooltipBg} text-[#003363] text-sm p-4 rounded-lg shadow-lg z-50 pointer-events-none`}
+        >
+          <div
+            className={`absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent ${tooltipArrow}`}
+          />
+          <p className="font-bold mb-2">{title}</p>
+          <p className="text-xs leading-relaxed">{description}</p>
+        </div>
+      )}
+    </button>
+  );
+};
+
+// Inline onboarding card – appears right below the field to fill; Skip or Continue when form not filled
 const OnboardingStepCard = ({
   step,
   totalSteps,
@@ -136,6 +180,29 @@ const StudentSettings = () => {
     if (!current) return;
     scrollToId(current.anchorId);
   }, [onboardingStep, shouldShowGuide, ONBOARDING_STEPS]);
+
+  // Auto-advance to next step when current step's field is filled
+  useEffect(() => {
+    if (!shouldShowGuide) return;
+    const current = ONBOARDING_STEPS.find((s) => s.id === onboardingStep);
+    if (!current) return;
+    const value = formData[current.field];
+    const filled = value != null && String(value).trim() !== "";
+    if (filled && current.id < ONBOARDING_STEPS.length) {
+      setOnboardingStep(current.id + 1);
+    }
+  }, [shouldShowGuide, onboardingStep, formData.gender, formData.studentNumber, formData.courseYearLevel, formData.studentType, ONBOARDING_STEPS]);
+
+  // Step button colors (like My Orders CategoryButton)
+  const ONBOARDING_STEP_COLORS = useMemo(
+    () => [
+      { hoverBg: "hover:bg-[#9FCDFF]", hoverBorder: "hover:border-[#9FCDFF]", tooltipBg: "bg-[#9FCDFF]", tooltipArrow: "border-b-[#9FCDFF]" },
+      { hoverBg: "hover:bg-[#FFCF85]", hoverBorder: "hover:border-[#FFCF85]", tooltipBg: "bg-[#F3BC62]", tooltipArrow: "border-b-[#F3BC62]" },
+      { hoverBg: "hover:bg-[#9AE799]", hoverBorder: "hover:border-[#9AE799]", tooltipBg: "bg-[#9AE799]", tooltipArrow: "border-b-[#9AE799]" },
+      { hoverBg: "hover:bg-[#9FCDFF]", hoverBorder: "hover:border-[#9FCDFF]", tooltipBg: "bg-[#9FCDFF]", tooltipArrow: "border-b-[#9FCDFF]" },
+    ],
+    []
+  );
 
   // Course & Year Level options - Combined dropdown
   const courseYearLevelOptions = [
@@ -414,6 +481,39 @@ const StudentSettings = () => {
                   <h2 className="text-lg font-semibold text-[#E68B00] mb-6">
                     Personal Information
                   </h2>
+
+                  {/* Onboarding step buttons (CategoryButton style) – when first-time student */}
+                  {shouldShowGuide && (
+                    <div className="py-4">
+                      <div className="space-y-12">
+                        <p className="text-sm font-medium text-gray-700">
+                          Complete your profile to see the right uniforms and order limits.
+                        </p>
+                        <div className="flex items-center justify-center gap-16 py-8">
+                          {ONBOARDING_STEPS.map((s, idx) => {
+                            const colors = ONBOARDING_STEP_COLORS[idx] || ONBOARDING_STEP_COLORS[0];
+                            return (
+                              <OnboardingStepButton
+                                key={s.id}
+                                step={s.id}
+                                title={s.title}
+                                description={s.description}
+                                isActive={onboardingStep === s.id}
+                                hoverBg={colors.hoverBg}
+                                hoverBorder={colors.hoverBorder}
+                                tooltipBg={colors.tooltipBg}
+                                tooltipArrow={colors.tooltipArrow}
+                                onClick={() => {
+                                  setOnboardingStep(s.id);
+                                  scrollToId(s.anchorId);
+                                }}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-6">
                     {/* Row 1: First Name, Last Name – read-only from Google account */}
@@ -730,7 +830,6 @@ const StudentSettings = () => {
         </div>
       )}
 
-      <Footer />
     </div>
   );
 };

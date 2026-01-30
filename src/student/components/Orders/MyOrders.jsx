@@ -13,7 +13,9 @@ import QRCode from "react-qr-code";
 import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
 import { orderAPI, itemsAPI, authAPI } from "../../../services/api";
+import { useCart } from "../../../context/CartContext";
 import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../../utils/maxQuantityKeys";
+import ProductCard from "../Products/ProductCard";
 
 /**
  * Helper function to download SVG as PNG
@@ -295,26 +297,41 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const [checkingAvailability, setCheckingAvailability] = useState({}); // { orderId: boolean }
   const [convertingOrders, setConvertingOrders] = useState({}); // { orderId: boolean }
   const [cancellingOrders, setCancellingOrders] = useState({}); // { orderId: boolean }
+  const [orderToCancel, setOrderToCancel] = useState(null); // order for cancel confirmation
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [maxItemsPerOrder, setMaxItemsPerOrder] = useState(null);
+  const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
+  const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
-  // Fetch max quantities and already-ordered counts for Order History "Order Again" (disable when max reached)
+  const { items: cartItems } = useCart();
+
+  // Fetch max quantities and already-ordered for Order History "Order Again" and Suggested For You (disable when limit reached)
   useEffect(() => {
-    if (!isHistoryView || !user) return;
+    if (!user) return;
     const fetchMaxQuantities = async () => {
       try {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setMaxItemsPerOrder(res.data?.maxItemsPerOrder ?? null);
+        setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
+        setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
       } catch (err) {
         if (err?.response?.data?.maxQuantities != null)
           setMaxQuantities(err.response.data.maxQuantities);
         if (err?.response?.data?.alreadyOrdered != null)
           setAlreadyOrdered(err.response.data.alreadyOrdered);
+        if (err?.response?.data?.maxItemsPerOrder != null)
+          setMaxItemsPerOrder(err.response.data.maxItemsPerOrder);
+        if (err?.response?.data?.slotsUsedFromPlacedOrders != null)
+          setSlotsUsedFromPlacedOrders(err.response.data.slotsUsedFromPlacedOrders);
+        if (err?.response?.data?.blockedDueToVoid != null)
+          setBlockedDueToVoid(err.response.data.blockedDueToVoid === true);
       }
     };
     fetchMaxQuantities();
-  }, [isHistoryView, user]);
+  }, [user]);
 
   // Update state when location state changes (e.g., navigation from checkout). Skip when history variant.
   useEffect(() => {
@@ -365,7 +382,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   // Connect to Socket.IO for real-time updates
   useSocketOrderUpdates(handleOrderUpdate);
 
-  // Get unique products from orders for "Suggested For You"
+  // Get unique products from orders for "Suggested For You" (include id for navigation when available)
   const getSuggestedProducts = () => {
     const uniqueProducts = new Map();
 
@@ -374,10 +391,12 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         order.items.forEach((item) => {
           if (item.image && !uniqueProducts.has(item.name)) {
             uniqueProducts.set(item.name, {
+              id: item.id || item.item_id || item.inventory_id || `n-${item.name}`,
               name: item.name,
               image: item.image,
               educationLevel: item.education_level || order.type,
               itemType: item.item_type || "Uniform",
+              status: item.status || "in_stock",
             });
           }
         });
@@ -387,7 +406,52 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
     return Array.from(uniqueProducts.values()).slice(0, 5); // Show max 5 products
   };
 
-  const suggestedProducts = getSuggestedProducts();
+  const rawSuggestedProducts = getSuggestedProducts();
+
+  // Cart slot count and slots left (same logic as AllProducts) for enriching suggested products
+  const cartSlotKeys = React.useMemo(() => {
+    const set = new Set();
+    (cartItems || []).forEach((i) => {
+      const k = resolveItemKeyForMaxQuantity(i.inventory?.name || i.name || "");
+      if (k) set.add(k);
+    });
+    return set;
+  }, [cartItems]);
+  const cartSlotCount = cartSlotKeys.size;
+  const slotsLeftForThisOrder =
+    maxItemsPerOrder != null && Number(maxItemsPerOrder) > 0
+      ? Math.max(0, Number(maxItemsPerOrder) - (Number(slotsUsedFromPlacedOrders) || 0))
+      : 0;
+  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+
+  // Enrich suggested products with limit flags so they show disabled when same as All Products
+  const suggestedProductsWithLimit = React.useMemo(() => {
+    return rawSuggestedProducts.map((p) => {
+      const key = resolveItemKeyForMaxQuantity(p.name);
+      const max =
+        isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null)
+          ? 0
+          : (maxQuantities[key] ?? DEFAULT_MAX_WHEN_UNKNOWN);
+      const notAllowedForStudentType = isOldStudent && (maxQuantities[key] === undefined || maxQuantities[key] === null);
+      const alreadyOrd = alreadyOrdered[key] ?? 0;
+      const inCart = (cartItems || []).filter(
+        (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
+      ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+      const effectiveMax = Math.max(0, max - inCart - alreadyOrd);
+      const isNewItemType = key && !cartSlotKeys.has(key);
+      const slotsFullForNewType =
+        maxItemsPerOrder != null &&
+        Number(maxItemsPerOrder) > 0 &&
+        isNewItemType &&
+        cartSlotCount >= slotsLeftForThisOrder;
+      return {
+        ...p,
+        _orderLimitReached: effectiveMax < 1,
+        _slotsFullForNewType: slotsFullForNewType,
+        _notAllowedForStudentType: notAllowedForStudentType,
+      };
+    });
+  }, [rawSuggestedProducts, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, maxItemsPerOrder, slotsLeftForThisOrder, isOldStudent]);
 
   // Filter orders based on active category, then sort by date (oldest/newest/all)
   const filteredOrders = React.useMemo(() => {
@@ -965,8 +1029,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
           />
         </div>
 
-        {/* Suggested For You Section */}
-        {suggestedProducts.length > 0 && (
+        {/* Suggested For You Section - same disabled state as All Products */}
+        {suggestedProductsWithLimit.length > 0 && (
           <div className="bg-gray-50 rounded-2xl p-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-2xl font-bold">
@@ -982,50 +1046,14 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
               </button>
             </div>
 
-            {/* Product Grid - items from your orders, so all show "Already ordered" (view details only) */}
+            {/* Product Grid - use ProductCard so disabled state matches All Products */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-              {suggestedProducts.map((product, index) => (
-                <div
-                  key={index}
-                  onClick={() => navigate("/all-products")}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow overflow-hidden group cursor-pointer"
-                >
-                  {/* Product Image */}
-                  <div className="relative aspect-square bg-gray-100 overflow-hidden">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                      decoding="async"
-                      onError={(e) => {
-                        e.target.src =
-                          'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect fill="%23f3f4f6" width="100" height="100"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="12" fill="%239ca3af"%3ENo Image%3C/text%3E%3C/svg%3E';
-                      }}
-                    />
-                    {/* Already ordered overlay - these products are from your orders */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
-                      <span className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-full shadow-lg">
-                        Already ordered
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="p-4">
-                    <h4 className="font-bold text-sm text-[#003363] line-clamp-2 mb-1">
-                      {product.name}
-                    </h4>
-                    <p className="text-xs text-[#F28C28] font-semibold">
-                      ({product.educationLevel})
-                    </p>
-                    {product.itemType && (
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {product.itemType}
-                      </p>
-                    )}
-                  </div>
-                </div>
+              {suggestedProductsWithLimit.map((product, index) => (
+                <ProductCard
+                  key={product.id || index}
+                  product={product}
+                  blockedDueToVoid={blockedDueToVoid}
+                />
               ))}
             </div>
           </div>
@@ -1367,7 +1395,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                       <div className="flex items-center gap-3">
                         {activeCategory === "orders" && (
                           <button
-                            onClick={() => handleCancelOrder(order)}
+                            onClick={() => setOrderToCancel(order)}
                             disabled={cancellingOrders[order.id || order._original?.id]}
                             className="px-6 py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Cancel this order so you can place a new one"
@@ -1443,6 +1471,48 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
               setSelectedOrder(null);
             }}
           />,
+          document.body
+        )}
+
+      {/* Cancel order confirmation modal */}
+      {orderToCancel &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50"
+            aria-modal="true"
+            role="dialog"
+            aria-labelledby="cancel-order-title"
+            onClick={() => setOrderToCancel(null)}
+          >
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <h2 id="cancel-order-title" className="text-lg font-semibold text-gray-900 mb-2">
+                Cancel order
+              </h2>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to cancel this order? You can place a new order after cancelling.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setOrderToCancel(null)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50"
+                >
+                  Keep order
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const order = orderToCancel;
+                    setOrderToCancel(null);
+                    await handleCancelOrder(order);
+                  }}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600"
+                >
+                  Yes, cancel order
+                </button>
+              </div>
+            </div>
+          </div>,
           document.body
         )}
     </>

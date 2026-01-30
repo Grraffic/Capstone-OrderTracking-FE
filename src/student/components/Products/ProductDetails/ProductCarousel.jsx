@@ -32,7 +32,9 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
         {displayProducts.map((product) => {
           const isCurrentProduct = product.id === currentProductId;
           const isOutOfStock = product.status === "out_of_stock";
-          
+          // Same disabled state as All Products: when item is disabled there, it is disabled here too
+          const isDisabled = product._isDisabled === true;
+
           // Check if item is gender-specific and if user's gender matches
           const itemGender = product.forGender || product.for_gender || "Unisex";
           const isGenderSpecific = itemGender !== "Unisex";
@@ -42,21 +44,23 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
           return (
             <div
               key={product.id}
-              onClick={() => !isCurrentProduct && !genderMismatch && onProductClick(product)}
-              className={`bg-white rounded-2xl shadow-lg overflow-hidden transition-all duration-300 flex flex-col h-full relative ${
-                isCurrentProduct
-                  ? "ring-4 ring-[#F28C28] opacity-75 cursor-default"
+              onClick={() => !isCurrentProduct && !genderMismatch && !isDisabled && onProductClick(product)}
+              className={`rounded-2xl shadow-lg overflow-hidden transition-all duration-300 flex flex-col h-full relative ${
+                isDisabled
+                  ? "bg-gray-100 cursor-default"
+                  : isCurrentProduct
+                  ? "bg-white ring-4 ring-[#F28C28] opacity-75 cursor-default"
                   : genderMismatch
-                  ? "cursor-not-allowed opacity-60"
-                  : "hover:shadow-2xl hover:scale-105 cursor-pointer"
+                  ? "bg-white cursor-not-allowed opacity-60"
+                  : "bg-white hover:shadow-2xl hover:scale-105 cursor-pointer"
               }`}
             >
-              {/* Product Image */}
-              <div className="relative aspect-square bg-gradient-to-br from-gray-50 to-gray-100">
+              {/* Product Image - grayscale when disabled (same as ProductCard in All Products) */}
+              <div className={`relative aspect-square transition-all duration-300 ${isDisabled ? "bg-gray-200" : "bg-gradient-to-br from-gray-50 to-gray-100"}`}>
                 <img
                   src={product.image}
                   alt={product.name}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-all duration-300 ${isDisabled ? "grayscale opacity-70" : ""}`}
                   loading="lazy"
                   decoding="async"
                   onError={(e) => {
@@ -74,8 +78,17 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
                   </div>
                 )}
 
+                {/* For New Students only overlay (same as ProductCard) */}
+                {product._notAllowedForStudentType && !isOutOfStock && !isCurrentProduct && !isDisabled && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
+                    <span className="px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">
+                      For New Students only
+                    </span>
+                  </div>
+                )}
+
                 {/* Pre-Order Badge - Top Left */}
-                {product.status === "pre_order" && !isCurrentProduct && (
+                {product.status === "pre_order" && !isCurrentProduct && !isDisabled && (
                   <div className="absolute top-3 left-3">
                     <span className="inline-block px-4 py-1.5 rounded-full text-xs font-bold bg-[#F28C28] text-white shadow-md">
                       Pre-Order
@@ -84,29 +97,29 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
                 )}
               </div>
 
-              {/* Product Info */}
+              {/* Product Info - gray text when disabled (same as ProductCard) */}
               <div className="p-4 flex flex-col flex-grow">
                 {/* Product Name - no min-height so gap to (College) matches All Products */}
-                <h3 className="text-base font-bold text-[#003363] mb-0.5 line-clamp-2 leading-tight">
+                <h3 className={`text-base font-bold mb-0.5 line-clamp-2 leading-tight ${isDisabled ? "text-gray-500" : "text-[#003363]"}`}>
                   {product.name}
                 </h3>
 
                 {/* Education Level - gap matches All Products ProductCard */}
                 {product.educationLevel && (
-                  <p className="text-sm text-[#F28C28] font-semibold mt-0.5">
+                  <p className={`text-sm font-semibold mt-0.5 ${isDisabled ? "text-gray-400" : "text-[#F28C28]"}`}>
                     ({product.educationLevel})
                   </p>
                 )}
 
                 {/* Gender Label - Show if item is gender-specific */}
-                {isGenderSpecific && (
+                {isGenderSpecific && !isDisabled && (
                   <p className="text-xs text-gray-600 font-medium mt-1">
                     For {itemGender}
                   </p>
                 )}
 
                 {/* Gender Mismatch Overlay */}
-                {genderMismatch && (
+                {genderMismatch && !isDisabled && (
                   <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60 z-10">
                     <span className="px-4 py-2 bg-gray-500 text-white text-sm font-semibold rounded-full shadow-lg">
                       For {itemGender} only

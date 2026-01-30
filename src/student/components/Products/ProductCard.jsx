@@ -13,42 +13,45 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const notAllowedForStudentType = product._notAllowedForStudentType === true;
 
   const handleProductClick = () => {
-    console.log(
-      "Product card clicked, navigating to:",
-      `/products/${product.id}`
-    );
-    console.log("Product ID:", product.id);
-    // Navigate to product details page when clicking on the card
-    navigate(`/products/${product.id}`);
+    // Suggested For You may use placeholder id (n-Name); go to all products then
+    const id = product.id;
+    const isPlaceholderId = typeof id === "string" && id.startsWith("n-");
+    if (isPlaceholderId || id == null) {
+      navigate("/all-products");
+      return;
+    }
+    navigate(`/products/${id}`);
   };
 
   const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType;
-  // When blocked due to void (unclaimed order), all items are disabled for ordering
-  const isDisabled = isAlreadyOrdered || blockedDueToVoid;
+  // When blocked due to void or slot limit, card is disabled; same red "Cannot order" for both
+  const isDisabled = isAlreadyOrdered || blockedDueToVoid || slotsFullForNewType;
 
   return (
     <div
-      className={`relative rounded-2xl shadow-md overflow-hidden transition-all duration-300 flex flex-col h-full cursor-pointer ${
+      className={`relative rounded-2xl shadow-md overflow-hidden flex flex-col h-full cursor-pointer ${
         isDisabled
           ? "bg-gray-100 hover:shadow-md"
-          : "bg-white hover:shadow-xl"
+          : "bg-white hover:shadow-xl transition-all duration-300"
       }`}
       onClick={handleProductClick}
-      style={{
-        transition: 'all 0.3s ease-in-out, transform 0.3s ease-in-out'
-      }}
+      style={
+        isDisabled
+          ? undefined
+          : { transition: "all 0.3s ease-in-out, transform 0.3s ease-in-out" }
+      }
     >
       {/* Product Image */}
       <div
-        className={`relative aspect-square transition-all duration-300 ${
-          isDisabled ? "bg-gray-200" : "bg-gray-50"
+        className={`relative aspect-square ${
+          isDisabled ? "bg-gray-200" : "bg-gray-50 transition-all duration-300"
         }`}
       >
         <img
           src={product.image}
           alt={product.name}
-          className={`w-full h-full object-cover transition-all duration-300 ${
-            isDisabled ? "grayscale opacity-70" : ""
+          className={`w-full h-full object-cover ${
+            isDisabled ? "grayscale opacity-70" : "transition-all duration-300"
           }`}
           loading="lazy"
           decoding="async"
@@ -59,31 +62,15 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
         />
 
         {/* Old students: item not in allowed list (new logo patch, number patch per level only) */}
-        {notAllowedForStudentType && !isOutOfStock && (
+        {notAllowedForStudentType && !isOutOfStock && !isDisabled && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
             <span className="px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">
               For New Students only
             </span>
           </div>
         )}
-        {/* Max item types per order – cart has reached slot limit; cannot add new item type */}
-        {slotsFullForNewType && !isOutOfStock && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
-            <span className="px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">
-              Max item types reached
-            </span>
-          </div>
-        )}
-        {/* Blocked due to void: previous order not claimed in time – all items disabled */}
-        {blockedDueToVoid && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/70">
-            <span className="px-4 py-2 bg-red-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">
-              Cannot order
-            </span>
-          </div>
-        )}
-        {/* Pre-Order Button Overlay - Only show when out of stock and not blocked due to void */}
-        {isOutOfStock && !blockedDueToVoid && (
+        {/* Pre-Order Button Overlay - Only show when out of stock and not blocked */}
+        {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
             <button
               type="button"

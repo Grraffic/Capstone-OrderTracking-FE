@@ -8,7 +8,6 @@ import { authAPI } from "../../services/api";
 import { resolveItemKeyForMaxQuantity, DEFAULT_MAX_WHEN_UNKNOWN } from "../../utils/maxQuantityKeys";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
-import Footer from "../../components/common/Footer";
 import toast from "react-hot-toast";
 
 /**
@@ -274,7 +273,6 @@ const MyCart = () => {
             </div>
           </div>
         </div>
-        <Footer />
       </div>
     );
   }
@@ -602,7 +600,6 @@ const MyCart = () => {
           </div>
         </div>
       </div>
-      <Footer />
     </div>
   );
 };

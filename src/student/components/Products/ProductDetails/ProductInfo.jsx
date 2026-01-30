@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
  * Displays product information in simplified format
  * Matching reference design
  */
-const ProductInfo = ({ product, onClose }) => {
+const ProductInfo = ({ product, onClose, isDisabled = false }) => {
   const isOutOfStock = product.status === "out_of_stock";
 
   // Parse product name to separate main name and "for Girls/Boys" part
@@ -62,18 +62,30 @@ const ProductInfo = ({ product, onClose }) => {
             </button>
           )}
 
-          {/* Education Level - Below Back Button, Left Aligned */}
-          <p className="text-[#003363] text-sm sm:text-base font-semibold">
+          {/* Education Level - Below Back Button, Left Aligned (same gray as ProductCard when disabled) */}
+          <p
+            className={`text-sm sm:text-base font-semibold ${
+              isDisabled ? "text-gray-400" : "text-[#003363]"
+            }`}
+          >
             {product.educationLevel || "All Education Levels"}
           </p>
 
-          {/* Product Name - Below Education Level */}
+          {/* Product Name - Below Education Level (same gray as ProductCard when disabled) */}
           <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#F28C28] leading-tight">
+            <h1
+              className={`text-2xl sm:text-3xl font-bold leading-tight ${
+                isDisabled ? "text-gray-500" : "text-[#F28C28]"
+              }`}
+            >
               {mainName}
             </h1>
             {suffix && (
-              <p className="text-xl sm:text-2xl font-bold text-[#F28C28] leading-tight">
+              <p
+                className={`text-xl sm:text-2xl font-bold leading-tight ${
+                  isDisabled ? "text-gray-500" : "text-[#F28C28]"
+                }`}
+              >
                 {suffix}
               </p>
             )}

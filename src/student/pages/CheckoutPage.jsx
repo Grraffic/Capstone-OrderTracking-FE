@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useCart } from "../../context/CartContext";
 import { useCheckout } from "../../context/CheckoutContext";
 import { useOrder } from "../../context/OrderContext";
@@ -10,7 +11,6 @@ import { groupCartItemsByVariations } from "../../utils/groupCartItems";
 import { generateOrderReceiptQRData } from "../../utils/qrCodeGenerator";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
-import Footer from "../../components/common/Footer";
 import toast from "react-hot-toast";
 
 /**
@@ -606,15 +606,26 @@ const CheckoutPage = () => {
       {/* Navigation */}
       <Navbar />
 
-      {/* Hero Section - Fixed background, stays in place */}
-      <HeroSection />
+      {/* Hero Section – "Checkout" at bottom center (like All Products) */}
+      <HeroSection heading="Checkout" align="bottom-center" />
 
-      {/* Main Content - Scrollable content that overlaps hero */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 pt-32 relative z-10 pb-8">
+      {/* Main Content – close to hero, slightly lower */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-20">
         {/* Main Card Container */}
-        <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden">
-          {/* Header Section */}
+        <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl sm:rounded-3xl shadow-gray-800 shadow-md overflow-hidden">
+          {/* Header Section – back button + cart items */}
           <div className="p-4 sm:p-6 lg:p-8">
+            {/* Back button – circular, inside card */}
+            <div className="mb-4 sm:mb-6 flex justify-start">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                aria-label="Go back"
+                className="flex items-center justify-center w-12 h-12 rounded-full bg-white border-2 border-[#003363] text-[#003363] shadow-md hover:bg-gray-50 hover:border-[#002347] hover:text-[#002347] transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </div>
             {/* Cart Items List */}
             <div className="space-y-3 sm:space-y-4 mb-6">
               {groupedItems.map((group) => {
@@ -768,8 +779,6 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <Footer />
     </div>
   );
 };

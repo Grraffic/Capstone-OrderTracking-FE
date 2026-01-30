@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { ShoppingCart, Package, CheckCircle, Bell, ChevronLeft } from "lucide-react";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
-import Footer from "../../components/common/Footer";
 import ProfileCard from "../components/common/ProfileCard";
 import MyOrders from "../components/Orders/MyOrders";
 import { useStudentProfile, useActivityFeed } from "../hooks";
@@ -229,15 +228,16 @@ const StudentProfile = () => {
               {/* Tabs Bar - Back left, Tabs centered, Filter right */}
               <div className="pb-4 mb-4 border-b border-gray-200">
                 <div className="flex items-center">
-                  {/* Left: Back to All Products (circle button) */}
+                  {/* Left: Back to All Products (button + text) */}
                   <div className="flex-1 flex justify-start">
                     <button
                       type="button"
                       onClick={() => navigate("/all-products")}
                       aria-label="Back to All Products"
-                      className="w-10 h-10 rounded-full border-2 border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white flex items-center justify-center transition-colors"
+                      className="flex items-center gap-2 rounded-full border-2 border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white pl-2 pr-4 py-2 transition-colors"
                     >
-                      <ChevronLeft className="w-5 h-5" />
+                      <ChevronLeft className="w-5 h-5 shrink-0" />
+                      <span className="text-sm font-semibold whitespace-nowrap">Browse all products</span>
                     </button>
                   </div>
 
@@ -387,7 +387,6 @@ const StudentProfile = () => {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 };

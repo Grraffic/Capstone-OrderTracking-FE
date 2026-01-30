@@ -2,18 +2,12 @@ import { useState, useCallback } from "react";
 import { parseOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import api from "../../../services/api";
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
 /**
  * useOrderQRScanner Hook
  *
- * Manages QR scanner for order receipts with complete flow:
- * 1. Scan QR code from student's order receipt
- * 2. Parse QR code data to extract order number
- * 3. Find order in database by order number
- * 4. Update order status from "pending" to "claimed"
- * 5. Reduce inventory for all items in the order
+ * Manages QR scanner for order receipts with two-step flow:
+ * 1. Scan QR code → fetch and validate order → show order in popup (do NOT release yet)
+ * 2. User confirms → update order status to "claimed" and reduce inventory
  *
  * @returns {Object} Scanner state and functions
  */
@@ -22,11 +16,14 @@ export const useOrderQRScanner = () => {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  /** Order fetched after scan; show in confirmation modal before releasing */
+  const [scannedOrder, setScannedOrder] = useState(null);
 
   const openQRScanner = useCallback(() => {
     setQrScannerOpen(true);
     setError(null);
     setSuccess(null);
+    setScannedOrder(null);
   }, []);
 
   const closeQRScanner = useCallback(() => {
@@ -34,236 +31,193 @@ export const useOrderQRScanner = () => {
     setError(null);
     setSuccess(null);
     setProcessing(false);
+    setScannedOrder(null);
+  }, []);
+
+  /** Close only the scanner overlay; keep scannedOrder so confirmation modal can show. */
+  const closeScannerOnly = useCallback(() => {
+    setQrScannerOpen(false);
+  }, []);
+
+  const dismissScannedOrder = useCallback(() => {
+    setScannedOrder(null);
+  }, []);
+
+  const clearSuccess = useCallback(() => {
+    setSuccess(null);
   }, []);
 
   /**
-   * Process scanned QR code data
-   * @param {string} scannedData - Raw QR code data
-   * @returns {Promise<Object>} Processing result
+   * Claim order: update status to "claimed" and reduce inventory.
+   * @param {Object} order - Full order from API (must have id, order_number, student_name, items, education_level)
+   * @returns {Promise<Object>} Success message object
    */
-  const processScannedOrder = useCallback(async (scannedData) => {
-    try {
-      setProcessing(true);
-      setError(null);
-      setSuccess(null);
+  const claimOrder = useCallback(async (order) => {
+    const orderNumber = order.order_number;
 
-      console.log("Processing scanned QR code:", scannedData);
+    const statusResponse = await api.patch(`/orders/${order.id}/status`, {
+      status: "claimed",
+    });
 
-      // Step 1: Parse QR code data
-      const orderData = parseOrderReceiptQRData(scannedData);
-      if (!orderData) {
-        throw new Error(
-          "Invalid QR code format. Please scan a valid order receipt."
-        );
-      }
+    if (!statusResponse.data.success) {
+      throw new Error(
+        statusResponse.data.message || "Failed to update order status"
+      );
+    }
 
-      console.log("Parsed order data:", orderData);
+    const inventoryUpdates = [];
+    const items = order.items || [];
 
-      // Step 2: Find order by order number
-      const orderNumber = orderData.orderNumber;
-      const orderResponse = await api.get(`/orders/number/${orderNumber}`);
+    for (const item of items) {
+      try {
+        const inventoryResponse = await api.get(`/items`, {
+          params: {
+            search: item.name,
+            education_level: order.education_level,
+          },
+        });
 
-      if (!orderResponse.data.success || !orderResponse.data.data) {
-        throw new Error("Order not found in database.");
-      }
-
-      const order = orderResponse.data.data;
-      console.log("Found order:", order);
-
-      // --- VALIDATION: Check if order contains valid items ---
-      // Verify that the order has items and they can be found in inventory
-      const validationItems = order.items || [];
-      
-      if (!validationItems || validationItems.length === 0) {
-        throw new Error(
-          "This order does not contain any items. Please contact support."
-        );
-      }
-
-      // Optional: Verify items exist in inventory (but don't block if check fails)
-      // This is just for logging/debugging purposes
-      let validItemsFound = 0;
-      const educationLevel = order.education_level;
-
-      for (const item of validationItems) {
-        try {
-          // Fetch item details to verify it exists
-          const itemSearchResponse = await api.get(`/items`, {
-            params: {
-              search: item.name,
-              education_level: educationLevel,
-            },
-          });
-
-          if (
-            itemSearchResponse.data.success &&
-            itemSearchResponse.data.data &&
-            itemSearchResponse.data.data.length > 0
-          ) {
-            validItemsFound++;
-          }
-        } catch (catCheckError) {
-          console.warn("Error checking item:", catCheckError);
-          // Continue checking other items - don't block the order
+        if (
+          !inventoryResponse.data.success ||
+          !inventoryResponse.data.data ||
+          inventoryResponse.data.data.length === 0
+        ) {
+          console.error(`Inventory item not found: ${item.name}`);
+          continue;
         }
-      }
 
-      // Log validation result but don't block the order
-      if (validItemsFound === 0) {
-        console.warn("⚠️ Warning: Could not verify items in inventory, but proceeding with order claim");
-      }
-      // ------------------------------------------------
+        const inventoryItem = inventoryResponse.data.data[0];
+        const adjustment = -item.quantity;
+        const adjustPayload = {
+          adjustment,
+          reason: `Order ${orderNumber} claimed - ${item.quantity}x ${item.name}`,
+        };
+        if (item.size) adjustPayload.size = item.size;
 
-      // Check if order is already claimed
-      if (order.status === "claimed") {
-        throw new Error(
-          `Order ${orderNumber} has already been claimed on ${
-            order.claimed_date
-              ? new Date(order.claimed_date).toLocaleDateString()
-              : "a previous date"
-          }.`
+        const adjustResponse = await api.patch(
+          `/items/${inventoryItem.id}/adjust`,
+          adjustPayload
         );
-      }
 
-      // Step 3: Update order status to "claimed"
-      const statusResponse = await api.patch(`/orders/${order.id}/status`, {
-        status: "claimed",
-      });
-
-      if (!statusResponse.data.success) {
-        throw new Error(
-          statusResponse.data.message || "Failed to update order status"
-        );
-      }
-
-      const statusResult = statusResponse.data;
-
-      console.log("Order status updated to claimed:", statusResult.data);
-
-      // Step 4: Reduce inventory for all items in the order
-      const inventoryUpdates = [];
-      const items = order.items || [];
-
-      for (const item of items) {
-        try {
-          // Find inventory item by name and education level
-          const inventoryResponse = await api.get(`/items`, {
-            params: {
-              search: item.name,
-              education_level: order.education_level,
-            },
-          });
-
-          if (
-            !inventoryResponse.data.success ||
-            !inventoryResponse.data.data ||
-            inventoryResponse.data.data.length === 0
-          ) {
-            console.error(`Inventory item not found: ${item.name}`);
-            continue;
-          }
-
-          // Get the first matching item
-          const inventoryItem = inventoryResponse.data.data[0];
-
-          // Reduce stock by the ordered quantity
-          const adjustment = -item.quantity; // Negative to reduce stock
-          
-          // Pass size information if available (for size-specific items)
-          const adjustPayload = {
-            adjustment,
-            reason: `Order ${orderNumber} claimed - ${item.quantity}x ${item.name}`,
-          };
-          
-          // Include size if the item has a size (for JSON variant handling)
-          if (item.size) {
-            adjustPayload.size = item.size;
-          }
-          
-          const adjustResponse = await api.patch(
-            `/items/${inventoryItem.id}/adjust`,
-            adjustPayload
-          );
-
-          if (adjustResponse.data.success) {
-            inventoryUpdates.push({
-              item: item.name,
-              quantity: item.quantity,
-              success: true,
-            });
-            console.log(
-              `Inventory reduced: ${item.name} by ${item.quantity}`,
-              adjustResponse.data.data
-            );
-          }
-        } catch (itemError) {
-          console.error(`Error processing item ${item.name}:`, itemError);
+        if (adjustResponse.data.success) {
           inventoryUpdates.push({
             item: item.name,
             quantity: item.quantity,
-            success: false,
-            error: itemError.message,
+            success: true,
           });
         }
+      } catch (itemError) {
+        console.error(`Error processing item ${item.name}:`, itemError);
+        inventoryUpdates.push({
+          item: item.name,
+          quantity: item.quantity,
+          success: false,
+          error: itemError.message,
+        });
       }
-
-      // Success!
-      const successMessage = {
-        orderNumber: order.order_number,
-        studentName: order.student_name,
-        items: inventoryUpdates,
-        message: `Order ${order.order_number} successfully claimed!`,
-      };
-
-      // Note: Socket.IO events are emitted by the backend when the order status is updated
-      // No need to emit from frontend - the backend already emits "order:updated" and "order:claimed"
-      console.log(
-        "✅ Order claimed successfully! Backend will emit Socket.IO events."
-      );
-
-      setSuccess(successMessage);
-      setProcessing(false);
-
-      return {
-        success: true,
-        data: successMessage,
-      };
-    } catch (err) {
-      console.error("Error processing scanned order:", err);
-      setError(err.message);
-      setProcessing(false);
-      throw err;
     }
+
+    return {
+      orderNumber,
+      studentName: order.student_name,
+      items: inventoryUpdates,
+      message: `Order ${orderNumber} successfully claimed!`,
+    };
   }, []);
 
   /**
-   * Handle QR code scanned event
+   * Fetch and validate order from scanned QR data. Does NOT claim; sets scannedOrder for confirmation modal.
    * @param {string} scannedData - Raw QR code data
    */
   const handleQRCodeScanned = useCallback(
     async (scannedData) => {
-      console.log("🔍 QR Code Scanned - Starting processing...");
+      setProcessing(true);
+      setError(null);
+      setSuccess(null);
+      setScannedOrder(null);
+
       try {
-        const result = await processScannedOrder(scannedData);
-        console.log("✅ QR Code Processing Complete:", result);
-        return result;
+        const orderData = parseOrderReceiptQRData(scannedData);
+        if (!orderData) {
+          throw new Error(
+            "Invalid QR code format. Please scan a valid order receipt."
+          );
+        }
+
+        const orderNumber = orderData.orderNumber;
+        const orderResponse = await api.get(`/orders/number/${orderNumber}`);
+
+        if (!orderResponse.data.success || !orderResponse.data.data) {
+          throw new Error("Order not found in database.");
+        }
+
+        const order = orderResponse.data.data;
+        const validationItems = order.items || [];
+
+        if (!validationItems || validationItems.length === 0) {
+          throw new Error(
+            "This order does not contain any items. Please contact support."
+          );
+        }
+
+        if (order.status === "claimed") {
+          throw new Error(
+            `Order ${orderNumber} has already been claimed on ${
+              order.claimed_date
+                ? new Date(order.claimed_date).toLocaleDateString()
+                : "a previous date"
+            }.`
+          );
+        }
+
+        setScannedOrder(order);
+        setProcessing(false);
+        return { success: true, order };
       } catch (err) {
-        // Error is already set in processScannedOrder
-        console.error("❌ QR scan error:", err);
+        console.error("Error processing scanned order:", err);
+        setError(err.message);
+        setProcessing(false);
         throw err;
       }
     },
-    [processScannedOrder]
+    []
   );
+
+  /**
+   * Confirm release: claim the scanned order (update status + reduce inventory), then clear scannedOrder.
+   */
+  const confirmReleaseOrder = useCallback(async () => {
+    if (!scannedOrder) return;
+    setProcessing(true);
+    setError(null);
+    try {
+      const successMessage = await claimOrder(scannedOrder);
+      setSuccess({
+        ...successMessage,
+        releasedAt: new Date(),
+      });
+      setScannedOrder(null);
+    } catch (err) {
+      console.error("Error claiming order:", err);
+      setError(err.message || "Failed to release order.");
+    } finally {
+      setProcessing(false);
+    }
+  }, [scannedOrder, claimOrder]);
 
   return {
     qrScannerOpen,
     openQRScanner,
     closeQRScanner,
+    closeScannerOnly,
     handleQRCodeScanned,
     processing,
     error,
     success,
+    scannedOrder,
+    confirmReleaseOrder,
+    dismissScannedOrder,
+    clearSuccess,
   };
 };
 

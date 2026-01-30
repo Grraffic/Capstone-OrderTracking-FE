@@ -6,7 +6,6 @@ import HeroSection from "../components/common/HeroSection";
 import CategorySidebar from "../components/Products/CategorySidebar";
 import ProductGrid from "../components/Products/ProductGrid";
 import Pagination from "../components/common/Pagination";
-import Footer from "../../components/common/Footer";
 import { useItems } from "../../property-custodian/hooks/items/useItems";
 import { useSearchDebounce, useProductPagination } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
@@ -131,6 +130,7 @@ const AllProducts = () => {
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
           setMaxItemsPerOrder(err?.response?.data?.maxItemsPerOrder ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
+          setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
         } else if (err?.response?.status !== 403) {
           console.error("Error fetching max quantities:", err);
         }
@@ -345,18 +345,25 @@ const AllProducts = () => {
     limitsLoaded &&
     (maxItemsPerOrder == null || maxItemsPerOrder === undefined || Number(maxItemsPerOrder) <= 0);
 
+  const slotLimitReached =
+    user &&
+    limitsLoaded &&
+    maxItemsPerOrder != null &&
+    Number(maxItemsPerOrder) > 0 &&
+    slotsLeftForThisOrder <= 0;
+
   // Event handlers
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     setIsSidebarOpen(false); // Close mobile sidebar after selection
   };
 
-  // Don't show products until we've fetched with the user's education level (avoids flash of all products on reload)
-  // When logged in, also wait for order limits so we don't show "can add" before we know alreadyOrdered
+  // Show full-page loading only for profile or initial products fetch, so the layout is the same for all users.
+  // Do not block on limits: show the full All Products layout (sidebar, header, grid) and let limits load in the background;
+  // cards will show disabled/overlays once limits are loaded (avoids stuck "Checking order limits..." and design difference per user).
   const isWaitingForProfile = user && profileLoading;
   const isWaitingForFilteredItems = user && userEducationLevel != null && loading;
-  const isWaitingForLimits = user && !limitsLoaded;
-  if (isWaitingForProfile || isWaitingForFilteredItems || isWaitingForLimits || loading) {
+  if (isWaitingForProfile || isWaitingForFilteredItems || (!user && loading)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -364,7 +371,7 @@ const AllProducts = () => {
           <div className="text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
             <p className="text-gray-600">
-              {isWaitingForProfile ? "Loading your profile..." : isWaitingForLimits ? "Checking order limits..." : "Loading products..."}
+              {isWaitingForProfile ? "Loading your profile..." : "Loading products..."}
             </p>
           </div>
         </div>
@@ -389,12 +396,22 @@ const AllProducts = () => {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
       <Navbar />
 
       {/* Hero Section – "Item Card" at middle bottom */}
       <HeroSection heading="Item Card" align="bottom-center" />
+
+      {/* Max items per order banner – direct child of page, before main content (DOM index 2) */}
+      {slotLimitReached && !blockedDueToVoid && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 mx-4 sm:mx-6 lg:mx-8 mb-4">
+          <Info className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <p className="text-sm text-red-800 font-semibold">
+            Max items per order reached.
+          </p>
+        </div>
+      )}
 
       {/* Main Content – white card close to hero/building */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-28">
@@ -468,6 +485,13 @@ const AllProducts = () => {
               </div>
             </div>
 
+            {user && !limitsLoaded && (
+              <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent flex-shrink-0" />
+                <p className="text-sm text-blue-800">Checking order limits...</p>
+              </div>
+            )}
+
             {!userEducationLevel && !profileLoading && (
               <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
                 <Info className="w-5 h-5 text-yellow-600 flex-shrink-0" />
@@ -483,7 +507,7 @@ const AllProducts = () => {
               </div>
             )}
 
-            {limitNotSet && (
+            {limitNotSet && !blockedDueToVoid && (
               <div className="mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
                 <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
                 <div className="flex-1">
@@ -494,16 +518,30 @@ const AllProducts = () => {
               </div>
             )}
 
+            {/* Voided unclaimed banner – kept in header */}
             {blockedDueToVoid && (
               <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
                 <Info className="w-5 h-5 text-red-600 flex-shrink-0" />
                 <div className="flex-1">
                   <p className="text-sm text-red-800 font-semibold">
-                    You cannot place another order because a previous order was voided for not being claimed in time.
+                    You cannot place another order because a previous order was voided for not being claimed in time. Please contact the finance department first.
                   </p>
                 </div>
               </div>
             )}
+
+            {/* Max items per order banner – in header to inform user */}
+            {slotLimitReached && !blockedDueToVoid && (
+              <div className="mt-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                <Info className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm text-amber-800 font-semibold">
+                    Max items per order reached. You have used all item slots for this order period. Remove existing orders to place new ones.
+                  </p>
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* Content Grid */}

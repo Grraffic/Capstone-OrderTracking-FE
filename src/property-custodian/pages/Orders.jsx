@@ -1,5 +1,5 @@
-import { QrCode, Search } from "lucide-react";
-import { subDays } from "date-fns";
+import { QrCode, Search, X, CheckCircle } from "lucide-react";
+import { subDays, format } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
 import DateRangePicker from "../components/common/DateRangePicker";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
@@ -61,15 +61,20 @@ const Orders = () => {
   const trimmedSearch = searchTerm ? searchTerm.trim() : "";
   const debouncedSearchTerm = useSearchDebounce(trimmedSearch, 500);
 
-  // QR Scanner functionality with order processing
+  // QR Scanner functionality: scan shows order popup, then user confirms to release
   const {
     qrScannerOpen,
     openQRScanner,
     closeQRScanner,
+    closeScannerOnly,
     handleQRCodeScanned,
     processing: qrProcessing,
     error: qrError,
     success: qrSuccess,
+    scannedOrder,
+    confirmReleaseOrder,
+    dismissScannedOrder,
+    clearSuccess,
   } = useOrderQRScanner();
 
   // Active status tab (Pre-orders, Orders, Claimed)
@@ -321,21 +326,19 @@ const Orders = () => {
   // Connect to Socket.IO for real-time updates
   useSocketOrderUpdates(handleOrderUpdate);
 
-  // Refetch orders after successful QR scan and close scanner
+  // When order is scanned, close only the scanner overlay (keep scannedOrder so confirmation modal shows)
+  useEffect(() => {
+    if (scannedOrder) {
+      closeScannerOnly();
+    }
+  }, [scannedOrder, closeScannerOnly]);
+
+  // Refetch orders when release succeeds so the order appears under Claimed
   useEffect(() => {
     if (qrSuccess) {
-      console.log("✅ Order claimed successfully, refreshing orders...");
-      // Refetch orders to show updated status
       refetchOrders();
-
-      // Close scanner after 2 seconds to show success message
-      const timer = setTimeout(() => {
-        closeQRScanner();
-      }, 2000);
-
-      return () => clearTimeout(timer);
     }
-  }, [qrSuccess, refetchOrders, closeQRScanner]);
+  }, [qrSuccess, refetchOrders]);
 
   // Close scanner on error after 5 seconds
   useEffect(() => {
@@ -613,75 +616,149 @@ const Orders = () => {
         processing={qrProcessing}
       />
 
-      {/* Success Notification */}
-      {qrSuccess && (
-        <div className="fixed bottom-8 right-8 z-50 max-w-md animate-slide-up">
-          <div className="bg-green-50 border-2 border-green-500 rounded-xl shadow-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+      {/* Order Details Modal - shows after QR scan with design: Name, Education Level, Transaction No, Order Date, Item Ordered, Size */}
+      {scannedOrder && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex justify-center px-6 pt-8 pb-4 border-b border-gray-200">
+              <h3 className="text-xl font-bold tracking-tight text-center">
+                <span className="text-[#0C2340]">Order</span>{" "}
+                <span className="text-[#e68b00]">details</span>
+              </h3>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 pt-8 pb-4 pl-6 pr-10 space-y-4">
+              {qrError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                  {qrError}
+                </div>
+              )}
+              <div className="space-y-3 max-w-full">
+                <div className="flex gap-4 items-baseline">
+                  <span className="text-sm font-semibold text-gray-600 w-[140px] shrink-0">Name:</span>
+                  <span className="text-gray-900 text-left">
+                    {scannedOrder.student_name ?? scannedOrder.studentName ?? "—"}
+                  </span>
+                </div>
+                <div className="flex gap-4 items-baseline">
+                  <span className="text-sm font-semibold text-gray-600 w-[140px] shrink-0">Education Level:</span>
+                  <span className="text-gray-900 text-left">
+                    {scannedOrder.education_level ?? scannedOrder.educationLevel ?? "—"}
+                  </span>
+                </div>
+                <div className="flex gap-4 items-baseline">
+                  <span className="text-sm font-semibold text-gray-600 w-[140px] shrink-0">Transaction No:</span>
+                  <span className="font-mono text-gray-900 text-left">
+                    {scannedOrder.order_number ?? scannedOrder.orderNumber ?? "—"}
+                  </span>
+                </div>
+                <div className="flex gap-4 items-baseline">
+                  <span className="text-sm font-semibold text-gray-600 w-[140px] shrink-0">Order Date:</span>
+                  <span className="text-gray-900 text-left">
+                    {scannedOrder.order_date || scannedOrder.created_at
+                      ? format(
+                          new Date(scannedOrder.order_date || scannedOrder.created_at),
+                          "MMM d, yyyy"
+                        )
+                      : "—"}
+                  </span>
+                </div>
+                <div className="flex gap-4 items-start">
+                  <span className="text-sm font-semibold text-gray-600 w-[140px] shrink-0 pt-0.5">Item Ordered</span>
+                  <div className="text-left">
+                    {(() => {
+                      const items = scannedOrder.items ?? [];
+                      const itemList = Array.isArray(items) ? items : [];
+                      if (itemList.length === 0) return <span className="text-gray-500">—</span>;
+                      return (
+                        <ul className="list-none space-y-0.5 text-gray-900">
+                          {itemList.map((item, index) => (
+                            <li key={index}>
+                              {(item.quantity ?? 0) > 1 && `${item.quantity ?? 0}x `}
+                              {item.name ?? item.item_name ?? "Item"}
+                            </li>
+                          ))}
+                        </ul>
+                      );
+                    })()}
+                  </div>
+                </div>
+                <div className="flex gap-4 items-baseline">
+                  <span className="text-sm font-semibold text-gray-600 w-[140px] shrink-0">Size:</span>
+                  <span className="text-gray-900 text-left">
+                    {(() => {
+                      const items = scannedOrder.items ?? [];
+                      const itemList = Array.isArray(items) ? items : [];
+                      const sizes = itemList
+                        .map((i) => i.size)
+                        .filter((s) => s && s !== "N/A");
+                      const uniqueSizes = [...new Set(sizes)];
+                      return uniqueSizes.length > 0 ? uniqueSizes.join(", ") : "—";
+                    })()}
+                  </span>
                 </div>
               </div>
-              <div className="flex-1">
-                <h4 className="text-lg font-bold text-green-800 mb-1">
-                  Order Claimed Successfully!
-                </h4>
-                <p className="text-sm text-green-700 mb-2">
-                  {qrSuccess.message}
-                </p>
-                <div className="text-xs text-green-600 space-y-1">
-                  <p>
-                    <strong>Order:</strong> {qrSuccess.orderNumber}
-                  </p>
-                  <p>
-                    <strong>Student:</strong> {qrSuccess.studentName}
-                  </p>
-                  {qrSuccess.items && qrSuccess.items.length > 0 && (
-                    <div className="mt-2">
-                      <strong>Items Updated:</strong>
-                      <ul className="ml-4 mt-1">
-                        {qrSuccess.items.map((item, idx) => (
-                          <li key={idx}>
-                            {item.success ? "✓" : "✗"} {item.item} (
-                            {item.quantity})
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+              <div className="pt-2 text-sm text-gray-700 font-medium">
+                This size is eligible for releasing.
               </div>
+            </div>
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex gap-3 justify-end">
               <button
-                onClick={closeQRScanner}
-                className="flex-shrink-0 text-green-600 hover:text-green-800"
+                onClick={dismissScannedOrder}
+                disabled={qrProcessing}
+                className="px-5 py-2.5 border border-gray-300 rounded-lg bg-white text-gray-700 hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
+                Back
               </button>
+              <button
+                onClick={confirmReleaseOrder}
+                disabled={qrProcessing}
+                className="px-5 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {qrProcessing ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Releasing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={18} />
+                    Release Order
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Release Success Modal - centered, checkmark, message, X top right */}
+      {qrSuccess && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden relative">
+            <button
+              onClick={() => {
+                clearSuccess();
+                refetchOrders();
+              }}
+              className="absolute top-4 right-4 p-2 hover:bg-gray-100 rounded-lg transition-colors z-10"
+              aria-label="Close"
+            >
+              <X size={20} className="text-gray-600" />
+            </button>
+            <div className="pt-12 pb-8 px-8 flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mb-6">
+                <CheckCircle size={36} className="text-green-600" />
+              </div>
+              <p className="text-gray-900 mb-2">
+                <strong>Name ({qrSuccess.studentName ?? "—"})</strong> order has been marked as Released on Date (
+                {qrSuccess.releasedAt
+                  ? format(new Date(qrSuccess.releasedAt), "MMMM d, yyyy")
+                  : format(new Date(), "MMMM d, yyyy")}
+                ).
+              </p>
+              <p className="text-gray-600 text-sm">
+                Inventory and order records have been updated automatically.
+              </p>
             </div>
           </div>
         </div>

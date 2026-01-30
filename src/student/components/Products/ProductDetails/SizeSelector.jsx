@@ -19,6 +19,7 @@ const SizeSelector = ({
   loadingSizes = false,
   disabled = false,
   disabledReason,
+  isPreOrder = false,
 }) => {
   // Size measurement guide
   const sizeMeasurements = {
@@ -182,11 +183,27 @@ const SizeSelector = ({
         </div>
       )}
 
-      {/* Size Confirmed Message */}
+      {/* Size Confirmed Message - same text; background color shows pre-order (red) vs order (green) */}
       {selectedSize && sizeConfirmed && !disabled && (
-        <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-          <Check className="w-5 h-5 text-green-600" />
-          <span className="text-sm text-green-700 font-medium">
+        <div
+          className={
+            isPreOrder
+              ? "flex items-center gap-2 p-3 bg-red-50 rounded-lg border border-red-200"
+              : "flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200"
+          }
+        >
+          <Check
+            className={
+              isPreOrder ? "w-5 h-5 text-red-600" : "w-5 h-5 text-green-600"
+            }
+          />
+          <span
+            className={
+              isPreOrder
+                ? "text-sm text-red-700 font-medium"
+                : "text-sm text-green-700 font-medium"
+            }
+          >
             Size {selectedSize} confirmed! You can now proceed with your order.
           </span>
         </div>

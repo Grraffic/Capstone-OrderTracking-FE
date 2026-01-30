@@ -67,7 +67,7 @@ const Navbar = () => {
       setIsProfileOpen(false);
       setIsMenuOpen(false);
       await logout();
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);
     }
@@ -119,7 +119,7 @@ const Navbar = () => {
     <header className="fixed top-0 left-0 right-0 z-50 w-full px-2 sm:px-4 md:px-6 lg:px-8 bg-transparent">
       <div className="w-full max-w-7xl mx-auto">
         <div className="flex items-center justify-between px-3 sm:px-4 md:px-6 shadow-gray-800 rounded-lg sm:rounded-xl shadow-md bg-white/90 backdrop-blur-md h-16 sm:h-18 md:h-20">
-          {/* Left side - Logo + Title */}
+          {/* Left side - Logo + Title (clickable to all products) */}
           <div className="flex items-center gap-2 sm:gap-3">
             <img
               src="../../../assets/image/LV Logo.png"
@@ -130,13 +130,20 @@ const Navbar = () => {
                   'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="40" fill="%233B82F6"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3ELV%3C/text%3E%3C/svg%3E';
               }}
             />
-            <h1 className="text-base sm:text-lg md:text-xl font-semibold">
-              <span className="text-[#003363] font-SFPro">La Verdad</span>
-              <span className="text-[#F28C28] font-SFPro"> OrderFlow</span>
-            </h1>
+            <button
+              type="button"
+              onClick={() => navigate("/all-products")}
+              className="text-left hover:opacity-80 transition-opacity"
+              aria-label="Go to all products"
+            >
+              <h1 className="text-base sm:text-lg md:text-xl font-semibold">
+                <span className="text-[#003363] font-SFPro">La Verdad</span>
+                <span className="text-[#F28C28] font-SFPro"> OrderFlow</span>
+              </h1>
+            </button>
           </div>
 
-          {/* Right Section */}
+          {/* Right Section - Notifications + Cart + User Profile */}
           <div className="flex items-center space-x-3 md:space-x-4">
             {/* Notification Icon - Desktop */}
             <div className="hidden md:block relative" ref={notificationRef}>
@@ -248,7 +255,7 @@ const Navbar = () => {
               )}
             </button>
 
-            {/* User Profile - Desktop */}
+            {/* User Profile - Desktop (right side) */}
             <div className="hidden md:block relative" ref={dropdownRef}>
               <button
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -262,7 +269,6 @@ const Navbar = () => {
                     onError={(e) => {
                       console.error("❌ Failed to load profile image:", userPhoto);
                       console.error("Image error:", e);
-                      // Fallback to initials if image fails to load
                       e.target.style.display = 'none';
                     }}
                     onLoad={() => {
@@ -317,12 +323,12 @@ const Navbar = () => {
                   <button
                     onClick={() => {
                       setIsProfileOpen(false);
-                      navigate("/student/profile", { 
-                        state: { 
+                      navigate("/student/profile", {
+                        state: {
                           activeTab: 'orders',
-                          viewMode: 'detail', 
-                          activeCategory: 'orders' 
-                        } 
+                          viewMode: 'detail',
+                          activeCategory: 'orders'
+                        }
                       });
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"

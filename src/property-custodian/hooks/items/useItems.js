@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSocket } from "../../../context/SocketContext";
 
 // API base URL - adjust based on your environment
@@ -83,12 +83,16 @@ export const useItems = (options = {}) => {
     itemType: "",
   });
 
+  // Remember last education level used so socket handlers (e.g. item:archived) can refetch with same level
+  const lastUserEducationLevelRef = useRef(null);
+
   /**
    * Fetch items from API
    * @param {string} userEducationLevel - Optional user education level for eligibility filtering
    */
   const fetchItems = useCallback(async (userEducationLevel = null) => {
     try {
+      if (userEducationLevel != null) lastUserEducationLevelRef.current = userEducationLevel;
       if (!hasFetchedOnce) setLoading(true);
       setError(null);
 
@@ -202,13 +206,22 @@ export const useItems = (options = {}) => {
       fetchItems();
     };
 
+    // When finance/accounting archives an item, refetch so it disappears from All Products immediately
+    const handleItemArchived = (data) => {
+      console.log("📡 Received item:archived via Socket.IO:", data);
+      const level = lastUserEducationLevelRef.current ?? undefined;
+      fetchItems(level || null);
+    };
+
     on("item:updated", handleItemUpdate);
     on("order:created", handleOrderCreated);
+    on("item:archived", handleItemArchived);
 
     // Cleanup on unmount
     return () => {
       off("item:updated", handleItemUpdate);
       off("order:created", handleOrderCreated);
+      off("item:archived", handleItemArchived);
     };
   }, [isConnected, on, off, fetchItems]);
 

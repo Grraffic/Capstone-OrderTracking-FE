@@ -50,10 +50,10 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
     try {
       setShowLogoutConfirm(false);
       await logout();
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       console.error("Logout failed:", error);
-      navigate("/login");
+      navigate("/");
     }
   };
 
