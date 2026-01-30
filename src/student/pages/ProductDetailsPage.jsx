@@ -201,12 +201,14 @@ const ProductDetailsPage = () => {
         
         // Allow access if:
         // 1. Product is "General" or has no education level
-        // 2. User has no education level set (show all)
-        // 3. Product matches user's education level
-        // 4. User has "Vocational" (ACT) and product is "College" – ACT is part of College
+        // 2. Product is "All Education Levels" (e.g. Logo Patch, ID Lace) – available to everyone
+        // 3. User has no education level set (show all)
+        // 4. Product matches user's education level
+        // 5. User has "Vocational" (ACT) and product is "College" – ACT is part of College
         const isAccessible =
           !productEducationLevel ||
           productEducationLevel === "General" ||
+          productEducationLevel === "All Education Levels" ||
           !userEducationLevel ||
           productEducationLevel === userEducationLevel ||
           (userEducationLevel === "Vocational" && productEducationLevel === "College");
@@ -401,12 +403,19 @@ const ProductDetailsPage = () => {
     resolvedMaxKey = matchingKeys.sort((a, b) => b.length - a.length)[0] ?? maxQuantityKey;
   }
   const keyNotInMaxQuantities = product && (maxQuantities[resolvedMaxKey] === undefined || maxQuantities[resolvedMaxKey] === null);
+  // Logo Patch max is 3 per spec; use as fallback when API doesn't return it so plus button works
+  const isLogoPatch = product && (() => {
+    const n = normalizeItemName(product.name || "");
+    return n.includes("logo patch") && !n.includes("new logo patch");
+  })();
   const maxForItem =
     product && maxQuantities[resolvedMaxKey] != null
       ? maxQuantities[resolvedMaxKey]
       : isOldStudent && keyNotInMaxQuantities
         ? 0
-        : DEFAULT_MAX_WHEN_UNKNOWN;
+        : isLogoPatch
+          ? 3
+          : DEFAULT_MAX_WHEN_UNKNOWN;
   const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities;
   const effectiveStock = product
     ? (requiresSizeSelection

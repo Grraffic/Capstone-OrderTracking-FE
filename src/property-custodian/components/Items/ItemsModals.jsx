@@ -141,12 +141,10 @@ const ItemsModals = ({
     };
   }, [modalState.isOpen, modalState.mode, formData.educationLevel]);
 
-  // Education level options override (use existing values, custom labels)
+  // Education level options (include "All Education Levels" for items like Logo Patch, ID Lace)
   const gradeLevelOptions = useMemo(
     () =>
-      EDUCATION_LEVELS.filter(
-        (level) => level.value !== "All Education Levels"
-      ).map((level) => {
+      EDUCATION_LEVELS.map((level) => {
         if (level.value === "Kindergarten") {
           return { ...level, label: "Preschool" };
         }
@@ -170,44 +168,6 @@ const ItemsModals = ({
     () => formData.itemType === "Uniforms",
     [formData.itemType]
   );
-
-  // Grade level category options mapping
-  const gradeLevelCategoryOptions = useMemo(() => {
-    const map = {
-      "All Education Levels": [
-        "Prekindergarten",
-        "Kindergarten",
-        "Grade 1",
-        "Grade 2",
-        "Grade 3",
-        "Grade 4",
-        "Grade 5",
-        "Grade 6",
-        "Grade 7",
-        "Grade 8",
-        "Grade 9",
-        "Grade 10",
-        "Grade 11",
-        "Grade 12",
-        "College",
-      ],
-      Kindergarten: ["Prekindergarten", "Kindergarten"],
-      Elementary: [
-        "Grade 1",
-        "Grade 2",
-        "Grade 3",
-        "Grade 4",
-        "Grade 5",
-        "Grade 6",
-      ],
-      "Junior High School": ["Grade 7", "Grade 8", "Grade 9", "Grade 10"],
-      "Senior High School": ["Grade 11", "Grade 12"],
-      College: ["College"],
-    };
-
-    const key = formData.educationLevel || "All Education Levels";
-    return map[key] || [];
-  }, [formData.educationLevel]);
 
   // Item name suggestions: merge static defaults + curated admin suggestions
   const suggestedItemNames = useMemo(() => {
@@ -1372,57 +1332,31 @@ const ItemsModals = ({
               onBlur={() => setFocusedSection(null)}
             >
               <div className="space-y-4">
-                {/* Row: Education Level & Grade Level Category (Category within Education Level) */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">
-                      Education Level
-                    </label>
-                    <select
-                      name="educationLevel"
-                      value={formData.educationLevel}
-                      onChange={handleInputChange}
-                      required
-                      disabled={isEditMode}
-                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                    >
-                      <option value="">Select Education Level</option>
-                      {gradeLevelOptions.map((level) => (
-                        <option key={level.value} value={level.value}>
-                          {level.label}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.educationLevel && (
-                      <p className="text-red-500 text-xs">
-                        {errors.educationLevel}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">
-                      Grade Level Category
-                    </label>
-                    <select
-                      name="category"
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      required
-                      disabled={isEditMode}
-                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                    >
-                      <option value="">Select Grade Level Category</option>
-                      {gradeLevelCategoryOptions.map((opt) => (
-                        <option key={opt} value={opt}>
-                          {opt}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.category && (
-                      <p className="text-red-500 text-xs">{errors.category}</p>
-                    )}
-                  </div>
+                {/* Education Level only (e.g. All Education Levels for Logo Patch, ID Lace) */}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Education Level
+                  </label>
+                  <select
+                    name="educationLevel"
+                    value={formData.educationLevel}
+                    onChange={handleInputChange}
+                    required
+                    disabled={isEditMode}
+                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                  >
+                    <option value="">Select Education Level</option>
+                    {gradeLevelOptions.map((level) => (
+                      <option key={level.value} value={level.value}>
+                        {level.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.educationLevel && (
+                    <p className="text-red-500 text-xs">
+                      {errors.educationLevel}
+                    </p>
+                  )}
                 </div>
 
                 {/* Row: Item Name & Item Type */}

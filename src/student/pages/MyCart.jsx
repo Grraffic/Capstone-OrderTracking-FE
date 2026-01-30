@@ -303,26 +303,21 @@ const MyCart = () => {
                   </h1>
                 </div>
 
-                {/* Right: Edit Cart on top, then cart icon + X Items below — left-aligned so both line up under Edit Cart */}
-                <div className="flex flex-col items-start gap-1.5">
+                {/* Right: Edit Cart button + cart icon + X Items (slightly inset from right) */}
+                <div className="flex flex-col items-end gap-1.5 mr-4">
                   <button
                     onClick={handleEditToggle}
-                    className="px-3 py-1.5 text-xs font-medium text-white bg-[#0C2340] hover:bg-[#0a1d33] rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#0C2340] hover:bg-[#0a1d33] rounded-lg transition-colors"
                   >
                     {editMode ? "Done" : "Edit Cart"}
                   </button>
-                  <div className="flex flex-col items-start gap-0.5 text-[#E68B00]">
+                  <div className="flex flex-col items-end gap-0.5 text-[#E68B00]">
                     <div className="flex items-center">
                       <ShoppingCart className="w-4 h-4 mr-1" />
                       <span className="text-sm font-medium">
                         {items.length} {items.length === 1 ? "Item" : "Items"}
                       </span>
                     </div>
-                    {totalItemLimit != null && Number(totalItemLimit) > 0 && (
-                      <span className="text-xs text-gray-600">
-                        {cartSlotCount} of {slotsLeftForThisOrder} item type{(cartSlotCount !== 1 || slotsLeftForThisOrder !== 1) ? "s" : ""} left for this order
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -377,6 +372,8 @@ const MyCart = () => {
                     const key = resolveItemKeyForMaxQuantity(name);
                     const educationLevel = item.inventory?.education_level || item.inventory?.educationLevel || item.inventory?.item_type || item.inventory?.itemType || "";
                     const image = item.inventory?.image || item.image || null;
+                    const price = item.inventory?.price ?? item.price ?? 0;
+                    const isLogoPatch = (n) => (n || "").toLowerCase().includes("logo patch") && !(n || "").toLowerCase().includes("new logo patch");
                     const maxForItem = getEffectiveMaxForItem(key);
                     const qty = item.quantity || 1;
                     const totalForItem = (items || []).filter(
@@ -450,7 +447,14 @@ const MyCart = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <span className="text-gray-700 font-medium">Free</span>
+                          {isLogoPatch(name) && Number(price) > 0 ? (
+                            <div className="flex flex-col items-end">
+                              <span className="text-sm text-gray-500 line-through">₱{Number(price).toFixed(2)}</span>
+                              <span className="text-gray-700 font-medium">Free</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-700 font-medium">Free</span>
+                          )}
                         </td>
                       </tr>
                     );
@@ -466,6 +470,8 @@ const MyCart = () => {
                 const key = resolveItemKeyForMaxQuantity(name);
                 const educationLevel = item.inventory?.education_level || item.inventory?.educationLevel || item.inventory?.item_type || item.inventory?.itemType || "";
                 const image = item.inventory?.image || item.image || null;
+                const price = item.inventory?.price ?? item.price ?? 0;
+                const isLogoPatch = (n) => (n || "").toLowerCase().includes("logo patch") && !(n || "").toLowerCase().includes("new logo patch");
                 const maxForItem = getEffectiveMaxForItem(key);
                 const qty = item.quantity || 1;
                 const totalForItem = (items || []).filter(
@@ -503,7 +509,14 @@ const MyCart = () => {
                           <span className="text-sm text-gray-600 font-medium">
                             Size: {item.size || "N/A"}
                           </span>
-                          <span className="text-gray-700 font-medium">Free</span>
+                          {isLogoPatch(name) && Number(price) > 0 ? (
+                            <div className="flex flex-col items-end">
+                              <span className="text-xs text-gray-500 line-through">₱{Number(price).toFixed(2)}</span>
+                              <span className="text-gray-700 font-medium">Free</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-700 font-medium">Free</span>
+                          )}
                         </div>
                         <div className="text-sm text-gray-600 mb-2">
                           <span className="font-medium">Qty:</span> {qty}
@@ -541,21 +554,6 @@ const MyCart = () => {
               })}
             </div>
 
-            {/* Over-limit warning and Order Now */}
-            {hasOverLimitItems && (
-              <div className="bg-amber-50 border-t border-amber-200 px-6 py-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="font-medium text-amber-800">You have more than the maximum allowed for some items.</p>
-                  <p className="text-sm text-amber-700 mt-1">
-                    If your orders or cart are already at the max for an item, you cannot add more or place another order for that item. Remove the extras to place your order. For example: {overLimitSummary[0]?.displayName} — max {overLimitSummary[0]?.max} per student{overLimitSummary[0]?.alreadyOrdered ? `, you have ${overLimitSummary[0]?.total} in cart (${overLimitSummary[0]?.alreadyOrdered} already ordered)` : `, you have ${overLimitSummary[0]?.total}`}.
-                  </p>
-                  <p className="text-sm text-amber-700 mt-2">
-                    The only items you can still order are those where you have remaining quota (e.g. for Preschool: 1 Kinder Dress, 1 Kinder Necktie, 1 Jersey, 1 ID Lace each, if not yet used).
-                  </p>
-                </div>
-              </div>
-            )}
             {isOverSlotLimit && (
               <div className="bg-amber-50 border-t border-amber-200 px-6 py-4 flex items-start gap-3">
                 <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -563,16 +561,6 @@ const MyCart = () => {
                   <p className="font-medium text-amber-800">Item type limit for this order reached.</p>
                   <p className="text-sm text-amber-700 mt-1">
                     You have {slotsLeftForThisOrder} item type{slotsLeftForThisOrder !== 1 ? "s" : ""} left for this order (max {totalItemLimit} total; {slotsUsedFromPlacedOrders} already used in placed orders). Your cart has {cartSlotCount}. Only placed orders count toward the limit—cart does not. Remove some item types to place your order. After you place, you must wait the lockout period before placing another.
-                  </p>
-                </div>
-              </div>
-            )}
-            {limitNotSet && (
-              <div className="bg-amber-50 border-t border-amber-200 px-6 py-4 flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="min-w-0">
-                  <p className="font-medium text-amber-800">
-                    Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders.
                   </p>
                 </div>
               </div>

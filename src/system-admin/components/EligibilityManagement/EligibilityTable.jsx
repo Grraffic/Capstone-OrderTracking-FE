@@ -24,7 +24,7 @@ const EligibilityTable = ({
   getItemEligibility,
 }) => {
   /**
-   * Handle checkbox change
+   * Handle checkbox change for a single level
    */
   const handleCheckboxChange = (itemId, field, checked) => {
     const currentEligibility = getItemEligibility(
@@ -36,6 +36,27 @@ const EligibilityTable = ({
     };
     onEligibilityChange(itemId, updatedEligibility);
   };
+
+  /**
+   * Handle "All Education Levels" checkbox: check/uncheck Preschool through College at once
+   */
+  const handleAllLevelsChange = (itemId, checked) => {
+    const updatedEligibility = {
+      isPreschoolEligible: checked,
+      isElementaryEligible: checked,
+      isJHSEligible: checked,
+      isSHSEligible: checked,
+      isCollegeEligible: checked,
+    };
+    onEligibilityChange(itemId, updatedEligibility);
+  };
+
+  const isAllLevelsChecked = (eligibility) =>
+    eligibility.isPreschoolEligible &&
+    eligibility.isElementaryEligible &&
+    eligibility.isJHSEligible &&
+    eligibility.isSHSEligible &&
+    eligibility.isCollegeEligible;
 
   /**
    * Handle delete button click
@@ -66,6 +87,9 @@ const EligibilityTable = ({
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">
               Item Name
             </th>
+            <th className="px-4 py-3 text-center text-sm font-semibold text-white" title="Check to make item available for all levels (Preschool through College)">
+              All Levels
+            </th>
             <th className="px-4 py-3 text-center text-sm font-semibold text-white">
               Preschool
             </th>
@@ -92,7 +116,7 @@ const EligibilityTable = ({
           {items.length === 0 ? (
             <tr>
               <td
-                colSpan={isEditMode ? 7 : 6}
+                colSpan={isEditMode ? 8 : 7}
                 className="px-4 py-12 text-center"
               >
                 <div className="flex flex-col items-center justify-center">
@@ -128,6 +152,20 @@ const EligibilityTable = ({
                         (not in inventory yet)
                       </span>
                     )}
+                  </td>
+
+                  {/* All Education Levels: one click to check Preschool through College */}
+                  <td className="px-4 py-4 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllLevelsChecked(eligibility)}
+                      onChange={(e) =>
+                        handleAllLevelsChange(item.id, e.target.checked)
+                      }
+                      disabled={!canEdit}
+                      className="eligibility-checkbox"
+                      title="Check to make this item available for all education levels (Preschool through College)"
+                    />
                   </td>
 
                   {/* Preschool Checkbox */}

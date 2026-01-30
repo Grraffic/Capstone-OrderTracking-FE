@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from "react";
-import { isCategoryValidForEducationLevel } from "../../constants/inventoryOptions";
 
 // API base URL - reuse the same convention as other admin hooks
 const API_BASE_URL =
@@ -134,28 +133,19 @@ export const useItemsModalForm = (
     (e) => {
       const { name, value } = e.target;
 
-      // Handle Education Level change - reset category if it's not valid for new education level
+      // Handle Education Level change - category is derived on submit (no Grade Level Category in UI)
       if (name === "educationLevel") {
         setFormData((prev) => {
           const newData = {
             ...prev,
             educationLevel: value,
           };
-
-          // When "All Education Levels" is selected, auto-select "All Levels" for category
+          // When "All Education Levels" is selected, category will be "All Levels" on submit
           if (value === "All Education Levels") {
             newData.category = "All Levels";
-            return newData;
+          } else {
+            newData.category = ""; // Will be set from item name on submit
           }
-
-          // Check if current category is valid for the new education level
-          if (
-            prev.category &&
-            !isCategoryValidForEducationLevel(prev.category, value)
-          ) {
-            newData.category = ""; // Reset category if not valid
-          }
-
           return newData;
         });
       } else {
@@ -342,13 +332,12 @@ export const useItemsModalForm = (
   const validateForm = useCallback(() => {
     const newErrors = {};
 
-    // Required fields validation
-    // Note: name field is auto-generated from category, so we don't validate it
+    // Required fields validation (category is derived from education level / item name on submit)
     if (!formData.educationLevel) {
       newErrors.educationLevel = "Education level is required";
     }
-    if (!formData.category) {
-      newErrors.category = "Category is required";
+    if (formData.educationLevel && formData.educationLevel !== "All Education Levels" && !(formData.name || "").trim()) {
+      newErrors.name = "Item name is required when education level is not All Education Levels";
     }
     if (!formData.itemType) {
       newErrors.itemType = "Item type is required";
@@ -377,10 +366,15 @@ export const useItemsModalForm = (
       e.preventDefault();
 
       if (validateForm()) {
-        // Auto-generate name from category if not provided
+        // Category: "All Education Levels" -> "All Levels"; otherwise use item name
+        const category =
+          formData.educationLevel === "All Education Levels"
+            ? "All Levels"
+            : (formData.name || formData.category || "").trim() || "All Levels";
         const submissionData = {
           ...formData,
-          name: formData.name || formData.category, // Use category as name if name is empty
+          name: (formData.name || "").trim() || formData.category,
+          category,
           adjustmentType,
         };
         onSubmit(submissionData);
