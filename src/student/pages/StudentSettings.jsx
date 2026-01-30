@@ -17,52 +17,7 @@ import { splitDisplayName } from "../../utils/displayName";
  *
  * All business logic is extracted to useStudentSettings hook.
  */
-// Circular step button with hover tooltip (same style as My Orders CategoryButton)
-const OnboardingStepButton = ({
-  step,
-  title,
-  description,
-  isActive,
-  hoverBg,
-  hoverBorder,
-  tooltipBg,
-  tooltipArrow,
-  onClick,
-}) => {
-  const [showTooltip, setShowTooltip] = useState(false);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setShowTooltip(true)}
-      onMouseLeave={() => setShowTooltip(false)}
-      className="flex flex-col items-center gap-3 group relative"
-      aria-label={`Step ${step}: ${title}`}
-    >
-      <div
-        className={`relative w-20 h-20 rounded-full flex items-center justify-center bg-white border-2 transition-all duration-300 group-hover:shadow-lg ${
-          isActive ? "border-[#E68B00] bg-orange-50/50" : "border-gray-300"
-        } ${hoverBorder} ${hoverBg}`}
-      >
-        <span className="text-xl font-bold text-[#003363]">{step}</span>
-      </div>
-      <span className="text-sm font-semibold text-[#003363]">{title}</span>
-      {showTooltip && (
-        <div
-          className={`absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 ${tooltipBg} text-[#003363] text-sm p-4 rounded-lg shadow-lg z-50 pointer-events-none`}
-        >
-          <div
-            className={`absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent ${tooltipArrow}`}
-          />
-          <p className="font-bold mb-2">{title}</p>
-          <p className="text-xs leading-relaxed">{description}</p>
-        </div>
-      )}
-    </button>
-  );
-};
-
-// Inline onboarding card – appears right below the field to fill; Skip or Continue when form not filled
+// Inline onboarding card – appears right below the field to fill; triangle points up to the field
 const OnboardingStepCard = ({
   step,
   totalSteps,
@@ -73,25 +28,32 @@ const OnboardingStepCard = ({
   isLastStep = false,
 }) => {
   return (
-    <div className="mt-3 rounded-xl border border-orange-200 bg-orange-50/80 shadow-md p-4" aria-label="Onboarding guide">
-      <p className="text-xs font-semibold text-[#003363] mb-1">Step {step} of {totalSteps}</p>
-      <h2 className="text-base font-bold text-[#003363] mb-1">{title}</h2>
-      <p className="text-sm text-gray-700 mb-4">{description}</p>
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={onSkip}
-          className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
-        >
-          Skip
-        </button>
-        <button
-          type="button"
-          onClick={onContinue}
-          className="px-5 py-2 bg-[#003363] text-white rounded-lg hover:bg-[#002347] transition-colors font-medium text-sm"
-        >
-          {isLastStep ? "Finish" : "Continue"}
-        </button>
+    <div className="mt-3 relative" aria-label="Onboarding guide">
+      {/* Triangle pointer connecting card to the field above */}
+      <div
+        className="absolute -top-2 left-6 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-b-[10px] border-b-orange-200"
+        aria-hidden
+      />
+      <div className="rounded-xl border border-orange-200 bg-orange-50/80 shadow-md p-4">
+        <p className="text-xs font-semibold text-[#003363] mb-1">Step {step} of {totalSteps}</p>
+        <h2 className="text-base font-bold text-[#003363] mb-1">{title}</h2>
+        <p className="text-sm text-gray-700 mb-4">{description}</p>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onSkip}
+            className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
+          >
+            Skip
+          </button>
+          <button
+            type="button"
+            onClick={onContinue}
+            className="px-5 py-2 bg-[#003363] text-white rounded-lg hover:bg-[#002347] transition-colors font-medium text-sm"
+          >
+            {isLastStep ? "Finish" : "Continue"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -192,17 +154,6 @@ const StudentSettings = () => {
       setOnboardingStep(current.id + 1);
     }
   }, [shouldShowGuide, onboardingStep, formData.gender, formData.studentNumber, formData.courseYearLevel, formData.studentType, ONBOARDING_STEPS]);
-
-  // Step button colors (like My Orders CategoryButton)
-  const ONBOARDING_STEP_COLORS = useMemo(
-    () => [
-      { hoverBg: "hover:bg-[#9FCDFF]", hoverBorder: "hover:border-[#9FCDFF]", tooltipBg: "bg-[#9FCDFF]", tooltipArrow: "border-b-[#9FCDFF]" },
-      { hoverBg: "hover:bg-[#FFCF85]", hoverBorder: "hover:border-[#FFCF85]", tooltipBg: "bg-[#F3BC62]", tooltipArrow: "border-b-[#F3BC62]" },
-      { hoverBg: "hover:bg-[#9AE799]", hoverBorder: "hover:border-[#9AE799]", tooltipBg: "bg-[#9AE799]", tooltipArrow: "border-b-[#9AE799]" },
-      { hoverBg: "hover:bg-[#9FCDFF]", hoverBorder: "hover:border-[#9FCDFF]", tooltipBg: "bg-[#9FCDFF]", tooltipArrow: "border-b-[#9FCDFF]" },
-    ],
-    []
-  );
 
   // Course & Year Level options - Combined dropdown
   const courseYearLevelOptions = [
@@ -481,39 +432,6 @@ const StudentSettings = () => {
                   <h2 className="text-lg font-semibold text-[#E68B00] mb-6">
                     Personal Information
                   </h2>
-
-                  {/* Onboarding step buttons (CategoryButton style) – when first-time student */}
-                  {shouldShowGuide && (
-                    <div className="py-4">
-                      <div className="space-y-12">
-                        <p className="text-sm font-medium text-gray-700">
-                          Complete your profile to see the right uniforms and order limits.
-                        </p>
-                        <div className="flex items-center justify-center gap-16 py-8">
-                          {ONBOARDING_STEPS.map((s, idx) => {
-                            const colors = ONBOARDING_STEP_COLORS[idx] || ONBOARDING_STEP_COLORS[0];
-                            return (
-                              <OnboardingStepButton
-                                key={s.id}
-                                step={s.id}
-                                title={s.title}
-                                description={s.description}
-                                isActive={onboardingStep === s.id}
-                                hoverBg={colors.hoverBg}
-                                hoverBorder={colors.hoverBorder}
-                                tooltipBg={colors.tooltipBg}
-                                tooltipArrow={colors.tooltipArrow}
-                                onClick={() => {
-                                  setOnboardingStep(s.id);
-                                  scrollToId(s.anchorId);
-                                }}
-                              />
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
 
                   <div className="space-y-6">
                     {/* Row 1: First Name, Last Name – read-only from Google account */}
