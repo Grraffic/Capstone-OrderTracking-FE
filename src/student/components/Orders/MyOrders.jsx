@@ -1182,21 +1182,21 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         onClick={onClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        className="flex flex-col items-center gap-2 sm:gap-3 group relative"
+        className="flex flex-col items-center gap-1.5 sm:gap-2 md:gap-3 group relative"
       >
         <div 
-          className={`relative w-16 h-16 sm:w-20 sm:h-20 md:w-20 md:h-20 rounded-full flex items-center justify-center bg-white border-2 border-gray-300 ${config.hoverBorder} ${config.hoverBg} transition-all duration-300 group-hover:shadow-lg`}
+          className={`relative w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center bg-white border-2 border-gray-300 ${config.hoverBorder} ${config.hoverBg} transition-all duration-300 group-hover:shadow-lg`}
         >
-          <Icon className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#003363] transition-colors" />
+          <Icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 lg:w-8 lg:h-8 text-[#003363] transition-colors" />
 
           {count > 0 && (
-            <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-[#F28C28] rounded-full flex items-center justify-center shadow-md">
-              <span className="text-white text-[10px] sm:text-xs font-bold">{count}</span>
+            <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-[#F28C28] rounded-full flex items-center justify-center shadow-md">
+              <span className="text-white text-[9px] sm:text-[10px] md:text-xs font-bold">{count}</span>
             </div>
           )}
         </div>
 
-        <span className="text-xs sm:text-sm font-semibold text-[#003363] transition-colors text-center">
+        <span className="text-[10px] sm:text-xs md:text-sm font-semibold text-[#003363] transition-colors text-center">
           {label}
         </span>
 
@@ -1248,15 +1248,15 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   // OVERVIEW VIEW - Category buttons + Suggested products (skip when history variant)
   if (viewMode === "overview" && !isHistoryView) {
     return (
-      <div className="space-y-8 sm:space-y-10 md:space-y-12">
+      <div className="space-y-6 sm:space-y-8 md:space-y-10 lg:space-y-12">
         {/* Title */}
-        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
+        <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
           <span className="text-[#003363]">My </span>
           <span className="text-[#F28C28]">Orders</span>
         </h2>
 
         {/* Category Buttons */}
-        <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-12 lg:gap-16 py-4 sm:py-6 md:py-8">
+        <div className="flex items-center justify-center gap-4 sm:gap-6 md:gap-10 lg:gap-12 xl:gap-16 py-3 sm:py-4 md:py-6 lg:py-8">
           <CategoryButton
             category="preOrders"
             icon={FileText}
@@ -1282,24 +1282,24 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
         {/* Suggested For You Section - same disabled state as All Products */}
         {suggestedProductsWithLimit.length > 0 && (
-          <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-5 md:mb-6">
-              <h3 className="text-xl sm:text-2xl font-bold">
+          <div className="bg-gray-50 rounded-lg sm:rounded-xl md:rounded-2xl p-3 sm:p-4 md:p-6 lg:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+              <h3 className="text-lg sm:text-xl md:text-2xl font-bold">
                 <span className="text-gray-700">Suggested </span>
                 <span className="text-[#F28C28]">For You</span>
               </h3>
               <button
                 onClick={() => navigate("/all-products")}
-                className="flex items-center gap-2 text-[#F28C28] hover:text-[#d97a1f] font-semibold transition-colors text-sm sm:text-base self-start sm:self-auto"
+                className="flex items-center gap-1.5 sm:gap-2 text-[#F28C28] hover:text-[#d97a1f] font-semibold transition-colors text-xs sm:text-sm md:text-base self-start sm:self-auto"
               >
                 <span className="whitespace-nowrap">Explore More Products</span>
-                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0" />
               </button>
             </div>
 
             {/* Product Grid - use ProductCard so disabled state matches All Products */}
             {/* Mobile M (375px): 2 cols, Mobile L (425px): 2 cols, Tablet (768px): 3 cols, Laptop (1024px): 4 cols */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
               {suggestedProductsWithLimit.map((product, index) => (
                 <ProductCard
                   key={product.id || index}
@@ -1317,21 +1317,21 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   // DETAIL VIEW - Order list (claimed orders when variant=history)
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-5 md:space-y-6">
         {/* Header: Back button + Category tabs (hidden in history variant) */}
         {!isHistoryView && (
-          <div className="flex items-start justify-between mb-6">
+          <div className="flex items-start justify-between mb-4 sm:mb-5 md:mb-6 gap-2 sm:gap-4">
             <button
               onClick={handleBackToOverview}
-              className="p-3 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 sm:p-2.5 md:p-3 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0"
               aria-label="Go back"
             >
-              <span className="text-2xl text-[#003363]">←</span>
+              <span className="text-xl sm:text-2xl md:text-2xl text-[#003363]">←</span>
             </button>
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-3 sm:gap-5 md:gap-6 lg:gap-8 overflow-x-auto">
               <button
                 onClick={() => setActiveCategory("preOrders")}
-                className={`text-sm font-semibold pb-1 transition-colors ${
+                className={`text-xs sm:text-sm md:text-sm font-semibold pb-1 transition-colors whitespace-nowrap ${
                   activeCategory === "preOrders"
                     ? "text-[#003363] border-b-2 border-[#F28C28]"
                     : "text-gray-600 hover:text-[#003363]"
@@ -1341,7 +1341,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
               </button>
               <button
                 onClick={() => setActiveCategory("orders")}
-                className={`text-sm font-semibold pb-1 transition-colors ${
+                className={`text-xs sm:text-sm md:text-sm font-semibold pb-1 transition-colors whitespace-nowrap ${
                   activeCategory === "orders"
                     ? "text-[#F28C28] border-b-2 border-[#F28C28]"
                     : "text-gray-600 hover:text-[#003363]"
@@ -1351,7 +1351,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
               </button>
               <button
                 onClick={() => setActiveCategory("claimed")}
-                className={`text-sm font-semibold pb-1 transition-colors ${
+                className={`text-xs sm:text-sm md:text-sm font-semibold pb-1 transition-colors whitespace-nowrap ${
                   activeCategory === "claimed"
                     ? "text-[#F28C28] border-b-2 border-[#F28C28]"
                     : "text-gray-600 hover:text-[#003363]"
@@ -1364,25 +1364,25 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         )}
 
         {/* Title Row with Dynamic Title and Info Icon */}
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-4xl font-bold">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 md:mb-4 gap-2 sm:gap-4">
+          <h1 className="text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-bold">
             <span className="text-[#003363]">{titleParts.first} </span>
             <span className="text-[#F28C28]">{titleParts.second}</span>
           </h1>
-          <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-            <span className="text-2xl text-[#003363]">ⓘ</span>
+          <button className="p-1.5 sm:p-2 md:p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0">
+            <span className="text-lg sm:text-xl md:text-2xl text-[#003363]">ⓘ</span>
           </button>
         </div>
 
         {/* Orders List (or Order History card grid) */}
         {listForPagination.length === 0 ? (
-          <div className="bg-white rounded-lg border-2 border-gray-200 p-12 text-center">
-            <p className="text-gray-500">No orders found in this category</p>
+          <div className="bg-white rounded-lg border-2 border-gray-200 p-8 sm:p-10 md:p-12 text-center">
+            <p className="text-sm sm:text-base text-gray-500">No orders found in this category</p>
           </div>
         ) : isHistoryView ? (
           /* Order History: card layout – image, title, View Details, Order Again only (no 1pc, FREE, Show QR) */
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
               {paginatedHistoryCards.map(({ order, item }, cardIndex) => {
                 const itemName = item.name || order.item || "Item";
                 const educationLevel = getEducationLevel(item, order);
@@ -1416,18 +1416,18 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                         </div>
                       )}
                     </div>
-                    <div className="p-4 min-w-0">
-                      <h4 className="text-base font-bold text-[#003363] mb-1 line-clamp-2">
+                    <div className="p-3 sm:p-4 min-w-0">
+                      <h4 className="text-sm sm:text-base font-bold text-[#003363] mb-1 line-clamp-2">
                         {itemName}
                       </h4>
-                      <p className="text-sm text-[#F28C28] font-semibold mb-4">
+                      <p className="text-xs sm:text-sm text-[#F28C28] font-semibold mb-3 sm:mb-4">
                         ({educationLevel})
                       </p>
-                      <div className="flex items-center gap-2 w-full min-w-0">
+                      <div className="flex items-center gap-1.5 sm:gap-2 w-full min-w-0">
                         <button
                           type="button"
                           onClick={() => handleShowQR(order)}
-                          className="flex-1 min-w-0 py-1.5 px-2 border-2 border-[#003363] text-[#003363] rounded-lg font-semibold text-xs text-center hover:bg-[#003363] hover:text-white transition-colors"
+                          className="flex-1 min-w-0 py-1.5 sm:py-1.5 px-2 border-2 border-[#003363] text-[#003363] rounded-lg font-semibold text-[10px] sm:text-xs text-center hover:bg-[#003363] hover:text-white transition-colors"
                         >
                           View Details
                         </button>
@@ -1436,7 +1436,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                           onClick={() => canOrderAgain && navigate("/all-products")}
                           disabled={!canOrderAgain}
                           title={canOrderAgain ? "Order this item again" : (isClaimed ? "This item has been claimed and cannot be ordered again" : "You have reached your max item per order")}
-                          className={`flex-1 min-w-0 py-1.5 px-2 border-2 rounded-lg font-semibold text-xs text-center transition-colors ${
+                          className={`flex-1 min-w-0 py-1.5 sm:py-1.5 px-2 border-2 rounded-lg font-semibold text-[10px] sm:text-xs text-center transition-colors ${
                             canOrderAgain
                               ? "border-[#F28C28] text-[#F28C28] hover:bg-[#F28C28] hover:text-white cursor-pointer"
                               : "border-gray-300 text-gray-400 cursor-not-allowed opacity-70"
@@ -1451,15 +1451,15 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
               })}
             </div>
             {listForPagination.length > itemsPerPage && (
-              <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
-                <span className="text-sm text-gray-600 mr-4">
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+                <span className="text-xs sm:text-sm text-gray-600 sm:mr-4">
                   Page {currentPage} of {totalPages}
                 </span>
-                <div className="flex space-x-3">
+                <div className="flex space-x-2 sm:space-x-3">
                   <button
                     onClick={handlePrevPage}
                     disabled={currentPage === 1}
-                    className={`px-6 py-2.5 rounded-lg font-semibold text-sm ${
+                    className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm ${
                       currentPage === 1
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -1470,7 +1470,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                   <button
                     onClick={handleNextPage}
                     disabled={currentPage >= totalPages}
-                    className={`px-6 py-2.5 rounded-lg font-semibold text-sm ${
+                    className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm ${
                       currentPage >= totalPages
                         ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                         : "bg-[#003363] text-white hover:bg-[#002347]"
@@ -1495,22 +1495,22 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                 const orderKey = order.id || order.order_number || `order-${orderIndex}`;
                 
                 return (
-                <div key={orderKey} className="p-6">
+                <div key={orderKey} className="p-3 sm:p-4 md:p-5 lg:p-6">
                   {/* Order Items List */}
-                  <div className="space-y-4 mb-4">
+                  <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4">
                     {order.items && order.items.length > 0 ? (
                       order.items.map((item, itemIndex) => (
-                        <div key={itemIndex} className="space-y-2">
-                          <div className="flex items-center gap-6">
+                        <div key={itemIndex} className="space-y-1.5 sm:space-y-2">
+                          <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
                             {/* Quantity - Left Side (No background) */}
-                            <div className="flex-shrink-0 w-12 flex items-start justify-center">
-                              <span className="text-[#003363] font-bold text-sm">
+                            <div className="flex-shrink-0 w-8 sm:w-10 md:w-12 flex items-start justify-center">
+                              <span className="text-[#003363] font-bold text-xs sm:text-sm">
                                 {item.quantity || 1}PC
                               </span>
                             </div>
 
                             {/* Item Image */}
-                            <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg overflow-hidden">
+                            <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-100 rounded-lg overflow-hidden">
                               {item.image ? (
                                 <img
                                   src={item.image}
@@ -1531,17 +1531,17 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                             </div>
 
                             {/* Item Details - Reorganized */}
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               {/* Size */}
-                              <p className="text-sm text-gray-600 mb-1">
+                              <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">
                                 {item.size || order.size || "Standard"}
                               </p>
                               {/* Item Name */}
-                              <h4 className="text-lg font-bold text-[#003363] mb-1">
+                              <h4 className="text-sm sm:text-base md:text-lg font-bold text-[#003363] mb-0.5 sm:mb-1 line-clamp-2">
                                 {item.name || order.item}
                               </h4>
                               {/* Education Level */}
-                              <p className="text-sm text-[#F28C28] font-semibold">
+                              <p className="text-xs sm:text-sm text-[#F28C28] font-semibold">
                                 {getEducationLevel(item, order)}
                               </p>
 
@@ -1549,7 +1549,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                               {activeCategory === "orders" &&
                                 (order.status === "ready" ||
                                   order.status === "completed") && (
-                                  <p className="text-sm text-[#F28C28] font-semibold mt-2">
+                                  <p className="text-xs sm:text-sm text-[#F28C28] font-semibold mt-1 sm:mt-2">
                                     Available for Claiming
                                   </p>
                                 )}
@@ -1563,9 +1563,9 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                                 const qty = Number(item.quantity) || 1;
                                 const itemTotal = displayUnitPrice * qty;
                                 return (
-                                  <div className="flex flex-col items-end text-xl font-bold text-[#003363]">
+                                  <div className="flex flex-col items-end text-base sm:text-lg md:text-xl font-bold text-[#003363]">
                                     {itemTotal > 0 && (
-                                      <span className="line-through text-gray-500 font-semibold text-base">
+                                      <span className="line-through text-gray-500 font-semibold text-xs sm:text-sm md:text-base">
                                         ₱{itemTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                       </span>
                                     )}
@@ -1580,8 +1580,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                           {activeCategory === "orders" &&
                             (order.status === "ready" ||
                               order.status === "completed") && (
-                              <div className="ml-[84px]">
-                                <p className="text-xs text-[#F28C28]">
+                              <div className="ml-0 sm:ml-[60px] md:ml-[84px]">
+                                <p className="text-[10px] sm:text-xs text-[#F28C28]">
                                   Your order is now available. Please proceed to
                                   the designated claiming area and present your
                                   QR code to receive your item.
@@ -1591,28 +1591,28 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                         </div>
                       ))
                     ) : (
-                      <div className="flex items-center gap-6">
+                      <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
                         {/* Quantity - Left Side (No background) */}
-                        <div className="flex-shrink-0 w-12 flex items-start justify-center">
-                          <span className="text-[#003363] font-bold text-sm">
+                        <div className="flex-shrink-0 w-8 sm:w-10 md:w-12 flex items-start justify-center">
+                          <span className="text-[#003363] font-bold text-xs sm:text-sm">
                             {order.quantity || 1}PC
                           </span>
                         </div>
 
-                        <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs">
+                        <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-[10px] sm:text-xs">
                           No Image
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           {/* Size */}
-                          <p className="text-sm text-gray-600 mb-1">
+                          <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">
                             {order.size || "Standard"}
                           </p>
                           {/* Item Name */}
-                          <h4 className="text-lg font-bold text-[#003363] mb-1">
+                          <h4 className="text-sm sm:text-base md:text-lg font-bold text-[#003363] mb-0.5 sm:mb-1 line-clamp-2">
                             {order.item}
                           </h4>
                           {/* Education Level */}
-                          <p className="text-sm text-[#F28C28] font-semibold">
+                          <p className="text-xs sm:text-sm text-[#F28C28] font-semibold">
                             {getEducationLevel({}, order)}
                           </p>
                         </div>
@@ -1626,9 +1626,9 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                             const displayUnitPrice = getDisplayPriceForFreeItem(orderItemName, storedUnit);
                             const displayTotal = displayUnitPrice * qty;
                             return (
-                              <div className="flex flex-col items-end text-xl font-bold text-[#003363]">
+                              <div className="flex flex-col items-end text-base sm:text-lg md:text-xl font-bold text-[#003363]">
                                 {displayTotal > 0 && (
-                                  <span className="line-through text-gray-500 font-semibold text-base">
+                                  <span className="line-through text-gray-500 font-semibold text-xs sm:text-sm md:text-base">
                                     ₱{displayTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
                                   </span>
                                 )}
@@ -1642,45 +1642,55 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                   </div>
 
                   {/* Action Button - Order for pre-orders, Show QR for regular orders */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end mt-3 sm:mt-4">
                     {activeCategory === "preOrders" ? (
-                      <button
-                        onClick={() => handleConvertPreOrder(order)}
-                        disabled={
-                          !orderAvailability[orderId] ||
-                          convertingOrders[orderId] ||
-                          checkingAvailability[orderId]
-                        }
-                        className={`px-6 py-2 border-2 rounded-full font-semibold text-sm transition-colors ${
-                          orderAvailability[orderId] &&
-                          !convertingOrders[orderId] &&
-                          !checkingAvailability[orderId]
-                            ? "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
-                            : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
-                        }`}
-                        title={
-                          checkingAvailability[orderId]
-                            ? "Checking availability..."
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <button
+                          onClick={() => setOrderToCancel(order)}
+                          disabled={cancellingOrders[order.id || order._original?.id]}
+                          className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Cancel this pre-order so you can place a new one"
+                        >
+                          {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
+                        </button>
+                        <button
+                          onClick={() => handleConvertPreOrder(order)}
+                          disabled={
+                            !orderAvailability[orderId] ||
+                            convertingOrders[orderId] ||
+                            checkingAvailability[orderId]
+                          }
+                          className={`px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 rounded-full font-semibold text-xs sm:text-sm transition-colors ${
+                            orderAvailability[orderId] &&
+                            !convertingOrders[orderId] &&
+                            !checkingAvailability[orderId]
+                              ? "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
+                              : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                          }`}
+                          title={
+                            checkingAvailability[orderId]
+                              ? "Checking availability..."
+                              : orderAvailability[orderId]
+                              ? "Click to convert pre-order to regular order"
+                              : "Item not yet available"
+                          }
+                        >
+                          {convertingOrders[orderId]
+                            ? "Processing..."
+                            : checkingAvailability[orderId]
+                            ? "Checking..."
                             : orderAvailability[orderId]
-                            ? "Click to convert pre-order to regular order"
-                            : "Item not yet available"
-                        }
-                      >
-                        {convertingOrders[orderId]
-                          ? "Processing..."
-                          : checkingAvailability[orderId]
-                          ? "Checking..."
-                          : orderAvailability[orderId]
-                          ? "Order"
-                          : "Not Available"}
-                      </button>
+                            ? "Order"
+                            : "Not Available"}
+                        </button>
+                      </div>
                     ) : (
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         {activeCategory === "orders" && (
                           <button
                             onClick={() => setOrderToCancel(order)}
                             disabled={cancellingOrders[order.id || order._original?.id]}
-                            className="px-6 py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
                             title="Cancel this order so you can place a new one"
                           >
                             {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
@@ -1688,7 +1698,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                         )}
                         <button
                           onClick={() => handleShowQR(order)}
-                          className="px-6 py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-sm transition-colors hover:bg-[#003363] hover:text-white"
+                          className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-[#003363] hover:text-white"
                           title="Show QR code"
                         >
                           Show QR
@@ -1703,19 +1713,19 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
             {/* Pagination Controls */}
             {listForPagination.length > itemsPerPage && (
-              <div className="flex items-center justify-end mt-8 pt-6 border-t border-gray-200">
-                <div className="flex items-center space-x-4">
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 sm:gap-4 mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+                <div className="flex items-center space-x-3 sm:space-x-4 w-full sm:w-auto justify-between sm:justify-end">
                   {/* Page Info */}
-                  <span className="text-sm text-gray-600">
+                  <span className="text-xs sm:text-sm text-gray-600">
                     Page {currentPage} of {totalPages}
                   </span>
 
                   {/* Navigation Buttons */}
-                  <div className="flex space-x-3">
+                  <div className="flex space-x-2 sm:space-x-3">
                     <button
                       onClick={handlePrevPage}
                       disabled={currentPage === 1}
-                      className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                      className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all ${
                         currentPage === 1
                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                           : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -1727,7 +1737,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                     <button
                       onClick={handleNextPage}
                       disabled={currentPage === totalPages}
-                      className={`px-6 py-2.5 rounded-lg font-semibold text-sm transition-all ${
+                      className={`px-4 sm:px-5 md:px-6 py-2 sm:py-2.5 rounded-lg font-semibold text-xs sm:text-sm transition-all ${
                         currentPage === totalPages
                           ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                           : "bg-[#003363] text-white hover:bg-[#002347] shadow-md"

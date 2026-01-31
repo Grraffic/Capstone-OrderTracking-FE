@@ -1,6 +1,5 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell } from "lucide-react";
 import { PRODUCT_STATUS } from "../../constants/studentProducts";
 
 const ProductCard = ({ product, blockedDueToVoid = false }) => {
@@ -127,15 +126,9 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
         {/* Stock Status - Only show for out of stock items */}
         {isOutOfStock && (
           <div className="mt-3">
-            <div className="flex flex-row items-center justify-between">
-              <span className="text-xs text-red-600 font-semibold">
-                Out of Stock
-              </span>
-              <button className="flex items-center gap-1 text-xs text-[#003363] hover:text-[#F28C28] transition-colors">
-                <Bell size={12} />
-                <span>Remind me</span>
-              </button>
-            </div>
+            <span className="text-xs text-red-600 font-semibold">
+              Out of Stock
+            </span>
           </div>
         )}
       </div>

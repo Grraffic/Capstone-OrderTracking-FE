@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { ArrowUp } from "lucide-react";
 import { useScrollOnState } from "../hooks/useScrollOnState";
 import Header from "../components/common/Header";
 import ContactForm from "../components/common/ContactForm";
@@ -7,6 +8,21 @@ import FeatureCarousel from "../constants/carouselSlides";
 
 export default function LandingPage() {
   useScrollOnState();
+  const [showScrollTop, setShowScrollTop] = useState(false);
+
+  // Show scroll-to-top button when user scrolls down
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   return (
     <div className="min-h-screen bg-white flex flex-col overflow-x-hidden">
       {/* Header */}
@@ -90,11 +106,7 @@ export default function LandingPage() {
             {/* Card 1 */}
             <div className="flex flex-col h-full">
               <div
-                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, rgba(243, 243, 243, 1) 0%, rgba(249, 240, 227, 0.97) 11%, rgba(203, 123, 0, 0.7) 60%, rgba(1, 109, 211, 0.7) 100%)",
-                }}
+                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white"
               >
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
                   Senior High <br /> Uniforms
@@ -150,11 +162,7 @@ export default function LandingPage() {
             {/* Card 2 */}
             <div className="flex flex-col h-full">
               <div
-                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, rgba(243, 243, 243, 1) 0%, rgba(249, 240, 227, 0.97) 11%, rgba(203, 123, 0, 0.7) 60%, rgba(1, 109, 211, 0.7) 100%)",
-                }}
+                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white"
               >
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
                   Basic Education Uniforms
@@ -210,11 +218,7 @@ export default function LandingPage() {
             {/* Card 3 */}
             <div className="flex flex-col h-full sm:col-span-2 lg:col-span-1">
               <div
-                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden"
-                style={{
-                  background:
-                    "linear-gradient(to bottom, rgba(243, 243, 243, 1) 0%, rgba(249, 240, 227, 0.97) 11%, rgba(203, 123, 0, 0.7) 60%, rgba(1, 109, 211, 0.7) 100%)",
-                }}
+                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white"
               >
                 <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
                   PE Uniforms are
@@ -420,6 +424,17 @@ export default function LandingPage() {
           </div>
         </div>
       </div>
+
+      {/* Scroll to Top Button - Mobile Only */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="lg:hidden fixed bottom-6 right-6 z-50 bg-[#003363] text-white rounded-full p-3 shadow-lg hover:bg-[#0C2340] transition-all duration-300 hover:scale-110 active:scale-95 min-w-[48px] min-h-[48px] flex items-center justify-center"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={24} />
+        </button>
+      )}
 
     </div>
   );

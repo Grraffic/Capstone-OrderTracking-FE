@@ -83,7 +83,13 @@ export default function Header() {
         {/* Left side - Logo + Title */}
         <div
           className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => window.location.reload()}
+          onClick={() => {
+            // Scroll to top first, then reload
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            setTimeout(() => {
+              window.location.reload();
+            }, 300); // Small delay to allow smooth scroll
+          }}
         >
           <img
             src="../../../assets/image/LV Logo.png"

@@ -210,8 +210,8 @@ const StudentProfile = () => {
       <HeroSection heading="User Profile" align="bottom-right" />
 
       {/* Profile Card – left; Activity – right (side-by-side from tablet 768px) */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 relative z-10">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
           {/* Left Side - Profile Card */}
           <ProfileCard
             profileData={profileData}
@@ -224,7 +224,7 @@ const StudentProfile = () => {
           {/* Right Side - Activity Feed */}
           <div className="md:col-span-3 min-w-0">
             {/* Single Background Container for Tabs + Activities */}
-            <div className="bg-gray-50 rounded-xl px-4 sm:px-6 md:px-6 min-h-[500px]">
+            <div className="bg-gray-50 rounded-xl px-3 sm:px-4 md:px-6 lg:px-8 min-h-[400px] sm:min-h-[450px] md:min-h-[500px]">
               {/* Tabs Bar - Arrow button beside Activities; then Orders, History; filter right */}
               <div className="pb-4 mb-4 border-b border-gray-200">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:flex-nowrap sm:gap-2 md:gap-5 lg:gap-6">
@@ -365,14 +365,14 @@ const StudentProfile = () => {
 
               {/* My Orders View */}
               {activeTab === "orders" && (
-                <div className="py-4">
+                <div className="py-2 sm:py-3 md:py-4 lg:py-6">
                   <MyOrders sortOrder={filter} />
                 </div>
               )}
 
               {/* History View - Claimed orders (Order History) */}
               {activeTab === "history" && (
-                <div className="py-4">
+                <div className="py-2 sm:py-3 md:py-4 lg:py-6">
                   <MyOrders sortOrder={filter} variant="history" />
                 </div>
               )}

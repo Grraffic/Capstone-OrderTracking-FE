@@ -16,7 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useItemsModalForm } from "../../hooks";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { EDUCATION_LEVELS, ITEM_TYPES } from "../../constants/inventoryOptions";
 import {
@@ -296,8 +296,61 @@ const ItemsModals = ({
     formData.stock,
   ]);
 
+  // Validation function to check if form is complete
+  const validateFormComplete = useMemo(() => {
+    // Basic required fields
+    if (!formData.itemType) return false;
+    if (!formData.educationLevel) return false;
+    if (formData.educationLevel !== "All Education Levels" && !formData.name?.trim()) return false;
+
+    // For Uniforms: check if at least one variant is filled
+    if (isUniforms) {
+      const hasValidVariant = selectedVariantIndices.some((index) => {
+        const size = variants[0]?.values?.[index]?.trim() || "";
+        const stock = Number(variantStocks[index]) || 0;
+        const price = Number(variantPrices[index]) || 0;
+        // At least size and (stock or price) should be filled
+        return size && (stock > 0 || price > 0);
+      });
+      if (!hasValidVariant) return false;
+    }
+
+    // For Accessories: check if at least one entry is filled
+    if (isAccessories) {
+      const hasValidEntry = selectedAccessoryIndices.some((index) => {
+        const stock = Number(accessoryStocks[index]) || 0;
+        const price = Number(accessoryPrices[index]) || 0;
+        return stock > 0 || price > 0;
+      });
+      if (!hasValidEntry) return false;
+    }
+
+    return true;
+  }, [
+    formData.itemType,
+    formData.educationLevel,
+    formData.name,
+    isUniforms,
+    isAccessories,
+    modalState.mode,
+    selectedVariantIndices,
+    variants,
+    variantStocks,
+    variantPrices,
+    selectedAccessoryIndices,
+    accessoryStocks,
+    accessoryPrices,
+  ]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate form before proceeding
+    if (!validateFormComplete) {
+      // Show alert or error message
+      alert("Please complete all required fields before submitting.");
+      return;
+    }
 
     // Handle Accessories (no sizes)
     if (
@@ -586,6 +639,69 @@ const ItemsModals = ({
     }
   };
 
+  // Helper function to generate description text based on education level
+  const generateDescriptionText = useCallback((educationLevel) => {
+    if (!educationLevel) {
+      return "Complete Set<br/>This Uniform is for students only.";
+    }
+
+    // Map education level values to proper display names for description
+    const educationLevelDisplayMap = {
+      "Kindergarten": "Preschool",
+      "Preschool": "Preschool",
+      "Elementary": "Elementary",
+      "Junior High School": "Junior High School",
+      "Senior High School": "Senior High School",
+      "College": "College",
+      "All Education Levels": "All Education Levels",
+    };
+
+    const displayName = educationLevelDisplayMap[educationLevel] || educationLevel;
+    
+    return `Complete Set<br/>This Uniform is for ${displayName} Only.`;
+  }, []);
+
+  // Track last education level to detect changes
+  const lastEducationLevelRef = useRef(null);
+
+  // Auto-update description text when education level changes (only in add mode)
+  useEffect(() => {
+    if (
+      modalState.mode === "add" &&
+      modalState.isOpen &&
+      formData.educationLevel &&
+      editorRef.current &&
+      formData.educationLevel !== lastEducationLevelRef.current
+    ) {
+      // Only update if editor is empty or contains the default template
+      const currentContent = editorRef.current.innerHTML || "";
+      const isDefaultContent = 
+        !currentContent.trim() ||
+        currentContent.includes("This uniform is for") ||
+        currentContent.includes("This Uniform is for") ||
+        currentContent.includes("Complete Set");
+
+      if (isDefaultContent) {
+        const newDescription = generateDescriptionText(formData.educationLevel);
+        editorRef.current.innerHTML = newDescription;
+        // Sync to form data
+        handleInputChange({
+          target: { name: "descriptionText", value: newDescription },
+        });
+      }
+      
+      // Update the ref to track the current education level
+      lastEducationLevelRef.current = formData.educationLevel;
+    }
+  }, [formData.educationLevel, modalState.mode, modalState.isOpen, generateDescriptionText, handleInputChange]);
+
+  // Reset last education level when modal closes
+  useEffect(() => {
+    if (!modalState.isOpen) {
+      lastEducationLevelRef.current = null;
+    }
+  }, [modalState.isOpen]);
+
   // Initialize editor content only once when modal opens for add/edit modes
   useEffect(() => {
     // Small delay to ensure the editor ref is available after render
@@ -596,15 +712,18 @@ const ItemsModals = ({
         modalState.isOpen &&
         (modalState.mode === "add" || modalState.mode === "edit")
       ) {
-        const initialContent =
-          formData.descriptionText ||
-          "Complete Set<br/>This uniform is for Senior High School students only.";
+        // For add mode, use education level-based description if available
+        // For edit mode, use existing descriptionText
+        const initialContent = modalState.mode === "add" && formData.educationLevel
+          ? generateDescriptionText(formData.educationLevel)
+          : formData.descriptionText ||
+            "Complete Set<br/>This Uniform is for Senior High School Only.";
         editorRef.current.innerHTML = initialContent;
         isEditorInitialized.current = true;
       }
     }, 0);
     return () => clearTimeout(timeoutId);
-  }, [formData.descriptionText, modalState.isOpen, modalState.mode]);
+  }, [formData.descriptionText, formData.educationLevel, modalState.isOpen, modalState.mode, generateDescriptionText]);
 
   // Reset initialization flag when modal closes or mode changes
   useEffect(() => {
@@ -2057,7 +2176,17 @@ const ItemsModals = ({
           <button
             type="submit"
             onClick={handleSubmit}
-            className="px-4 py-1.5 mobile-l:px-6 mobile-l:py-2.5 text-xs mobile-l:text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 shadow-sm font-semibold transition"
+            disabled={!validateFormComplete}
+            className={`px-4 py-1.5 mobile-l:px-6 mobile-l:py-2.5 text-xs mobile-l:text-sm rounded-lg shadow-sm font-semibold transition ${
+              validateFormComplete
+                ? "bg-orange-500 text-white hover:bg-orange-600 cursor-pointer"
+                : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+            title={
+              !validateFormComplete
+                ? "Please complete all required fields (Item Type, Education Level, Item Name, and at least one size/entry with stock or price)"
+                : "Submit form"
+            }
           >
             Done
           </button>
