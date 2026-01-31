@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { subDays } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
@@ -56,19 +56,41 @@ const Inventory = () => {
   });
 
   // Fetch all orders to calculate unreleased and released counts
-  // Use a very high limit to get all orders, or fetch multiple pages if needed
+  // Fetch active orders (pending, processing, ready, payment_pending)
   const {
-    orders: allOrders,
-    loading: ordersLoading,
-    pagination: ordersPagination,
+    orders: allActiveOrders,
+    loading: activeOrdersLoading,
   } = useOrders({
     page: 1,
-    limit: 10000, // Fetch a very large number to get all orders
-    status: null, // Get all statuses
+    limit: 10000,
+    status: null, // Gets active orders: pending, processing, ready, payment_pending
     orderType: null,
     educationLevel: null,
     search: null,
   });
+
+  // Fetch claimed/completed orders separately (backend filters them out when status is null)
+  const {
+    orders: allClaimedOrders,
+    loading: claimedOrdersLoading,
+  } = useOrders({
+    page: 1,
+    limit: 10000,
+    status: "claimed", // Explicitly fetch claimed orders
+    orderType: null,
+    educationLevel: null,
+    search: null,
+  });
+
+  // Combine all orders for calculations
+  const allOrders = useMemo(() => {
+    return [
+      ...(allActiveOrders || []),
+      ...(allClaimedOrders || []),
+    ];
+  }, [allActiveOrders, allClaimedOrders]);
+
+  const ordersLoading = activeOrdersLoading || claimedOrdersLoading;
   // Transaction data - fetched from API
   const [transactionData, setTransactionData] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
@@ -306,11 +328,11 @@ const Inventory = () => {
             // This allows comparing releases across different time periods
             if (startDate || endDate) {
               const status = order.status?.toLowerCase();
-              const isReleased = status === "claimed";
+              const isReleased = status === "claimed" || status === "completed";
 
               // Use appropriate date based on order status
               const orderDate = isReleased
-                ? order.updated_at || order.completed_at || order.created_at // When it was released
+                ? order.claimed_date || order.updated_at || order.completed_at || order.created_at // When it was released
                 : order.created_at; // When it was created
 
               if (orderDate) {
@@ -401,9 +423,12 @@ const Inventory = () => {
 
             if (matchingQuantity > 0) {
               const status = order.status?.toLowerCase();
+              // Unreleased: pending or processing orders
               if (status === "pending" || status === "processing") {
                 unreleasedCount += matchingQuantity;
-              } else if (status === "claimed") {
+              } 
+              // Released: claimed or completed orders (both count as released)
+              else if (status === "claimed" || status === "completed") {
                 releasedCount += matchingQuantity;
               }
             }
@@ -717,11 +742,11 @@ const Inventory = () => {
           order.status?.toLowerCase() === "processing"
       ).length;
 
-      // Released orders = claimed status
-      const releasedCount = allOrders.filter(
-        (order) =>
-          order.status?.toLowerCase() === "claimed"
-      ).length;
+      // Released orders = claimed or completed status
+      const releasedCount = allOrders.filter((order) => {
+        const status = order.status?.toLowerCase();
+        return status === "claimed" || status === "completed";
+      }).length;
 
       console.log(
         `[Inventory] 📊 Total order counts - Unreleased: ${unreleasedCount}, Released: ${releasedCount}`

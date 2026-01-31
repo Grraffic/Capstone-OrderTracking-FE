@@ -40,6 +40,7 @@ const ProductDetailsPage = () => {
   const [userEducationLevel, setUserEducationLevel] = useState(null);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [claimedItems, setClaimedItems] = useState({});
   const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [maxQuantitiesProfileIncomplete, setMaxQuantitiesProfileIncomplete] = useState(false);
@@ -151,6 +152,7 @@ const ProductDetailsPage = () => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setClaimedItems(res.data?.claimedItems ?? {});
         setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setMaxQuantitiesProfileIncomplete(res.data?.profileIncomplete === true);
@@ -163,6 +165,7 @@ const ProductDetailsPage = () => {
         if (err?.response?.status === 400) {
           setMaxQuantitiesProfileIncomplete(true);
           setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
+          setClaimedItems(err?.response?.data?.claimedItems ?? {});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
           setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
@@ -171,6 +174,7 @@ const ProductDetailsPage = () => {
           console.error("Error fetching max quantities:", err);
           setMaxQuantitiesProfileIncomplete(false);
           setAlreadyOrdered({});
+          setClaimedItems({});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
           setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
@@ -461,11 +465,19 @@ const ProductDetailsPage = () => {
       ? (Number(alreadyOrdered["jogging pants"]) || 0)
       : 0;
   const alreadyOrderedForItem = Math.max(baseAlready, joggingFallback);
+  // Check if item is claimed - if so, disable ordering permanently
+  const baseClaimed = product ? (Number(claimedItems[productResolvedKey]) || 0) : 0;
+  const joggingClaimedFallback =
+    product && normalizeItemName(product.name || "").includes("jogging pants")
+      ? (Number(claimedItems["jogging pants"]) || 0)
+      : 0;
+  const claimedForItem = Math.max(baseClaimed, joggingClaimedFallback);
+  const isClaimed = claimedForItem > 0;
   const effectiveMax = product
-    ? Math.min(
+    ? (isClaimed ? 0 : Math.min(
         Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem),
         effectiveStock || 999
-      )
+      ))
     : getDefaultMaxForItem("");
 
   // Clamp quantity when effectiveMax decreases (e.g. after maxQuantities loads)
@@ -500,17 +512,19 @@ const ProductDetailsPage = () => {
       const notAllowedForStudentType =
         isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
+      const claimedForItem = claimedItems[key] ?? 0;
+      const isClaimed = claimedForItem > 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-      const effectiveMaxItem = Math.max(0, max - inCart - alreadyOrd);
+      const effectiveMaxItem = isClaimed ? 0 : Math.max(0, max - inCart - alreadyOrd);
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewTypeItem =
         totalItemLimit != null &&
         Number(totalItemLimit) > 0 &&
         isNewItemType &&
         cartSlotCount >= slotsLeftForThisOrder;
-      const _orderLimitReached = effectiveMaxItem < 1;
+      const _orderLimitReached = effectiveMaxItem < 1 || isClaimed;
       const _isDisabled = _orderLimitReached || blockedDueToVoid || slotsFullForNewTypeItem || notAllowedForStudentType;
       return {
         ...p,
@@ -894,7 +908,7 @@ const ProductDetailsPage = () => {
                 {/* Bottom Section - Fixed at Bottom */}
                 <div className="mt-auto pt-4 space-y-3 border-t border-gray-200">
                   {/* Already ordered — message removed per design
-                  {effectiveMax < 1 && alreadyOrderedForItem > 0 && (
+                  {(effectiveMax < 1 && alreadyOrderedForItem > 0) || isClaimed && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                       <p className="font-medium">This item is already in your orders.</p>
                       <p className="mt-1 text-amber-700">Add to Cart and Order Now are disabled for this item, same as when it is in your cart. You have already ordered the maximum. You can only claim it when your order is ready.</p>

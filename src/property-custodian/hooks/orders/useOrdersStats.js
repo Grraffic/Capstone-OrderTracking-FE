@@ -29,39 +29,51 @@ const useOrdersStats = (orders) => {
     }
 
     // Calculate total cost
+    // Check both totalAmount (transformed) and total_amount (raw API)
     const totalCost = orders.reduce((sum, order) => {
-      return sum + (parseFloat(order.totalAmount) || 0);
+      const amount = order.totalAmount || order.total_amount || order.originalOrder?.total_amount || 0;
+      return sum + (parseFloat(amount) || 0);
     }, 0);
+
+    // Helper function to get order status (check both order.status and originalOrder.status)
+    const getOrderStatus = (order) => {
+      return (order.status?.toLowerCase() || 
+              order.originalOrder?.status?.toLowerCase() || 
+              "").toLowerCase();
+    };
 
     // Count orders by status
     const pendingCount = orders.filter(
-      (order) => order.status?.toLowerCase() === "pending"
+      (order) => getOrderStatus(order) === "pending"
     ).length;
 
     const processingCount = orders.filter(
-      (order) => order.status?.toLowerCase() === "processing"
+      (order) => getOrderStatus(order) === "processing"
     ).length;
 
-    const claimedCount = orders.filter(
-      (order) => order.status?.toLowerCase() === "claimed"
-    ).length;
+    const claimedCount = orders.filter((order) => {
+      const status = getOrderStatus(order);
+      return status === "claimed" || status === "completed";
+    }).length;
 
     const cancelledCount = orders.filter(
-      (order) => order.status?.toLowerCase() === "cancelled"
+      (order) => getOrderStatus(order) === "cancelled"
     ).length;
 
     // Calculate unreleased quantity (pending + processing)
-    const unreleasedQuantity = orders.filter(
-      (order) =>
-        order.status?.toLowerCase() === "pending" ||
-        order.status?.toLowerCase() === "processing"
-    ).length;
+    const unreleasedQuantity = orders.filter((order) => {
+      const status = getOrderStatus(order);
+      return status === "pending" || status === "processing";
+    }).length;
 
     // Calculate released quantity (claimed)
-    const releasedQuantity = orders.filter(
-      (order) =>
-        order.status?.toLowerCase() === "claimed"
-    ).length;
+    // Check both order.status and originalOrder.status (for transformed orders)
+    const releasedQuantity = orders.filter((order) => {
+      const status = order.status?.toLowerCase() || 
+                    order.originalOrder?.status?.toLowerCase() || 
+                    "";
+      return status === "claimed" || status === "completed";
+    }).length;
 
     return {
       totalCost,

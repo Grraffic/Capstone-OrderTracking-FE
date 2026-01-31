@@ -53,8 +53,11 @@ export const ActivityProvider = ({ children }) => {
       console.log("🔍 Event userId:", data.userId);
       console.log("🔍 Match?", data.userId === user.id);
 
-      // Only track activity if this order belongs to the current user
-      if (data.userId === user.id) {
+      // Only track activity if this order belongs to the current user (support both id and uid)
+      const currentUserId = user.id || user.uid;
+      const eventUserId = data.userId;
+      
+      if (eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId))) {
         // Calculate total items count
         const itemCount = data.items?.length || 0;
 
@@ -74,8 +77,8 @@ export const ActivityProvider = ({ children }) => {
         console.log("✅ Activity tracked: Order claimed");
       } else {
         console.log("⚠️ Order claimed event received but userId doesn't match current user");
-        console.log("⚠️ Expected:", user.id);
-        console.log("⚠️ Received:", data.userId);
+        console.log("⚠️ Expected:", currentUserId);
+        console.log("⚠️ Received:", eventUserId);
       }
     };
 

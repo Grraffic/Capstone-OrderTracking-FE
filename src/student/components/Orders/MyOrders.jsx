@@ -283,6 +283,22 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   // Safety check: ensure orders is always an array
   const safeOrders = Array.isArray(orders) ? orders : [];
 
+  // Ensure orders are fetched when component mounts (safety net)
+  useEffect(() => {
+    console.log(`🔍 MyOrders: Component mounted/updated`, {
+      hasUser: !!user,
+      userId: user?.uid || user?.id,
+      ordersCount: safeOrders.length,
+      loading
+    });
+    
+    // If we have a user but no orders and not loading, try to fetch
+    if (user && safeOrders.length === 0 && !loading && fetchOrders) {
+      console.log(`🔍 MyOrders: No orders found, triggering fetchOrders as safety net`);
+      fetchOrders();
+    }
+  }, [user, safeOrders.length, loading, fetchOrders]);
+
   // When variant="history", show claimed orders in detail view only (Order History)
   const [viewMode, setViewMode] = useState(
     isHistoryView ? "detail" : (location.state?.viewMode || "overview")
@@ -301,6 +317,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const [orderToCancel, setOrderToCancel] = useState(null); // order for cancel confirmation
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [claimedItems, setClaimedItems] = useState({});
   const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
@@ -315,6 +332,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setClaimedItems(res.data?.claimedItems ?? {});
         setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
@@ -323,6 +341,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
           setMaxQuantities(err.response.data.maxQuantities);
         if (err?.response?.data?.alreadyOrdered != null)
           setAlreadyOrdered(err.response.data.alreadyOrdered);
+        if (err?.response?.data?.claimedItems != null)
+          setClaimedItems(err.response.data.claimedItems);
         if (err?.response?.data?.totalItemLimit != null)
           setMaxItemsPerOrder(err.response.data.totalItemLimit);
         if (err?.response?.data?.slotsUsedFromPlacedOrders != null)
@@ -374,14 +394,111 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
   // Handle Socket.IO real-time order updates
   const handleOrderUpdate = useCallback((data) => {
-    console.log("📡 Student - Real-time order update received:", data);
-    // The OrderContext should handle refetching
-    // If you need manual refetch, uncomment below
-    // refetchOrders();
-  }, []);
+    console.log("📡 MyOrders - Real-time order update received:", data);
+    console.log("📡 MyOrders - Order status:", data.status);
+    console.log("📡 MyOrders - Order ID:", data.orderId || data.order?.id);
+    console.log("📡 MyOrders - Order Number:", data.order?.order_number);
+    console.log("📡 MyOrders - Current activeCategory:", activeCategory);
+    console.log("📡 MyOrders - Current orders count:", orders.length);
+    
+    // The OrderContext should handle refetching, but we can also manually refetch here
+    // to ensure the UI updates immediately
+    if (data.status && (data.status === "claimed" || data.status === "completed")) {
+      console.log("📡 MyOrders - Order claimed/completed, refreshing orders and max quantities");
+      console.log("📡 MyOrders - Order details:", {
+        id: data.order?.id || data.orderId,
+        orderNumber: data.order?.order_number,
+        status: data.status,
+        items: data.order?.items?.map(i => i.name).join(", ")
+      });
+      
+      // If order was just claimed and user is viewing "orders" tab, switch to "claimed" tab
+      // to show them the order immediately
+      if (data.status === "claimed" && activeCategory === "orders") {
+        console.log("📡 MyOrders - Switching to Claimed tab to show the claimed order");
+        setActiveCategory("claimed");
+      }
+      
+      // OrderContext will handle the refetch, but we also call it here with a slight delay
+      // to ensure the UI updates after OrderContext has processed the update
+      // This ensures the order appears in the correct category
+      console.log("📡 MyOrders - Scheduling fetchOrders to refresh order list");
+      setTimeout(() => {
+        console.log("📡 MyOrders - Executing fetchOrders...");
+        fetchOrders().then(() => {
+          console.log("✅ MyOrders: Orders refreshed, checking if claimed order appears...");
+          // Verify the order appears in the filtered list
+          const claimedOrders = orders.filter(
+            (order) =>
+              order.order_type !== "pre-order" &&
+              (order.status === "completed" || order.status === "claimed")
+          );
+          const orderExists = claimedOrders.some(
+            o => o.id === (data.order?.id || data.orderId) || 
+                 o.orderNumber === data.order?.order_number
+          );
+          if (orderExists) {
+            console.log("✅ MyOrders: Claimed order found in filtered list!");
+          } else {
+            console.warn("⚠️ MyOrders: Claimed order not found in filtered list yet. Order may need another refresh.");
+          }
+        });
+      }, 500); // Wait for OrderContext to complete its refetch first
+      
+      // Refetch max quantities to update claimedItems
+      if (user) {
+        console.log("📡 MyOrders - Refreshing max quantities to update claimedItems");
+        authAPI.getMaxQuantities()
+          .then((res) => {
+            console.log("📡 MyOrders - Max quantities refreshed, claimedItems:", res.data?.claimedItems);
+            setMaxQuantities(res.data?.maxQuantities ?? {});
+            setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+            setClaimedItems(res.data?.claimedItems ?? {});
+            setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
+            setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
+            setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
+          })
+          .catch((err) => {
+            console.error("❌ MyOrders - Error refreshing max quantities after order claim:", err);
+          });
+      }
+    } else {
+      console.log("📡 MyOrders - Order update received but status is not claimed/completed:", data.status);
+    }
+  }, [fetchOrders, user, activeCategory, orders.length]);
 
   // Connect to Socket.IO for real-time updates
   useSocketOrderUpdates(handleOrderUpdate);
+
+  // Diagnostic: Log claimed orders whenever orders change
+  useEffect(() => {
+    if (orders.length > 0) {
+      const claimedOrders = orders.filter(
+        (order) =>
+          order.order_type !== "pre-order" &&
+          (order.status === "completed" || order.status === "claimed")
+      );
+      
+      console.log(`🔍 MyOrders Diagnostic: Total orders: ${orders.length}, Claimed orders: ${claimedOrders.length}`);
+      
+      if (claimedOrders.length > 0) {
+        console.log(`✅ MyOrders Diagnostic: Claimed orders available:`, claimedOrders.map(o => ({
+          id: o.id,
+          orderNumber: o.orderNumber,
+          status: o.status,
+          claimedDate: o.claimedDate,
+          items: o.items?.map(i => `${i.quantity}x ${i.name}`).join(", ") || "N/A"
+        })));
+      } else {
+        console.log(`⚠️ MyOrders Diagnostic: No claimed orders found in current orders array`);
+        console.log(`⚠️ MyOrders Diagnostic: All order statuses:`, orders.map(o => ({
+          orderNumber: o.orderNumber,
+          status: o.status,
+          order_type: o.order_type
+        })));
+      }
+    }
+  }, [orders]);
 
   // Get unique products from orders for "Suggested For You" (include id for navigation when available)
   const getSuggestedProducts = () => {
@@ -462,6 +579,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
   // Filter orders based on active category, then sort by date (oldest/newest/all)
   const filteredOrders = React.useMemo(() => {
+    console.log(`🔍 MyOrders: Filtering orders for category "${activeCategory}". Total orders: ${orders.length}`);
     let list;
     switch (activeCategory) {
       case "preOrders":
@@ -483,6 +601,29 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
             order.order_type !== "pre-order" &&
             (order.status === "completed" || order.status === "claimed")
         );
+        // Log filtering results for debugging
+        if (list.length > 0) {
+          console.log(`✅ MyOrders: Filtered ${list.length} claimed/completed orders for display`);
+          console.log(`✅ MyOrders: Claimed order details:`, list.map(o => ({
+            id: o.id,
+            orderNumber: o.orderNumber,
+            status: o.status,
+            items: o.items?.map(i => i.name).join(", ")
+          })));
+        } else {
+          console.log(`⚠️ MyOrders: No claimed orders found. Total orders: ${orders.length}`);
+          const allStatuses = orders.reduce((acc, o) => {
+            acc[o.status] = (acc[o.status] || 0) + 1;
+            return acc;
+          }, {});
+          console.log(`⚠️ MyOrders: Order status breakdown:`, allStatuses);
+          console.log(`⚠️ MyOrders: Sample orders:`, orders.slice(0, 3).map(o => ({
+            id: o.id,
+            orderNumber: o.orderNumber,
+            status: o.status,
+            order_type: o.order_type
+          })));
+        }
         break;
       default:
         list = [...orders];
@@ -1145,7 +1286,9 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                 const maxQuantityKey = resolveItemKeyForMaxQuantity(itemName);
                 const maxForItem = maxQuantities[maxQuantityKey] ?? getDefaultMaxForItem(itemName);
                 const alreadyOrderedForItem = alreadyOrdered[maxQuantityKey] ?? 0;
-                const canOrderAgain = Number(maxForItem) > 0 && alreadyOrderedForItem < Number(maxForItem);
+                const claimedForItem = claimedItems[maxQuantityKey] ?? 0;
+                const isClaimed = claimedForItem > 0;
+                const canOrderAgain = !isClaimed && Number(maxForItem) > 0 && alreadyOrderedForItem < Number(maxForItem);
                 return (
                   <div
                     key={`${order.id || cardIndex}-${item.name || cardIndex}`}
@@ -1188,7 +1331,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                           type="button"
                           onClick={() => canOrderAgain && navigate("/all-products")}
                           disabled={!canOrderAgain}
-                          title={canOrderAgain ? "Order this item again" : "You have reached your max item per order"}
+                          title={canOrderAgain ? "Order this item again" : (isClaimed ? "This item has been claimed and cannot be ordered again" : "You have reached your max item per order")}
                           className={`flex-1 min-w-0 py-1.5 px-2 border-2 rounded-lg font-semibold text-xs text-center transition-colors ${
                             canOrderAgain
                               ? "border-[#F28C28] text-[#F28C28] hover:bg-[#F28C28] hover:text-white cursor-pointer"

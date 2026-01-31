@@ -17,7 +17,7 @@ export const useOrderClaimedListener = () => {
   const { on, off, isConnected } = useSocket();
 
   useEffect(() => {
-    if (!user?.uid || !isConnected) {
+    if ((!user?.uid && !user?.id) || !isConnected) {
       console.log("⚠️ useOrderClaimedListener: No user or socket not connected, skipping event setup");
       return;
     }
@@ -25,15 +25,25 @@ export const useOrderClaimedListener = () => {
     // Listen for order claimed events
     const handleOrderClaimed = (data) => {
       console.log("📡 Received order claimed event:", data);
+      console.log("🔍 Current user.uid:", user.uid);
+      console.log("🔍 Current user.id:", user.id);
+      console.log("🔍 Event userId:", data.userId);
 
-      // Only track activity if this order belongs to the current user
-      if (data.userId === user.uid) {
+      // Check if this order belongs to the current user (support both uid and id)
+      const currentUserId = user.uid || user.id;
+      const eventUserId = data.userId;
+      
+      if (eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId))) {
         trackOrderClaimed({
           orderId: data.orderId,
           orderNumber: data.orderNumber,
           items: data.items,
         });
         console.log("✅ Activity tracked: Order claimed");
+      } else {
+        console.log("⚠️ Order claimed event received but userId doesn't match current user");
+        console.log("⚠️ Expected:", currentUserId);
+        console.log("⚠️ Received:", eventUserId);
       }
     };
 
@@ -43,7 +53,7 @@ export const useOrderClaimedListener = () => {
     return () => {
       off("order:claimed", handleOrderClaimed);
     };
-  }, [user?.uid, trackOrderClaimed, isConnected, on, off]);
+  }, [user?.uid, user?.id, trackOrderClaimed, isConnected, on, off]);
 
   return {
     isConnected,

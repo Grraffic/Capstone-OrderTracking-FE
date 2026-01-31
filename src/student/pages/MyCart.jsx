@@ -31,6 +31,7 @@ const MyCart = () => {
   const [selectedItems, setSelectedItems] = useState([]);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [claimedItems, setClaimedItems] = useState({});
   const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [limitsRefreshTrigger, setLimitsRefreshTrigger] = useState(0);
@@ -78,6 +79,7 @@ const MyCart = () => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setClaimedItems(res.data?.claimedItems ?? {});
         setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
@@ -92,6 +94,7 @@ const MyCart = () => {
         }
         setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
         setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
+        setClaimedItems(err?.response?.data?.claimedItems ?? {});
         setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
@@ -171,8 +174,15 @@ const MyCart = () => {
       .filter((i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key)
       .reduce((s, i) => s + (Number(i.quantity) || 0), 0);
     const alreadyOrderedForItem = (alreadyOrdered[key] || 0);
-    const roomForThisLine = maxForItem - (totalForItem - currentQuantity) - alreadyOrderedForItem;
-    newQuantity = Math.min(newQuantity, Math.max(1, roomForThisLine), maxForItem - alreadyOrderedForItem);
+    const claimedForItem = (claimedItems[key] || 0);
+    const isClaimed = claimedForItem > 0;
+    // If item is claimed, set quantity to 0 (effectively removing it)
+    if (isClaimed) {
+      newQuantity = 0;
+    } else {
+      const roomForThisLine = maxForItem - (totalForItem - currentQuantity) - alreadyOrderedForItem;
+      newQuantity = Math.min(newQuantity, Math.max(1, roomForThisLine), maxForItem - alreadyOrderedForItem);
+    }
 
     try {
       await updateCartItem(itemId, newQuantity);
@@ -206,14 +216,15 @@ const MyCart = () => {
     for (const item of items || []) {
       const name = item.inventory?.name || item.name || "Unknown Item";
       const key = resolveItemKeyForMaxQuantity(name);
-      if (!byKey[key]) byKey[key] = { total: 0, max: getEffectiveMaxForItem(key), alreadyOrdered: alreadyOrdered[key] || 0, displayName: name };
+      const claimedForItem = claimedItems[key] || 0;
+      if (!byKey[key]) byKey[key] = { total: 0, max: getEffectiveMaxForItem(key), alreadyOrdered: alreadyOrdered[key] || 0, claimed: claimedForItem, displayName: name };
       byKey[key].total += Number(item.quantity) || 0;
     }
     const summary = Object.entries(byKey)
-      .filter(([, v]) => (v.total + (v.alreadyOrdered || 0)) > v.max)
+      .filter(([, v]) => (v.claimed > 0) || ((v.total + (v.alreadyOrdered || 0)) > v.max))
       .map(([key, v]) => ({ key, ...v }));
     return { hasOverLimitItems: summary.length > 0, overLimitSummary: summary };
-  }, [items, maxQuantities, alreadyOrdered, isOldStudent]);
+  }, [items, maxQuantities, alreadyOrdered, claimedItems, isOldStudent]);
 
   // Handle order now (blocked when limit not set, blockedDueToVoid, hasOverLimitItems, or over slot limit)
   const handleOrderNow = () => {
@@ -433,7 +444,7 @@ const MyCart = () => {
                                 <button
                                   onClick={() => handleQuantityChange(item.id, qty, 1, name)}
                                   className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={(totalForItem + alreadyOrderedForItem) >= maxForItem}
+                                  disabled={isClaimed || (totalForItem + alreadyOrderedForItem) >= maxForItem}
                                 >
                                   <Plus className="w-4 h-4 text-gray-700" />
                                 </button>
@@ -545,7 +556,7 @@ const MyCart = () => {
                               <button
                                 onClick={() => handleQuantityChange(item.id, qty, 1, name)}
                                 className="w-7 h-7 flex items-center justify-center bg-white hover:bg-gray-100 rounded-full border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={(totalForItem + alreadyOrderedForItem) >= maxForItem}
+                                disabled={isClaimed || (totalForItem + alreadyOrderedForItem) >= maxForItem}
                               >
                                 <Plus className="w-3 h-3 text-gray-700" />
                               </button>

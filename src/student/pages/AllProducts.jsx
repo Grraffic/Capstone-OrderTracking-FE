@@ -39,6 +39,7 @@ const AllProducts = () => {
   const [profileLoading, setProfileLoading] = useState(true);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
+  const [claimedItems, setClaimedItems] = useState({});
   const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
   const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
   const [limitsLoaded, setLimitsLoaded] = useState(false);
@@ -117,6 +118,7 @@ const AllProducts = () => {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
+        setClaimedItems(res.data?.claimedItems ?? {});
         setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? Object.keys(res.data?.alreadyOrdered ?? {}).length);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
@@ -127,6 +129,7 @@ const AllProducts = () => {
       } catch (err) {
         if (err?.response?.status === 400) {
           setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
+          setClaimedItems(err?.response?.data?.claimedItems ?? {});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
           setMaxItemsPerOrder(err?.response?.data?.totalItemLimit ?? null);
           setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? Object.keys(err?.response?.data?.alreadyOrdered ?? {}).length);
@@ -326,6 +329,8 @@ const AllProducts = () => {
       const notAllowedForStudentType =
         isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
+      const claimedForItem = claimedItems[key] ?? 0;
+      const isClaimed = claimedForItem > 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
@@ -338,14 +343,15 @@ const AllProducts = () => {
         cartSlotCount >= slotsLeftForThisOrder;
       return {
         ...p,
-        _orderLimitReached: effectiveMax < 1,
+        _orderLimitReached: effectiveMax < 1 || isClaimed,
+        _isClaimed: isClaimed,
         _slotsFullForNewType: slotsFullForNewType,
         _notAllowedForStudentType: notAllowedForStudentType,
       };
     });
     // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).
     return list;
-  }, [paginatedItems, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
+  }, [paginatedItems, maxQuantities, alreadyOrdered, claimedItems, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
 
   const limitNotSet =
     user &&

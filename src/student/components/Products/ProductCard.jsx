@@ -9,6 +9,7 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const isOutOfStock = product.status === "out_of_stock";
   const isPreOrder = product.status === "pre_order";
   const orderLimitReached = product._orderLimitReached === true;
+  const isClaimed = product._isClaimed === true;
   const slotsFullForNewType = product._slotsFullForNewType === true;
   const notAllowedForStudentType = product._notAllowedForStudentType === true;
 
@@ -23,9 +24,9 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
     navigate(`/products/${id}`);
   };
 
-  const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType;
-  // When blocked due to void or slot limit, card is disabled; same red "Cannot order" for both
-  const isDisabled = isAlreadyOrdered || blockedDueToVoid || slotsFullForNewType;
+  const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType && !isClaimed;
+  // When blocked due to void, slot limit, or claimed, card is disabled
+  const isDisabled = isAlreadyOrdered || isClaimed || blockedDueToVoid || slotsFullForNewType;
 
   return (
     <div

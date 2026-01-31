@@ -222,9 +222,6 @@ const Orders = () => {
     return filtered;
   }, [mockOrders, startDate, endDate]);
 
-  // Calculate statistics from all orders (not just current page)
-  const stats = useOrdersStats(mockOrders);
-
   // Fetch all orders for accurate counts (not paginated)
   // We need to fetch orders with different statuses separately to get accurate counts
   // because the backend filters out claimed/cancelled when status is null
@@ -245,6 +242,26 @@ const Orders = () => {
     educationLevel: null,
     search: null,
   });
+
+  // Calculate statistics from ALL orders (not just filtered/current tab)
+  // Combine active and claimed orders to get accurate stats regardless of active tab
+  const allOrdersForStats = useMemo(() => {
+    const combined = [
+      ...(allActiveOrdersForCount || []),
+      ...(allClaimedOrdersForCount || []),
+    ];
+    
+    // Debug: Log claimed orders to verify they're included
+    const claimedInStats = combined.filter(o => {
+      const status = o.status?.toLowerCase() || o.originalOrder?.status?.toLowerCase() || "";
+      return status === "claimed" || status === "completed";
+    });
+    console.log(`📊 Orders Stats: Total orders for stats: ${combined.length}, Claimed orders: ${claimedInStats.length}`);
+    
+    return combined;
+  }, [allActiveOrdersForCount, allClaimedOrdersForCount]);
+  
+  const stats = useOrdersStats(allOrdersForStats);
 
   // Calculate order counts for tabs
   const orderCounts = useMemo(() => {
@@ -324,8 +341,10 @@ const Orders = () => {
   const handleOrderUpdate = useCallback(
     (data) => {
       console.log("📡 Real-time order update received:", data);
-      // Refetch orders to show the updated data
+      // Refetch all order queries to update stats and counts
       refetchOrders();
+      // Note: allActiveOrdersForCount and allClaimedOrdersForCount will auto-refetch
+      // because they use the same useOrders hook which listens to changes
     },
     [refetchOrders]
   );
