@@ -45,18 +45,30 @@ export const SocketProvider = ({ children }) => {
       console.log("⚠️ SocketProvider: No authenticated user, skipping connection");
       
       // Disconnect if user logs out
-      if (socketClient.isConnected()) {
-        console.log("🔌 SocketProvider: User logged out, disconnecting socket");
-        socketClient.disconnect();
-        setIsConnected(false);
+      try {
+        if (socketClient.isConnected()) {
+          console.log("🔌 SocketProvider: User logged out, disconnecting socket");
+          socketClient.disconnect();
+          setIsConnected(false);
+        }
+      } catch (error) {
+        console.error("Error disconnecting socket:", error);
       }
       return;
     }
 
     console.log("🔌 SocketProvider: User authenticated, establishing connection for user:", user.uid);
 
-    // Connect to Socket.IO server
-    const socket = socketClient.connect();
+    // Connect to Socket.IO server with error handling
+    let socket;
+    try {
+      socket = socketClient.connect();
+    } catch (error) {
+      console.error("❌ SocketProvider: Failed to initialize socket connection:", error);
+      setConnectionError(error.message || "Failed to connect");
+      setIsConnected(false);
+      return;
+    }
 
     // Set up connection event handlers
     const handleConnect = () => {
@@ -76,20 +88,31 @@ export const SocketProvider = ({ children }) => {
       setIsConnected(false);
     };
 
-    // Add event listeners
-    socket.on("connect", handleConnect);
-    socket.on("disconnect", handleDisconnect);
-    socket.on("connect_error", handleConnectError);
+    // Add event listeners with error handling
+    try {
+      socket.on("connect", handleConnect);
+      socket.on("disconnect", handleDisconnect);
+      socket.on("connect_error", handleConnectError);
 
-    // Set initial connection state
-    setIsConnected(socket.connected);
+      // Set initial connection state
+      setIsConnected(socket.connected || false);
+    } catch (error) {
+      console.error("❌ SocketProvider: Error setting up socket event listeners:", error);
+      setConnectionError(error.message || "Failed to set up socket listeners");
+    }
 
     // Cleanup on unmount or user change
     return () => {
-      console.log("🔌 SocketProvider: Cleaning up socket event listeners");
-      socket.off("connect", handleConnect);
-      socket.off("disconnect", handleDisconnect);
-      socket.off("connect_error", handleConnectError);
+      try {
+        console.log("🔌 SocketProvider: Cleaning up socket event listeners");
+        if (socket) {
+          socket.off("connect", handleConnect);
+          socket.off("disconnect", handleDisconnect);
+          socket.off("connect_error", handleConnectError);
+        }
+      } catch (error) {
+        console.error("Error cleaning up socket listeners:", error);
+      }
     };
   }, [user?.uid]);
 

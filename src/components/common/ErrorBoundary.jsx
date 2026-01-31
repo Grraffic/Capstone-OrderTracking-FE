@@ -53,10 +53,10 @@ class ErrorBoundary extends React.Component {
             <p className="text-gray-600 mb-4">
               We're sorry, but something unexpected happened. Please try reloading the page.
             </p>
-            {process.env.NODE_ENV === "development" && this.state.error && (
+            {this.state.error && (
               <details className="mb-4 text-left">
                 <summary className="cursor-pointer text-sm text-gray-500 mb-2">
-                  Error Details (Development Only)
+                  Error Details {process.env.NODE_ENV === "development" ? "(Development)" : "(Click to view)"}
                 </summary>
                 <pre className="text-xs bg-gray-100 p-2 rounded overflow-auto max-h-40">
                   {this.state.error.toString()}

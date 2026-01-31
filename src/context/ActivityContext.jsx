@@ -18,7 +18,19 @@ export const useActivity = () => {
  */
 export const ActivityProvider = ({ children }) => {
   const { user } = useAuth();
-  const { on, off, isConnected } = useSocket();
+  // Safely get socket context - useSocket might throw if not within SocketProvider
+  let socketContext;
+  try {
+    socketContext = useSocket();
+  } catch (error) {
+    console.warn("ActivityProvider: Socket context not available, continuing without socket features:", error);
+    socketContext = null;
+  }
+  
+  const on = socketContext?.on || (() => {});
+  const off = socketContext?.off || (() => {});
+  const isConnected = socketContext?.isConnected || false;
+  
   const [activities, setActivities] = useState([]);
 
   // Load activities from localStorage when component mounts

@@ -26,8 +26,9 @@ const ProtectedRoute = ({ children, requiredRoles = [] }) => {
   }
 
   // Check if user is inactive - block access
-  if (user.is_active === false) {
-    return <InactiveUserOverlay userName={user.displayName || user.email?.split("@")[0]} email={user.email} />;
+  // Safely check is_active property (may not exist in normalized user object)
+  if (user && user.hasOwnProperty('is_active') && user.is_active === false) {
+    return <InactiveUserOverlay userName={user.displayName || (user.email ? user.email.split("@")[0] : "User")} email={user.email} />;
   }
 
   // Check if user has required role

@@ -132,6 +132,8 @@ export const AuthProvider = ({ children }) => {
               userData.onboardingCompletedAt ??
               userData.onboarding_completed_at ??
               null,
+            // Include is_active if provided by API (for ProtectedRoute checks)
+            is_active: userData.is_active !== undefined ? userData.is_active : true,
           };
 
           console.log("✅ AuthContext - Normalized user object:", {
