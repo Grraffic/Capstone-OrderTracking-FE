@@ -84,7 +84,19 @@ const Orders = () => {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8; // Match inventory pagination
+  // Responsive items per page: 3 for mobile, 8 for larger screens
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  
+  // Update items per page based on screen size
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      setItemsPerPage(window.innerWidth < 640 ? 3 : 8);
+    };
+    
+    updateItemsPerPage();
+    window.addEventListener('resize', updateItemsPerPage);
+    return () => window.removeEventListener('resize', updateItemsPerPage);
+  }, []);
 
   // Fetch orders from API with filters
   const {
@@ -379,8 +391,8 @@ const Orders = () => {
   }, [qrError, closeQRScanner]);
 
   return (
-    <AdminLayout title="Orders">
-      <div className="p-4 sm:p-6 lg:p-8">
+    <AdminLayout title="Orders" noPadding={true}>
+      <div className="pt-0 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8">
         {/* Page Header - Title with QR Code and Search */}
         <div className="mb-4 sm:mb-6">
           {/* Desktop Layout: Title left, Controls right */}
@@ -421,34 +433,35 @@ const Orders = () => {
 
           {/* Mobile/Tablet Layout: Stacked */}
           <div className="lg:hidden">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight mb-3 sm:mb-4">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight mb-3 sm:mb-4">
               <span className="text-[#0C2340]">Or</span>
               <span className="text-[#e68b00]">ders</span>
             </h1>
 
-            {/* QR Scanner and Search Bar - Stacked */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+            {/* QR Scanner and Search Bar - Side by Side on Mobile */}
+            <div className="flex flex-row items-center gap-2">
               {/* QR Code Scanner Button */}
               <button
                 onClick={openQRScanner}
-                className="flex items-center justify-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium shadow-sm text-sm sm:text-base"
+                className="flex items-center justify-center gap-1.5 px-3 sm:px-3 md:px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] transition-colors font-medium shadow-sm text-xs sm:text-xs md:text-sm flex-shrink-0"
               >
-                <QrCode size={18} className="sm:w-5 sm:h-5" />
-                <span>Scan QR Code</span>
+                <QrCode size={16} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Scan QR</span>
+                <span className="sm:hidden">Scan</span>
               </button>
 
               {/* Search Bar */}
-              <div className="relative flex-1 sm:flex-initial sm:w-64">
+              <div className="relative flex-1 min-w-0">
                 <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={18}
+                  className="absolute left-2.5 sm:left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={16}
                 />
                 <input
                   type="text"
                   placeholder="Search orders..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-full shadow-sm text-sm sm:text-base"
+                  className="pl-8 sm:pl-9 pr-2.5 sm:pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-full shadow-sm text-xs sm:text-sm"
                 />
               </div>
             </div>
@@ -456,19 +469,19 @@ const Orders = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="mb-4 sm:mb-6 flex items-center gap-3 sm:gap-4 lg:gap-6 xl:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-hide -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8">
+        <div className="mb-3 sm:mb-4 md:mb-6 flex items-center gap-2 sm:gap-3 md:gap-4 lg:gap-6 xl:gap-8 border-b border-gray-200 overflow-x-auto scrollbar-hide -mx-3 sm:-mx-4 md:-mx-6 lg:-mx-8 px-3 sm:px-4 md:px-6 lg:px-8 pt-2 sm:pt-3">
           <button
             onClick={() => setActiveStatusTab("Pre-orders")}
-            className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm lg:text-base whitespace-nowrap px-1 sm:px-2 ${
+            className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap px-0.5 sm:px-1 md:px-2 ${
               activeStatusTab === "Pre-orders"
                 ? "text-[#e68b00]"
                 : "text-[#0C2340] hover:text-[#e68b00]"
             }`}
           >
-            <span className="relative inline-block pr-4 sm:pr-5">
+            <span className="relative inline-block pr-3 sm:pr-4 md:pr-5">
               Pre-orders
               <span
-                className={`absolute -top-1 -right-0 sm:-top-1.5 sm:-right-1 text-[11px] sm:text-sm font-bold leading-none ${
+                className={`absolute top-0 -right-0 sm:top-0 sm:-right-1 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
                   activeStatusTab === "Pre-orders"
                     ? "text-[#e68b00]"
                     : "text-[#0C2340]"
@@ -483,16 +496,16 @@ const Orders = () => {
           </button>
           <button
             onClick={() => setActiveStatusTab("Orders")}
-            className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm lg:text-base whitespace-nowrap px-1 sm:px-2 ${
+            className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap px-0.5 sm:px-1 md:px-2 ${
               activeStatusTab === "Orders"
                 ? "text-[#e68b00]"
                 : "text-[#0C2340] hover:text-[#e68b00]"
             }`}
           >
-            <span className="relative inline-block pr-4 sm:pr-5">
+            <span className="relative inline-block pr-3 sm:pr-4 md:pr-5">
               Orders
               <span
-                className={`absolute -top-1 -right-0 sm:-top-1.5 sm:-right-1 text-[11px] sm:text-sm font-bold leading-none ${
+                className={`absolute top-0 -right-0 sm:top-0 sm:-right-1 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
                   activeStatusTab === "Orders"
                     ? "text-[#e68b00]"
                     : "text-[#0C2340]"
@@ -507,16 +520,16 @@ const Orders = () => {
           </button>
           <button
             onClick={() => setActiveStatusTab("Claimed")}
-            className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm lg:text-base whitespace-nowrap px-1 sm:px-2 ${
+            className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap px-0.5 sm:px-1 md:px-2 ${
               activeStatusTab === "Claimed"
                 ? "text-[#e68b00]"
                 : "text-[#0C2340] hover:text-[#e68b00]"
             }`}
           >
-            <span className="relative inline-block pr-4 sm:pr-5">
+            <span className="relative inline-block pr-3 sm:pr-4 md:pr-5">
               Claimed
               <span
-                className={`absolute -top-1 -right-0 sm:-top-1.5 sm:-right-1 text-[11px] sm:text-sm font-bold leading-none ${
+                className={`absolute top-0 -right-0 sm:top-0 sm:-right-1 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
                   activeStatusTab === "Claimed"
                     ? "text-[#e68b00]"
                     : "text-[#0C2340]"
@@ -532,9 +545,9 @@ const Orders = () => {
         </div>
 
         {/* Date Range Selector and Filter Dropdowns - Below Tabs */}
-        <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-between gap-3 sm:gap-4">
-          {/* Left Side - Date Range Selector */}
-          <div className="flex justify-start">
+        <div className="mb-3 sm:mb-4 md:mb-6 flex flex-col gap-2 sm:gap-3">
+          {/* Date Range Selector */}
+          <div className="w-full">
             <DateRangePicker
               startDate={startDate}
               endDate={endDate}
@@ -542,17 +555,17 @@ const Orders = () => {
                 setStartDate(start);
                 setEndDate(end);
               }}
-              className="w-full sm:w-auto"
+              className="w-full"
             />
           </div>
 
-          {/* Right Side - Filter Dropdowns */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-3 sm:gap-4">
+          {/* Filter Dropdowns */}
+          <div className="w-full">
             {/* Education Level Dropdown */}
             <select
               value={educationLevelFilter}
               onChange={(e) => setEducationLevelFilter(e.target.value)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors w-full sm:w-auto"
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
               title="Filter by education level"
               aria-label="Education Level"
             >

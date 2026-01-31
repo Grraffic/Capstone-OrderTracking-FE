@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Camera,
@@ -244,14 +245,34 @@ const QRCodeScannerModal = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4"
+      style={{ 
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 10000
+      }}
+      onClick={(e) => {
+        // Close modal when clicking outside (but not on the modal content)
+        if (e.target === e.currentTarget) {
+          handleClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden flex flex-col relative z-[10001]"
+        style={{ zIndex: 10001 }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-[#0C2340] to-[#1e3a8a]">
-          <div className="flex items-center gap-3">
-            <Camera className="text-white" size={24} />
-            <h3 className="text-xl font-semibold text-white">Scan QR Code</h3>
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 bg-gradient-to-r from-[#0C2340] to-[#1e3a8a]">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Camera className="text-white" size={20} />
+            <h3 className="text-lg sm:text-xl font-semibold text-white">Scan QR Code</h3>
           </div>
           <button
             onClick={handleClose}
@@ -263,13 +284,13 @@ const QRCodeScannerModal = ({
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {/* Video Stream with Overlay */}
-          <div className="mb-6 rounded-xl overflow-hidden bg-black relative">
+          <div className="mb-4 sm:mb-6 rounded-xl overflow-hidden bg-black relative">
             {/* Video Element - Always visible when modal is open */}
             <video
               ref={videoRef}
-              className="w-full aspect-video object-cover"
+              className="w-full h-[300px] sm:h-[400px] object-cover"
               playsInline
               muted
               autoPlay
@@ -279,12 +300,12 @@ const QRCodeScannerModal = ({
             {isScanning && (
               <div className="absolute inset-0 pointer-events-none z-10">
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-64 h-64 border-4 border-[#e68b00] rounded-lg relative">
+                  <div className="w-56 h-56 sm:w-64 sm:h-64 border-4 border-[#e68b00] rounded-lg relative">
                     {/* Corner decorations */}
-                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-white rounded-tl-lg"></div>
-                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
-                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
-                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-white rounded-br-lg"></div>
+                    <div className="absolute top-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-l-4 border-white rounded-tl-lg"></div>
+                    <div className="absolute top-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-t-4 border-r-4 border-white rounded-tr-lg"></div>
+                    <div className="absolute bottom-0 left-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-l-4 border-white rounded-bl-lg"></div>
+                    <div className="absolute bottom-0 right-0 w-6 h-6 sm:w-8 sm:h-8 border-b-4 border-r-4 border-white rounded-br-lg"></div>
                   </div>
                 </div>
               </div>
@@ -292,9 +313,9 @@ const QRCodeScannerModal = ({
 
             {/* Loading State - Show on top of video */}
             {!isScanning && !error && (
-              <div className="absolute inset-0 w-full aspect-video bg-gray-900/80 flex items-center justify-center z-20">
+              <div className="absolute inset-0 w-full h-[300px] sm:h-[400px] bg-gray-900/80 flex items-center justify-center z-20">
                 <div className="text-center">
-                  <Loader2 className="w-12 h-12 text-[#e68b00] animate-spin mx-auto mb-3" />
+                  <Loader2 className="w-10 h-10 sm:w-12 sm:h-12 text-[#e68b00] animate-spin mx-auto mb-3" />
                   <p className="text-white text-sm font-medium">
                     Initializing camera...
                   </p>
@@ -305,9 +326,9 @@ const QRCodeScannerModal = ({
 
             {/* Error State - Show on top of video */}
             {error && (
-              <div className="absolute inset-0 w-full aspect-video bg-gray-900/80 flex items-center justify-center z-20">
-                <div className="text-center px-6">
-                  <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+              <div className="absolute inset-0 w-full h-[300px] sm:h-[400px] bg-gray-900/80 flex items-center justify-center z-20">
+                <div className="text-center px-4 sm:px-6">
+                  <AlertCircle className="w-10 h-10 sm:w-12 sm:h-12 text-red-500 mx-auto mb-3" />
                   <p className="text-white text-sm font-medium mb-2">
                     Camera Error
                   </p>
@@ -479,7 +500,8 @@ const QRCodeScannerModal = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

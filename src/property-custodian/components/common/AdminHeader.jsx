@@ -230,39 +230,39 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
 
   return (
     <header
-      className={`fixed top-0 right-0 h-16 bg-white border-b border-gray-100 px-4 sm:px-8 flex items-center justify-between z-40 transition-all duration-300 ${
+      className={`fixed top-0 right-0 h-16 bg-white border-b border-gray-100 px-2 sm:px-4 md:px-8 flex items-center justify-between z-40 transition-all duration-300 ${
         sidebarOpen ? "left-64" : "left-20"
       }`}
     >
       {/* Left side - Menu toggle and department name */}
-      <div className="flex items-center gap-3 sm:gap-6">
+      <div className="flex items-center gap-2 sm:gap-3 md:gap-6 min-w-0 flex-1">
         <button
           onClick={onMenuToggle}
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-1.5 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           aria-label="Toggle sidebar"
         >
-          <Menu size={24} className="text-[#0C2340]" />
+          <Menu size={20} className="sm:w-6 sm:h-6 text-[#0C2340]" />
         </button>
 
-        <h2 className="text-base sm:text-lg font-sf-medium font-medium text-[#003363] truncate max-w-[120px] sm:max-w-none">
+        <h2 className="text-xs sm:text-sm md:text-base lg:text-lg font-sf-medium font-medium text-[#003363] truncate max-w-[100px] sm:max-w-[200px] md:max-w-none">
           Finance and Accounting Department
         </h2>
       </div>
 
       {/* Right side - Notifications and user profile */}
-      <div className="flex items-center gap-3 sm:gap-6">
+      <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3 lg:gap-6 flex-shrink-0">
         {/* Notification bell */}
         <div className="relative" ref={notificationRef}>
           <button
             onClick={toggleNotifications}
-            className={`relative p-2 rounded-lg transition-colors ${
+            className={`relative p-1.5 sm:p-2 rounded-lg transition-colors ${
               showNotifications ? "bg-gray-100" : "hover:bg-gray-100"
             }`}
             aria-label="Notifications"
           >
-            <Bell size={22} className="text-[#0C2340]" />
+            <Bell size={18} className="sm:w-5 sm:h-5 md:w-[22px] md:h-[22px] text-[#0C2340]" />
             {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              <span className="absolute top-0.5 right-0.5 sm:top-1 sm:right-1 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-red-500 rounded-full animate-pulse"></span>
             )}
           </button>
 
@@ -278,14 +278,14 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
         </div>
 
         {/* User profile section */}
-        <div className="flex items-center gap-2 sm:gap-3 pl-4 sm:pl-6 border-l border-gray-200">
+        <div className="flex items-center gap-1 sm:gap-2 md:gap-3 pl-2 sm:pl-3 md:pl-4 lg:pl-6 border-l border-gray-200">
           {/* Hide name/email on small screens */}
           <div className="hidden sm:flex flex-col items-end">
-            <span className="text-sm font-medium text-[#0C2340]">
+            <span className="text-xs md:text-sm font-medium text-[#0C2340]">
               {displayName}
             </span>
             {userEmail && (
-              <span className="text-xs text-gray-500">{userEmail}</span>
+              <span className="text-[10px] md:text-xs text-gray-500">{userEmail}</span>
             )}
           </div>
 
@@ -293,7 +293,7 @@ const AdminHeader = ({ onMenuToggle, sidebarOpen = true }) => {
             <img
               src={userAvatar}
               alt={displayName}
-              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover border-2 border-[#e68b00]"
+              className="w-7 h-7 sm:w-8 sm:h-8 md:w-9 md:h-9 lg:w-10 lg:h-10 rounded-full object-cover border-2 border-[#e68b00]"
             />
           </div>
         </div>
