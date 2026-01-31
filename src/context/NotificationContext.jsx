@@ -96,12 +96,17 @@ export const NotificationProvider = ({ children }) => {
 
         console.log("✅ Notification added: Item restocked");
 
-        // Show browser notification if permission granted
-        if (Notification.permission === "granted") {
-          new Notification(newNotification.title, {
-            body: newNotification.message,
-            icon: "/logo.png",
-          });
+        // Show browser notification if permission granted and API is available
+        // Note: Notification API is not available in iOS WebKit (Safari/Chrome/Brave)
+        if (typeof window !== "undefined" && "Notification" in window && window.Notification.permission === "granted") {
+          try {
+            new window.Notification(newNotification.title, {
+              body: newNotification.message,
+              icon: "/logo.png",
+            });
+          } catch (error) {
+            console.warn("Failed to show browser notification:", error);
+          }
         }
       } else {
         console.log("⚠️ Restock notification received but userId doesn't match current user");
@@ -148,12 +153,17 @@ export const NotificationProvider = ({ children }) => {
           icon: "✅",
         });
 
-        // Show browser notification if permission granted
-        if (Notification.permission === "granted") {
-          new Notification(newNotification.title, {
-            body: newNotification.message,
-            icon: "/logo.png",
-          });
+        // Show browser notification if permission granted and API is available
+        // Note: Notification API is not available in iOS WebKit (Safari/Chrome/Brave)
+        if (typeof window !== "undefined" && "Notification" in window && window.Notification.permission === "granted") {
+          try {
+            new window.Notification(newNotification.title, {
+              body: newNotification.message,
+              icon: "/logo.png",
+            });
+          } catch (error) {
+            console.warn("Failed to show browser notification:", error);
+          }
         }
       } else {
         console.log("⚠️ Order release notification received but userId doesn't match current user");
@@ -164,9 +174,18 @@ export const NotificationProvider = ({ children }) => {
 
     on("notification:created", handleOrderReleased);
 
-    // Request notification permission
-    if (Notification.permission === "default") {
-      Notification.requestPermission();
+    // Request notification permission if API is available
+    // Note: Notification API is not available in iOS WebKit (Safari/Chrome/Brave)
+    if (typeof window !== "undefined" && "Notification" in window) {
+      try {
+        if (window.Notification.permission === "default") {
+          window.Notification.requestPermission().catch((error) => {
+            console.warn("Failed to request notification permission:", error);
+          });
+        }
+      } catch (error) {
+        console.warn("Notification API not supported on this device:", error);
+      }
     }
 
     // Cleanup on unmount
