@@ -71,14 +71,14 @@ const featuredItems = {
   peUniforms: [
     {
       image: "../../assets/image/JERSEY.png",
-      title: "PE Uniforms are",
+      title: "PE Uniforms",
       subtitle: "",
       description: "are now Available!",
       watermark: ["PE", "Uniform"],
     },
     {
       image: "../../assets/image/JOGGING PANTS.png",
-      title: "PE Uniforms are",
+      title: "PE Uniforms",
       subtitle: "",
       description: "are now Available!",
       watermark: ["PE", "Uniform"],
@@ -117,8 +117,9 @@ export default function LandingPage() {
   const [peUniformsIndex, setPeUniformsIndex] = useState(0);
   const [higherEducationIndex, setHigherEducationIndex] = useState(0);
   
-  // Detect mobile screen size (375px and 425px)
+  // Detect mobile screen size (375px and 425px) and tablet (768px)
   const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
   
   // Track which cards are currently visible
   // Desktop: 3 cards (0=Senior High, 1=Basic Education, 2=PE Uniforms, 3=Higher Education)
@@ -129,16 +130,17 @@ export default function LandingPage() {
   const visibleCardsRef = React.useRef([0, 1, 2]);
   const mobileCardIndexRef = React.useRef(0); // Track current card index for mobile rotation
 
-  // Detect mobile screen size
+  // Detect mobile and tablet screen sizes
   useEffect(() => {
-    const checkMobile = () => {
+    const checkScreenSize = () => {
       const width = window.innerWidth;
       setIsMobile(width >= 375 && width <= 425);
+      setIsTablet(width >= 640 && width < 1024); // Tablet: 640px to 1023px
     };
     
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+    return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
 
   // Show scroll-to-top button when user scrolls down
@@ -203,10 +205,10 @@ export default function LandingPage() {
     };
   }, []);
 
-  // Card rotation logic - different for mobile vs desktop
+  // Card rotation logic - different for mobile, tablet, and desktop
   useEffect(() => {
     if (!isMobile) {
-      // Desktop: 3 cards rotation
+      // Tablet: 2 cards, Desktop: 3 cards rotation
       let timeouts = [];
       
       const scheduleTransition = (delay, newCards, oldCards, isTransition = true) => {
@@ -227,7 +229,7 @@ export default function LandingPage() {
               setTimeout(() => {
                 setExitingCard(null);
                 setEnteringCard(null);
-              }, 1000); // Match animation duration
+              }, 1200); // Match animation duration
             }, 0);
           } else {
             setVisibleCards(newCards);
@@ -244,24 +246,48 @@ export default function LandingPage() {
         
         const currentCards = visibleCardsRef.current;
 
-        // Step 1: After 5 seconds, Senior High out, Higher Education in
-        scheduleTransition(5000, [3, 1, 2], currentCards, true);
+        if (isTablet) {
+          // Tablet: Show only 2 cards - rotate through all 4 cards
+          // Step 1: After 5 seconds, Senior High out, PE Uniforms in
+          scheduleTransition(5000, [1, 2], currentCards.length === 2 ? currentCards : [0, 1], true);
 
-        // Step 2: After another 5.5 seconds (10.5s total), Basic Education out, Senior High in
-        // Slightly longer delay to allow smooth transition completion
-        scheduleTransition(10500, [3, 0, 2], [3, 1, 2], true);
+          // Step 2: After another 5.5 seconds (10.5s total), Basic Education out, Higher Education in
+          scheduleTransition(10500, [2, 3], [1, 2], true);
 
-        // Step 3: After another 5.5 seconds (16s total), reset to initial state
-        scheduleTransition(16000, [0, 1, 2], [3, 0, 2], false);
+          // Step 3: After another 5.5 seconds (16s total), PE Uniforms out, Senior High in
+          scheduleTransition(16000, [3, 0], [2, 3], true);
+
+          // Step 4: After another 5.5 seconds (21.5s total), Higher Education out, Basic Education in
+          scheduleTransition(21500, [0, 1], [3, 0], true);
+        } else {
+          // Desktop: 3 cards rotation
+          // Step 1: After 5 seconds, Senior High out, Higher Education in
+          scheduleTransition(5000, [3, 1, 2], currentCards, true);
+
+          // Step 2: After another 5.5 seconds (10.5s total), Basic Education out, Senior High in
+          scheduleTransition(10500, [3, 0, 2], [3, 1, 2], true);
+
+          // Step 3: After another 5.5 seconds (16s total), reset to initial state
+          scheduleTransition(16000, [0, 1, 2], [3, 0, 2], false);
+        }
       };
+
+      // Set initial cards based on screen size
+      if (isTablet) {
+        setVisibleCards([0, 1]); // Senior High, Basic Education
+        visibleCardsRef.current = [0, 1];
+      } else {
+        setVisibleCards([0, 1, 2]); // Senior High, Basic Education, PE Uniforms
+        visibleCardsRef.current = [0, 1, 2];
+      }
 
       // Run initial cycle
       runCycle();
 
-      // Repeat cycle every 16 seconds (adjusted for smoother transitions)
+      // Repeat cycle - 16s for desktop, 27s for tablet (to complete full rotation of all 4 cards)
       const cycleInterval = setInterval(() => {
         runCycle();
-      }, 16000);
+      }, isTablet ? 27000 : 16000);
 
       return () => {
         clearInterval(cycleInterval);
@@ -306,7 +332,7 @@ export default function LandingPage() {
         clearInterval(mobileInterval);
       };
     }
-  }, [isMobile]); // Re-run when mobile state changes
+  }, [isMobile, isTablet]); // Re-run when mobile or tablet state changes
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -393,6 +419,8 @@ export default function LandingPage() {
           <div className={`relative ${
             isMobile 
               ? "overflow-hidden min-h-[400px]" 
+              : isTablet
+              ? "overflow-hidden min-h-[400px]"
               : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
           }`}>
             {/* Card 1 - Senior High */}
@@ -400,14 +428,21 @@ export default function LandingPage() {
               <div
                 key="senior-high"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" : ""
+                  isMobile ? "w-full absolute inset-0" 
+                  : isTablet 
+                    ? `w-[calc(50%-12px)] absolute top-0 ${
+                        visibleCards.indexOf(0) === 0 ? "left-0" : "right-0"
+                      }`
+                  : ""
                 }`}
                 style={{
                   animation: exitingCard === 0
-                    ? "fadeOutLeft 1s ease-in-out"
+                    ? "fadeOutLeft 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
                     : enteringCard === 0
-                    ? "slideInFromRight 1s ease-in-out"
+                    ? "slideInFromRight 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
                     : "",
+                  transition: isTablet && !exitingCard && !enteringCard ? "all 0.3s ease-in-out" : "",
+                  willChange: (exitingCard === 0 || enteringCard === 0) ? "transform, opacity" : "auto",
                 }}
               >
                 <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
@@ -471,7 +506,12 @@ export default function LandingPage() {
               <div
                 key="basic-education"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" : ""
+                  isMobile ? "w-full absolute inset-0" 
+                  : isTablet 
+                    ? `w-[calc(50%-12px)] absolute top-0 ${
+                        visibleCards.indexOf(1) === 0 ? "left-0" : "right-0"
+                      }`
+                  : ""
                 }`}
                 style={{
                   animation: exitingCard === 1
@@ -542,7 +582,12 @@ export default function LandingPage() {
               <div
                 key="pe-uniforms"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" : ""
+                  isMobile ? "w-full absolute inset-0" 
+                  : isTablet 
+                    ? `w-[calc(50%-12px)] absolute top-0 ${
+                        visibleCards.indexOf(2) === 0 ? "left-0" : "right-0"
+                      }`
+                  : ""
                 }`}
                 style={{
                   animation: exitingCard === 2
@@ -610,7 +655,12 @@ export default function LandingPage() {
               <div
                 key="higher-education"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" : ""
+                  isMobile ? "w-full absolute inset-0" 
+                  : isTablet 
+                    ? `w-[calc(50%-12px)] absolute top-0 ${
+                        visibleCards.indexOf(3) === 0 ? "left-0" : "right-0"
+                      }`
+                  : ""
                 }`}
                 style={{
                   animation: exitingCard === 3
