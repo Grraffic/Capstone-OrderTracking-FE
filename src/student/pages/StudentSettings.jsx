@@ -6,6 +6,11 @@ import { useStudentSettings } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { getCourseBannerStyle } from "../utils/courseBanner";
 import { splitDisplayName } from "../../utils/displayName";
+import {
+  STUDENT_NUMBER_PLACEHOLDER,
+  STUDENT_NUMBER_FORMAT_HINT,
+  getSuggestedInitials,
+} from "../../utils/studentNumberFormat";
 
 /**
  * StudentSettings Component
@@ -510,7 +515,8 @@ const StudentSettings = () => {
                           onChange={(e) =>
                             handleFieldChange("studentNumber", e.target.value)
                           }
-                          placeholder="e.g., 22-11223"
+                          placeholder={STUDENT_NUMBER_PLACEHOLDER}
+                          maxLength={11}
                           className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
                             shouldShowGuide &&
                             onboardingStep === 2 &&
@@ -519,6 +525,15 @@ const StudentSettings = () => {
                               : ""
                           }`}
                         />
+                        <p className="mt-1.5 text-xs text-gray-500">
+                          {STUDENT_NUMBER_FORMAT_HINT}
+                        </p>
+                        {user?.name && getSuggestedInitials(user.name) && (
+                          <p className="mt-1 text-xs text-[#003363]">
+                            Your initials from name &quot;{user.name}&quot;:{" "}
+                            <span className="font-medium">{getSuggestedInitials(user.name)}</span>
+                          </p>
+                        )}
                         {shouldShowGuide && onboardingStep === 2 && (
                           <OnboardingStepCard
                             step={2}

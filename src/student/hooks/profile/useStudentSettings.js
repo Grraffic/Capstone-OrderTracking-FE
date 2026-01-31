@@ -3,6 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { authAPI } from "../../../services/api";
 import { profileService } from "../../../services/profile.service";
+import {
+  isValidStudentNumber,
+  normalizeStudentNumber,
+} from "../../../utils/studentNumberFormat";
 import toast from "react-hot-toast";
 
 /**
@@ -224,6 +228,12 @@ export const useStudentSettings = () => {
         setSaving(false);
         return;
       }
+      const normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
+      if (!isValidStudentNumber(normalizedStudentNumber)) {
+        toast.error("Student number must match format: YY-NNNNNIII (e.g. 22-00023RSR)");
+        setSaving(false);
+        return;
+      }
       if (!formData.courseYearLevel) {
         toast.error("Please select your course & year level before saving.");
         setSaving(false);
@@ -241,7 +251,7 @@ export const useStudentSettings = () => {
       // Name is read-only from Google; do not overwrite it from this form
       const updateData = {
         courseYearLevel: formData.courseYearLevel,
-        studentNumber: formData.studentNumber || null,
+        studentNumber: normalizedStudentNumber || formData.studentNumber || null,
         gender: formData.gender || null,
         educationLevel: educationLevel,
         studentType: formData.studentType && formData.studentType.trim() ? formData.studentType.trim().toLowerCase() : null,
