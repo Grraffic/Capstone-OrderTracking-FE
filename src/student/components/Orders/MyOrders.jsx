@@ -282,24 +282,26 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const { orders, loading, error, fetchOrders } = useOrder();
   const { user } = useAuth();
 
+  // State for fetching all products (same as AllProducts) - declare early to avoid hoisting issues
+  const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
   // Safety check: ensure orders is always an array
   const safeOrders = Array.isArray(orders) ? orders : [];
 
-  // Ensure orders are fetched when component mounts (safety net)
+  // Safety net: Ensure orders are fetched if they're missing after auth loads
   useEffect(() => {
-    console.log(`🔍 MyOrders: Component mounted/updated`, {
-      hasUser: !!user,
-      userId: user?.uid || user?.id,
-      ordersCount: safeOrders.length,
-      loading
-    });
-    
-    // If we have a user but no orders and not loading, try to fetch
-    if (user && safeOrders.length === 0 && !loading && fetchOrders) {
-      console.log(`🔍 MyOrders: No orders found, triggering fetchOrders as safety net`);
-      fetchOrders();
+    // Only trigger if we have a user, auth is not loading, and we have no orders
+    if (user && !profileLoading && safeOrders.length === 0 && !loading && fetchOrders) {
+      // Small delay to ensure OrderContext has had a chance to fetch
+      const timer = setTimeout(() => {
+        if (safeOrders.length === 0 && !loading) {
+          fetchOrders();
+        }
+      }, 500);
+      return () => clearTimeout(timer);
     }
-  }, [user, safeOrders.length, loading, fetchOrders]);
+  }, [user, profileLoading, safeOrders.length, loading, fetchOrders]);
 
   // When variant="history", show claimed orders in detail view only (Order History)
   const [viewMode, setViewMode] = useState(
@@ -325,10 +327,6 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
 
   const { items: cartItems } = useCart();
-
-  // State for fetching all products (same as AllProducts)
-  const [userEducationLevel, setUserEducationLevel] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(true);
 
   // Fetch user profile to get education level (same as AllProducts)
   useEffect(() => {
@@ -390,17 +388,20 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
   const eligibilityLevel =
     userEducationLevel === "Vocational" ? "College" : userEducationLevel;
+  
+  // Get student type for old students (they should see all items for their education level)
+  const studentType = user?.studentType || user?.student_type || null;
 
   // Fetch items once profile is loaded (same as AllProducts)
   useEffect(() => {
     if (!fetchAllItems) return;
     if (user && profileLoading) return;
     if (eligibilityLevel) {
-      fetchAllItems(eligibilityLevel);
+      fetchAllItems(eligibilityLevel, studentType);
     } else {
-      fetchAllItems();
+      fetchAllItems(null, studentType);
     }
-  }, [user, profileLoading, eligibilityLevel, fetchAllItems]);
+  }, [user, profileLoading, eligibilityLevel, studentType, fetchAllItems]);
 
   // Update state when location state changes (e.g., navigation from checkout). Skip when history variant.
   useEffect(() => {

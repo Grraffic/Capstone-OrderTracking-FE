@@ -151,16 +151,19 @@ const AllProducts = () => {
 
   const eligibilityLevel =
     userEducationLevel === "Vocational" ? "College" : userEducationLevel;
+  
+  // Get student type for old students (they should see all items for their education level)
+  const studentType = user?.studentType || user?.student_type || null;
 
   useEffect(() => {
     if (!fetchItems) return;
     if (user && profileLoading) return;
     if (eligibilityLevel) {
-      fetchItems(eligibilityLevel);
+      fetchItems(eligibilityLevel, studentType);
     } else {
-      fetchItems();
+      fetchItems(null, studentType);
     }
-  }, [user, profileLoading, eligibilityLevel, fetchItems]);
+  }, [user, profileLoading, eligibilityLevel, studentType, fetchItems]);
 
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);

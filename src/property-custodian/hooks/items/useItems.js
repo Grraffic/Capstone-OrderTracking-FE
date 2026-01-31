@@ -89,8 +89,9 @@ export const useItems = (options = {}) => {
   /**
    * Fetch items from API
    * @param {string} userEducationLevel - Optional user education level for eligibility filtering
+   * @param {string} studentType - Optional student type ("old" or "new") for filtering logic
    */
-  const fetchItems = useCallback(async (userEducationLevel = null) => {
+  const fetchItems = useCallback(async (userEducationLevel = null, studentType = null) => {
     try {
       if (userEducationLevel != null) lastUserEducationLevelRef.current = userEducationLevel;
       if (!hasFetchedOnce) setLoading(true);
@@ -99,6 +100,9 @@ export const useItems = (options = {}) => {
       const params = new URLSearchParams();
       if (userEducationLevel) {
         params.set("userEducationLevel", userEducationLevel);
+      }
+      if (studentType) {
+        params.set("studentType", studentType);
       }
       if (itemStatusFilter && itemStatusFilter !== "active") {
         params.set("itemStatus", itemStatusFilter);
