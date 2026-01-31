@@ -101,6 +101,9 @@ const StudentSettings = () => {
   const shouldShowGuide =
     isFirstTimeStudent && !onboardingDismissed && !isOnboardingFieldsComplete;
 
+  // Check if profile is completed - if so, disable all fields (only system admin can edit)
+  const isProfileCompleted = profileData?.onboardingCompleted === true || user?.onboardingCompleted === true;
+
   const ONBOARDING_STEPS = useMemo(
     () => [
       {
@@ -238,7 +241,9 @@ const StudentSettings = () => {
 
   // Trigger file input click
   const triggerFileInput = () => {
-    fileInputRef.current?.click();
+    if (!isProfileCompleted) {
+      fileInputRef.current?.click();
+    }
   };
 
   const courseLevel = formData.courseYearLevel || profileData?.courseYearLevel;
@@ -358,18 +363,18 @@ const StudentSettings = () => {
                           )}
                         </div>
                       )}
-                      <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-[#E68B00] shadow-xl group">
+                      <div className={`relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-[#E68B00] shadow-xl ${isProfileCompleted ? "" : "group"}`}>
                         {showImage ? (
                           <img
                             src={imagePreview}
                             alt="Profile"
-                            className="absolute inset-0 w-full h-full object-cover cursor-pointer transition-opacity group-hover:opacity-90"
+                            className={`absolute inset-0 w-full h-full object-cover transition-opacity ${isProfileCompleted ? "cursor-default" : "cursor-pointer group-hover:opacity-90"}`}
                             onClick={triggerFileInput}
                             onError={() => setImageLoadError(true)}
                           />
                         ) : (
                           <div
-                            className="absolute inset-0 min-w-full min-h-full bg-[#003363] flex items-center justify-center cursor-pointer transition-opacity group-hover:opacity-90"
+                            className={`absolute inset-0 min-w-full min-h-full bg-[#003363] flex items-center justify-center transition-opacity ${isProfileCompleted ? "cursor-default" : "cursor-pointer group-hover:opacity-90"}`}
                             onClick={triggerFileInput}
                             role="img"
                             aria-label={displayNameForCard ? `Profile for ${displayNameForCard}` : "Profile picture"}
@@ -379,14 +384,16 @@ const StudentSettings = () => {
                             </span>
                           </div>
                         )}
-                        <div
-                          className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/30 z-20"
-                          onClick={triggerFileInput}
-                        >
-                          <div className="bg-white/95 rounded-full p-2 sm:p-2.5">
-                            <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-[#003363]" />
+                        {!isProfileCompleted && (
+                          <div
+                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/30 z-20"
+                            onClick={triggerFileInput}
+                          >
+                            <div className="bg-white/95 rounded-full p-2 sm:p-2.5">
+                              <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-[#003363]" />
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -439,6 +446,15 @@ const StudentSettings = () => {
                   </h2>
 
                   <div className="space-y-6">
+                    {/* Profile Completed Notice */}
+                    {isProfileCompleted && (
+                      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <p className="text-sm text-amber-800 font-medium">
+                          <span className="font-semibold">Profile Completed:</span> Your personal information has been submitted and is now locked. Only system administrators can update your information. Please contact an administrator if you need to make changes.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Row 1: First Name, Last Name – read-only from Google account */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -481,7 +497,12 @@ const StudentSettings = () => {
                           onChange={(e) =>
                             handleFieldChange("gender", e.target.value)
                           }
+                          disabled={isProfileCompleted}
                           className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                            isProfileCompleted
+                              ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                              : ""
+                          } ${
                             shouldShowGuide && onboardingStep === 1 && !formData.gender
                               ? "ring-2 ring-[#E68B00]"
                               : ""
@@ -515,9 +536,14 @@ const StudentSettings = () => {
                           onChange={(e) =>
                             handleFieldChange("studentNumber", e.target.value)
                           }
+                          disabled={isProfileCompleted}
                           placeholder={STUDENT_NUMBER_PLACEHOLDER}
                           maxLength={11}
                           className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                            isProfileCompleted
+                              ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                              : ""
+                          } ${
                             shouldShowGuide &&
                             onboardingStep === 2 &&
                             !String(formData.studentNumber || "").trim()
@@ -560,7 +586,12 @@ const StudentSettings = () => {
                         onChange={(e) =>
                           handleFieldChange("courseYearLevel", e.target.value)
                         }
+                        disabled={isProfileCompleted}
                         className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                          isProfileCompleted
+                            ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                            : ""
+                        } ${
                           shouldShowGuide && onboardingStep === 3 && !formData.courseYearLevel
                             ? "ring-2 ring-[#E68B00]"
                             : ""
@@ -650,7 +681,12 @@ const StudentSettings = () => {
                         onChange={(e) =>
                           handleFieldChange("studentType", e.target.value)
                         }
+                        disabled={isProfileCompleted}
                         className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                          isProfileCompleted
+                            ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                            : ""
+                        } ${
                           shouldShowGuide && onboardingStep === 4 && !formData.studentType
                             ? "ring-2 ring-[#E68B00]"
                             : ""
@@ -699,9 +735,9 @@ const StudentSettings = () => {
                         setShowDiscardModal(true);
                       }
                     }}
-                    disabled={!hasChanges}
+                    disabled={!hasChanges || isProfileCompleted}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      hasChanges
+                      hasChanges && !isProfileCompleted
                         ? "border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
                         : "border-2 border-gray-200 text-gray-400 cursor-not-allowed"
                     }`}
@@ -712,9 +748,9 @@ const StudentSettings = () => {
                   <button
                     id="onboard-save"
                     onClick={handleSaveChanges}
-                    disabled={!hasChanges || saving}
+                    disabled={!hasChanges || saving || isProfileCompleted}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      hasChanges && !saving
+                      hasChanges && !saving && !isProfileCompleted
                         ? "bg-[#E68B00] text-white hover:bg-[#d97d00]"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
