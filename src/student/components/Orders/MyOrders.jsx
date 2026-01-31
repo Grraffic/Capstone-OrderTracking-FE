@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
   FileText,
@@ -17,6 +17,8 @@ import { useCart } from "../../../context/CartContext";
 import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../../utils/maxQuantityKeys";
 import { getDisplayPriceForFreeItem } from "../../../utils/freeItemDisplayPrice";
 import ProductCard from "../Products/ProductCard";
+import { useItems } from "../../../property-custodian/hooks/items/useItems";
+import { categoryFromItemType } from "../../constants/studentProducts";
 
 /**
  * Helper function to download SVG as PNG
@@ -324,6 +326,33 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
   const { items: cartItems } = useCart();
 
+  // State for fetching all products (same as AllProducts)
+  const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(true);
+
+  // Fetch user profile to get education level (same as AllProducts)
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setProfileLoading(true);
+        const response = await authAPI.getProfile();
+        const userData = response.data;
+        setUserEducationLevel(userData.educationLevel || null);
+      } catch (err) {
+        console.error("Error fetching user profile:", err);
+        setUserEducationLevel(null);
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchUserProfile();
+    } else {
+      setProfileLoading(false);
+    }
+  }, [user]);
+
   // Fetch max quantities and already-ordered for Order History "Order Again" and Suggested For You (disable when limit reached)
   useEffect(() => {
     if (!user) return;
@@ -353,6 +382,25 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
     };
     fetchMaxQuantities();
   }, [user]);
+
+  // Fetch all items using useItems hook (same as AllProducts)
+  const { items: allItems, fetchItems: fetchAllItems } = useItems({
+    skipInitialFetch: true,
+  });
+
+  const eligibilityLevel =
+    userEducationLevel === "Vocational" ? "College" : userEducationLevel;
+
+  // Fetch items once profile is loaded (same as AllProducts)
+  useEffect(() => {
+    if (!fetchAllItems) return;
+    if (user && profileLoading) return;
+    if (eligibilityLevel) {
+      fetchAllItems(eligibilityLevel);
+    } else {
+      fetchAllItems();
+    }
+  }, [user, profileLoading, eligibilityLevel, fetchAllItems]);
 
   // Update state when location state changes (e.g., navigation from checkout). Skip when history variant.
   useEffect(() => {
@@ -500,31 +548,81 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
     }
   }, [orders]);
 
-  // Get unique products from orders for "Suggested For You" (include id for navigation when available)
-  const getSuggestedProducts = () => {
-    const uniqueProducts = new Map();
+  // Transform all items to products (same logic as AllProducts)
+  const transformedProducts = useMemo(() => {
+    // Group items by name and education level
+    const groupedItems = allItems.reduce((acc, item) => {
+      const key = `${item.name}-${item.educationLevel}`;
 
-    safeOrders.forEach((order) => {
-      if (order.items && order.items.length > 0) {
-        order.items.forEach((item) => {
-          if (item.image && !uniqueProducts.has(item.name)) {
-            uniqueProducts.set(item.name, {
-              id: item.id || item.item_id || item.inventory_id || `n-${item.name}`,
-              name: item.name,
-              image: item.image,
-              educationLevel: item.education_level || order.type,
-              itemType: item.item_type || "Uniform",
-              status: item.status || "in_stock",
-            });
-          }
-        });
+      if (!acc[key]) {
+        acc[key] = {
+          items: [],
+          totalStock: 0,
+        };
       }
+
+      acc[key].items.push(item);
+      acc[key].totalStock += item.stock || 0;
+
+      return acc;
+    }, {});
+
+    // Convert grouped items to product format
+    return Object.values(groupedItems).map((group) => {
+      // Use the first item as the base (they all have the same name and education level)
+      const baseItem = group.items[0];
+      const totalStock = group.totalStock;
+
+      // Map inventory status to product status based on total stock
+      let status = "in_stock";
+      if (totalStock === 0) {
+        status = "out_of_stock";
+      } else if (totalStock < 20) {
+        status = "limited_stock";
+      }
+
+      const itemType = baseItem.itemType ?? baseItem.item_type ?? "";
+      const productName = baseItem.name ?? "";
+      return {
+        id: baseItem.id,
+        name: baseItem.name,
+        type: baseItem.itemType?.toLowerCase() || "other",
+        category: categoryFromItemType(itemType, productName),
+        status: status,
+        image: baseItem.image || "/images/products/placeholder.jpg",
+        price: 0, // FREE for students - price hidden
+        description: baseItem.description || baseItem.descriptionText || "",
+        educationLevel: baseItem.educationLevel,
+        itemType: baseItem.itemType,
+        forGender: baseItem.forGender || baseItem.for_gender || "Unisex",
+        for_gender: baseItem.for_gender || baseItem.forGender || "Unisex", // Also include snake_case for compatibility
+        stock: totalStock, // Use total stock across all sizes
+        sizes: group.items.map((i) => i.size).filter((s) => s !== "N/A"), // Collect all sizes
+        // Keep original item data for order submission
+        _originalItem: baseItem,
+      };
     });
+  }, [allItems]);
 
-    return Array.from(uniqueProducts.values()).slice(0, 5); // Show max 5 products
-  };
+  // Filter products by user gender (same as AllProducts)
+  const filteredAllProducts = useMemo(() => {
+    let filtered = [...transformedProducts];
 
-  const rawSuggestedProducts = getSuggestedProducts();
+    // Filter by user gender: only show Unisex or items for the user's gender
+    if (user?.gender) {
+      filtered = filtered.filter((p) => {
+        const fg = (p.for_gender || p.forGender || "Unisex").toString().trim();
+        return fg === "Unisex" || fg === user.gender;
+      });
+    }
+
+    return filtered;
+  }, [transformedProducts, user?.gender]);
+
+  // Use all products for "Suggested For You" (same as AllProducts)
+  const rawSuggestedProducts = useMemo(() => {
+    return filteredAllProducts.slice(0, 5); // Show max 5 products
+  }, [filteredAllProducts]);
 
   // Cart slot count and slots left (same logic as AllProducts) for enriching suggested products
   const cartSlotKeys = React.useMemo(() => {
@@ -543,7 +641,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
 
   // Enrich suggested products with limit flags so they show disabled when same as All Products
-  const suggestedProductsWithLimit = React.useMemo(() => {
+  // Same logic as AllProducts to ensure consistency
+  const suggestedProductsWithLimit = useMemo(() => {
     return rawSuggestedProducts.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
       const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
@@ -558,6 +657,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
       const notAllowedForStudentType =
         isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
+      const claimedForItem = claimedItems[key] ?? 0;
+      const isClaimed = claimedForItem > 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
@@ -570,12 +671,13 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         cartSlotCount >= slotsLeftForThisOrder;
       return {
         ...p,
-        _orderLimitReached: effectiveMax < 1,
+        _orderLimitReached: effectiveMax < 1 || isClaimed,
+        _isClaimed: isClaimed,
         _slotsFullForNewType: slotsFullForNewType,
         _notAllowedForStudentType: notAllowedForStudentType,
       };
     });
-  }, [rawSuggestedProducts, maxQuantities, alreadyOrdered, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
+  }, [rawSuggestedProducts, maxQuantities, alreadyOrdered, claimedItems, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
 
   // Filter orders based on active category, then sort by date (oldest/newest/all)
   const filteredOrders = React.useMemo(() => {
@@ -1079,32 +1181,32 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         onClick={onClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        className="flex flex-col items-center gap-3 group relative"
+        className="flex flex-col items-center gap-2 sm:gap-3 group relative"
       >
         <div 
-          className={`relative w-20 h-20 rounded-full flex items-center justify-center bg-white border-2 border-gray-300 ${config.hoverBorder} ${config.hoverBg} transition-all duration-300 group-hover:shadow-lg`}
+          className={`relative w-16 h-16 sm:w-20 sm:h-20 md:w-20 md:h-20 rounded-full flex items-center justify-center bg-white border-2 border-gray-300 ${config.hoverBorder} ${config.hoverBg} transition-all duration-300 group-hover:shadow-lg`}
         >
-          <Icon className="w-8 h-8 text-[#003363] transition-colors" />
+          <Icon className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 text-[#003363] transition-colors" />
 
           {count > 0 && (
-            <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#F28C28] rounded-full flex items-center justify-center shadow-md">
-              <span className="text-white text-xs font-bold">{count}</span>
+            <div className="absolute -top-1 -right-1 w-5 h-5 sm:w-6 sm:h-6 bg-[#F28C28] rounded-full flex items-center justify-center shadow-md">
+              <span className="text-white text-[10px] sm:text-xs font-bold">{count}</span>
             </div>
           )}
         </div>
 
-        <span className="text-sm font-semibold text-[#003363] transition-colors">
+        <span className="text-xs sm:text-sm font-semibold text-[#003363] transition-colors text-center">
           {label}
         </span>
 
         {/* Tooltip */}
         {showTooltip && (
-          <div className={`absolute top-full mt-4 left-1/2 -translate-x-1/2 w-64 ${config.tooltipBg} text-[#003363] text-sm p-4 rounded-lg shadow-lg z-50`}>
+          <div className={`hidden sm:block absolute top-full mt-4 left-1/2 -translate-x-1/2 w-56 sm:w-64 ${config.tooltipBg} text-[#003363] text-sm p-3 sm:p-4 rounded-lg shadow-lg z-50`}>
             {/* Arrow */}
             <div className={`absolute -top-2 left-1/2 -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-transparent ${config.tooltipArrow}`}></div>
             
-            <p className="font-bold mb-2">{config.title}</p>
-            <p className="text-xs leading-relaxed">
+            <p className="font-bold mb-2 text-xs sm:text-sm">{config.title}</p>
+            <p className="text-[10px] sm:text-xs leading-relaxed">
               {config.message}
             </p>
           </div>
@@ -1145,15 +1247,15 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   // OVERVIEW VIEW - Category buttons + Suggested products (skip when history variant)
   if (viewMode === "overview" && !isHistoryView) {
     return (
-      <div className="space-y-12">
+      <div className="space-y-8 sm:space-y-10 md:space-y-12">
         {/* Title */}
-        <h2 className="text-4xl font-bold">
+        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">
           <span className="text-[#003363]">My </span>
           <span className="text-[#F28C28]">Orders</span>
         </h2>
 
         {/* Category Buttons */}
-        <div className="flex items-center justify-center gap-16 py-8">
+        <div className="flex items-center justify-center gap-6 sm:gap-10 md:gap-12 lg:gap-16 py-4 sm:py-6 md:py-8">
           <CategoryButton
             category="preOrders"
             icon={FileText}
@@ -1179,23 +1281,24 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
         {/* Suggested For You Section - same disabled state as All Products */}
         {suggestedProductsWithLimit.length > 0 && (
-          <div className="bg-gray-50 rounded-2xl p-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold">
+          <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-5 md:mb-6">
+              <h3 className="text-xl sm:text-2xl font-bold">
                 <span className="text-gray-700">Suggested </span>
                 <span className="text-[#F28C28]">For You</span>
               </h3>
               <button
                 onClick={() => navigate("/all-products")}
-                className="flex items-center gap-2 text-[#F28C28] hover:text-[#d97a1f] font-semibold transition-colors"
+                className="flex items-center gap-2 text-[#F28C28] hover:text-[#d97a1f] font-semibold transition-colors text-sm sm:text-base self-start sm:self-auto"
               >
-                <span>Explore More Products</span>
-                <ChevronRight className="w-5 h-5" />
+                <span className="whitespace-nowrap">Explore More Products</span>
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
               </button>
             </div>
 
             {/* Product Grid - use ProductCard so disabled state matches All Products */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            {/* Mobile M (375px): 2 cols, Mobile L (425px): 2 cols, Tablet (768px): 3 cols, Laptop (1024px): 4 cols */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
               {suggestedProductsWithLimit.map((product, index) => (
                 <ProductCard
                   key={product.id || index}
