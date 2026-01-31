@@ -16,15 +16,22 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
 
-  // User roles for school uniform ordering system
-  // - STUDENT: Students ordering uniforms (@student.laverdad.edu.ph)
-  // - PROPERTY_CUSTODIAN: Property custodians managing inventory (@laverdad.edu.ph)
-  // - SYSTEM_ADMIN: System administrators managing users and settings
+  // User roles: student (students table) and staff roles (staff table)
   const USER_ROLES = {
     STUDENT: "student",
-    PROPERTY_CUSTODIAN: "property_custodian",
     SYSTEM_ADMIN: "system_admin",
+    PROPERTY_CUSTODIAN: "property_custodian",
+    FINANCE_STAFF: "finance_staff",
+    ACCOUNTING_STAFF: "accounting_staff",
+    DEPARTMENT_HEAD: "department_head",
   };
+  const STAFF_ROLES = [
+    USER_ROLES.SYSTEM_ADMIN,
+    USER_ROLES.PROPERTY_CUSTODIAN,
+    USER_ROLES.FINANCE_STAFF,
+    USER_ROLES.ACCOUNTING_STAFF,
+    USER_ROLES.DEPARTMENT_HEAD,
+  ];
 
   useEffect(() => {
     const checkAuthStatus = async () => {
@@ -189,6 +196,7 @@ export const AuthProvider = ({ children }) => {
     userRole,
     loading,
     USER_ROLES,
+    STAFF_ROLES,
     signInWithGoogle,
     logout,
     updateUser,
