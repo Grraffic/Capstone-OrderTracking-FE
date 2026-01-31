@@ -226,17 +226,34 @@ const Orders = () => {
   const stats = useOrdersStats(mockOrders);
 
   // Fetch all orders for accurate counts (not paginated)
-  const { orders: allOrdersForCount } = useOrders({
+  // We need to fetch orders with different statuses separately to get accurate counts
+  // because the backend filters out claimed/cancelled when status is null
+  const { orders: allActiveOrdersForCount } = useOrders({
     page: 1,
-    limit: 10000, // Fetch all orders for counting
+    limit: 10000,
     orderType: null,
-    status: null,
+    status: null, // This gets active orders: pending, processing, ready, payment_pending
+    educationLevel: null,
+    search: null,
+  });
+
+  const { orders: allClaimedOrdersForCount } = useOrders({
+    page: 1,
+    limit: 10000,
+    orderType: null,
+    status: "claimed", // Explicitly fetch claimed orders
     educationLevel: null,
     search: null,
   });
 
   // Calculate order counts for tabs
   const orderCounts = useMemo(() => {
+    // Combine active and claimed orders for counting
+    const allOrdersForCount = [
+      ...(allActiveOrdersForCount || []),
+      ...(allClaimedOrdersForCount || []),
+    ];
+
     if (!allOrdersForCount || allOrdersForCount.length === 0) {
       return {
         preOrders: 0,
@@ -254,7 +271,8 @@ const Orders = () => {
       const status = order.status?.toLowerCase();
       return (
         orderType !== "pre-order" &&
-        status !== "claimed"
+        status !== "claimed" &&
+        status !== "cancelled" // Exclude cancelled/voided orders
       );
     }).length;
 
@@ -268,7 +286,7 @@ const Orders = () => {
       orders: allRegularOrders,
       claimed: allClaimed,
     };
-  }, [allOrdersForCount]);
+  }, [allActiveOrdersForCount, allClaimedOrdersForCount]);
 
   // Use API pagination
   const totalPages = apiPagination.totalPages || 1;

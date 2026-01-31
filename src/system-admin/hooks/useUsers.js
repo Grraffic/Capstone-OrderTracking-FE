@@ -102,8 +102,18 @@ export const useUsers = () => {
       }
     } catch (err) {
       console.error("Error updating user:", err);
-      setError(err.message || "Failed to update user");
-      throw err;
+      // Extract error message from response if available
+      const errorMessage = err.response?.data?.error || 
+                          err.response?.data?.message || 
+                          err.message || 
+                          "Failed to update user";
+      console.error("Error details:", {
+        message: errorMessage,
+        response: err.response?.data,
+        status: err.response?.status,
+      });
+      setError(errorMessage);
+      throw new Error(errorMessage);
     } finally {
       setLoading(false);
     }

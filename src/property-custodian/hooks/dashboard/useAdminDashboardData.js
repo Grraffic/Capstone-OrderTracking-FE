@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useAdminSidebar } from "../common/useAdminSidebar";
 import { useOrders } from "../orders/useOrders";
 import { useInventoryHealthStats } from "./useInventoryHealthStats";
@@ -41,15 +41,35 @@ export const useAdminDashboardData = () => {
   const [recentAudits, setRecentAudits] = useState([]);
   const [recentAuditsLoading, setRecentAuditsLoading] = useState(true);
 
-  // Fetch all orders to calculate order counts
-  const { orders: allOrders, loading: ordersLoading } = useOrders({
+  // Fetch active orders (pending, processing, ready, payment_pending)
+  const { orders: allActiveOrders, loading: activeOrdersLoading } = useOrders({
     page: 1,
     limit: 10000,
-    status: null,
     orderType: null,
+    status: null, // Gets active orders: pending, processing, ready, payment_pending
     educationLevel: null,
     search: null,
   });
+
+  // Fetch claimed orders separately (they're excluded when status is null)
+  const { orders: allClaimedOrders, loading: claimedOrdersLoading } = useOrders({
+    page: 1,
+    limit: 10000,
+    orderType: null,
+    status: "claimed", // Explicitly fetch claimed orders
+    educationLevel: null,
+    search: null,
+  });
+
+  // Combine active and claimed orders for dashboard calculations
+  const allOrders = useMemo(() => {
+    return [
+      ...(allActiveOrders || []),
+      ...(allClaimedOrders || []),
+    ];
+  }, [allActiveOrders, allClaimedOrders]);
+
+  const ordersLoading = activeOrdersLoading || claimedOrdersLoading;
 
   // Fetch out of stock items
   useEffect(() => {
