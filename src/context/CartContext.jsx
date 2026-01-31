@@ -77,15 +77,22 @@ export const CartProvider = ({ children }) => {
   const { user } = useAuth();
   const { trackAddToCart, trackRemoveFromCart } = useActivity();
 
-  // Fetch cart items when user logs in
+  // Fetch cart items when user logs in (only for students)
   useEffect(() => {
     if (user?.id) {
-      fetchCartItems();
+      // Only fetch cart for students - system admins and staff don't have carts
+      if (user?.role === "student") {
+        fetchCartItems();
+      } else {
+        // Non-students don't have carts - set empty cart
+        dispatch({ type: "SET_CART_ITEMS", payload: [] });
+      }
     } else {
       // Clear cart when user logs out
       dispatch({ type: "CLEAR_CART" });
     }
-  }, [user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, user?.role]);
 
   /**
    * Fetch all cart items for the current user
@@ -96,12 +103,26 @@ export const CartProvider = ({ children }) => {
       const response = await cartAPI.getCartItems(user.id);
 
       if (response.data.success) {
-        dispatch({ type: "SET_CART_ITEMS", payload: response.data.data });
+        dispatch({ type: "SET_CART_ITEMS", payload: response.data.data || [] });
       }
     } catch (error) {
       console.error("Fetch cart items error:", error);
+      
+      // Don't show error for non-students (system admins, staff, etc.)
+      // They don't have carts, so this is expected
+      const userRole = user?.role;
+      if (userRole && userRole !== "student") {
+        // Non-students don't have carts - set empty cart silently
+        dispatch({ type: "SET_CART_ITEMS", payload: [] });
+        dispatch({ type: "SET_LOADING", payload: false });
+        return;
+      }
+      
+      // For students, show error if cart fetch fails
       dispatch({ type: "SET_ERROR", payload: error.message });
       toast.error("Failed to load cart items");
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
     }
   };
 
