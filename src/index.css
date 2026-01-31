@@ -160,3 +160,39 @@
     background: #9ca3af;
   }
 }
+
+/* Fade in animation for featured items rotation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Fade out to left animation - smoother and slower */
+@keyframes fadeOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.95);
+  }
+}
+
+/* Slide in from right animation - smoother and slower */
+@keyframes slideInFromRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}

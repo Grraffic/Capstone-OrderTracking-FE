@@ -1,22 +1,33 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const uniforms = [
   {
     id: "uniform-1",
-    src: "../../assets/image/PANTS.png",
-    alt: "Female Uniform",
+    images: [
+      { src: "../../assets/image/PANTS.png", alt: "Higher Education Pants" },
+      { src: "../../assets/image/SHS BLOUSE.png", alt: "Higher Education Blouse" },
+      { src: "../../assets/image/SHS SKIRT.png", alt: "Higher Education Skirt" },
+    ],
     text: "Higher Education",
   },
   {
     id: "uniform-2",
-    src: "../../assets/image/KINDER DRESS.png",
-    alt: "Male Uniform",
+    images: [
+      { src: "../../assets/image/KINDER DRESS.png", alt: "Basic Education Dress" },
+      { src: "../../assets/image/ELEMENTARY BLOUSE.png", alt: "Elementary Blouse" },
+      { src: "../../assets/image/JHS BLOUSE.png", alt: "Junior High Blouse" },
+      { src: "../../assets/image/POLO JACKET (Elem & JHS).png", alt: "Polo Jacket" },
+    ],
     text: "Basic Education",
   },
   {
     id: "uniform-3",
-    src: "../../assets/image/POLO JACKET (Elem & JHS).png",
-    alt: "Sailor Uniform",
+    images: [
+      { src: "../../assets/image/POLO JACKET (Elem & JHS).png", alt: "Basic Education Polo" },
+      { src: "../../assets/image/JERSEY.png", alt: "PE Jersey" },
+      { src: "../../assets/image/JOGGING PANTS.png", alt: "Jogging Pants" },
+    ],
     text: "Basic Education Polo",
   },
 ];
@@ -53,8 +64,35 @@ const carouselSlides = [
 ];
 
 function FeatureCarousel() {
+  const navigate = useNavigate();
   const [mainIndex, setMainIndex] = useState(0);
   const [displayedUniforms, setDisplayedUniforms] = useState([...uniforms]);
+  
+  // Track current image index for each uniform
+  const [uniformImageIndices, setUniformImageIndices] = useState(
+    uniforms.reduce((acc, uniform) => {
+      acc[uniform.id] = 0;
+      return acc;
+    }, {})
+  );
+
+  // Auto-rotate images within each uniform card
+  useEffect(() => {
+    if (mainIndex !== 1) return;
+
+    const imageRotationInterval = setInterval(() => {
+      setUniformImageIndices((prev) => {
+        const newIndices = { ...prev };
+        displayedUniforms.forEach((uniform) => {
+          newIndices[uniform.id] = 
+            (prev[uniform.id] + 1) % uniform.images.length;
+        });
+        return newIndices;
+      });
+    }, 4000); // Rotate images every 4 seconds
+
+    return () => clearInterval(imageRotationInterval);
+  }, [mainIndex, displayedUniforms]);
 
   // Auto-rotate uniforms every 5 seconds (only on the uniforms/features slide)
   useEffect(() => {
@@ -113,9 +151,13 @@ function FeatureCarousel() {
           }
         >
           <img
-            src={uniform.src}
-            alt={uniform.alt}
-            className="w-full h-full min-h-[100px] max-h-[200px] object-contain object-center transition-all duration-500 ease-in-out flex-1"
+            key={`${uniform.id}-${uniformImageIndices[uniform.id]}`}
+            src={uniform.images[uniformImageIndices[uniform.id]]?.src || uniform.images[0].src}
+            alt={uniform.images[uniformImageIndices[uniform.id]]?.alt || uniform.images[0].alt}
+            className="w-full h-full min-h-[100px] max-h-[200px] object-contain object-center flex-1"
+            style={{
+              animation: "fadeIn 0.8s ease-in-out",
+            }}
           />
         </div>
       ))}
@@ -155,7 +197,10 @@ function FeatureCarousel() {
                       to Higher Education
                       are now Available
                     </p>
-                    <button className="mt-1 sm:mt-1.5 md:mt-2 px-3 py-2 sm:px-5 sm:py-2.5 md:px-8 md:py-3 border border-[#f59301] sm:border-2 text-[#f59301] rounded-full font-bold shadow hover:bg-orange-50 hover:text-orange-600 transition w-fit text-xs sm:text-sm md:text-base min-h-[6px] sm:min-h-[40px] md:min-h-[44px] flex items-center justify-center self-start">
+                    <button 
+                      onClick={() => navigate("/login")}
+                      className="mt-1 sm:mt-1.5 md:mt-2 px-3 py-2 sm:px-5 sm:py-2.5 md:px-8 md:py-3 border border-[#f59301] sm:border-2 text-[#f59301] rounded-full font-bold shadow hover:bg-orange-50 hover:text-orange-600 transition w-fit text-xs sm:text-sm md:text-base min-h-[6px] sm:min-h-[40px] md:min-h-[44px] flex items-center justify-center self-start"
+                    >
                       Order Now
                     </button>
                   </div>

@@ -6,9 +6,140 @@ import Header from "../components/common/Header";
 import ContactForm from "../components/common/ContactForm";
 import FeatureCarousel from "../constants/carouselSlides";
 
+// Featured items data for automatic rotation
+const featuredItems = {
+  seniorHigh: [
+    {
+      image: "../../assets/image/SHS BLOUSE.png",
+      title: "Senior High",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Senior", "High School"],
+    },
+    {
+      image: "../../assets/image/SHS SKIRT.png",
+      title: "Senior High",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Senior", "High School"],
+    },
+    {
+      image: "../../assets/image/SHS NECKTIE.png",
+      title: "Senior High",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Senior", "High School"],
+    },
+    {
+      image: "../../assets/image/PANTS.png",
+      title: "Senior High",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Senior", "High School"],
+    },
+  ],
+  basicEducation: [
+    {
+      image: "../../assets/image/ELEMENTARY BLOUSE.png",
+      title: "Basic Education",
+      subtitle: "Uniforms",
+      description: "are now in stock!",
+      watermark: ["Basic", "Education"],
+    },
+    {
+      image: "../../assets/image/JHS BLOUSE.png",
+      title: "Basic Education",
+      subtitle: "Uniforms",
+      description: "are now in stock!",
+      watermark: ["Basic", "Education"],
+    },
+    {
+      image: "../../assets/image/KINDER DRESS.png",
+      title: "Basic Education",
+      subtitle: "Uniforms",
+      description: "are now in stock!",
+      watermark: ["Basic", "Education"],
+    },
+    {
+      image: "../../assets/image/POLO JACKET (Elem & JHS).png",
+      title: "Basic Education",
+      subtitle: "Uniforms",
+      description: "are now in stock!",
+      watermark: ["Basic", "Education"],
+    },
+  ],
+  peUniforms: [
+    {
+      image: "../../assets/image/JERSEY.png",
+      title: "PE Uniforms are",
+      subtitle: "",
+      description: "are now Available!",
+      watermark: ["PE", "Uniform"],
+    },
+    {
+      image: "../../assets/image/JOGGING PANTS.png",
+      title: "PE Uniforms are",
+      subtitle: "",
+      description: "are now Available!",
+      watermark: ["PE", "Uniform"],
+    },
+  ],
+  higherEducation: [
+    {
+      image: "../../assets/image/PANTS.png",
+      title: "Higher Education",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Higher", "Education"],
+    },
+    {
+      image: "../../assets/image/SHS BLOUSE.png",
+      title: "Higher Education",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Higher", "Education"],
+    },
+    {
+      image: "../../assets/image/POLO JACKET (Elem & JHS).png",
+      title: "Higher Education",
+      subtitle: "Uniforms",
+      description: "are now Available!",
+      watermark: ["Higher", "Education"],
+    },
+  ],
+};
+
 export default function LandingPage() {
   useScrollOnState();
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [seniorHighIndex, setSeniorHighIndex] = useState(0);
+  const [basicEducationIndex, setBasicEducationIndex] = useState(0);
+  const [peUniformsIndex, setPeUniformsIndex] = useState(0);
+  const [higherEducationIndex, setHigherEducationIndex] = useState(0);
+  
+  // Detect mobile screen size (375px and 425px)
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Track which cards are currently visible
+  // Desktop: 3 cards (0=Senior High, 1=Basic Education, 2=PE Uniforms, 3=Higher Education)
+  // Mobile: 1 card at a time
+  const [visibleCards, setVisibleCards] = useState([0, 1, 2]); // Start with Senior High, Basic Education, PE Uniforms
+  const [exitingCard, setExitingCard] = useState(null);
+  const [enteringCard, setEnteringCard] = useState(null);
+  const visibleCardsRef = React.useRef([0, 1, 2]);
+  const mobileCardIndexRef = React.useRef(0); // Track current card index for mobile rotation
+
+  // Detect mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      setIsMobile(width >= 375 && width <= 425);
+    };
+    
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Show scroll-to-top button when user scrolls down
   useEffect(() => {
@@ -19,6 +150,163 @@ export default function LandingPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Auto-rotate featured items within each card
+  useEffect(() => {
+    let seniorHighInterval;
+    let basicEducationInterval;
+    let peUniformsInterval;
+    let higherEducationInterval;
+
+    // Senior High rotation - every 4 seconds
+    seniorHighInterval = setInterval(() => {
+      setSeniorHighIndex((prev) => 
+        (prev + 1) % featuredItems.seniorHigh.length
+      );
+    }, 4000);
+
+    // Basic Education rotation - every 4 seconds, starts after 1 second
+    const basicEducationTimeout = setTimeout(() => {
+      basicEducationInterval = setInterval(() => {
+        setBasicEducationIndex((prev) => 
+          (prev + 1) % featuredItems.basicEducation.length
+        );
+      }, 4000);
+    }, 1000);
+
+    // PE Uniforms rotation - every 4 seconds, starts after 2 seconds
+    const peUniformsTimeout = setTimeout(() => {
+      peUniformsInterval = setInterval(() => {
+        setPeUniformsIndex((prev) => 
+          (prev + 1) % featuredItems.peUniforms.length
+        );
+      }, 4000);
+    }, 2000);
+
+    // Higher Education rotation - every 4 seconds, starts after 3 seconds
+    const higherEducationTimeout = setTimeout(() => {
+      higherEducationInterval = setInterval(() => {
+        setHigherEducationIndex((prev) => 
+          (prev + 1) % featuredItems.higherEducation.length
+        );
+      }, 4000);
+    }, 3000);
+
+    return () => {
+      if (seniorHighInterval) clearInterval(seniorHighInterval);
+      if (basicEducationInterval) clearInterval(basicEducationInterval);
+      if (peUniformsInterval) clearInterval(peUniformsInterval);
+      if (higherEducationInterval) clearInterval(higherEducationInterval);
+      clearTimeout(basicEducationTimeout);
+      clearTimeout(peUniformsTimeout);
+      clearTimeout(higherEducationTimeout);
+    };
+  }, []);
+
+  // Card rotation logic - different for mobile vs desktop
+  useEffect(() => {
+    if (!isMobile) {
+      // Desktop: 3 cards rotation
+      let timeouts = [];
+      
+      const scheduleTransition = (delay, newCards, oldCards, isTransition = true) => {
+        const timeout = setTimeout(() => {
+          if (isTransition) {
+            // Find which card is exiting and which is entering
+            const exiting = oldCards.find(card => !newCards.includes(card));
+            const entering = newCards.find(card => !oldCards.includes(card));
+            
+            if (exiting !== undefined) setExitingCard(exiting);
+            if (entering !== undefined) setEnteringCard(entering);
+            
+            // After animation, update cards and clear flags
+            // Use longer duration for smoother transition
+            setTimeout(() => {
+              setVisibleCards(newCards);
+              visibleCardsRef.current = newCards;
+              setTimeout(() => {
+                setExitingCard(null);
+                setEnteringCard(null);
+              }, 1000); // Match animation duration
+            }, 0);
+          } else {
+            setVisibleCards(newCards);
+            visibleCardsRef.current = newCards;
+          }
+        }, delay);
+        timeouts.push(timeout);
+      };
+
+      const runCycle = () => {
+        // Clear any existing timeouts
+        timeouts.forEach(clearTimeout);
+        timeouts = [];
+        
+        const currentCards = visibleCardsRef.current;
+
+        // Step 1: After 5 seconds, Senior High out, Higher Education in
+        scheduleTransition(5000, [3, 1, 2], currentCards, true);
+
+        // Step 2: After another 5.5 seconds (10.5s total), Basic Education out, Senior High in
+        // Slightly longer delay to allow smooth transition completion
+        scheduleTransition(10500, [3, 0, 2], [3, 1, 2], true);
+
+        // Step 3: After another 5.5 seconds (16s total), reset to initial state
+        scheduleTransition(16000, [0, 1, 2], [3, 0, 2], false);
+      };
+
+      // Run initial cycle
+      runCycle();
+
+      // Repeat cycle every 16 seconds (adjusted for smoother transitions)
+      const cycleInterval = setInterval(() => {
+        runCycle();
+      }, 16000);
+
+      return () => {
+        clearInterval(cycleInterval);
+        timeouts.forEach(clearTimeout);
+      };
+    } else {
+      // Mobile: 1 card at a time, continuously cycle through all 4 cards
+      const allCards = [0, 1, 2, 3]; // Senior High, Basic Education, PE Uniforms, Higher Education
+      let currentIndex = 0;
+      
+      // Set initial card
+      setVisibleCards([allCards[currentIndex]]);
+      visibleCardsRef.current = [allCards[currentIndex]];
+      mobileCardIndexRef.current = currentIndex;
+      
+      const rotateNext = () => {
+        const oldIndex = currentIndex;
+        currentIndex = (currentIndex + 1) % allCards.length;
+        const newCard = allCards[currentIndex];
+        const oldCard = allCards[oldIndex];
+        
+        // Set exiting and entering cards
+        setExitingCard(oldCard);
+        setEnteringCard(newCard);
+        
+        setTimeout(() => {
+          setVisibleCards([newCard]);
+          visibleCardsRef.current = [newCard];
+          mobileCardIndexRef.current = currentIndex;
+          
+          setTimeout(() => {
+            setExitingCard(null);
+            setEnteringCard(null);
+          }, 1000); // Match animation duration
+        }, 0);
+      };
+      
+      // Rotate every 4 seconds on mobile
+      const mobileInterval = setInterval(rotateNext, 4000);
+      
+      return () => {
+        clearInterval(mobileInterval);
+      };
+    }
+  }, [isMobile]); // Re-run when mobile state changes
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -43,7 +331,7 @@ export default function LandingPage() {
             </p>
             <Link
               to="/login"
-              className="border-2 border-[#E68B00] text-[#E68B00] px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:bg-orange-50 hover:text-orange-600 transition ml-auto block w-fit text-sm sm:text-base min-h-[44px] flex items-center justify-center"
+              className="border-2 border-[#E68B00] text-[#E68B00] px-6 sm:px-8 py-2.5 sm:py-3 rounded-full font-semibold hover:bg-orange-50 hover:text-orange-600 transition ml-auto inline-flex items-center justify-center w-fit text-sm sm:text-base min-h-[44px]"
             >
               Get Started
             </Link>
@@ -102,174 +390,291 @@ export default function LandingPage() {
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#003363] mb-8 sm:mb-12">
             Now <span className="text-[#E68B00]">Available</span>
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {/* Card 1 */}
-            <div className="flex flex-col h-full">
+          <div className={`relative ${
+            isMobile 
+              ? "overflow-hidden min-h-[400px]" 
+              : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+          }`}>
+            {/* Card 1 - Senior High */}
+            {(visibleCards.includes(0) || exitingCard === 0) && (
               <div
-                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white"
+                key="senior-high"
+                className={`flex flex-col h-full ${
+                  isMobile ? "w-full absolute inset-0" : ""
+                }`}
+                style={{
+                  animation: exitingCard === 0
+                    ? "fadeOutLeft 1s ease-in-out"
+                    : enteringCard === 0
+                    ? "slideInFromRight 1s ease-in-out"
+                    : "",
+                }}
               >
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                  Senior High <br /> Uniforms
-                </h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-4">
-                  are now Available!
-                </p>
-                <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
-                  {/* Background text under the image (watermark) */}
-                  <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
-                    <div
-                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
-                      style={{
-                        letterSpacing: "0.05em",
-                        lineHeight: "0.85",
-                        margin: 0,
-                        padding: 0,
-                        display: "block",
-                      }}
-                    >
-                      Senior
+                <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                    {featuredItems.seniorHigh[seniorHighIndex].title} <br />{" "}
+                    <span className="text-[#E68B00]">
+                      {featuredItems.seniorHigh[seniorHighIndex].subtitle}
+                    </span>
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-2">
+                    {featuredItems.seniorHigh[seniorHighIndex].description}
+                  </p>
+                  <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                    <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                        }}
+                      >
+                        {featuredItems.seniorHigh[seniorHighIndex].watermark[0]}
+                      </div>
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                          marginTop: "-0.1em",
+                        }}
+                      >
+                        {featuredItems.seniorHigh[seniorHighIndex].watermark[1]}
+                      </div>
                     </div>
-                    <div
-                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
-                      style={{
-                        letterSpacing: "0.05em",
-                        lineHeight: "0.85",
-                        margin: 0,
-                        padding: 0,
-                        display: "block",
-                        marginTop: "-0.1em",
-                      }}
-                    >
-                      High School
-                    </div>
+                    <img
+                      key={seniorHighIndex}
+                      src={featuredItems.seniorHigh[seniorHighIndex].image}
+                      alt="Senior High Uniforms"
+                      className="relative z-10 w-full h-full object-contain"
+                      style={{ animation: "fadeIn 0.6s ease-in-out" }}
+                    />
                   </div>
-
-                  <img
-                    src="../../assets/image/SHS BLOUSE.png"
-                    alt="Senior High Uniforms"
-                    className="relative z-10 w-full h-full object-contain"
-                  />
                 </div>
+                <Link
+                  to="/all-products"
+                  className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
+                >
+                  → Click here to Order
+                </Link>
               </div>
-              <Link
-                to="/all-products"
-                className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
-              >
-               → Click here to Order
-              </Link>
-            </div>
+            )}
 
-            {/* Card 2 */}
-            <div className="flex flex-col h-full">
+            {/* Card 2 - Basic Education */}
+            {(visibleCards.includes(1) || exitingCard === 1) && (
               <div
-                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white"
+                key="basic-education"
+                className={`flex flex-col h-full ${
+                  isMobile ? "w-full absolute inset-0" : ""
+                }`}
+                style={{
+                  animation: exitingCard === 1
+                    ? "fadeOutLeft 1s ease-in-out"
+                    : enteringCard === 1
+                    ? "slideInFromRight 1s ease-in-out"
+                    : "",
+                }}
               >
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                  Basic Education Uniforms
-                </h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-4">
-                  are now in stock!
-                </p>
-                <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
-                  {/* Background text under the image (watermark) */}
-                  <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
-                    <div
-                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
-                      style={{
-                        letterSpacing: "0.05em",
-                        lineHeight: "0.85",
-                        margin: 0,
-                        padding: 0,
-                        display: "block",
-                      }}
-                    >
-                      Basic
+                <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                    {featuredItems.basicEducation[basicEducationIndex].title} <br />{" "}
+                    <span className="text-[#E68B00]">
+                      {featuredItems.basicEducation[basicEducationIndex].subtitle}
+                    </span>
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-2">
+                    {featuredItems.basicEducation[basicEducationIndex].description}
+                  </p>
+                  <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                    <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                        }}
+                      >
+                        {featuredItems.basicEducation[basicEducationIndex].watermark[0]}
+                      </div>
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                          marginTop: "-0.1em",
+                        }}
+                      >
+                        {featuredItems.basicEducation[basicEducationIndex].watermark[1]}
+                      </div>
                     </div>
-                    <div
-                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
-                      style={{
-                        letterSpacing: "0.05em",
-                        lineHeight: "0.85",
-                        margin: 0,
-                        padding: 0,
-                        display: "block",
-                        marginTop: "-0.1em",
-                      }}
-                    >
-                      Education
-                    </div>
+                    <img
+                      key={basicEducationIndex}
+                      src={featuredItems.basicEducation[basicEducationIndex].image}
+                      alt="Basic Education Uniforms"
+                      className="relative z-10 w-full h-full object-contain"
+                      style={{ animation: "fadeIn 0.6s ease-in-out" }}
+                    />
                   </div>
-
-                  <img
-                    src="../../assets/image/ELEMENTARY BLOUSE.png"
-                    alt="Basic Education Uniforms"
-                    className="relative z-10 w-full h-full object-contain"
-                  />
                 </div>
+                <Link
+                  to="/all-products"
+                  className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
+                >
+                  → Click here to Order
+                </Link>
               </div>
-              <Link
-                to="/all-products"
-                className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
-              >
-               → Click here to Order 
-              </Link>
-            </div>
+            )}
 
-            {/* Card 3 */}
-            <div className="flex flex-col h-full sm:col-span-2 lg:col-span-1">
+            {/* Card 3 - PE Uniforms */}
+            {(visibleCards.includes(2) || exitingCard === 2) && (
               <div
-                className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white"
+                key="pe-uniforms"
+                className={`flex flex-col h-full ${
+                  isMobile ? "w-full absolute inset-0" : ""
+                }`}
+                style={{
+                  animation: exitingCard === 2
+                    ? "fadeOutLeft 1s ease-in-out"
+                    : enteringCard === 2
+                    ? "slideInFromRight 1s ease-in-out"
+                    : "",
+                }}
               >
-                <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                  PE Uniforms are
-                </h3>
-                <p className="text-sm sm:text-base text-gray-600 mb-4">
-                  are now Available!
-                </p>
-                <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
-                  {/* Background text under the image (watermark) */}
-                  <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
-                    <div
-                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
-                      style={{
-                        letterSpacing: "0.05em",
-                        lineHeight: "0.85",
-                        margin: 0,
-                        padding: 0,
-                        display: "block",
-                      }}
-                    >
-                      PE
+                <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                    {featuredItems.peUniforms[peUniformsIndex].title}
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-2">
+                    {featuredItems.peUniforms[peUniformsIndex].description}
+                  </p>
+                  <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                    <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                        }}
+                      >
+                        {featuredItems.peUniforms[peUniformsIndex].watermark[0]}
+                      </div>
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                          marginTop: "-0.1em",
+                        }}
+                      >
+                        {featuredItems.peUniforms[peUniformsIndex].watermark[1]}
+                      </div>
                     </div>
-                    <div
-                      className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
-                      style={{
-                        letterSpacing: "0.05em",
-                        lineHeight: "0.85",
-                        margin: 0,
-                        padding: 0,
-                        display: "block",
-                        marginTop: "-0.1em",
-                      }}
-                    >
-                      Uniform
-                    </div>
+                    <img
+                      key={peUniformsIndex}
+                      src={featuredItems.peUniforms[peUniformsIndex].image}
+                      alt="PE Uniforms"
+                      className="relative z-10 w-full h-full object-contain"
+                      style={{ animation: "fadeIn 0.6s ease-in-out" }}
+                    />
                   </div>
-
-                  <img
-                    src="../../assets/image/JERSEY.png"
-                    alt="PE Uniforms"
-                    className="relative z-10 w-full h-full object-contain"
-                  />
                 </div>
+                <Link
+                  to="/all-products"
+                  className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
+                >
+                  → Click here to Order
+                </Link>
               </div>
-              <Link
-                to="/all-products"
-                className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
+            )}
+
+            {/* Card 4 - Higher Education */}
+            {(visibleCards.includes(3) || exitingCard === 3) && (
+              <div
+                key="higher-education"
+                className={`flex flex-col h-full ${
+                  isMobile ? "w-full absolute inset-0" : ""
+                }`}
+                style={{
+                  animation: exitingCard === 3
+                    ? "fadeOutLeft 1s ease-in-out"
+                    : enteringCard === 3
+                    ? "slideInFromRight 1s ease-in-out"
+                    : "",
+                }}
               >
-               → Click here to Order
-              </Link>
-            </div>
+                <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
+                  <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
+                    {featuredItems.higherEducation[higherEducationIndex].title} <br />{" "}
+                    <span className="text-[#E68B00]">
+                      {featuredItems.higherEducation[higherEducationIndex].subtitle}
+                    </span>
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-600 mb-2">
+                    {featuredItems.higherEducation[higherEducationIndex].description}
+                  </p>
+                  <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
+                    <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                        }}
+                      >
+                        {featuredItems.higherEducation[higherEducationIndex].watermark[0]}
+                      </div>
+                      <div
+                        className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
+                        style={{
+                          letterSpacing: "0.05em",
+                          lineHeight: "0.85",
+                          margin: 0,
+                          padding: 0,
+                          display: "block",
+                          marginTop: "-0.1em",
+                        }}
+                      >
+                        {featuredItems.higherEducation[higherEducationIndex].watermark[1]}
+                      </div>
+                    </div>
+                    <img
+                      key={higherEducationIndex}
+                      src={featuredItems.higherEducation[higherEducationIndex].image}
+                      alt="Higher Education Uniforms"
+                      className="relative z-10 w-full h-full object-contain"
+                      style={{ animation: "fadeIn 0.6s ease-in-out" }}
+                    />
+                  </div>
+                </div>
+                <Link
+                  to="/all-products"
+                  className="mt-2 text-[#00396E] font-semibold text-sm sm:text-base hover:underline min-h-[44px] inline-flex items-center"
+                >
+                  → Click here to Order
+                </Link>
+              </div>
+            )}
           </div>
         </div>
       </section>
