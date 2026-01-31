@@ -254,3 +254,22 @@ div[class*="go4109123758"][data-animation="exit"] > div[class*="go2072408551"],
 .custom-toast[data-animation="exit"] {
   animation: none !important;
 }
+
+/* Force single card on mobile (375px - 430px) */
+@media (min-width: 375px) and (max-width: 430px) {
+  .mobile-single-card {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
+  }
+  
+  .mobile-single-card > div {
+    width: 100% !important;
+    max-width: 100% !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+  }
+}

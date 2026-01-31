@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUp } from "lucide-react";
 import { useScrollOnState } from "../hooks/useScrollOnState";
@@ -117,26 +117,39 @@ export default function LandingPage() {
   const [peUniformsIndex, setPeUniformsIndex] = useState(0);
   const [higherEducationIndex, setHigherEducationIndex] = useState(0);
   
-  // Detect mobile screen size (375px and 425px) and tablet (768px)
+  // Detect mobile screen size (375px and 430px) and tablet (768px)
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   
   // Track which cards are currently visible
   // Desktop: 3 cards (0=Senior High, 1=Basic Education, 2=PE Uniforms, 3=Higher Education)
   // Mobile: 1 card at a time
-  const [visibleCards, setVisibleCards] = useState([0, 1, 2]); // Start with Senior High, Basic Education, PE Uniforms
+  // Initialize based on screen size - default to mobile (1 card) to prevent flash of multiple cards
+  const getInitialVisibleCards = () => {
+    if (typeof window !== 'undefined') {
+      const width = window.innerWidth;
+      // Mobile M (375px) and Mobile L (430px) - always 1 card
+      if (width >= 375 && width <= 430) {
+        return [0]; // Force single card
+      }
+    }
+    return [0, 1, 2]; // Desktop/Tablet: Start with Senior High, Basic Education, PE Uniforms
+  };
+  const [visibleCards, setVisibleCards] = useState(getInitialVisibleCards);
   const [exitingCard, setExitingCard] = useState(null);
   const [enteringCard, setEnteringCard] = useState(null);
-  const visibleCardsRef = React.useRef([0, 1, 2]);
+  const visibleCardsRef = React.useRef(getInitialVisibleCards());
   const mobileCardIndexRef = React.useRef(0); // Track current card index for mobile rotation
 
   // Detect mobile and tablet screen sizes
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      // Mobile M only (375px), Mobile L (425px) and above will show 2 cards
-      setIsMobile(width >= 375 && width < 425);
-      setIsTablet(width >= 425 && width < 1024); // Mobile L (425px) and Tablet: 425px to 1023px
+      // Mobile M (375px) and Mobile L (430px) - show 1 card only
+      // Use <= 430 to ensure Mobile L (430px) is included in mobile
+      setIsMobile(width >= 375 && width <= 430);
+      // Tablet starts at 431px (above Mobile L)
+      setIsTablet(width >= 431 && width < 1024);
     };
     
     checkScreenSize();
@@ -208,7 +221,65 @@ export default function LandingPage() {
 
   // Card rotation logic - different for mobile, tablet, and desktop
   useEffect(() => {
-    if (!isMobile) {
+    // Force mobile to show only 1 card immediately
+    if (isMobile) {
+      // Mobile: 1 card at a time, continuously cycle through all 4 cards
+      const allCards = [0, 1, 2, 3]; // Senior High, Basic Education, PE Uniforms, Higher Education
+      
+      // Ensure only 1 card is visible on mobile - check ref to avoid dependency issues
+      if (visibleCardsRef.current.length > 1) {
+        setVisibleCards([0]);
+        visibleCardsRef.current = [0];
+      }
+      
+      let currentIndex = visibleCardsRef.current[0] || 0;
+      
+      // Set initial card if not already set - use ref to avoid dependency issues
+      if (visibleCardsRef.current.length !== 1) {
+        setVisibleCards([allCards[currentIndex]]);
+        visibleCardsRef.current = [allCards[currentIndex]];
+        mobileCardIndexRef.current = currentIndex;
+      }
+      
+      const rotateNext = () => {
+        const oldIndex = currentIndex;
+        currentIndex = (currentIndex + 1) % allCards.length;
+        const newCard = allCards[currentIndex];
+        const oldCard = allCards[oldIndex];
+        
+        // Set exiting and entering cards
+        setExitingCard(oldCard);
+        setEnteringCard(newCard);
+        
+        setTimeout(() => {
+          setVisibleCards([newCard]);
+          visibleCardsRef.current = [newCard];
+          mobileCardIndexRef.current = currentIndex;
+          
+          setTimeout(() => {
+            setExitingCard(null);
+            setEnteringCard(null);
+          }, 1000); // Match animation duration
+        }, 0);
+      };
+      
+      // Rotate every 4 seconds on mobile
+      const mobileInterval = setInterval(rotateNext, 4000);
+      
+      return () => {
+        clearInterval(mobileInterval);
+      };
+    } else {
+      // Double-check we're not on mobile before running tablet/desktop logic
+      const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+      const isActuallyMobile = currentWidth >= 375 && currentWidth <= 430;
+      
+      if (isActuallyMobile) {
+        // If we're actually on mobile, don't run tablet/desktop logic
+        console.log('🔧 Prevented tablet/desktop logic from running on mobile');
+        return;
+      }
+      
       // Tablet: 2 cards, Desktop: 3 cards rotation
       let timeouts = [];
       
@@ -294,46 +365,26 @@ export default function LandingPage() {
         clearInterval(cycleInterval);
         timeouts.forEach(clearTimeout);
       };
-    } else {
-      // Mobile: 1 card at a time, continuously cycle through all 4 cards
-      const allCards = [0, 1, 2, 3]; // Senior High, Basic Education, PE Uniforms, Higher Education
-      let currentIndex = 0;
-      
-      // Set initial card
-      setVisibleCards([allCards[currentIndex]]);
-      visibleCardsRef.current = [allCards[currentIndex]];
-      mobileCardIndexRef.current = currentIndex;
-      
-      const rotateNext = () => {
-        const oldIndex = currentIndex;
-        currentIndex = (currentIndex + 1) % allCards.length;
-        const newCard = allCards[currentIndex];
-        const oldCard = allCards[oldIndex];
-        
-        // Set exiting and entering cards
-        setExitingCard(oldCard);
-        setEnteringCard(newCard);
-        
-        setTimeout(() => {
-          setVisibleCards([newCard]);
-          visibleCardsRef.current = [newCard];
-          mobileCardIndexRef.current = currentIndex;
-          
-          setTimeout(() => {
-            setExitingCard(null);
-            setEnteringCard(null);
-          }, 1000); // Match animation duration
-        }, 0);
-      };
-      
-      // Rotate every 4 seconds on mobile
-      const mobileInterval = setInterval(rotateNext, 4000);
-      
-      return () => {
-        clearInterval(mobileInterval);
-      };
     }
   }, [isMobile, isTablet]); // Re-run when mobile or tablet state changes
+
+  // Add defensive useLayoutEffect to enforce single card on mobile (runs synchronously before paint)
+  useLayoutEffect(() => {
+    const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const isActuallyMobile = currentWidth >= 375 && currentWidth <= 430;
+    
+    if (isMobile || isActuallyMobile) {
+      setVisibleCards((prev) => {
+        if (prev.length > 1 || visibleCardsRef.current.length > 1) {
+          console.warn('🔧 Mobile detected with multiple cards, forcing to 1 card immediately');
+          const singleCard = [prev[0] || visibleCardsRef.current[0] || 0];
+          visibleCardsRef.current = singleCard;
+          return singleCard;
+        }
+        return prev;
+      });
+    }
+  }, [isMobile]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -417,19 +468,27 @@ export default function LandingPage() {
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#003363] mb-8 sm:mb-12">
             Now <span className="text-[#E68B00]">Available</span>
           </h2>
-          <div className={`relative ${
-            isMobile 
-              ? "overflow-hidden min-h-[400px]" 
-              : isTablet
-              ? "overflow-hidden min-h-[400px]"
-              : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
-          }`}>
+          <div 
+            className={`relative ${
+              isMobile 
+                ? "overflow-hidden min-h-[400px] !grid !grid-cols-1 mobile-single-card" 
+                : isTablet
+                ? "overflow-hidden min-h-[400px]"
+                : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+            }`}
+            style={isMobile ? { 
+              display: 'grid',
+              gridTemplateColumns: '1fr',
+              gap: 0,
+              maxWidth: '100%'
+            } : {}}
+          >
             {/* Card 1 - Senior High */}
             {(visibleCards.includes(0) || exitingCard === 0) && (
               <div
                 key="senior-high"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" 
+                  isMobile ? "!w-full !absolute !inset-0" 
                   : isTablet 
                     ? `w-[calc(50%-12px)] absolute top-0 ${
                         visibleCards.indexOf(0) === 0 ? "left-0" : "right-0"
@@ -437,6 +496,16 @@ export default function LandingPage() {
                   : ""
                 }`}
                 style={{
+                  ...(isMobile ? {
+                    width: '100%',
+                    maxWidth: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: visibleCards.includes(0) ? 10 : 0
+                  } : {}),
                   animation: exitingCard === 0
                     ? "fadeOutLeft 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
                     : enteringCard === 0
@@ -507,7 +576,7 @@ export default function LandingPage() {
               <div
                 key="basic-education"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" 
+                  isMobile ? "!w-full !absolute !inset-0" 
                   : isTablet 
                     ? `w-[calc(50%-12px)] absolute top-0 ${
                         visibleCards.indexOf(1) === 0 ? "left-0" : "right-0"
@@ -515,6 +584,16 @@ export default function LandingPage() {
                   : ""
                 }`}
                 style={{
+                  ...(isMobile ? {
+                    width: '100%',
+                    maxWidth: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: visibleCards.includes(1) ? 10 : 0
+                  } : {}),
                   animation: exitingCard === 1
                     ? "fadeOutLeft 1s ease-in-out"
                     : enteringCard === 1
@@ -583,7 +662,7 @@ export default function LandingPage() {
               <div
                 key="pe-uniforms"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" 
+                  isMobile ? "!w-full !absolute !inset-0" 
                   : isTablet 
                     ? `w-[calc(50%-12px)] absolute top-0 ${
                         visibleCards.indexOf(2) === 0 ? "left-0" : "right-0"
@@ -591,6 +670,16 @@ export default function LandingPage() {
                   : ""
                 }`}
                 style={{
+                  ...(isMobile ? {
+                    width: '100%',
+                    maxWidth: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: visibleCards.includes(2) ? 10 : 0
+                  } : {}),
                   animation: exitingCard === 2
                     ? "fadeOutLeft 1s ease-in-out"
                     : enteringCard === 2
@@ -656,7 +745,7 @@ export default function LandingPage() {
               <div
                 key="higher-education"
                 className={`flex flex-col h-full ${
-                  isMobile ? "w-full absolute inset-0" 
+                  isMobile ? "!w-full !absolute !inset-0" 
                   : isTablet 
                     ? `w-[calc(50%-12px)] absolute top-0 ${
                         visibleCards.indexOf(3) === 0 ? "left-0" : "right-0"
@@ -664,6 +753,16 @@ export default function LandingPage() {
                   : ""
                 }`}
                 style={{
+                  ...(isMobile ? {
+                    width: '100%',
+                    maxWidth: '100%',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    zIndex: visibleCards.includes(3) ? 10 : 0
+                  } : {}),
                   animation: exitingCard === 3
                     ? "fadeOutLeft 1s ease-in-out"
                     : enteringCard === 3
