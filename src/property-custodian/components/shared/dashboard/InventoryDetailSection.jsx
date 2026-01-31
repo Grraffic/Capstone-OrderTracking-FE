@@ -55,23 +55,23 @@ const InventoryDetailSection = ({ totalItemVariants }) => {
   // Safety check: ensure data is initialized
   if (data === undefined && !loading && !error) {
     return (
-      <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm p-4">
-        <p className="text-sm text-gray-500">Loading inventory data...</p>
+      <div className="mt-4 sm:mt-6 bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 md:p-4">
+        <p className="text-xs sm:text-sm text-gray-500">Loading inventory data...</p>
       </div>
     );
   }
 
   return (
-    <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 ease-in-out">
+    <div className="mt-4 sm:mt-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden transition-all duration-300 ease-in-out">
       {/* Header */}
-      <div className="px-4 sm:px-6 py-4 border-b border-gray-200 bg-white">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+      <div className="px-2.5 sm:px-3 md:px-4 lg:px-6 py-3 sm:py-4 border-b border-gray-200 bg-white">
+        <div className="flex flex-col gap-2 sm:gap-3 md:gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-3 md:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+              <label className="text-xs sm:text-sm font-medium text-gray-700 whitespace-nowrap">
                 Education Level:
               </label>
-              <div className="w-full sm:w-auto min-w-[200px]">
+              <div className="flex-1 sm:flex-none sm:w-auto min-w-0 sm:min-w-[200px]">
                 <EducationLevelFilter
                   value={selectedEducationLevel}
                   onChange={setSelectedEducationLevel}
@@ -83,10 +83,10 @@ const InventoryDetailSection = ({ totalItemVariants }) => {
       </div>
 
       {/* Content */}
-      <div className="p-4 sm:p-6">
+      <div className="p-2.5 sm:p-3 md:p-4 lg:p-6">
         {error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-sm text-red-600">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4">
+            <p className="text-xs sm:text-sm text-red-600">
               Error loading inventory data: {error}
             </p>
           </div>
@@ -102,37 +102,38 @@ const InventoryDetailSection = ({ totalItemVariants }) => {
       </div>
 
       {/* Footer with pagination */}
-      <div className="px-4 sm:px-6 py-3 border-t border-gray-200 bg-gray-50">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-gray-600">
+      <div className="px-2.5 sm:px-3 md:px-4 lg:px-6 py-2 sm:py-3 border-t border-gray-200 bg-gray-50">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4">
+          <p className="text-[10px] sm:text-xs md:text-sm text-gray-600 font-sf-medium">
             Total Items - {selectedEducationLevel}: {totalItemsCount} Items
           </p>
           
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={handlePrevious}
                 disabled={currentPage === 1}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 text-sm font-medium"
+                className="px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 text-[10px] sm:text-xs md:text-sm font-medium"
                 aria-label="Previous page"
               >
-                <ChevronLeft size={18} />
-                <span>Previous</span>
+                <ChevronLeft size={14} className="sm:w-4 sm:h-4 md:w-[18px] md:h-[18px]" />
+                <span className="hidden sm:inline">Previous</span>
+                <span className="sm:hidden">Prev</span>
               </button>
               
-              <span className="text-sm text-gray-600 px-3">
+              <span className="text-[10px] sm:text-xs md:text-sm text-gray-600 px-2 sm:px-3 font-sf-medium">
                 Page {currentPage} of {totalPages}
               </span>
               
               <button
                 onClick={handleNext}
                 disabled={currentPage >= totalPages}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 text-sm font-medium"
+                className="px-2 sm:px-2.5 md:px-3 py-1 sm:py-1.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 text-[10px] sm:text-xs md:text-sm font-medium"
                 aria-label="Next page"
               >
                 <span>Next</span>
-                <ChevronRight size={18} />
+                <ChevronRight size={14} className="sm:w-4 sm:h-4 md:w-[18px] md:h-[18px]" />
               </button>
             </div>
           )}

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import DatePicker from "react-datepicker";
-import { format, subDays, startOfMonth, endOfMonth, startOfYear, endOfYear } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth, startOfYear } from "date-fns";
 import { Calendar, ChevronDown } from "lucide-react";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -14,8 +15,10 @@ import "react-datepicker/dist/react-datepicker.css";
 const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = "" }) => {
   const [preset, setPreset] = useState("Last 7 days");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
   const calendarRef = useRef(null);
   const containerRef = useRef(null);
+  const buttonRef = useRef(null);
   const selectRef = useRef(null);
 
   // Preset options
@@ -28,6 +31,49 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
     "This year",
     "Custom range",
   ];
+
+  // Calculate calendar position when it opens
+  useEffect(() => {
+    if (!showCalendar || !buttonRef.current) return;
+
+    const calculatePosition = () => {
+      const buttonRect = buttonRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const calendarWidth = 280;
+      const calendarHeight = 300;
+      
+      let left = buttonRect.left;
+      let top = buttonRect.bottom + 4; // 4px gap (mt-1)
+      
+      // On mobile, center the calendar
+      if (viewportWidth < 768) {
+        left = Math.max(8, (viewportWidth - calendarWidth) / 2);
+        // If calendar would go below viewport, position it above
+        if (top + calendarHeight > viewportHeight) {
+          top = buttonRect.top - calendarHeight - 4;
+        }
+      } else {
+        // On desktop, align to right
+        left = buttonRect.right - calendarWidth;
+        // Ensure it doesn't go off the left edge
+        if (left < 8) {
+          left = 8;
+        }
+      }
+      
+      setCalendarPosition({ top, left });
+    };
+
+    calculatePosition();
+    window.addEventListener('resize', calculatePosition);
+    window.addEventListener('scroll', calculatePosition, true);
+
+    return () => {
+      window.removeEventListener('resize', calculatePosition);
+      window.removeEventListener('scroll', calculatePosition, true);
+    };
+  }, [showCalendar]);
 
   // Close calendar when clicking outside
   useEffect(() => {
@@ -45,8 +91,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
       }
       
       // Don't close if clicking the button (let it toggle)
-      const button = containerRef.current?.querySelector('button[type="button"]');
-      if (button && button.contains(event.target)) {
+      if (buttonRef.current && buttonRef.current.contains(event.target)) {
         return;
       }
       
@@ -87,11 +132,12 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
         newStartDate = startOfMonth(today);
         newEndDate = today;
         break;
-      case "Last month":
+      case "Last month": {
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         newStartDate = startOfMonth(lastMonth);
         newEndDate = endOfMonth(lastMonth);
         break;
+      }
       case "This year":
         newStartDate = startOfYear(today);
         newEndDate = today;
@@ -129,11 +175,13 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
   const handleCalendarChange = (dates) => {
     const [start, end] = dates;
     if (start) {
+      // If only start date is selected (no end), set end to same date for single-day selection
+      const finalEnd = end || start;
       if (onDateRangeChange) {
-        onDateRangeChange(start, end || null);
+        onDateRangeChange(start, finalEnd);
       }
-      // If both dates are selected, close calendar and update preset
-      if (start && end) {
+      // If both dates are selected (or same date for single selection), close calendar
+      if (start && finalEnd) {
         setShowCalendar(false);
         setPreset("Custom range");
       }
@@ -176,6 +224,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
       {/* Right Section - Calendar Date Range */}
       <div className="relative flex-1 min-w-0 overflow-visible">
         <button
+          ref={buttonRef}
           type="button"
           onClick={(e) => {
             e.stopPropagation();
@@ -189,23 +238,33 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
           </div>
           <ChevronDown className="w-3.5 h-3.5 sm:w-3.5 md:w-4 sm:h-3.5 md:h-4 text-gray-500 ml-1 sm:ml-1.5 md:ml-2 flex-shrink-0" />
         </button>
-
-        {/* Calendar Dropdown */}
-        {showCalendar && (
-          <div className="absolute top-full left-0 sm:left-0 md:left-auto md:right-0 mt-1 z-[9999]" ref={calendarRef}>
-            <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-2">
-              <DatePicker
-                selected={startDate}
-                onChange={handleCalendarChange}
-                startDate={startDate}
-                endDate={endDate}
-                selectsRange
-                inline
-              />
-            </div>
-          </div>
-        )}
       </div>
+      
+      {/* Calendar Dropdown - Rendered via Portal to prevent overflow */}
+      {showCalendar && createPortal(
+        <div 
+          ref={calendarRef}
+          className="fixed z-[9999]"
+          style={{ 
+            top: `${calendarPosition.top}px`,
+            left: `${calendarPosition.left}px`,
+            width: '280px',
+            maxWidth: 'calc(100vw - 1rem)'
+          }}
+        >
+          <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-2">
+            <DatePicker
+              selected={startDate}
+              onChange={handleCalendarChange}
+              startDate={startDate}
+              endDate={endDate}
+              selectsRange
+              inline
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

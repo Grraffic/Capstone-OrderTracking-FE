@@ -71,8 +71,28 @@ const RecentAudits = ({ transactions = [] }) => {
                   key={transaction.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  <td className="px-4 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                    {transaction.dateTime}
+                  <td className="px-4 sm:px-6 py-4 text-sm text-gray-700">
+                    {(() => {
+                      // Split dateTime into date and time parts
+                      const dateTimeStr = transaction.dateTime || "";
+                      // Format is usually "Feb 1, 2026 04:24 AM" or "Jan 26, 2024 2:30 PM"
+                      // Split by pattern: space before time (HH:MM AM/PM or H:MM AM/PM)
+                      const timeMatch = dateTimeStr.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+                      if (timeMatch) {
+                        const timeIndex = dateTimeStr.indexOf(timeMatch[1]);
+                        const datePart = dateTimeStr.substring(0, timeIndex).trim();
+                        const timePart = timeMatch[1].trim();
+                        
+                        return (
+                          <div className="flex flex-col">
+                            <span className="whitespace-nowrap">{datePart}</span>
+                            <span className="whitespace-nowrap text-xs text-gray-600 mt-0.5">{timePart}</span>
+                          </div>
+                        );
+                      }
+                      // Fallback: if no time pattern found, show as is
+                      return <span className="whitespace-nowrap">{dateTimeStr}</span>;
+                    })()}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-sm text-gray-700">
                     {transaction.user}

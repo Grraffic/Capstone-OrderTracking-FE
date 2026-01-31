@@ -1,3 +1,4 @@
+import { useState } from "react";
 import AdminLayout from "../components/layouts/AdminLayout";
 import {
   InventoryHealth,
@@ -5,21 +6,38 @@ import {
   OrderTracking,
   RecentAudits,
 } from "../components/shared";
+import DateRangePicker from "../components/common/DateRangePicker";
 import { useAdminDashboardData } from "../hooks";
 import { DashboardSkeleton } from "../components/Skeleton";
+import { subDays, startOfDay, endOfDay } from "date-fns";
 
 const AdminDashboard = () => {
+  // Date range state - default to last 30 days
+  const today = new Date();
+  const defaultStartDate = startOfDay(subDays(today, 29));
+  const defaultEndDate = endOfDay(today);
+  const [startDate, setStartDate] = useState(defaultStartDate);
+  const [endDate, setEndDate] = useState(defaultEndDate);
+
   const {
-    activeTab,
-    handleTabChange,
     inventoryHealth,
     outOfStockItems,
     orderTracking,
     recentAudits,
     loading,
-  } = useAdminDashboardData();
+  } = useAdminDashboardData(startDate, endDate);
 
-  const tabs = ["Week", "Month", "Year"];
+  const handleDateRangeChange = (newStartDate, newEndDate) => {
+    if (newStartDate) {
+      setStartDate(startOfDay(newStartDate));
+    }
+    if (newEndDate) {
+      setEndDate(endOfDay(newEndDate));
+    } else if (newStartDate && !newEndDate) {
+      // If only start date is selected, set end date to same day
+      setEndDate(endOfDay(newStartDate));
+    }
+  };
 
   return (
     <AdminLayout
@@ -37,31 +55,22 @@ const AdminDashboard = () => {
         <>
           {/* Inventory Health Section */}
           <div className="mb-8">
-            <div className="flex items-center gap-8 mb-4">
+            <div className="mb-4">
               <h2 className="text-lg font-semibold text-[#0C2340]">
                 Inventory <span className="text-[#e68b00]">Health</span>
               </h2>
-              {/* Tabs */}
-              <div className="flex gap-6">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => handleTabChange(tab)}
-                    className={`pb-0 font-medium transition-colors relative text-sm ${
-                      activeTab === tab
-                        ? "text-[#e68b00]"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    {tab}
-                    {activeTab === tab && (
-                      <div className="absolute bottom-0 left-0 right-0 h-1 bg-[#e68b00] rounded-t-full"></div>
-                    )}
-                  </button>
-                ))}
-              </div>
             </div>
-            <InventoryHealth stats={inventoryHealth} />
+            <InventoryHealth 
+              stats={inventoryHealth}
+              dateRangePicker={
+                <DateRangePicker
+                  startDate={startDate}
+                  endDate={endDate}
+                  onDateRangeChange={handleDateRangeChange}
+                  className="w-full"
+                />
+              }
+            />
           </div>
 
           {/* Inventory Alerts and Order Tracking - Side by Side */}

@@ -11,9 +11,11 @@ import api from "../../../services/api";
  * - At Reorder Point: groups with at least one row "At Reorder Point" and not fully out of stock
  * - Out of Stock: groups with at least one row "Out of Stock" (same as section list)
  *
+ * @param {Date} startDate - Start date for filtering items by created_at
+ * @param {Date} endDate - End date for filtering items by created_at
  * @returns {Object} { stats, loading } - stats object with totalItemVariants, atReorderPoint, outOfStock
  */
-export const useInventoryHealthStats = () => {
+export const useInventoryHealthStats = (startDate, endDate) => {
   const [stats, setStats] = useState({
     totalItemVariants: 0,
     atReorderPoint: 0,
@@ -29,7 +31,15 @@ export const useInventoryHealthStats = () => {
         const { data: result } = await api.get("/items/inventory-report");
 
         if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
-          const rows = result.data;
+          // Filter rows by date range if provided
+          let rows = result.data;
+          if (startDate && endDate) {
+            rows = rows.filter((row) => {
+              if (!row.created_at) return false;
+              const createdDate = new Date(row.created_at);
+              return createdDate >= startDate && createdDate <= endDate;
+            });
+          }
 
           // Group rows by (name, education_level) - same grouping as OutOfStockSection
           const groupStatuses = new Map();
@@ -81,7 +91,7 @@ export const useInventoryHealthStats = () => {
     };
 
     fetchInventoryStats();
-  }, []);
+  }, [startDate, endDate]);
 
   return { stats, loading };
 };

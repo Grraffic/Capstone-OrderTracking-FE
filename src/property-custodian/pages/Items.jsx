@@ -74,6 +74,7 @@ const Items = () => {
     variations: [],
   });
   const menuRef = useRef(null);
+  const filterButtonRef = useRef(null);
   // Note: AdminLayout handles sidebar state internally
 
   // Close menu when clicking outside
@@ -164,8 +165,23 @@ const Items = () => {
       }));
   }, [filteredItems, educationLevelFilter, mapTabLabelToEducationLevel]);
 
-  // Paginate grouped items (max 8 per page for grid and list)
-  const itemsPerPage = 8;
+  // Paginate grouped items - responsive: 3 on mobile, 8 on larger screens
+  const [itemsPerPage, setItemsPerPage] = useState(8);
+  
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      if (window.innerWidth < 640) {
+        setItemsPerPage(3); // Mobile M and Mobile L
+      } else {
+        setItemsPerPage(8); // Larger screens
+      }
+    };
+    
+    updateItemsPerPage();
+    window.addEventListener('resize', updateItemsPerPage);
+    return () => window.removeEventListener('resize', updateItemsPerPage);
+  }, []);
+  
   const paginatedGroupedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
@@ -261,27 +277,28 @@ const Items = () => {
   }, [educationLevelFilter]);
 
   return (
-    <AdminLayout title="Items">
+    <AdminLayout title="Items" noPadding={true}>
+      <div className="p-3 sm:p-4 md:p-6 lg:p-8 font-sf-medium">
       {isInitialLoading ? (
         <ItemsSkeleton viewMode={viewMode} />
       ) : (
         <>
           {/* Page Header - Title */}
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-6 md:mb-8">
             {/* Page Title */}
-            <h1 className="text-4xl font-bold">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl xl:text-5xl font-sf-semibold font-semibold tracking-tight">
               <span className="text-[#0C2340]">Ite</span>
               <span className="text-[#e68b00]">ms</span>
             </h1>
           </div>
 
           {/* Inventory Health Section */}
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-6 md:mb-8">
             <InventoryHealth stats={inventoryHealthStats} />
           </div>
 
           {/* Horizontal Level Selection Tabs - Desktop / Dropdown - Mobile */}
-          <div className="mb-8 border-b border-gray-200 pb-2">
+          <div className="mb-4 sm:mb-6 md:mb-8 border-b border-gray-200 pb-2">
             {/* Mobile Dropdown */}
             <div className="md:hidden">
               <div className="relative">
@@ -292,7 +309,7 @@ const Items = () => {
                     setSelectedLevel(level);
                     setEducationLevelFilter(level);
                   }}
-                  className="w-full appearance-none bg-white border-2 border-gray-300 rounded-lg px-4 py-2.5 pr-10 text-sm font-medium text-[#0C2340] focus:outline-none focus:border-[#e68b00] focus:ring-2 focus:ring-[#e68b00]/20 transition-colors"
+                  className="w-full appearance-none bg-white border-2 border-gray-300 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 pr-8 sm:pr-10 text-xs sm:text-sm font-sf-medium font-medium text-[#0C2340] focus:outline-none focus:border-[#e68b00] focus:ring-2 focus:ring-[#e68b00]/20 transition-colors"
                 >
                   {[
                     "All",
@@ -337,7 +354,7 @@ const Items = () => {
                       // Sync with items filter so clicking a tab actually filters the list
                       setEducationLevelFilter(level);
                     }}
-                    className={`relative pb-3 text-sm md:text-base font-medium transition-colors ${
+                    className={`relative pb-3 text-xs sm:text-sm md:text-base font-sf-medium font-medium transition-colors ${
                       isActive
                         ? "text-[#e68b00]"
                         : "text-[#0C2340] hover:text-[#e68b00]"
@@ -356,52 +373,55 @@ const Items = () => {
           </div>
 
           {/* List of Items header + controls */}
-          <div className="mb-6 flex flex-col gap-4">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              {/* Left: List of items title */}
-              <h2 className="text-2xl font-semibold text-[#0C2340]">
+          <div className="mb-4 sm:mb-6 flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              {/* Title */}
+              <h2 className="text-xl sm:text-2xl font-sf-semibold font-semibold text-[#0C2340]">
                 List of{" "}
                 <span className="text-[#e68b00] underline decoration-[#e68b00]/40">
                   Items
                 </span>
               </h2>
 
-              {/* Right: Add Item, Search, Filter Button */}
-              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                {/* Add New Item Button */}
+              {/* Mobile Layout: Add Item on left, Search on right */}
+              <div className="flex flex-row items-center gap-2 sm:gap-3">
+                {/* Add New Item Button - Left */}
                 <button
                   onClick={openAddModal}
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d67a00] transition-colors shadow-sm whitespace-nowrap font-medium text-sm"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d67a00] transition-colors shadow-sm whitespace-nowrap font-medium text-xs sm:text-sm flex-shrink-0"
                   title="Add New Item"
                   aria-label="Add New Item"
                 >
-                  <Plus size={18} />
-                  <span>Add Item</span>
+                  <Plus size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Add Item</span>
+                  <span className="sm:hidden">Add</span>
                 </button>
 
-                {/* Search Bar */}
-                <div className="relative w-full sm:w-64">
+                {/* Search Bar - Right */}
+                <div className="relative flex-1 min-w-0">
                   <Search
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    size={20}
+                    className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5"
                   />
                   <input
                     type="text"
                     placeholder="Search items..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-sm bg-white"
+                    className="w-full pl-8 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-xs sm:text-sm bg-white"
                   />
                 </div>
+              </div>
 
-                {/* Filter Button - opens Filter dropdown below */}
+              {/* Filter Button - Right side under search */}
+              <div className="flex justify-end">
                 <div className="relative inline-block">
                   <button
+                    ref={filterButtonRef}
                     type="button"
                     onClick={() => setFilterDropdownOpen((prev) => !prev)}
-                    className="flex items-center justify-center gap-2 px-3 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+                    className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-3 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-xs sm:text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
                   >
-                    <Filter size={18} />
+                    <Filter size={16} className="sm:w-[18px] sm:h-[18px]" />
                     <span>Filters</span>
                   </button>
                   <ItemsFilterDropdown
@@ -416,6 +436,7 @@ const Items = () => {
                       });
                     }}
                     initialFilters={appliedFilters}
+                    buttonRef={filterButtonRef}
                   />
                 </div>
               </div>
@@ -430,25 +451,25 @@ const Items = () => {
                     setViewMode("grid");
                     setSelectedListRowKey(null);
                   }}
-                  className={`px-3 py-2 flex items-center gap-1 text-xs font-medium transition-colors ${
+                  className={`px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1 text-[10px] sm:text-xs font-medium transition-colors ${
                     viewMode === "grid"
                       ? "bg-[#0C2340] text-white"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  <LayoutGrid size={16} />
+                  <LayoutGrid size={14} className="sm:w-4 sm:h-4" />
                   <span>Grid</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setViewMode("list")}
-                  className={`px-3 py-2 flex items-center gap-1 text-xs font-medium transition-colors border-l border-gray-300 ${
+                  className={`px-2.5 sm:px-3 py-1.5 sm:py-2 flex items-center gap-1 text-[10px] sm:text-xs font-medium transition-colors border-l border-gray-300 ${
                     viewMode === "list"
                       ? "bg-[#0C2340] text-white"
                       : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  <List size={16} />
+                  <List size={14} className="sm:w-4 sm:h-4" />
                   <span>List</span>
                 </button>
               </div>
@@ -457,20 +478,20 @@ const Items = () => {
 
           {/* Item Grid or List */}
           {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
               {paginatedItems.length === 0 ? (
-                <div className="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-gray-300">
-                  <p className="text-sm font-medium text-gray-700 mb-1">
+                <div className="col-span-full flex flex-col items-center justify-center py-12 sm:py-16 bg-white rounded-xl sm:rounded-2xl border border-dashed border-gray-300">
+                  <p className="text-xs sm:text-sm font-sf-medium font-medium text-gray-700 mb-1">
                     No items found
                   </p>
-                  <p className="text-xs text-gray-500 mb-4">
+                  <p className="text-[10px] sm:text-xs text-gray-500 mb-3 sm:mb-4">
                     Try adjusting your filters or add a new item.
                   </p>
                   <button
                     onClick={openAddModal}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d67a00] text-sm font-medium shadow-sm transition-colors"
+                    className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-[#e68b00] text-white rounded-lg hover:bg-[#d67a00] text-xs sm:text-sm font-sf-medium font-medium shadow-sm transition-colors"
                   >
-                    <Plus size={16} />
+                    <Plus size={14} className="sm:w-4 sm:h-4" />
                     <span>Add Item</span>
                   </button>
                 </div>
@@ -482,12 +503,12 @@ const Items = () => {
                   return (
                     <div
                       key={group.groupKey}
-                      className="relative bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
+                      className="relative bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow flex flex-col"
                     >
                       {/* Three-dot menu (hidden when viewing archived items — archived items stay in archive, no actions) */}
                       {appliedFilters.itemStatus !== "archived" && (
                         <div
-                          className="absolute top-3 right-3"
+                          className="absolute top-2 right-2 sm:top-3 sm:right-3"
                           ref={openMenuId === group.groupKey ? menuRef : null}
                         >
                           <div className="relative inline-block">
@@ -500,19 +521,19 @@ const Items = () => {
                                     : group.groupKey
                                 )
                               }
-                              className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                              className="p-1.5 sm:p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                               aria-label="More options"
                             >
-                              <MoreHorizontal size={18} />
+                              <MoreHorizontal size={16} className="sm:w-[18px] sm:h-[18px]" />
                             </button>
                             {openMenuId === group.groupKey && (
-                              <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                              <div className="absolute right-0 mt-2 w-36 sm:w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
                                 <button
                                   onClick={() => {
                                     openEditModal(representativeItem);
                                     setOpenMenuId(null);
                                   }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors"
+                                  className="w-full text-left px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 rounded-t-lg transition-colors font-sf-medium"
                                 >
                                   Edit Item
                                 </button>
@@ -525,7 +546,7 @@ const Items = () => {
                                       // Error already set in hook
                                     }
                                   }}
-                                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors"
+                                  className="w-full text-left px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-50 rounded-b-lg transition-colors font-sf-medium"
                                 >
                                   Archive Item
                                 </button>
@@ -536,8 +557,8 @@ const Items = () => {
                       )}
 
                       {/* Product Image */}
-                      <div className="mb-4">
-                        <div className="w-full h-48 sm:h-56 bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center">
+                      <div className="mb-3 sm:mb-4">
+                        <div className="w-full h-40 sm:h-48 md:h-56 bg-gray-50 rounded-lg sm:rounded-xl overflow-hidden flex items-center justify-center">
                           {group.image ? (
                             <img
                               src={group.image}
@@ -549,7 +570,7 @@ const Items = () => {
                               }}
                             />
                           ) : (
-                            <div className="text-xs text-gray-400">
+                            <div className="text-[10px] sm:text-xs text-gray-400 font-sf-medium">
                               No Image Available
                             </div>
                           )}
@@ -557,18 +578,18 @@ const Items = () => {
                       </div>
 
                       {/* Product Content */}
-                      <div className="flex-1 flex flex-col gap-2">
-                        <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2">
+                      <div className="flex-1 flex flex-col gap-1.5 sm:gap-2">
+                        <h3 className="text-xs sm:text-sm font-sf-semibold font-semibold text-[#0C2340] line-clamp-2">
                           {group.name}
                         </h3>
 
                         {/* Item Type Label */}
-                        <p className="text-xs text-gray-500 font-medium">
+                        <p className="text-[10px] sm:text-xs text-gray-500 font-sf-medium font-medium">
                           {formatItemType(group.itemType)}
                         </p>
 
                         {/* Horizontal Divider */}
-                        <hr className="border-gray-200 my-1" />
+                        <hr className="border-gray-200 my-0.5 sm:my-1" />
 
                         {/* View Details Link - Centered */}
                         <button
@@ -576,7 +597,7 @@ const Items = () => {
                           onClick={() =>
                             openItemDetailsModal(representativeItem)
                           }
-                          className="mt-1 flex items-center justify-center gap-1 text-xs font-medium text-[#0C2340] hover:text-[#e68b00]"
+                          className="mt-0.5 sm:mt-1 flex items-center justify-center gap-1 text-[10px] sm:text-xs font-sf-medium font-medium text-[#0C2340] hover:text-[#e68b00]"
                         >
                           <span>View Details</span>
                           <span aria-hidden="true">→</span>
@@ -708,11 +729,11 @@ const Items = () => {
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden space-y-3">
+              <div className="md:hidden space-y-2 sm:space-y-3">
                 {paginatedGroupedItems.length === 0 ? (
-                  <div className="px-4 py-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
-                    <p className="text-sm font-medium">No items found</p>
-                    <p className="text-xs mt-1">
+                  <div className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
+                    <p className="text-xs sm:text-sm font-sf-medium font-medium">No items found</p>
+                    <p className="text-[10px] sm:text-xs mt-1 font-sf-medium">
                       Try adjusting your filters or add a new item.
                     </p>
                   </div>
@@ -724,14 +745,14 @@ const Items = () => {
                     return (
                       <div
                         key={group.groupKey}
-                        className="bg-white rounded-xl shadow-sm border border-gray-200 p-3 sm:p-4 flex gap-3 sm:gap-4"
+                        className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 p-2.5 sm:p-3 md:p-4 flex gap-2 sm:gap-3 md:gap-4"
                       >
                         {/* Image */}
                         <div className="flex-shrink-0">
                           <img
                             src={group.image}
                             alt={group.name}
-                            className="w-14 h-14 sm:w-16 sm:h-16 object-cover rounded-lg border border-gray-200"
+                            className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-cover rounded-lg border border-gray-200"
                             onError={(e) => {
                               e.target.src = "https://via.placeholder.com/64";
                             }}
@@ -739,24 +760,24 @@ const Items = () => {
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 flex flex-col gap-2 min-w-0">
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="flex-1 min-w-0 pr-2">
-                              <h3 className="text-sm font-semibold text-[#0C2340] line-clamp-2 mb-1">
+                        <div className="flex-1 flex flex-col gap-1.5 sm:gap-2 min-w-0">
+                          <div className="flex justify-between items-start gap-1.5 sm:gap-2">
+                            <div className="flex-1 min-w-0 pr-1.5 sm:pr-2">
+                              <h3 className="text-xs sm:text-sm font-sf-semibold font-semibold text-[#0C2340] line-clamp-2 mb-0.5 sm:mb-1">
                                 {group.name}
                               </h3>
-                              <p className="text-xs text-[#e68b00]">
+                              <p className="text-[10px] sm:text-xs text-[#e68b00] font-sf-medium">
                                 {formatItemType(group.itemType)}
                               </p>
                             </div>
-                            <div className="text-xs font-semibold text-[#003363] flex-shrink-0">
+                            <div className="text-[10px] sm:text-xs font-sf-semibold font-semibold text-[#003363] flex-shrink-0">
                               ₱{" "}
                               {representativeItem.price?.toLocaleString() ||
                                 "0.00"}
                             </div>
                           </div>
 
-                          <p className="text-xs text-gray-500 mt-0.5">
+                          <p className="text-[10px] sm:text-xs text-gray-500 mt-0.5 font-sf-medium">
                             Grade Level:{" "}
                             <span className="text-[#0C2340]">
                               {group.educationLevel || "—"}
@@ -764,12 +785,12 @@ const Items = () => {
                           </p>
 
                           {/* Actions — no Edit/Delete when viewing archived items */}
-                          <div className="mt-2 flex justify-end gap-1.5 sm:gap-2 flex-wrap">
+                          <div className="mt-1.5 sm:mt-2 flex justify-end gap-1 sm:gap-1.5 md:gap-2 flex-wrap">
                             <button
                               onClick={() =>
                                 openItemDetailsModal(representativeItem)
                               }
-                              className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-[#0C2340]/10 text-[10px] sm:text-xs font-medium text-[#0C2340] hover:bg-[#0C2340]/20 transition-colors"
+                              className="px-1.5 sm:px-2 md:px-2.5 py-1 sm:py-1 md:py-1.5 rounded-md bg-[#0C2340]/10 text-[9px] sm:text-[10px] md:text-xs font-sf-medium font-medium text-[#0C2340] hover:bg-[#0C2340]/20 transition-colors"
                             >
                               View Details
                             </button>
@@ -777,7 +798,7 @@ const Items = () => {
                               <>
                                 <button
                                   onClick={() => openEditModal(representativeItem)}
-                                  className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-blue-50 text-[10px] sm:text-xs font-medium text-[#003363] hover:bg-blue-100 transition-colors"
+                                  className="px-1.5 sm:px-2 md:px-2.5 py-1 sm:py-1 md:py-1.5 rounded-md bg-blue-50 text-[9px] sm:text-[10px] md:text-xs font-sf-medium font-medium text-[#003363] hover:bg-blue-100 transition-colors"
                                 >
                                   Edit
                                 </button>
@@ -785,7 +806,7 @@ const Items = () => {
                                   onClick={() =>
                                     openDeleteModal(representativeItem)
                                   }
-                                  className="px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-md bg-red-50 text-[10px] sm:text-xs font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
+                                  className="px-1.5 sm:px-2 md:px-2.5 py-1 sm:py-1 md:py-1.5 rounded-md bg-red-50 text-[9px] sm:text-[10px] md:text-xs font-sf-medium font-medium text-[#e68b00] hover:bg-red-100 transition-colors"
                                 >
                                   Delete
                                 </button>
@@ -803,30 +824,33 @@ const Items = () => {
 
           {/* Pagination: Previous / Next */}
           {hasPagination && (
-            <div className="mt-6 flex items-center justify-between gap-4 flex-wrap">
-              <div className="text-sm text-gray-600">
-                Page {currentPage} of {totalPagesGrouped}
+            <div className="mt-4 sm:mt-6 flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
+              <div className="text-xs sm:text-sm text-gray-600 font-sf-medium">
+                Page <span className="font-semibold">{currentPage}</span> of{" "}
+                <span className="font-semibold">{totalPagesGrouped}</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   aria-label="Previous page"
                 >
-                  <ChevronLeft size={18} />
-                  Previous
+                  <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
+                  <span className="hidden sm:inline">Previous</span>
+                  <span className="sm:hidden">Prev</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage >= totalPagesGrouped}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   aria-label="Next page"
                 >
-                  Next
-                  <ChevronRight size={18} />
+                  <span className="hidden sm:inline">Next</span>
+                  <span className="sm:hidden">Next</span>
+                  <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
               </div>
             </div>
@@ -834,7 +858,7 @@ const Items = () => {
 
           {/* Results Info */}
           {searchTerm && (
-            <div className="mt-4 text-sm text-gray-600">
+            <div className="mt-4 text-xs sm:text-sm text-gray-600 font-sf-medium">
               Showing {groupedItems.length} result
               {groupedItems.length !== 1 ? "s" : ""} for "{searchTerm}"
               {groupedItems.length < filteredItems.length && (
@@ -926,6 +950,7 @@ const Items = () => {
           />
         </>
       )}
+      </div>
     </AdminLayout>
   );
 };

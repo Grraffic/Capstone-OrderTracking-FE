@@ -325,9 +325,37 @@ const TransactionsTable = ({ transactions }) => {
                 
                 {/* Header Row */}
                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-3 pb-3 border-b border-gray-200">
-                  <span className="text-xs text-gray-500 font-medium">
-                    {transaction.dateTime}
-                  </span>
+                  <div className="flex flex-col">
+                    {(() => {
+                      // Split dateTime into date and time parts
+                      const dateTimeStr = transaction.dateTime || "";
+                      // Format is usually "Jan 26, 2024 2:30 PM" or "Jan 26, 2024, 2:30 PM"
+                      // Split by pattern: space before time (HH:MM AM/PM)
+                      const timeMatch = dateTimeStr.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+                      if (timeMatch) {
+                        const timeIndex = dateTimeStr.indexOf(timeMatch[1]);
+                        const datePart = dateTimeStr.substring(0, timeIndex).trim();
+                        const timePart = timeMatch[1].trim();
+                        
+                        return (
+                          <>
+                            <span className="text-xs text-gray-500 font-medium">
+                              {datePart}
+                            </span>
+                            <span className="text-xs text-gray-500 font-medium mt-0.5">
+                              {timePart}
+                            </span>
+                          </>
+                        );
+                      }
+                      // Fallback: if no time pattern found, show as is
+                      return (
+                        <span className="text-xs text-gray-500 font-medium">
+                          {dateTimeStr}
+                        </span>
+                      );
+                    })()}
+                  </div>
                   <span className={`font-medium text-sm ${statusColor}`}>
                     {transaction.status}
                   </span>

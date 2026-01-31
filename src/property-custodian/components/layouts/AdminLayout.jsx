@@ -34,7 +34,7 @@ const AdminLayout = ({ children, noPadding = false }) => {
           sidebarOpen ? "left-64" : "left-20"
         }`}
       >
-        <div className={noPadding ? "" : "p-8"}>{children}</div>
+        <div className={noPadding ? "" : "p-3 sm:p-4 md:p-6 lg:p-8"}>{children}</div>
       </main>
     </div>
   );

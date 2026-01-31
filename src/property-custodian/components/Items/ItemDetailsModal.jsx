@@ -119,9 +119,19 @@ const ItemDetailsModal = ({
       ? "text-orange-600"
       : "text-green-600";
 
-  return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 py-2 pl-[5.5rem] pr-3 mobile-m:pl-[5.5rem] mobile-m:pr-3 mobile-m:pt-12 mobile-l:py-3 mobile-l:pl-[5.75rem] mobile-l:pr-4  mobile-l:pt-10 tablet:p-6 tablet:pl-24 tablet:pt-16 tablet:pr-6 tablet:pb-6 laptop:p-5 laptop:pl-24 laptop:pt-20">
-      <div className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-full mobile-l:max-w-[405px] tablet:max-w-[600px] laptop:max-w-4xl max-h-[90vh] mobile-l:max-h-[82vh] tablet:max-h-[82vh] laptop:max-h-[90vh] overflow-hidden flex flex-col mt-5 mobile-m:mt-6 mobile-l:mt-6 tablet:mt-8 laptop:mt-0">
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-[10000] p-3 sm:p-4 md:p-6"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div 
+        className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-3rem)] md:max-w-[600px] lg:max-w-4xl max-h-[90vh] sm:max-h-[85vh] md:max-h-[82vh] overflow-hidden flex flex-col relative z-[10001]"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header - scales with breakpoint: 375 / 425 / 768 / 1024 - tighter at Mobile L and Tablet */}
         <div className="px-2.5 py-2.5 mobile-m:px-3 mobile-m:py-3 mobile-l:px-3 mobile-l:py-2.5 tablet:px-4 tablet:py-3 laptop:px-6 laptop:py-4 border-b border-gray-100 flex items-start justify-between gap-1.5 mobile-l:gap-2 tablet:gap-3 flex-shrink-0">
           <div className="min-w-0 flex-1">
@@ -456,7 +466,8 @@ const ItemDetailsModal = ({
         </div>,
         document.body
       )}
-    </div>
+    </div>,
+    document.body
   );
 };
 

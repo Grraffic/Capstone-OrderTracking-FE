@@ -981,12 +981,12 @@ const Inventory = () => {
   return (
     <AdminLayout showTitle={false} noPadding={true}>
       {/* Inventory Content - SF Pro Medium font */}
-      <div className="p-4 sm:p-5 md:p-6 lg:p-8 font-sf-medium">
+      <div className="p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8 font-sf-medium">
         {/* Page Header - Title with Search */}
-        <div className="mb-4 sm:mb-5 md:mb-6">
+        <div className="mb-3 sm:mb-4 md:mb-5 lg:mb-6">
           {/* Desktop Layout: Title left, Tabs and Search right */}
           <div className="hidden lg:flex lg:items-center lg:justify-between">
-            <h1 className="text-4xl xl:text-5xl font-sf-semibold font-semibold tracking-tight">
+            <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-sf-semibold font-semibold tracking-tight">
               <span className="text-[#0C2340]">Inven</span>
               <span className="text-[#E68B00]">tory</span>
             </h1>
@@ -1044,17 +1044,17 @@ const Inventory = () => {
 
           {/* Mobile/Tablet Layout: Stacked */}
           <div className="lg:hidden">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-sf-semibold font-semibold tracking-tight">
+            <div className="flex flex-col gap-2 sm:gap-3 mb-2 sm:mb-3 md:mb-4">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-sf-semibold font-semibold tracking-tight">
                 <span className="text-[#0C2340]">Inven</span>
                 <span className="text-[#E68B00]">tory</span>
               </h1>
 
-              {/* Segmented Control - Inventory and Transaction Tabs - Right Side */}
-              <div className="flex items-center bg-[#0C2340] rounded-lg p-1 w-full sm:w-fit sm:ml-0">
+              {/* Segmented Control - Inventory and Transaction Tabs */}
+              <div className="flex items-center bg-[#0C2340] rounded-lg p-0.5 sm:p-1 w-full">
                 <button
                   onClick={() => setActiveTab("inventory")}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors duration-200 text-center ${
+                  className={`flex-1 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm font-medium rounded-md transition-colors duration-200 text-center ${
                     activeTab === "inventory"
                       ? "bg-[#E68B00] text-white"
                       : "bg-transparent text-white hover:bg-gray-700"
@@ -1064,7 +1064,7 @@ const Inventory = () => {
                 </button>
                 <button
                   onClick={() => setActiveTab("transaction")}
-                  className={`flex-1 sm:flex-none px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-md transition-colors duration-200 text-center ${
+                  className={`flex-1 px-2.5 sm:px-3 md:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm font-medium rounded-md transition-colors duration-200 text-center ${
                     activeTab === "transaction"
                       ? "bg-[#E68B00] text-white"
                       : "bg-transparent text-white hover:bg-gray-700"
@@ -1082,10 +1082,10 @@ const Inventory = () => {
                 placeholder="Search items"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 sm:pl-10 pr-3 sm:pr-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent shadow-sm transition-all duration-200 ease-in-out text-sm sm:text-base"
+                className="w-full pl-8 sm:pl-9 md:pl-10 pr-2.5 sm:pr-3 md:pr-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent shadow-sm transition-all duration-200 ease-in-out text-xs sm:text-sm md:text-base"
               />
               <svg
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
+                className="absolute left-2.5 sm:left-3 md:left-3 top-1/2 transform -translate-y-1/2 w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-gray-400"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1102,7 +1102,7 @@ const Inventory = () => {
         </div>
 
         {/* Inventory Health Section */}
-        <div className="mb-6 sm:mb-7 md:mb-8">
+        <div className="mb-4 sm:mb-5 md:mb-6 lg:mb-7 xl:mb-8">
           <InventoryHealth stats={inventoryHealthStats} />
         </div>
 
@@ -1155,16 +1155,16 @@ const Inventory = () => {
 
         {/* Pagination - Only show for inventory tab and when there's more than 1 page */}
         {activeTab === "inventory" && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 px-2 sm:px-4 py-3 mt-4 sm:mt-6">
-            <div className="text-xs sm:text-sm md:text-base text-gray-600">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-4 py-2 sm:py-3 mt-3 sm:mt-4 md:mt-6">
+            <div className="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 font-sf-medium">
               Page <span className="font-semibold">{currentPage}</span> of{" "}
               <span className="font-semibold">{totalPages}</span>
             </div>
-            <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <button
                 onClick={handlePreviousPage}
                 disabled={currentPage === 1}
-                className={`px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium rounded-lg border transition-colors duration-200 ${
+                className={`px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-medium rounded-lg border transition-colors duration-200 ${
                   currentPage === 1
                     ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
@@ -1175,7 +1175,7 @@ const Inventory = () => {
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
-                className={`px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 text-xs sm:text-sm md:text-base font-medium rounded-lg border transition-colors duration-200 ${
+                className={`px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-medium rounded-lg border transition-colors duration-200 ${
                   currentPage === totalPages
                     ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                     : "bg-[#E68B00] text-white border-[#E68B00] hover:bg-[#D67A00]"

@@ -28,12 +28,8 @@ const MaintenanceBlock = ({ children }) => {
   // Block students if maintenance is active
   // Allow system admins and property custodians to access
   if (isActive && userRole === "student") {
-    console.log("🚫 Maintenance mode is active, blocking student access", { isActive, userRole, message });
     return <MaintenanceOverlay message={message} />;
   }
-  
-  // Debug logging
-  console.log("🔓 MaintenanceBlock status:", { isActive, userRole, message, loading });
 
   // For non-students or when maintenance is not active, render children normally
   return <>{children}</>;

@@ -30,16 +30,11 @@ export const MaintenanceProvider = ({ children }) => {
    */
   const checkMaintenanceStatus = useCallback(async () => {
     try {
-      console.log("🔍 Checking maintenance status...");
       const response = await maintenanceAPI.checkMaintenanceStatus();
-      
-      console.log("📊 Maintenance status response:", response.data);
       
       if (response.data && response.data.success !== undefined) {
         const isActive = response.data.isActive === true;
         const message = response.data.message || null;
-        
-        console.log(`✅ Maintenance status: ${isActive ? "ACTIVE" : "INACTIVE"}`, { message });
         
         setMaintenanceStatus({
           isActive,
@@ -47,7 +42,6 @@ export const MaintenanceProvider = ({ children }) => {
           loading: false,
         });
       } else {
-        console.warn("⚠️ Unexpected maintenance status response format:", response.data);
         setMaintenanceStatus({
           isActive: false,
           message: null,
@@ -55,12 +49,7 @@ export const MaintenanceProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error("❌ Error checking maintenance status:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
+      console.error("Error checking maintenance status:", error);
       // On error, assume maintenance is not active to avoid blocking users
       setMaintenanceStatus({
         isActive: false,

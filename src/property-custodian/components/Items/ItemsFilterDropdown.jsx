@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { subDays } from "date-fns";
 
 const CUSTOM_DATE_DEBOUNCE_MS = 400;
@@ -20,6 +21,7 @@ const ItemsFilterDropdown = ({
   onClose,
   onApply,
   initialFilters = {},
+  buttonRef = null,
 }) => {
   const [itemStatus, setItemStatus] = useState(
     initialFilters.itemStatus ?? null
@@ -34,6 +36,8 @@ const ItemsFilterDropdown = ({
     initialFilters.endDate ?? new Date()
   );
   const customDateTimeoutRef = useRef(null);
+
+  // No longer need position calculation since we're centering the dropdown
 
   useEffect(() => {
     if (!isOpen) return;
@@ -165,20 +169,21 @@ const ItemsFilterDropdown = ({
     return `${y}-${m}-${day}`;
   };
 
-  return (
-    <>
-      {/* Transparent overlay — click to apply current filters and close */}
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[10000] bg-black/50 flex items-center justify-center p-3 sm:p-4"
+      onClick={handleClose}
+      onKeyDown={(e) => e.key === "Escape" && handleClose()}
+      aria-hidden
+    >
+      {/* Dropdown panel — centered. Form prevents Enter/submit from reloading the page. */}
       <div
-        className="fixed inset-0 z-40"
-        onClick={handleClose}
-        onKeyDown={(e) => e.key === "Escape" && handleClose()}
-        aria-hidden
-      />
-      {/* Dropdown panel — below the Filters button. Form prevents Enter/submit from reloading the page. */}
-      <div
-        className="absolute right-0 top-full mt-2 z-50 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+        className="relative z-[10001] w-full max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
         role="dialog"
         aria-label="Filter options"
+        onClick={(e) => e.stopPropagation()}
       >
         <form
           onSubmit={(e) => e.preventDefault()}
@@ -276,7 +281,8 @@ const ItemsFilterDropdown = ({
         </div>
         </form>
       </div>
-    </>
+    </div>,
+    document.body
   );
 };
 
