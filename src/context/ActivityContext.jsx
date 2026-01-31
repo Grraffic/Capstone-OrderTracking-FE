@@ -39,42 +39,50 @@ export const ActivityProvider = ({ children }) => {
 
   // Listen for Socket.IO events when admin claims student's order
   useEffect(() => {
-    if (!user?.id || !isConnected) {
+    const currentUserId = user?.uid || user?.id; // Prioritize uid (Supabase Auth UID)
+    if (!currentUserId || !isConnected) {
       console.log("⚠️ ActivityContext: No user or socket not connected, skipping event setup");
       return;
     }
 
-    console.log("🔌 ActivityContext: Setting up Socket.IO listeners for user:", user.id);
+    console.log("🔌 ActivityContext: Setting up Socket.IO listeners for user:", currentUserId);
 
     // Listen for order claimed events
     const handleOrderClaimed = (data) => {
       console.log("📡 Received order claimed event:", data);
-      console.log("🔍 Current user.id:", user.id);
+      console.log("🔍 Current user.id:", user?.id);
+      console.log("🔍 Current user.uid:", user?.uid);
       console.log("🔍 Event userId:", data.userId);
-      console.log("🔍 Match?", data.userId === user.id);
 
-      // Only track activity if this order belongs to the current user (support both id and uid)
-      const currentUserId = user.id || user.uid;
+      // Only track activity if this order belongs to the current user
+      // Prioritize user.uid (Supabase Auth UID) for matching
+      const currentUserId = user?.uid || user?.id; // Changed: uid first
       const eventUserId = data.userId;
+      const isMatch = eventUserId && currentUserId && (
+        eventUserId === currentUserId || 
+        String(eventUserId) === String(currentUserId)
+      );
+      console.log("🔍 Match?", isMatch);
       
-      if (eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId))) {
+      if (isMatch) {
         // Calculate total items count
         const itemCount = data.items?.length || 0;
 
-        const newActivity = {
+        // Create "order_released" activity (order was released by property custodian)
+        const releasedActivity = {
           id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           userId: user.id,
           timestamp: new Date().toISOString(),
-          type: "claimed",
-          description: `Claimed ${itemCount} item(s) from order #${data.orderNumber}`,
+          type: "order_released",
+          description: `Your order #${data.orderNumber} with ${itemCount} item(s) has been released`,
           orderId: data.orderId,
           orderNumber: data.orderNumber,
           items: data.items,
           itemCount: itemCount,
         };
 
-        setActivities((prev) => [newActivity, ...prev]);
-        console.log("✅ Activity tracked: Order claimed");
+        setActivities((prev) => [releasedActivity, ...prev]);
+        console.log("✅ Activity tracked: Order released");
       } else {
         console.log("⚠️ Order claimed event received but userId doesn't match current user");
         console.log("⚠️ Expected:", currentUserId);
@@ -88,7 +96,7 @@ export const ActivityProvider = ({ children }) => {
     return () => {
       off("order:claimed", handleOrderClaimed);
     };
-  }, [user?.id, isConnected, on, off]);
+  }, [user?.id, user?.uid, isConnected, on, off]);
 
   /**
    * Load activities from localStorage

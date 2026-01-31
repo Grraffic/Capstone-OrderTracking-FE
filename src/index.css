@@ -185,14 +185,72 @@
   }
 }
 
-/* Slide in from right animation - smoother and slower */
+/* Slide in from right animation - right to left (fade in) */
 @keyframes slideInFromRight {
   from {
     opacity: 0;
-    transform: translateX(30px) scale(0.98);
+    transform: translateX(100px) scale(0.95);
   }
   to {
     opacity: 1;
     transform: translateX(0) scale(1);
   }
+}
+
+/* Slide out to right animation - left to right (fade out) */
+@keyframes slideOutToRight {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100px) scale(0.95);
+  }
+}
+
+/* Custom toast animations for react-hot-toast - slide in from right */
+/* Toast container spacing - prevent overlap */
+.toast-container {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  align-items: flex-end !important;
+}
+
+.toast-container > div {
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  position: relative !important;
+}
+
+/* Target the toast container and all toast elements - prevent overlap */
+.toast-container > div > div {
+  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  position: relative !important;
+}
+
+/* Target react-hot-toast generated classes (fallback) */
+div[class*="go4109123758"] {
+  margin-bottom: 6px !important;
+}
+
+div[class*="go4109123758"] > div[class*="go2072408551"] {
+  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  margin-bottom: 0 !important;
+}
+
+/* Custom toast class */
+.custom-toast {
+  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  margin-bottom: 0 !important;
+}
+
+/* Exit animation - no transition, instant removal */
+.toast-container > div[data-animation="exit"] > div,
+div[class*="go4109123758"][data-animation="exit"] > div[class*="go2072408551"],
+.custom-toast[data-animation="exit"] {
+  animation: none !important;
 }

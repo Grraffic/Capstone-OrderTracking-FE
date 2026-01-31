@@ -77,14 +77,14 @@ const Navbar = () => {
     if (!notification.is_read) {
       await markAsRead(notification.id);
     }
-    // Navigate to orders page if it's a restock notification
+    // Navigate to pre-orders page if it's a restock notification
     if (notification.type === "restock") {
-      // Pass state to open "Orders" tab and "Orders" category
+      // Navigate to Pre-Orders section
       navigate("/student/profile", { 
         state: { 
           activeTab: 'orders',
           viewMode: 'detail', 
-          activeCategory: 'orders' 
+          activeCategory: 'preOrders' 
         } 
       });
       setIsNotificationOpen(false);

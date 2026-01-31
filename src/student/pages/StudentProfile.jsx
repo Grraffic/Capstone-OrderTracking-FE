@@ -78,6 +78,8 @@ const StudentProfile = () => {
         return <Package className="w-6 h-6 text-[#003363]" />;
       case "claimed":
         return <CheckCircle className="w-6 h-6 text-[#22c55e]" />;
+      case "order_released":
+        return <CheckCircle className="w-6 h-6 text-[#22c55e]" />;
       default:
         return <ShoppingCart className="w-6 h-6 text-[#003363]" />;
     }
@@ -116,6 +118,9 @@ const StudentProfile = () => {
       details = description;
     } else if (type === "claimed") {
       title = "Order Claimed Successfully";
+      details = description;
+    } else if (type === "order_released") {
+      title = "Order Released";
       details = description;
     } else {
       title = description;

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { useSocket } from "./SocketContext";
 import axios from "axios";
+import toast from "react-hot-toast";
 
 const NotificationContext = createContext();
 
@@ -36,37 +37,59 @@ export const NotificationProvider = ({ children }) => {
 
   // Fetch notifications when user logs in
   useEffect(() => {
-    if (user?.uid) {
+    if (user?.uid || user?.id) {
       fetchNotifications();
       fetchUnreadCount();
+      
+      // Periodically refresh notifications to catch any missed Socket.IO events
+      // This ensures notifications are received even if Socket.IO event doesn't match
+      const refreshInterval = setInterval(() => {
+        fetchNotifications();
+        fetchUnreadCount();
+      }, 60000); // Refresh every 60 seconds
+      
+      return () => clearInterval(refreshInterval);
     } else {
       setNotifications([]);
       setUnreadCount(0);
     }
-  }, [user?.uid]);
+  }, [user?.uid, user?.id]);
 
   // Listen for Socket.IO restock notifications
   useEffect(() => {
-    if (!user?.uid || !isConnected) {
+    const currentUserId = user?.uid || user?.id;
+    if (!currentUserId || !isConnected) {
       console.log("⚠️ NotificationContext: No user or socket not connected, skipping event setup");
       return;
     }
 
-    console.log("🔌 NotificationContext: Setting up Socket.IO listeners for user:", user.uid);
+    console.log("🔌 NotificationContext: Setting up Socket.IO listeners for user:", currentUserId);
 
     // Listen for inventory restock events
     const handleInventoryRestocked = (data) => {
       console.log("📡 Received items:restocked event:", data);
-      console.log("🔍 Current user.uid:", user.uid);
+      console.log("🔍 Current user.uid:", user?.uid);
+      console.log("🔍 Current user.id:", user?.id);
       console.log("🔍 Event userId:", data.userId);
-      console.log("🔍 Match?", data.userId === user.uid);
 
-      // Only add notification if it's for the current user
-      if (data.userId === user.uid) {
+      // Only add notification if it's for the current user (support both uid and id)
+      const currentUserId = user?.uid || user?.id;
+      const eventUserId = data.userId;
+      const isMatch = eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId));
+      console.log("🔍 Match?", isMatch);
+
+      if (isMatch) {
         const newNotification = data.notification;
 
-        // Add to notifications list
-        setNotifications((prev) => [newNotification, ...prev]);
+        // Check if notification already exists (avoid duplicates)
+        setNotifications((prev) => {
+          const exists = prev.some((n) => n.id === newNotification.id);
+          if (exists) {
+            console.log("⚠️ Notification already exists, skipping duplicate");
+            return prev;
+          }
+          return [newNotification, ...prev];
+        });
 
         // Increment unread count
         setUnreadCount((prev) => prev + 1);
@@ -82,12 +105,64 @@ export const NotificationProvider = ({ children }) => {
         }
       } else {
         console.log("⚠️ Restock notification received but userId doesn't match current user");
-        console.log("⚠️ Expected:", user.uid);
+        console.log("⚠️ Expected:", user?.uid || user?.id);
         console.log("⚠️ Received:", data.userId);
       }
     };
 
     on("items:restocked", handleInventoryRestocked);
+
+    // Listen for order release notifications
+    const handleOrderReleased = (data) => {
+      console.log("📡 Received notification:created event:", data);
+      console.log("🔍 Current user.uid:", user?.uid);
+      console.log("🔍 Current user.id:", user?.id);
+      console.log("🔍 Event userId:", data.userId);
+      
+      // Check if this notification is for the current user (support both uid and id)
+      const currentUserId = user?.uid || user?.id;
+      const eventUserId = data.userId;
+      const isMatch = eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId));
+      console.log("🔍 Match?", isMatch);
+
+      // Only add notification if it's for the current user
+      if (isMatch && data.notification) {
+        const newNotification = data.notification;
+
+        // Add to notifications list
+        setNotifications((prev) => {
+          // Check if notification already exists (avoid duplicates)
+          const exists = prev.some((n) => n.id === newNotification.id);
+          if (exists) return prev;
+          return [newNotification, ...prev];
+        });
+
+        // Increment unread count
+        setUnreadCount((prev) => prev + 1);
+
+        console.log("✅ Notification added: Order released");
+
+        // Show toast notification
+        toast.success(newNotification.message || "Your order has been released!", {
+          duration: 4000,
+          icon: "✅",
+        });
+
+        // Show browser notification if permission granted
+        if (Notification.permission === "granted") {
+          new Notification(newNotification.title, {
+            body: newNotification.message,
+            icon: "/logo.png",
+          });
+        }
+      } else {
+        console.log("⚠️ Order release notification received but userId doesn't match current user");
+        console.log("⚠️ Expected:", user?.uid || user?.id);
+        console.log("⚠️ Received:", data.userId);
+      }
+    };
+
+    on("notification:created", handleOrderReleased);
 
     // Request notification permission
     if (Notification.permission === "default") {
@@ -97,20 +172,22 @@ export const NotificationProvider = ({ children }) => {
     // Cleanup on unmount
     return () => {
       off("items:restocked", handleInventoryRestocked);
+      off("notification:created", handleOrderReleased);
     };
-  }, [user?.uid, isConnected, on, off]);
+  }, [user?.uid, user?.id, isConnected, on, off]);
 
   /**
    * Fetch all notifications for the current user
    */
   const fetchNotifications = async (unreadOnly = false) => {
-    if (!user?.uid) return;
+    const userId = user?.uid || user?.id;
+    if (!userId) return;
 
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/notifications`, {
         params: {
-          userId: user.uid,
+          userId: userId,
           unreadOnly,
         },
       });
@@ -129,12 +206,13 @@ export const NotificationProvider = ({ children }) => {
    * Fetch unread notification count
    */
   const fetchUnreadCount = async () => {
-    if (!user?.uid) return;
+    const userId = user?.uid || user?.id;
+    if (!userId) return;
 
     try {
       const response = await axios.get(`${API_URL}/notifications/unread-count`, {
         params: {
-          userId: user.uid,
+          userId: userId,
         },
       });
 
@@ -176,13 +254,14 @@ export const NotificationProvider = ({ children }) => {
    * Mark all notifications as read
    */
   const markAllAsRead = async () => {
-    if (!user?.uid) return;
+    const userId = user?.uid || user?.id;
+    if (!userId) return;
 
     try {
       const response = await axios.patch(
         `${API_URL}/notifications/mark-all-read`,
         {
-          userId: user.uid,
+          userId: userId,
         }
       );
 

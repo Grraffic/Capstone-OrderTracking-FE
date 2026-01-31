@@ -9,6 +9,7 @@ import { useActivity } from "../../context/ActivityContext";
 import { itemsAPI, authAPI } from "../../services/api";
 import { groupCartItemsByVariations } from "../../utils/groupCartItems";
 import { generateOrderReceiptQRData } from "../../utils/qrCodeGenerator";
+import { getDisplayPriceForFreeItem } from "../../utils/freeItemDisplayPrice";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import toast from "react-hot-toast";
@@ -703,11 +704,29 @@ const CheckoutPage = () => {
                         )}
                       </div>
 
-                      {/* FREE Badge */}
+                      {/* Price and FREE Badge */}
                       <div className="flex-shrink-0">
-                        <span className="inline-block px-2.5 py-1 sm:px-4 sm:py-1.5 bg-[#F28C28] text-white font-bold text-xs sm:text-sm rounded-full">
-                          FREE
-                        </span>
+                        {(() => {
+                          // Calculate total price for the group
+                          const groupTotal = group.variations.reduce((sum, variation) => {
+                            const itemPrice = variation.inventory?.price ?? variation.price ?? 0;
+                            const displayPrice = getDisplayPriceForFreeItem(group.name, itemPrice);
+                            return sum + (displayPrice * (variation.quantity || 1));
+                          }, 0);
+                          
+                           return (
+                             <div className="flex flex-col items-end">
+                               {groupTotal > 0 && (
+                                 <span className="line-through text-gray-500 font-semibold text-xs sm:text-sm mb-0.5 text-right block w-full">
+                                   ₱{groupTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                 </span>
+                               )}
+                               <span className={`inline-block px-2.5 py-1 sm:px-4 sm:py-1.5 bg-[#F28C28] text-white font-bold text-base sm:text-lg md:text-xl rounded-full ${groupTotal > 0 ? "mt-0.5" : ""}`}>
+                                 FREE
+                               </span>
+                             </div>
+                           );
+                        })()}
                       </div>
                     </div>
 
@@ -736,11 +755,26 @@ const CheckoutPage = () => {
                             </h4>
                           </div>
 
-                          {/* FREE Badge */}
+                          {/* Price and FREE Badge */}
                           <div className="flex-shrink-0">
-                            <span className="inline-block px-2 py-0.5 sm:px-3 sm:py-1 bg-[#F28C28] text-white font-bold text-xs rounded-full">
-                              FREE
-                            </span>
+                            {(() => {
+                              const itemPrice = variation.inventory?.price ?? variation.price ?? 0;
+                              const displayPrice = getDisplayPriceForFreeItem(group.name, itemPrice);
+                              const variationTotal = displayPrice * (variation.quantity || 1);
+                              
+                               return (
+                                 <div className="flex flex-col items-end">
+                                   {variationTotal > 0 && (
+                                     <span className="line-through text-gray-500 font-semibold text-[10px] sm:text-xs mb-0.5 text-right block w-full">
+                                       ₱{variationTotal.toLocaleString("en-PH", { minimumFractionDigits: 2 })}
+                                     </span>
+                                   )}
+                                   <span className={`inline-block px-2 py-0.5 sm:px-3 sm:py-1 bg-[#F28C28] text-white font-bold text-sm sm:text-base md:text-lg rounded-full ${variationTotal > 0 ? "mt-0.5" : ""}`}>
+                                     FREE
+                                   </span>
+                                 </div>
+                               );
+                            })()}
                           </div>
                         </div>
                       ))}

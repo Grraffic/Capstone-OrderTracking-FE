@@ -53,7 +53,7 @@ export const useActivityFeed = () => {
       if (activeTab === 'orders') {
         filtered = userActivities.filter(a => a.type === 'checkout' || a.type === 'order_placed');
       } else if (activeTab === 'history') {
-        filtered = userActivities.filter(a => a.type === 'claimed');
+        filtered = userActivities.filter(a => a.type === 'claimed' || a.type === 'order_released');
       }
       
       setActivities(filtered);

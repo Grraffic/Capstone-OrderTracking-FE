@@ -24,12 +24,19 @@ export default function App() {
                       <BrowserRouter>
                         <Toaster
                           position="top-right"
+                          containerStyle={{
+                            top: "100px", // Add spacing below header (header is ~64-80px)
+                          }}
+                          containerClassName="toast-container"
+                          gutter={6}
                           toastOptions={{
                             duration: 3000,
                             style: {
                               background: "#363636",
                               color: "#fff",
+                              marginBottom: "0px",
                             },
+                            className: "custom-toast",
                             success: {
                               duration: 3000,
                               iconTheme: {

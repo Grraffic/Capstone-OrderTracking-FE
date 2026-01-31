@@ -134,8 +134,9 @@ export default function LandingPage() {
   useEffect(() => {
     const checkScreenSize = () => {
       const width = window.innerWidth;
-      setIsMobile(width >= 375 && width <= 425);
-      setIsTablet(width >= 640 && width < 1024); // Tablet: 640px to 1023px
+      // Mobile M only (375px), Mobile L (425px) and above will show 2 cards
+      setIsMobile(width >= 375 && width < 425);
+      setIsTablet(width >= 425 && width < 1024); // Mobile L (425px) and Tablet: 425px to 1023px
     };
     
     checkScreenSize();

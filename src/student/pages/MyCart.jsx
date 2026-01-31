@@ -138,11 +138,19 @@ const MyCart = () => {
   };
 
   // Toggle edit mode
-  const handleEditToggle = () => {
-    setEditMode(!editMode);
-    if (editMode) {
-      setSelectedItems([]); // Clear selections when exiting edit mode
-    }
+  const handleEditToggle = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("Edit Cart button clicked, current editMode:", editMode);
+    setEditMode((prev) => {
+      const newMode = !prev;
+      console.log("Setting editMode to:", newMode);
+      if (prev) {
+        // Exiting edit mode - clear selections
+        setSelectedItems([]);
+      }
+      return newMode;
+    });
   };
 
   // Handle checkbox selection
@@ -318,8 +326,9 @@ const MyCart = () => {
                 {/* Right: Edit Cart button + cart icon + X Items (slightly inset from right) */}
                 <div className="flex flex-col items-end gap-1.5 mr-4">
                   <button
+                    type="button"
                     onClick={handleEditToggle}
-                    className="px-4 py-2 text-sm font-medium text-white bg-[#0C2340] hover:bg-[#0a1d33] rounded-lg transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-white bg-[#0C2340] hover:bg-[#0a1d33] rounded-lg transition-colors cursor-pointer"
                   >
                     {editMode ? "Done" : "Edit Cart"}
                   </button>
@@ -391,6 +400,8 @@ const MyCart = () => {
                       (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
                     ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
                     const alreadyOrderedForItem = alreadyOrdered[key] || 0;
+                    const claimedForItem = claimedItems[key] || 0;
+                    const isClaimed = claimedForItem > 0;
                     const isOverLimit = (totalForItem + alreadyOrderedForItem) > maxForItem;
                     return (
                       <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isOverLimit ? "bg-amber-50/50" : ""}`}>
@@ -491,6 +502,8 @@ const MyCart = () => {
                   (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
                 ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
                 const alreadyOrderedForItem = alreadyOrdered[key] || 0;
+                const claimedForItem = claimedItems[key] || 0;
+                const isClaimed = claimedForItem > 0;
                 const isOverLimit = (totalForItem + alreadyOrderedForItem) > maxForItem;
                 return (
                   <div key={item.id} className={`p-4 ${isOverLimit ? "bg-amber-50/50" : ""}`}>

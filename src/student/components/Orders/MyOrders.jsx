@@ -418,6 +418,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
     }
   }, [location.state, isHistoryView]);
 
+
   // Count orders by category
   const getOrderCounts = () => {
     return {
@@ -1493,9 +1494,15 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                 // Must use UUID id for database operations, fallback to order_number only for display/key
                 const orderId = order.id || `order-${orderIndex}`;
                 const orderKey = order.id || order.order_number || `order-${orderIndex}`;
+                const orderNumber = order.orderNumber || order.order_number;
+                const orderElementId = orderNumber ? `order-${orderNumber}` : null;
                 
                 return (
-                <div key={orderKey} className="p-3 sm:p-4 md:p-5 lg:p-6">
+                <div 
+                  key={orderKey} 
+                  id={orderElementId || undefined}
+                  className="p-3 sm:p-4 md:p-5 lg:p-6 transition-all duration-300"
+                >
                   {/* Order Items List */}
                   <div className="space-y-3 sm:space-y-4 mb-3 sm:mb-4">
                     {order.items && order.items.length > 0 ? (
