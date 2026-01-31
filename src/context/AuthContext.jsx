@@ -38,15 +38,54 @@ export const AuthProvider = ({ children }) => {
       try {
         // If we landed with token in URL (OAuth callback), store it first so we don't
         // miss it (AuthCallback runs after this effect; reading URL here avoids "login twice").
-        const urlParams = new URLSearchParams(window.location.search);
+        let urlParams;
+        try {
+          urlParams = new URLSearchParams(window.location.search);
+        } catch (urlError) {
+          console.error("Error parsing URL parameters:", urlError);
+          urlParams = new URLSearchParams();
+        }
+        
         const tokenFromUrl = urlParams.get("token");
         if (tokenFromUrl) {
-          localStorage.setItem("authToken", tokenFromUrl);
+          try {
+            localStorage.setItem("authToken", tokenFromUrl);
+          } catch (storageError) {
+            console.error("Error storing token in localStorage:", storageError);
+            // Continue without storing - might be in private browsing mode
+          }
         }
 
-        const storedToken = localStorage.getItem("authToken");
+        let storedToken;
+        try {
+          storedToken = localStorage.getItem("authToken");
+        } catch (storageError) {
+          console.error("Error reading from localStorage:", storageError);
+          storedToken = null;
+        }
+
         if (storedToken) {
-          const response = await authAPI.getProfile();
+          let response;
+          try {
+            response = await authAPI.getProfile();
+          } catch (apiError) {
+            console.error("Error fetching user profile:", apiError);
+            // Check if it's a network error (common on iOS)
+            if (!apiError.response) {
+              console.error("Network error - API may be unreachable");
+              // Set loading to false but don't clear token - might be temporary network issue
+              setLoading(false);
+              return;
+            }
+            throw apiError; // Re-throw to be caught by outer catch
+          }
+          
+          if (!response || !response.data) {
+            console.error("Invalid response from getProfile API");
+            setLoading(false);
+            return;
+          }
+          
           const userData = response.data;
           // Normalize profile shape for frontend components
           // Extract email safely - handle both string and object cases
@@ -123,11 +162,25 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (error) {
         console.error("Error checking auth status:", error);
+        console.error("Error details:", {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+          response: error.response ? {
+            status: error.response.status,
+            statusText: error.response.statusText,
+            data: error.response.data
+          } : null
+        });
         
         // Check if error is due to inactive account
         if (error.response?.status === 403 && error.response?.data?.error === "account_inactive") {
           console.log("🚫 Account is inactive, clearing session...");
-          localStorage.removeItem("authToken");
+          try {
+            localStorage.removeItem("authToken");
+          } catch (storageError) {
+            console.error("Error clearing authToken from localStorage:", storageError);
+          }
           setUser(null);
           setUserRole(null);
           setLoading(false);
@@ -135,8 +188,16 @@ export const AuthProvider = ({ children }) => {
           return;
         }
         
-        // If token is invalid, clear it
-        localStorage.removeItem("authToken");
+        // If token is invalid or expired, clear it
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log("Token is invalid or expired, clearing session...");
+          try {
+            localStorage.removeItem("authToken");
+          } catch (storageError) {
+            console.error("Error clearing authToken from localStorage:", storageError);
+          }
+        }
+        
         setUser(null);
         setUserRole(null);
       } finally {
@@ -157,9 +218,21 @@ export const AuthProvider = ({ children }) => {
       // Redirect to backend Google OAuth endpoint using environment variable
       const baseUrl =
         import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-      window.location.href = `${baseUrl}/auth/google`;
+      
+      if (!baseUrl) {
+        throw new Error("API URL is not configured");
+      }
+      
+      const redirectUrl = `${baseUrl}/auth/google`;
+      console.log("Redirecting to Google OAuth:", redirectUrl);
+      window.location.href = redirectUrl;
     } catch (error) {
       console.error("Error signing in with Google:", error);
+      console.error("Error details:", {
+        message: error.message,
+        name: error.name,
+        stack: error.stack
+      });
       throw error;
     }
   };
@@ -167,12 +240,17 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     try {
       await authAPI.logout();
-      localStorage.removeItem("authToken");
+    } catch (error) {
+      console.error("Error calling logout API:", error);
+      // Continue with local logout even if API call fails
+    } finally {
+      try {
+        localStorage.removeItem("authToken");
+      } catch (storageError) {
+        console.error("Error clearing authToken from localStorage:", storageError);
+      }
       setUser(null);
       setUserRole(null);
-    } catch (error) {
-      console.error("Error signing out:", error);
-      throw error;
     }
   };
 

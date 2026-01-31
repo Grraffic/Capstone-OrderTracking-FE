@@ -8,11 +8,13 @@ import { OrderProvider } from "./context/OrderContext";
 import { ActivityProvider } from "./context/ActivityContext";
 import { CheckoutProvider } from "./context/CheckoutContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import AppRoutes from "./routes";
 
 export default function App() {
   return (
-    <div className="min-h-screen bg-white">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-white">
       <MaintenanceProvider>
         <AuthProvider>
           <SocketProvider>
@@ -62,7 +64,8 @@ export default function App() {
             </NotificationProvider>
           </SocketProvider>
         </AuthProvider>
-      </MaintenanceProvider>
-    </div>
+        </MaintenanceProvider>
+      </div>
+    </ErrorBoundary>
   );
 }
