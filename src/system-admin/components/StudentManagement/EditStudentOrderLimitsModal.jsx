@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus } from "lucide-react";
 import { splitDisplayName } from "../../../utils/displayName";
 import studentPermissionsAPI from "../../../services/studentPermissions.service";
@@ -483,35 +484,44 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
   // Items are already filtered by education level in fetchItems, so we can use them directly
   const filteredItems = items;
 
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full z-[10000] max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-          <h2 className="text-xl font-semibold text-[#0C2340]">
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[99999] flex items-center justify-center p-1.5 sm:p-2 md:p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full z-[99999] max-h-[98vh] sm:max-h-[95vh] md:max-h-[90vh] overflow-y-auto mx-1.5 sm:mx-2 md:mx-4">
+        <div className="flex items-center justify-between p-2.5 sm:p-3 md:p-4 lg:p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-[#0C2340]">
             <span className="text-[#e68b00]">Edit User</span>
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors flex-shrink-0 p-1"
             aria-label="Close"
           >
-            <X size={24} />
+            <X size={18} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          <div className="mb-4">
-            <p className="text-sm font-medium text-gray-700">
-              Editing: <span className="font-semibold text-[#003363]">{displayName}</span>
+        <div className="p-2.5 sm:p-3 md:p-4 lg:p-6 space-y-2.5 sm:space-y-3 md:space-y-4">
+          <div className="mb-2.5 sm:mb-3 md:mb-4">
+            <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-700">
+              Editing: <span className="font-semibold text-[#003363] break-words">{displayName}</span>
             </p>
           </div>
 
           {/* Student Information - New Layout */}
-          <div className="space-y-4">
-            {/* Row 1: Student Name (left) and Student Number (right) */}
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3 sm:space-y-4">
+            {/* Row 1: Student Name (left) and Student Number (right) - side by side on mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Student Name
                 </label>
                 <input
@@ -519,11 +529,11 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
                   value={formData.name}
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   placeholder="Enter student name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
+                  className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-xs sm:text-sm"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Student Number
                 </label>
                 <input
@@ -531,21 +541,21 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
                   value={formData.studentNumber}
                   onChange={(e) => handleInputChange("studentNumber", e.target.value)}
                   placeholder="e.g. 22-11223"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
+                  className="w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-xs sm:text-sm"
                 />
               </div>
             </div>
 
-            {/* Row 2: Grade Level (left) and Student Type (right) */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Row 2: Grade Level (left) and Student Type (right) - side by side on mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Grade Level <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.courseYearLevel}
                   onChange={(e) => handleInputChange("courseYearLevel", e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                  className={`w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-xs sm:text-sm ${
                     errors.courseYearLevel ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -601,13 +611,13 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Student Type <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.studentType}
                   onChange={(e) => handleInputChange("studentType", e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                  className={`w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-xs sm:text-sm ${
                     errors.studentType ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -621,16 +631,16 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
               </div>
             </div>
 
-            {/* Row 3: Gender (left) and Total Item Limit (right) */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Row 3: Gender (left) and Total Item Limit (right) - side by side on mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 gap-2 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Gender <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={formData.gender}
                   onChange={(e) => handleInputChange("gender", e.target.value)}
-                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                  className={`w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-xs sm:text-sm ${
                     errors.gender ? "border-red-500" : "border-gray-300"
                   }`}
                 >
@@ -643,26 +653,26 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                   Total Item Limit <span className="text-gray-400 text-xs">(Optional)</span>
                 </label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <input
                     type="text"
                     value={formData.maxItemsPerOrder}
                     onChange={(e) => handleInputChange("maxItemsPerOrder", e.target.value)}
                     placeholder="e.g. 5"
-                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                    className={`w-full px-2.5 sm:px-3 py-1.5 sm:py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-xs sm:text-sm ${
                       errors.maxItemsPerOrder ? "border-red-500" : "border-gray-300"
                     }`}
                   />
                   <button
                     type="button"
                     onClick={() => handleIncrement("maxItemsPerOrder")}
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    className="px-2 sm:px-3 py-1.5 sm:py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0"
                     title="Increment"
                   >
-                    <Plus size={18} className="text-gray-600" />
+                    <Plus size={16} className="sm:w-[18px] sm:h-[18px] text-gray-600" />
                   </button>
                 </div>
                 {errors.maxItemsPerOrder && (
@@ -676,25 +686,25 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
           </div>
 
           {/* Item Eligibility Table - 3 Columns */}
-          <div className="mt-6 border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-[#0C2340] mb-4">Item Eligibility</h3>
+          <div className="mt-3 sm:mt-4 md:mt-6 border-t border-gray-200 pt-3 sm:pt-4 md:pt-6">
+            <h3 className="text-sm sm:text-base md:text-lg font-semibold text-[#0C2340] mb-2.5 sm:mb-3 md:mb-4">Item Eligibility</h3>
             
             {loadingItems ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="text-gray-500">Loading items...</div>
+              <div className="flex items-center justify-center py-6 sm:py-8">
+                <div className="text-xs sm:text-sm text-gray-500">Loading items...</div>
               </div>
             ) : filteredItems.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-gray-500">
                 {educationLevel ? "No items found for this education level." : "Please select Grade Level to see items."}
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full">
+              <div className="border border-gray-200 rounded-lg overflow-hidden overflow-x-auto -mx-1.5 sm:mx-0">
+                <table className="w-full min-w-[320px] sm:min-w-[400px]">
                   <thead className="bg-[#0C2340] text-white">
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-semibold">Item Name</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold">Eligible Item</th>
-                      <th className="px-4 py-3 text-center text-sm font-semibold">Quantity</th>
+                      <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-left text-[10px] sm:text-xs md:text-sm font-semibold whitespace-nowrap">Item Name</th>
+                      <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-center text-[10px] sm:text-xs md:text-sm font-semibold whitespace-nowrap">Eligible</th>
+                      <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-center text-[10px] sm:text-xs md:text-sm font-semibold whitespace-nowrap">Quantity</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -702,31 +712,31 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
                       const permission = itemPermissions[item.normalizedName] || { enabled: false, quantity: 1 };
                       return (
                         <tr key={item.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-[10px] sm:text-xs md:text-sm text-gray-900 break-words">{item.name}</td>
+                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-3 text-center">
                             <input
                               type="checkbox"
                               checked={permission.enabled}
                               onChange={(e) => handleItemEligibilityChange(item.normalizedName, e.target.checked)}
-                              className="w-5 h-5 text-[#0C2340] border-gray-300 rounded focus:ring-[#0C2340] focus:ring-2"
+                              className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 text-[#0C2340] border-gray-300 rounded focus:ring-[#0C2340] focus:ring-2"
                             />
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex items-center justify-center gap-2">
+                          <td className="px-2 sm:px-3 md:px-4 py-2 sm:py-3">
+                            <div className="flex items-center justify-center gap-1 sm:gap-2">
                               <input
                                 type="text"
                                 value={permission.quantity || ""}
                                 onChange={(e) => handleItemQuantityChange(item.normalizedName, e.target.value)}
                                 placeholder="1"
-                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm text-center"
+                                className="w-14 sm:w-16 md:w-20 px-1 sm:px-1.5 md:px-2 py-0.5 sm:py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-[10px] sm:text-xs md:text-sm text-center"
                               />
                               <button
                                 type="button"
                                 onClick={() => handleItemQuantityIncrement(item.normalizedName)}
-                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                className="px-1 sm:px-1.5 md:px-2 py-0.5 sm:py-1 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex-shrink-0"
                                 title="Increment"
                               >
-                                <Plus size={16} className="text-gray-600" />
+                                <Plus size={12} className="sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 text-gray-600" />
                               </button>
                             </div>
                           </td>
@@ -741,24 +751,25 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 sticky bottom-0 bg-white">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 p-2.5 sm:p-3 md:p-4 lg:p-6 border-t border-gray-200 sticky bottom-0 bg-white">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+            className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-xs sm:text-sm md:text-base font-medium"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="px-4 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium"
+            className="w-full sm:w-auto px-3 sm:px-4 py-1.5 sm:py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors text-xs sm:text-sm md:text-base font-medium"
           >
             Save
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
