@@ -68,3 +68,33 @@ export function normalizeStudentNumber(value) {
   }
   return s;
 }
+
+/**
+ * Determine student type (old/new) based on student number year.
+ * Extracts the 2-digit year prefix (YY) from format YY-NNNNNIII,
+ * converts to full year (20YY), and compares with current year.
+ * Returns "old" if year < current year, "new" if year >= current year.
+ * 
+ * @param {string} studentNumber - Student number in format YY-NNNNNIII
+ * @returns {string|null} - "old", "new", or null if invalid
+ */
+export function getStudentTypeFromStudentNumber(studentNumber) {
+  if (!studentNumber || typeof studentNumber !== "string") return null;
+  
+  // Try to extract year prefix even if not fully formatted yet
+  // This allows real-time detection as user types (e.g., "22" or "22-")
+  const trimmed = studentNumber.trim();
+  if (!trimmed) return null;
+  
+  // Match YY at the start, optionally followed by hyphen and more characters
+  const yearMatch = trimmed.match(/^(\d{2})/);
+  if (!yearMatch) return null;
+  
+  const yearPrefix = parseInt(yearMatch[1], 10);
+  if (isNaN(yearPrefix) || yearPrefix < 0 || yearPrefix > 99) return null;
+  
+  const fullYear = 2000 + yearPrefix; // 22 -> 2022, 26 -> 2026
+  const currentYear = new Date().getFullYear(); // e.g., 2026
+  
+  return fullYear < currentYear ? "old" : "new";
+}

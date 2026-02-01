@@ -5,6 +5,7 @@ import { splitDisplayName } from "../../../utils/displayName";
 import studentPermissionsAPI from "../../../services/studentPermissions.service";
 import { toast } from "react-hot-toast";
 import { getDefaultMaxForItem, normalizeItemName } from "../../../utils/maxQuantityKeys";
+import { getStudentTypeFromStudentNumber } from "../../../utils/studentNumberFormat";
 import api from "../../../services/api";
 
 /**
@@ -107,6 +108,39 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
       setErrors({});
     }
   }, [isOpen, student]);
+
+  // Auto-detect student type from student number when it changes
+  useEffect(() => {
+    if (!formData.studentNumber || !formData.studentNumber.trim()) return;
+    
+    const detectedType = getStudentTypeFromStudentNumber(formData.studentNumber);
+    if (detectedType) {
+      // Auto-set student type, but admin can still override manually
+      setFormData((prev) => {
+        // Only update if different to avoid unnecessary re-renders
+        if (prev.studentType !== detectedType) {
+          return {
+            ...prev,
+            studentType: detectedType,
+          };
+        }
+        return prev;
+      });
+    }
+  }, [formData.studentNumber]);
+
+  // Also auto-detect when modal opens with existing student data
+  useEffect(() => {
+    if (isOpen && student?.student_number && !formData.studentType) {
+      const detectedType = getStudentTypeFromStudentNumber(student.student_number);
+      if (detectedType) {
+        setFormData((prev) => ({
+          ...prev,
+          studentType: detectedType,
+        }));
+      }
+    }
+  }, [isOpen, student?.student_number]);
 
   // Fetch items when modal opens and student data is available
   useEffect(() => {

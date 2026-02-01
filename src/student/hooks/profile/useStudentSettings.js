@@ -6,6 +6,7 @@ import { profileService } from "../../../services/profile.service";
 import {
   isValidStudentNumber,
   normalizeStudentNumber,
+  getStudentTypeFromStudentNumber,
 } from "../../../utils/studentNumberFormat";
 import toast from "react-hot-toast";
 
@@ -41,6 +42,14 @@ export const useStudentSettings = () => {
     studentNumber: "",
     gender: "",
     studentType: "", // "new" or "old" - used for max-order-per-item segment
+  });
+
+  // Field-level validation errors
+  const [fieldErrors, setFieldErrors] = useState({
+    gender: null,
+    studentNumber: null,
+    courseYearLevel: null,
+    studentType: null,
   });
 
   const fetchProfileData = useCallback(async () => {
@@ -122,6 +131,44 @@ export const useStudentSettings = () => {
     fetchProfileData();
   }, [fetchProfileData]);
 
+  // Auto-detect student type from student number in real-time
+  useEffect(() => {
+    if (!formData.studentNumber || !formData.studentNumber.trim()) {
+      // Clear student type if student number is cleared
+      if (formData.studentType) {
+        setFormData((prev) => ({
+          ...prev,
+          studentType: "",
+        }));
+        setHasChanges(true);
+      }
+      return;
+    }
+
+    const detectedType = getStudentTypeFromStudentNumber(formData.studentNumber);
+    if (detectedType) {
+      // Auto-set student type in real-time
+      setFormData((prev) => {
+        // Only update if different to avoid unnecessary re-renders
+        if (prev.studentType !== detectedType) {
+          setHasChanges(true);
+          return {
+            ...prev,
+            studentType: detectedType,
+          };
+        }
+        return prev;
+      });
+    } else if (formData.studentType) {
+      // Clear if student number becomes invalid
+      setFormData((prev) => ({
+        ...prev,
+        studentType: "",
+      }));
+      setHasChanges(true);
+    }
+  }, [formData.studentNumber]);
+
   /**
    * Handle image file selection
    */
@@ -172,6 +219,13 @@ export const useStudentSettings = () => {
       [field]: value,
     }));
     setHasChanges(true);
+    // Clear field error when user starts typing/selecting
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        [field]: null,
+      }));
+    }
   };
 
   /**
@@ -252,32 +306,45 @@ export const useStudentSettings = () => {
       setSaving(true);
 
       // Validate required fields for onboarding
+      const newFieldErrors = {};
+      let hasErrors = false;
+
       if (!formData.gender) {
-        toast.error("Please select your gender before saving.");
-        setSaving(false);
-        return;
+        newFieldErrors.gender = "Gender is required";
+        hasErrors = true;
       }
       if (!formData.studentNumber || !String(formData.studentNumber).trim()) {
-        toast.error("Please enter your student number before saving.");
-        setSaving(false);
-        return;
-      }
-      const normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
-      if (!isValidStudentNumber(normalizedStudentNumber)) {
-        toast.error("Student number must match format: YY-NNNNNIII (e.g. 22-00023RSR)");
-        setSaving(false);
-        return;
+        newFieldErrors.studentNumber = "Student number is required";
+        hasErrors = true;
+      } else {
+        const normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
+        if (!isValidStudentNumber(normalizedStudentNumber)) {
+          newFieldErrors.studentNumber = "Student number must match format: YY-NNNNNIII (e.g. 22-00023RSR)";
+          hasErrors = true;
+        }
       }
       if (!formData.courseYearLevel) {
-        toast.error("Please select your course & year level before saving.");
-        setSaving(false);
-        return;
+        newFieldErrors.courseYearLevel = "Course & Year Level is required";
+        hasErrors = true;
       }
       if (!formData.studentType || !String(formData.studentType).trim()) {
-        toast.error("Please select your student type before saving.");
+        newFieldErrors.studentType = "Student type is required";
+        hasErrors = true;
+      }
+
+      if (hasErrors) {
+        setFieldErrors(newFieldErrors);
         setSaving(false);
         return;
       }
+
+      // Clear any existing errors if validation passes
+      setFieldErrors({
+        gender: null,
+        studentNumber: null,
+        courseYearLevel: null,
+        studentType: null,
+      });
 
       // Calculate education level from course & year level
       const educationLevel = getEducationLevel(formData.courseYearLevel);
@@ -403,6 +470,7 @@ export const useStudentSettings = () => {
     imagePreview,
     hasChanges,
     formData,
+    fieldErrors,
     handleImageSelect,
     handleRemovePhoto,
     handleFieldChange,

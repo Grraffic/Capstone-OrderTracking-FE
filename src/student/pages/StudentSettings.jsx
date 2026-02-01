@@ -84,6 +84,7 @@ const StudentSettings = () => {
     imagePreview,
     hasChanges,
     formData,
+    fieldErrors,
     handleImageSelect,
     handleFieldChange,
     handleSaveChanges,
@@ -95,8 +96,8 @@ const StudentSettings = () => {
   const isOnboardingFieldsComplete =
     Boolean(formData.gender && String(formData.gender).trim()) &&
     Boolean(formData.studentNumber && String(formData.studentNumber).trim()) &&
-    Boolean(formData.courseYearLevel && String(formData.courseYearLevel).trim()) &&
-    Boolean(formData.studentType && String(formData.studentType).trim());
+    Boolean(formData.courseYearLevel && String(formData.courseYearLevel).trim());
+    // Student type is auto-detected from student number, not required in completion check
 
   const shouldShowGuide =
     isFirstTimeStudent && !onboardingDismissed && !isOnboardingFieldsComplete;
@@ -128,13 +129,7 @@ const StudentSettings = () => {
         title: "Course & Year Level",
         description: "Choose your course and year level so we can show only the uniforms you are eligible for.",
       },
-      {
-        id: 4,
-        field: "studentType",
-        anchorId: "onboard-student-type",
-        title: "Student Type",
-        description: "Tell us if you are a new or old student to apply the right ordering rules.",
-      },
+      // Step 4 (Student Type) removed - auto-detected from student number
     ],
     []
   );
@@ -162,7 +157,7 @@ const StudentSettings = () => {
     if (filled && current.id < ONBOARDING_STEPS.length) {
       setOnboardingStep(current.id + 1);
     }
-  }, [shouldShowGuide, onboardingStep, formData.gender, formData.studentNumber, formData.courseYearLevel, formData.studentType, ONBOARDING_STEPS]);
+  }, [shouldShowGuide, onboardingStep, formData.gender, formData.studentNumber, formData.courseYearLevel, ONBOARDING_STEPS]);
 
   // Course & Year Level options - Combined dropdown
   const courseYearLevelOptions = [
@@ -499,10 +494,12 @@ const StudentSettings = () => {
                             handleFieldChange("gender", e.target.value)
                           }
                           disabled={isProfileCompleted}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
                             isProfileCompleted
-                              ? "bg-gray-100 text-gray-600 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300"
+                              : fieldErrors?.gender
+                              ? "border-red-500 focus:ring-red-500"
+                              : "border-gray-300"
                           } ${
                             shouldShowGuide && onboardingStep === 1 && !formData.gender
                               ? "ring-2 ring-[#E68B00]"
@@ -513,6 +510,9 @@ const StudentSettings = () => {
                           <option value="Male">Male</option>
                           <option value="Female">Female</option>
                         </select>
+                        {fieldErrors?.gender && (
+                          <p className="mt-1.5 text-xs text-red-600">{fieldErrors.gender}</p>
+                        )}
                         {shouldShowGuide && onboardingStep === 1 && (
                           <OnboardingStepCard
                             step={1}
@@ -540,10 +540,12 @@ const StudentSettings = () => {
                           disabled={isProfileCompleted}
                           placeholder={STUDENT_NUMBER_PLACEHOLDER}
                           maxLength={11}
-                          className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
                             isProfileCompleted
-                              ? "bg-gray-100 text-gray-600 cursor-not-allowed"
-                              : ""
+                              ? "bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300"
+                              : fieldErrors?.studentNumber
+                              ? "border-red-500 focus:ring-red-500"
+                              : "border-gray-300"
                           } ${
                             shouldShowGuide &&
                             onboardingStep === 2 &&
@@ -552,10 +554,10 @@ const StudentSettings = () => {
                               : ""
                           }`}
                         />
-                        <p className="mt-1.5 text-xs text-gray-500">
-                          {STUDENT_NUMBER_FORMAT_HINT}
-                        </p>
-                        {user?.name && getSuggestedInitials(user.name) && (
+                        {fieldErrors?.studentNumber && (
+                          <p className="mt-1.5 text-xs text-red-600">{fieldErrors.studentNumber}</p>
+                        )}
+                        {user?.name && getSuggestedInitials(user.name) && !fieldErrors?.studentNumber && (
                           <p className="mt-1 text-xs text-[#003363]">
                             Your initials from name &quot;{user.name}&quot;:{" "}
                             <span className="font-medium">{getSuggestedInitials(user.name)}</span>
@@ -564,7 +566,7 @@ const StudentSettings = () => {
                         {shouldShowGuide && onboardingStep === 2 && (
                           <OnboardingStepCard
                             step={2}
-                            totalSteps={4}
+                            totalSteps={3}
                             title="Student Number"
                             description="Enter your student number so we can verify and track your orders."
                             onSkip={() => setOnboardingStep(3)}
@@ -576,7 +578,37 @@ const StudentSettings = () => {
                     </div>
 
                     {/* Row 3: Course & Year Level */}
-                    <div>
+                    <div className="relative">
+                      {shouldShowGuide && onboardingStep === 3 && (
+                        <div className="mb-3 relative" aria-label="Onboarding guide">
+                          {/* Triangle pointer pointing down to the field below */}
+                          <div
+                            className="absolute -bottom-2 left-6 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-orange-200 z-10"
+                            aria-hidden
+                          />
+                          <div className="rounded-xl border border-orange-200 bg-orange-50/80 shadow-md p-4">
+                            <p className="text-xs font-semibold text-[#003363] mb-1">Step 3 of 3</p>
+                            <h2 className="text-base font-bold text-[#003363] mb-1">Course & Year Level</h2>
+                            <p className="text-sm text-gray-700 mb-4">Choose your course and year level so we can show only the uniforms you are eligible for.</p>
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setOnboardingDismissed(true)}
+                                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
+                              >
+                                Skip
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setOnboardingDismissed(true)}
+                                className="px-5 py-2 bg-[#003363] text-white rounded-lg hover:bg-[#002347] transition-colors font-medium text-sm"
+                              >
+                                Finish
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
                         Course & Year Level{" "}
                         <span className="text-red-500">*</span>
@@ -588,10 +620,12 @@ const StudentSettings = () => {
                           handleFieldChange("courseYearLevel", e.target.value)
                         }
                         disabled={isProfileCompleted}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
+                        className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
                           isProfileCompleted
-                            ? "bg-gray-100 text-gray-600 cursor-not-allowed"
-                            : ""
+                            ? "bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300"
+                            : fieldErrors?.courseYearLevel
+                            ? "border-red-500 focus:ring-red-500"
+                            : "border-gray-300"
                         } ${
                           shouldShowGuide && onboardingStep === 3 && !formData.courseYearLevel
                             ? "ring-2 ring-[#E68B00]"
@@ -658,59 +692,37 @@ const StudentSettings = () => {
                         </optgroup>
 
                       </select>
-                      {shouldShowGuide && onboardingStep === 3 && (
-                        <OnboardingStepCard
-                          step={3}
-                          totalSteps={4}
-                          title="Course & Year Level"
-                          description="Choose your course and year level so we can show only the uniforms you are eligible for."
-                          onSkip={() => setOnboardingStep(4)}
-                          onContinue={() => setOnboardingStep(4)}
-                          isLastStep={false}
-                        />
+                      {fieldErrors?.courseYearLevel && (
+                        <p className="mt-1.5 text-xs text-red-600">{fieldErrors.courseYearLevel}</p>
                       )}
                     </div>
 
-                    {/* Row 4: Student Type (New/Old) */}
+                    {/* Row 4: Student Type (Auto-detected, Read-only) */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Student Type <span className="text-red-500">*</span>
+                        Student Type
                       </label>
-                      <select
-                        id="onboard-student-type"
-                        value={formData.studentType}
-                        onChange={(e) =>
-                          handleFieldChange("studentType", e.target.value)
-                        }
-                        disabled={isProfileCompleted}
-                        className={`w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
-                          isProfileCompleted
-                            ? "bg-gray-100 text-gray-600 cursor-not-allowed"
-                            : ""
-                        } ${
-                          shouldShowGuide && onboardingStep === 4 && !formData.studentType
-                            ? "ring-2 ring-[#E68B00]"
-                            : ""
-                        }`}
-                      >
-                        <option value="">Select Student Type</option>
-                        <option value="new">New Student</option>
-                        <option value="old">Old Student</option>
-                      </select>
-                      {shouldShowGuide && onboardingStep === 4 && (
-                        <OnboardingStepCard
-                          step={4}
-                          totalSteps={4}
-                          title="Student Type"
-                          description="Tell us if you are a new or old student to apply the right ordering rules."
-                          onSkip={() => setOnboardingDismissed(true)}
-                          onContinue={() => setOnboardingDismissed(true)}
-                          isLastStep
-                        />
+                      <div className={`px-4 py-3 border rounded-lg bg-gray-50 text-gray-700 ${
+                        fieldErrors?.studentType ? "border-red-500" : "border-gray-300"
+                      }`}>
+                        {formData.studentType ? (
+                          <span className="font-medium capitalize">
+                            {formData.studentType === "old" ? "Old Student" : "New Student"}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400 italic">
+                            Enter your student number to automatically determine student type
+                          </span>
+                        )}
+                      </div>
+                      {fieldErrors?.studentType && (
+                        <p className="mt-1.5 text-xs text-red-600">{fieldErrors.studentType}</p>
                       )}
-                      <p className="text-xs text-gray-500 mt-2">
-                        This helps determine your allowed order quantities.
-                      </p>
+                      {!fieldErrors?.studentType && (
+                        <p className="text-xs text-gray-500 mt-2">
+                          Automatically determined from your student number
+                        </p>
+                      )}
                     </div>
 
                     {/* Email Address */}
