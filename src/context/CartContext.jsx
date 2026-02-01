@@ -247,8 +247,10 @@ export const CartProvider = ({ children }) => {
 
   /**
    * Clear entire cart
+   * @param {Object} options - Options object
+   * @param {boolean} options.suppressToast - If true, don't show the "Cart cleared" toast
    */
-  const clearCart = async () => {
+  const clearCart = async (options = {}) => {
     try {
       if (!user?.id) {
         return;
@@ -260,7 +262,9 @@ export const CartProvider = ({ children }) => {
 
       if (response.data.success) {
         dispatch({ type: "CLEAR_CART" });
-        toast.success("Cart cleared");
+        if (!options.suppressToast) {
+          toast.success("Cart cleared");
+        }
       }
     } catch (error) {
       console.error("Clear cart error:", error);

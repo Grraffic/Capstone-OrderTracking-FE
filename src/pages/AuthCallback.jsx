@@ -80,6 +80,9 @@ const AuthCallback = () => {
         // Handle both new and old role names for backward compatibility
         navigate("/property-custodian", { replace: true });
       } else if (role === "student") {
+        // Students are always redirected to /all-products
+        // StudentOnboardingGuard will handle redirecting to /student/settings if onboarding is incomplete
+        // If admin created the student account, onboarding_completed is already true, so they can access /all-products
         navigate("/all-products", { replace: true });
       } else {
         // fallback

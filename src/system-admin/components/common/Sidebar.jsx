@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   UserCog,
-  Archive,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -39,8 +38,8 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]); // Close sidebar whenever the route changes on mobile/tablet
 
-  // User Management dropdown sub-items (order: List of Employees, List of Students, Archive Users)
-  const userManagementPaths = ["/system-admin/users", "/system-admin/students", "/system-admin/archive-users"];
+  // User Management dropdown sub-items (order: List of Employees, List of Students)
+  const userManagementPaths = ["/system-admin/users", "/system-admin/students"];
   const isUserManagementActive = userManagementPaths.some((path) =>
     location.pathname === path || location.pathname.startsWith(path + "/")
   );
@@ -76,7 +75,6 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   const userManagementSubItems = [
     { to: "/system-admin/users", label: "List of Employees", icon: UserCog },
     { to: "/system-admin/students", label: "List of Students", icon: GraduationCap },
-    { to: "/system-admin/archive-users", label: "Archive Users", icon: Archive },
   ];
 
   const navItems = [

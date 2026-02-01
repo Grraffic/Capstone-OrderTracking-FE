@@ -102,7 +102,8 @@ const StudentSettings = () => {
     isFirstTimeStudent && !onboardingDismissed && !isOnboardingFieldsComplete;
 
   // Check if profile is completed - if so, disable all fields (only system admin can edit)
-  const isProfileCompleted = profileData?.onboardingCompleted === true || user?.onboardingCompleted === true;
+  // Use truthy check to handle boolean true values properly
+  const isProfileCompleted = Boolean(profileData?.onboardingCompleted) || Boolean(user?.onboardingCompleted);
 
   const ONBOARDING_STEPS = useMemo(
     () => [

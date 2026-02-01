@@ -47,18 +47,30 @@ export const useActivityFeed = () => {
 
       // Get activities from ActivityContext
       const userActivities = getActivities();
+      console.log(`📊 useActivityFeed: Fetched ${userActivities.length} total activities from context`);
+      console.log(`📊 useActivityFeed: Active tab: ${activeTab}`);
       
       // Filter based on active tab
       let filtered = userActivities;
       if (activeTab === 'orders') {
         filtered = userActivities.filter(a => a.type === 'checkout' || a.type === 'order_placed');
+        console.log(`📊 useActivityFeed: Filtered to ${filtered.length} order activities`);
       } else if (activeTab === 'history') {
         filtered = userActivities.filter(a => a.type === 'claimed' || a.type === 'order_released');
+        console.log(`📊 useActivityFeed: Filtered to ${filtered.length} history activities (claimed/released)`);
+        console.log(`📊 useActivityFeed: History activities:`, filtered.map(a => ({ type: a.type, orderNumber: a.orderNumber, description: a.description?.substring(0, 50) })));
+      } else {
+        // activities tab - show all
+        console.log(`📊 useActivityFeed: Showing all ${filtered.length} activities`);
+        const orderReleasedCount = filtered.filter(a => a.type === 'order_released').length;
+        if (orderReleasedCount > 0) {
+          console.log(`📊 useActivityFeed: Found ${orderReleasedCount} order_released activities in all activities`);
+        }
       }
       
       setActivities(filtered);
     } catch (err) {
-      console.error("Error fetching activities:", err);
+      console.error("❌ useActivityFeed: Error fetching activities:", err);
       setError(err.message || "Failed to load activities");
       setActivities([]);
     } finally {

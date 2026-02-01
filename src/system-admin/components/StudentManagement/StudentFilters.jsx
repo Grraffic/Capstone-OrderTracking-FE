@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Search, Calendar, Edit } from "lucide-react";
+import { Search, Calendar, Edit, UserPlus } from "lucide-react";
 
 /**
  * StudentFilters Component
@@ -16,6 +16,7 @@ const StudentFilters = ({
   gradeLevel,
   onGradeLevelChange,
   onEditTable,
+  onAddUser,
   selectedCount,
 }) => {
   // Education level options - matching property custodian
@@ -150,9 +151,9 @@ const StudentFilters = ({
 
   return (
     <div className="flex flex-col gap-4 mb-6">
-      {/* School Year Selector - Top Row */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-xs">
+      {/* School Year Selector - Top Row, Right Aligned */}
+      <div className="flex items-center gap-2 justify-end">
+        <div className="relative w-56">
           <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
@@ -223,8 +224,16 @@ const StudentFilters = ({
           ))}
         </select>
 
-        {/* Edit Table Button - Right side */}
-        <div className="ml-auto">
+        {/* Add User and Edit Table Buttons - Right side */}
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={onAddUser}
+            className="flex items-center gap-2 px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97a1f] transition-colors font-medium"
+            title="Add new student"
+          >
+            <UserPlus size={20} />
+            <span className="hidden sm:inline">Add User</span>
+          </button>
           <button
             onClick={onEditTable}
             className="flex items-center gap-2 px-4 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium"

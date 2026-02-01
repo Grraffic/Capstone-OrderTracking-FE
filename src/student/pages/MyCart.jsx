@@ -224,13 +224,35 @@ const MyCart = () => {
     for (const item of items || []) {
       const name = item.inventory?.name || item.name || "Unknown Item";
       const key = resolveItemKeyForMaxQuantity(name);
-      const claimedForItem = claimedItems[key] || 0;
-      if (!byKey[key]) byKey[key] = { total: 0, max: getEffectiveMaxForItem(key), alreadyOrdered: alreadyOrdered[key] || 0, claimed: claimedForItem, displayName: name };
+      // Get claimed count for this item
+      let claimedForItem = claimedItems[key] || 0;
+      const max = getEffectiveMaxForItem(key);
+      if (!byKey[key]) byKey[key] = { total: 0, max: max, alreadyOrdered: alreadyOrdered[key] || 0, claimed: claimedForItem, displayName: name };
       byKey[key].total += Number(item.quantity) || 0;
     }
     const summary = Object.entries(byKey)
-      .filter(([, v]) => (v.claimed > 0) || ((v.total + (v.alreadyOrdered || 0)) > v.max))
+      .filter(([, v]) => {
+        // Block if claimed count has reached max, OR if (cart + already ordered) exceeds max
+        const isClaimedMaxReached = v.max > 0 && v.claimed >= v.max;
+        const exceedsMax = (v.total + v.alreadyOrdered) > v.max;
+        return isClaimedMaxReached || exceedsMax;
+      })
       .map(([key, v]) => ({ key, ...v }));
+    
+    // Debug logging for logo patch items
+    const logoPatchSummary = summary.find(s => s.key === "logo patch");
+    if (logoPatchSummary) {
+      console.log(`[MyCart] Logo patch over limit detected:`, {
+        key: logoPatchSummary.key,
+        total: logoPatchSummary.total,
+        max: logoPatchSummary.max,
+        alreadyOrdered: logoPatchSummary.alreadyOrdered,
+        claimed: logoPatchSummary.claimed,
+        claimedItemsLogoPatch: claimedItems["logo patch"],
+        isClaimedMaxReached: logoPatchSummary.max > 0 && logoPatchSummary.claimed >= logoPatchSummary.max
+      });
+    }
+    
     return { hasOverLimitItems: summary.length > 0, overLimitSummary: summary };
   }, [items, maxQuantities, alreadyOrdered, claimedItems, isOldStudent]);
 
@@ -251,7 +273,19 @@ const MyCart = () => {
       return;
     }
     if (hasOverLimitItems) {
-      toast.error("Remove the extra items over the maximum allowed to place your order.");
+      // Check if any items are blocked due to claimed max reached
+      const claimedMaxItems = overLimitSummary.filter((v) => v.max > 0 && v.claimed >= v.max);
+      console.log(`[MyCart] hasOverLimitItems: true`, {
+        overLimitSummary,
+        claimedMaxItems,
+        totalItems: items.length
+      });
+      if (claimedMaxItems.length > 0) {
+        const itemNames = claimedMaxItems.map((v) => v.displayName).join(", ");
+        toast.error(`You have already claimed the maximum allowed quantity for: ${itemNames}. Remove these items from your cart.`);
+      } else {
+        toast.error("Remove the extra items over the maximum allowed to place your order.");
+      }
       return;
     }
     if (isOverSlotLimit) {
@@ -400,9 +434,10 @@ const MyCart = () => {
                       (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
                     ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
                     const alreadyOrderedForItem = alreadyOrdered[key] || 0;
-                    const claimedForItem = claimedItems[key] || 0;
-                    const isClaimed = claimedForItem > 0;
-                    const isOverLimit = (totalForItem + alreadyOrderedForItem) > maxForItem;
+                    // Get claimed count for this item
+                    let claimedForItem = claimedItems[key] || 0;
+                    const isClaimedMaxReached = maxForItem > 0 && claimedForItem >= maxForItem;
+                    const isOverLimit = isClaimedMaxReached || (totalForItem + alreadyOrderedForItem) > maxForItem;
                     return (
                       <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isOverLimit ? "bg-amber-50/50" : ""}`}>
                         {editMode && (

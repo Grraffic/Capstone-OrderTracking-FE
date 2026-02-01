@@ -559,8 +559,10 @@ const CheckoutPage = () => {
         if (isDirectCheckout) {
           clearCheckoutItems();
         } else {
-          await clearCart(user.uid);
+          // Clear cart without showing toast
+          await clearCart({ suppressToast: true });
         }
+        
         // Signal that limits (maxQuantities / alreadyOrdered) must be refetched so
         // Add to Cart / Order stay disabled for items already in My Orders
         window.dispatchEvent(new CustomEvent("order-created"));

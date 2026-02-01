@@ -42,8 +42,6 @@ const StudentProfile = () => {
     loading: activitiesLoading,
     activeTab,
     filter,
-    currentPage,
-    totalPages,
     handleTabChange,
     handleFilterChange,
     nextPage,
@@ -103,8 +101,20 @@ const StudentProfile = () => {
 
   // Enhanced helper function to render activity title and description with highlights
   const renderActivityContent = (activity) => {
-    const { type, description, productName, educationLevel, orderId, itemCount } =
+    const { type, description, productName, educationLevel, orderId } =
       activity;
+    
+    // Debug logging for order_released activities
+    if (type === "order_released" || type === "claimed") {
+      console.log(`🎨 StudentProfile: Rendering ${type} activity:`, {
+        type,
+        orderId: activity.orderId,
+        orderNumber: activity.orderNumber,
+        itemCount: activity.itemCount,
+        hasDescription: !!description,
+        descriptionLength: description?.length || 0
+      });
+    }
 
     // Parse the description to create title and detail parts
     let title = "";
@@ -120,8 +130,22 @@ const StudentProfile = () => {
       title = "Order Claimed Successfully";
       details = description;
     } else if (type === "order_released") {
-      title = "Order Released";
-      details = description;
+      title = "Order Claimed Successfully";
+      // Format the description to be more user-friendly with robust fallback handling
+      if (description && description.trim()) {
+        details = description;
+      } else {
+        // Build description from available data
+        const orderNum = activity.orderNumber || orderId || null;
+        const itemCount = activity.itemCount || (Array.isArray(activity.items) ? activity.items.length : 0) || 1;
+        const itemText = itemCount === 1 ? "item" : "items";
+        
+        if (orderNum) {
+          details = `Your order #${orderNum} with ${itemCount} ${itemText} has been successfully claimed.`;
+        } else {
+          details = `Your order with ${itemCount} ${itemText} has been successfully claimed.`;
+        }
+      }
     } else {
       title = description;
     }
@@ -131,7 +155,6 @@ const StudentProfile = () => {
       if (!text) return null;
 
       const parts = [];
-      let remainingText = text;
 
       // Keywords to highlight with their colors
       const keywords = [
@@ -147,6 +170,15 @@ const StudentProfile = () => {
           color: "text-[#003363]",
           bold: true,
         },
+        // Highlight order numbers (format: #ORD-...)
+        ...(activity.orderNumber ? [{ 
+          text: `#${activity.orderNumber}`, 
+          color: "text-[#F28C28]", 
+          bold: true 
+        }] : []),
+        // Highlight "successfully claimed" text
+        { text: "successfully claimed", color: "text-[#22c55e]", bold: true },
+        { text: "has been released", color: "text-[#22c55e]", bold: true },
       ];
 
       // Build highlighted text
@@ -198,7 +230,7 @@ const StudentProfile = () => {
         <p className="text-xs text-gray-500 mt-2">
           {getRelativeTime(activity.timestamp)}
         </p>
-        {type === "claimed" && (
+        {(type === "claimed" || type === "order_released") && (
           <button className="mt-3 px-4 py-1.5 border-2 border-[#003363] text-[#003363] rounded-full text-sm font-medium hover:bg-[#003363] hover:text-white transition-colors">
             View Details
           </button>
@@ -318,7 +350,21 @@ const StudentProfile = () => {
                         <p>No activities found</p>
                       </div>
                     ) : (
-                      activities.map((activity) => (
+                      (() => {
+                        // Debug logging for activities display
+                        const orderReleasedActivities = activities.filter(a => a.type === 'order_released' || a.type === 'claimed');
+                        if (orderReleasedActivities.length > 0) {
+                          console.log(`🎨 StudentProfile: Rendering ${activities.length} activities, including ${orderReleasedActivities.length} claimed/released orders`);
+                          orderReleasedActivities.forEach(a => {
+                            console.log(`🎨 StudentProfile: Order activity:`, {
+                              type: a.type,
+                              orderNumber: a.orderNumber,
+                              orderId: a.orderId,
+                              hasDescription: !!a.description
+                            });
+                          });
+                        }
+                        return activities.map((activity) => (
                         <div
                           key={activity.id}
                           className="flex items-start gap-3 sm:gap-5 pb-4 border-b border-gray-200 last:border-b-0"
@@ -331,7 +377,8 @@ const StudentProfile = () => {
                           {/* Activity Details */}
                           {renderActivityContent(activity)}
                         </div>
-                      ))
+                      ));
+                      })()
                     )}
                   </div>
 

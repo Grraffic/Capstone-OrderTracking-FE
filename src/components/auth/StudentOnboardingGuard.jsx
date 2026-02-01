@@ -17,7 +17,8 @@ const StudentOnboardingGuard = ({ children }) => {
   const navigate = useNavigate();
 
   const isStudent = user?.role === "student";
-  const onboardingCompleted = user?.onboardingCompleted === true;
+  // Use truthy check to handle boolean true values properly
+  const onboardingCompleted = Boolean(user?.onboardingCompleted);
   const isSettingsRoute = location.pathname.startsWith("/student/settings");
 
   const shouldGate = useMemo(() => {

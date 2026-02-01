@@ -73,6 +73,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
   const [formData, setFormData] = useState({
     maxItemsPerOrder: "",
     studentNumber: "",
+    name: "",
     courseYearLevel: "",
     studentType: "",
     gender: "",
@@ -89,6 +90,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
             ? String(student.total_item_limit)
             : "",
         studentNumber: student.student_number || "",
+        name: student.name || "",
         courseYearLevel: student.course_year_level || "",
         studentType: student.student_type || "",
         gender: student.gender || "",
@@ -103,6 +105,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
       setFormData({ 
         maxItemsPerOrder: "",
         studentNumber: "",
+        name: "",
         courseYearLevel: "",
         studentType: "",
         gender: "",
@@ -186,6 +189,9 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     if (formData.studentNumber !== undefined) {
       updateData.student_number = formData.studentNumber.trim() || null;
     }
+    if (formData.name !== undefined) {
+      updateData.name = formData.name.trim() || null;
+    }
     if (formData.courseYearLevel !== undefined) {
       updateData.course_year_level = formData.courseYearLevel.trim() || null;
       // Calculate education_level from course_year_level
@@ -257,6 +263,21 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
                       value={formData.studentNumber}
                       onChange={(e) => handleInputChange("studentNumber", e.target.value)}
                       placeholder="e.g. 22-11223"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
+                    />
+                  </td>
+                </tr>
+                {/* Student Name */}
+                <tr>
+                  <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">
+                    Student Name
+                  </td>
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange("name", e.target.value)}
+                      placeholder="Enter student name"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
                     />
                   </td>

@@ -332,12 +332,30 @@ const AllProducts = () => {
       const notAllowedForStudentType =
         isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
-      const claimedForItem = claimedItems[key] ?? 0;
-      const isClaimed = claimedForItem > 0;
+      // Get claimed count for this item
+      let claimedForItem = claimedItems[key] ?? 0;
+      // FORCE DISABLE: Item is disabled if claimed count has reached or exceeded the max limit
+      // This ensures items with claimed orders cannot be ordered again
+      const isClaimedMaxReached = max > 0 && claimedForItem >= max;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-      const effectiveMax = Math.max(0, max - inCart - alreadyOrd);
+      // FORCE: When claimed max is reached, effectiveMax MUST be 0 - no exceptions
+      const effectiveMax = isClaimedMaxReached ? 0 : Math.max(0, max - inCart - alreadyOrd - claimedForItem);
+      
+      // Debug logging for logo patch items (after all variables are calculated)
+      if (key === "logo patch") {
+        console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, Claimed: ${claimedForItem}, isClaimedMaxReached: ${isClaimedMaxReached}`, {
+          claimedItemsLogoPatch: claimedItems["logo patch"],
+          claimedForItem,
+          maxQuantitiesKey: maxQuantities[key],
+          alreadyOrdered: alreadyOrd,
+          inCart,
+          effectiveMax,
+          _isClaimed: isClaimedMaxReached,
+          _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached
+        });
+      }
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewType =
         totalItemLimit != null &&
@@ -346,10 +364,15 @@ const AllProducts = () => {
         cartSlotCount >= slotsLeftForThisOrder;
       return {
         ...p,
-        _orderLimitReached: effectiveMax < 1 || isClaimed,
-        _isClaimed: isClaimed,
+        // FORCE DISABLE: If claimed max is reached, item is ALWAYS disabled
+        _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached,
+        _isClaimed: isClaimedMaxReached, // This forces ProductCard to disable the item
         _slotsFullForNewType: slotsFullForNewType,
         _notAllowedForStudentType: notAllowedForStudentType,
+        _claimedCount: claimedForItem,
+        _maxAllowed: max,
+        // Force effectiveMax to 0 when claimed max is reached
+        _effectiveMax: isClaimedMaxReached ? 0 : effectiveMax,
       };
     });
     // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).

@@ -76,9 +76,12 @@ export const useStudentSettings = () => {
       setOriginalImageUrl(profile.photoURL);
 
       // Initialize form data (name is read-only from Google, not in form)
+      // Normalize courseYearLevel to match dropdown option format
+      const rawCourseYearLevel = profile.courseYearLevel !== "N/A" ? profile.courseYearLevel : "";
+      const normalizedCourseYearLevel = normalizeCourseYearLevel(rawCourseYearLevel);
+
       setFormData({
-        courseYearLevel:
-          profile.courseYearLevel !== "N/A" ? profile.courseYearLevel : "",
+        courseYearLevel: normalizedCourseYearLevel,
         studentNumber:
           profile.studentNumber !== "N/A" ? profile.studentNumber : "",
         gender: profile.gender || "",
@@ -169,6 +172,37 @@ export const useStudentSettings = () => {
       [field]: value,
     }));
     setHasChanges(true);
+  };
+
+  /**
+   * Normalize course year level from database format to dropdown format
+   * Converts variations like "BSIS 4th year" or "BSIS 4th yr" to "BSIS 4th Year"
+   * @param {string} courseYearLevel - Course year level from database
+   * @returns {string} Normalized course year level matching dropdown options
+   */
+  const normalizeCourseYearLevel = (courseYearLevel) => {
+    if (!courseYearLevel || typeof courseYearLevel !== "string") {
+      return "";
+    }
+
+    const trimmed = courseYearLevel.trim();
+    if (!trimmed) return "";
+
+    // Handle college course formats: "BSIS 4th year" → "BSIS 4th Year"
+    // Pattern matches: (Course Code) (Number)(st|nd|rd|th) (year|yr|Year)
+    const collegePattern = /^(BSIS|BSA|BSAIS|BSSW|BAB|ACT)\s+(\d+)(st|nd|rd|th)\s+(year|yr|Year)$/i;
+    const match = trimmed.match(collegePattern);
+
+    if (match) {
+      const courseCode = match[1].toUpperCase();
+      const yearNumber = match[2];
+      const yearSuffix = match[3];
+      // Always capitalize "Year"
+      return `${courseCode} ${yearNumber}${yearSuffix} Year`;
+    }
+
+    // For other formats (Grade 10, Kindergarten, etc.), return as-is
+    return trimmed;
   };
 
   /**
@@ -343,11 +377,14 @@ export const useStudentSettings = () => {
     setImagePreview(originalImageUrl);
 
     // Reset form data to original profile values (name is read-only from Google)
+    // Normalize courseYearLevel to match dropdown option format
+    const rawCourseYearLevel = profileData?.courseYearLevel !== "N/A"
+      ? profileData?.courseYearLevel
+      : "";
+    const normalizedCourseYearLevel = normalizeCourseYearLevel(rawCourseYearLevel);
+
     setFormData({
-      courseYearLevel:
-        profileData?.courseYearLevel !== "N/A"
-          ? profileData?.courseYearLevel
-          : "",
+      courseYearLevel: normalizedCourseYearLevel,
       studentNumber:
         profileData?.studentNumber !== "N/A" ? profileData?.studentNumber : "",
       gender: profileData?.gender || "",

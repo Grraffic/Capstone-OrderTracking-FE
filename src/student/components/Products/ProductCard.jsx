@@ -11,8 +11,14 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const isClaimed = product._isClaimed === true;
   const slotsFullForNewType = product._slotsFullForNewType === true;
   const notAllowedForStudentType = product._notAllowedForStudentType === true;
+  const claimedCount = product._claimedCount || 0;
+  const maxAllowed = product._maxAllowed || 0;
 
   const handleProductClick = () => {
+    // FORCE DISABLE: If item is claimed, prevent navigation
+    if (isClaimed) {
+      return; // Block click entirely when item has reached claimed max
+    }
     // Suggested For You may use placeholder id (n-Name); go to all products then
     const id = product.id;
     const isPlaceholderId = typeof id === "string" && id.startsWith("n-");
@@ -24,7 +30,8 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   };
 
   const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType && !isClaimed;
-  // When blocked due to void, slot limit, or claimed, card is disabled
+  // FORCE DISABLE: When blocked due to void, slot limit, or claimed max reached, card is ALWAYS disabled
+  // isClaimed takes priority - if item has reached claimed max, it MUST be disabled
   const isDisabled = isAlreadyOrdered || isClaimed || blockedDueToVoid || slotsFullForNewType;
 
   return (

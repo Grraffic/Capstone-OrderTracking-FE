@@ -27,10 +27,10 @@ export default function App() {
                         <Toaster
                           position="top-right"
                           containerStyle={{
-                            top: "100px", // Add spacing below header (header is ~64-80px)
+                            top: "72px", // Position right under header (header is 64px/h-16, plus 8px spacing)
                           }}
                           containerClassName="toast-container"
-                          gutter={6}
+                          gutter={2}
                           toastOptions={{
                             duration: 3000,
                             style: {

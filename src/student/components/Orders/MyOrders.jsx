@@ -9,6 +9,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useOrder } from "../../../context/OrderContext";
 import { useAuth } from "../../../context/AuthContext";
+import { useSocket } from "../../../context/SocketContext";
 import QRCode from "react-qr-code";
 import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
@@ -82,8 +83,292 @@ const downloadSVGAsPNG = (svgElement, filename) => {
  */
 const QRCodeModal = ({ order, onClose, profileData }) => {
   const [qrError, setQrError] = React.useState(null);
+  const { on, off, isConnected } = useSocket();
+  const qrContainerRef = React.useRef(null);
+  const pollingIntervalRef = React.useRef(null);
+  const hasClosedRef = React.useRef(false);
 
   if (!order) return null;
+
+  // Enhanced order number normalization function
+  const normalizeOrderNumber = React.useCallback((num) => {
+    if (!num) return null;
+    const str = String(num).trim();
+    // Remove "ORD-" prefix if present, handle various formats
+    return str.replace(/^ORD-?/i, '').trim();
+  }, []);
+
+  // Enhanced UUID/ID matching function
+  const matchOrderId = React.useCallback((id1, id2) => {
+    if (!id1 || !id2) return false;
+    const str1 = String(id1).trim();
+    const str2 = String(id2).trim();
+    // Exact match
+    if (str1 === str2) return true;
+    // Case-insensitive match for UUIDs
+    if (str1.toLowerCase() === str2.toLowerCase()) return true;
+    // Partial match (for cases where one has prefix/suffix)
+    if (str1.includes(str2) || str2.includes(str1)) return true;
+    return false;
+  }, []);
+
+  // Enhanced order number matching function
+  const matchOrderNumber = React.useCallback((num1, num2) => {
+    if (!num1 || !num2) return false;
+    const normalized1 = normalizeOrderNumber(num1);
+    const normalized2 = normalizeOrderNumber(num2);
+    if (!normalized1 || !normalized2) return false;
+    // Exact match after normalization
+    if (normalized1 === normalized2) return true;
+    // Case-insensitive match
+    if (normalized1.toLowerCase() === normalized2.toLowerCase()) return true;
+    // Partial match (one contains the other)
+    if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) return true;
+    // Also try exact match with original values
+    const str1 = String(num1).trim();
+    const str2 = String(num2).trim();
+    if (str1 === str2 || str1.toLowerCase() === str2.toLowerCase()) return true;
+    return false;
+  }, [normalizeOrderNumber]);
+
+  // Extract order identifiers from event data (checking multiple locations)
+  const extractOrderIdentifiers = React.useCallback((data) => {
+    return {
+      orderNumber: data.orderNumber || data.order_number || data.order?.order_number || data.order?.orderNumber,
+      orderId: data.orderId || data.id || data.order?.id,
+      status: data.status?.toLowerCase() || data.order?.status?.toLowerCase(),
+    };
+  }, []);
+
+  // Reset closed flag when modal opens with a new order
+  React.useEffect(() => {
+    hasClosedRef.current = false;
+    return () => {
+      // Cleanup polling when component unmounts or order changes
+      if (pollingIntervalRef.current) {
+        console.log("🧹 QRCodeModal: Cleaning up polling on unmount/order change");
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [order?.id, order?.orderNumber, order?.order_number]);
+
+  // Polling function to check order status as fallback
+  const startPolling = React.useCallback((orderId, orderNumber) => {
+    if (pollingIntervalRef.current) {
+      // Clear existing polling before starting new one
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    
+    console.log("🔄 QRCodeModal: Starting polling fallback", { orderId, orderNumber });
+    
+    pollingIntervalRef.current = setInterval(async () => {
+      if (hasClosedRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+        return;
+      }
+
+      try {
+        // Try to get order by ID first, then by order number
+        let orderData = null;
+        if (orderId) {
+          try {
+            const response = await orderAPI.getOrderById(orderId);
+            if (response.data?.success && response.data?.data) {
+              orderData = response.data.data;
+            }
+          } catch (err) {
+            // If ID fails, try order number
+            if (orderNumber) {
+              try {
+                const response = await orderAPI.getOrderByNumber(orderNumber);
+                if (response.data?.success && response.data?.data) {
+                  orderData = response.data.data;
+                }
+              } catch (err2) {
+                console.warn("⚠️ QRCodeModal: Polling failed for both ID and order number", err2);
+              }
+            }
+          }
+        } else if (orderNumber) {
+          try {
+            const response = await orderAPI.getOrderByNumber(orderNumber);
+            if (response.data?.success && response.data?.data) {
+              orderData = response.data.data;
+            }
+          } catch (err) {
+            console.warn("⚠️ QRCodeModal: Polling failed for order number", err);
+          }
+        }
+
+        if (orderData) {
+          const status = orderData.status?.toLowerCase();
+          if (status === "claimed" || status === "completed") {
+            console.log("✅ QRCodeModal: Polling detected order claimed, closing modal", {
+              orderId: orderData.id,
+              orderNumber: orderData.order_number,
+              status
+            });
+            hasClosedRef.current = true;
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+            onClose();
+          }
+        }
+      } catch (error) {
+        console.error("❌ QRCodeModal: Polling error", error);
+      }
+    }, 2500); // Poll every 2.5 seconds
+  }, [onClose]);
+
+  // Reset closed flag when modal opens with a new order
+  React.useEffect(() => {
+    hasClosedRef.current = false;
+  }, [order?.id, order?.orderNumber, order?.order_number]);
+
+  // Listen for order claimed/released events to auto-close modal
+  React.useEffect(() => {
+    if (!order) return;
+
+    // Get all possible order identifiers from the order object
+    const orderNumber = order.orderNumber || order.order_number;
+    const orderId = order.id || order.orderId;
+    
+    console.log("🔍 QRCodeModal: Initializing", { 
+      orderNumber, 
+      orderId,
+      orderKeys: Object.keys(order),
+      isConnected,
+      fullOrder: order 
+    });
+    
+    // Early return if we don't have any identifiers
+    if (!orderNumber && !orderId) {
+      console.warn("⚠️ QRCodeModal: No order number or ID found, cannot match events");
+      return;
+    }
+
+    // Start polling as fallback (will continue even if socket is not connected)
+    startPolling(orderId, orderNumber);
+
+    // If socket is not connected, log warning but continue with polling
+    if (!isConnected) {
+      console.warn("⚠️ QRCodeModal: Socket not connected, relying on polling fallback");
+      return;
+    }
+    
+    const handleOrderClaimed = (data) => {
+      console.log("📡 QRCodeModal: Received order:claimed event", data);
+      
+      // Extract order identifiers from event data (checking multiple locations)
+      const eventData = extractOrderIdentifiers(data);
+      const eventOrderNumber = eventData.orderNumber;
+      const eventOrderId = eventData.orderId;
+      
+      // Try to match by order number or order ID using enhanced matching
+      const matchesByNumber = matchOrderNumber(eventOrderNumber, orderNumber);
+      const matchesById = matchOrderId(eventOrderId, orderId);
+      const matches = matchesByNumber || matchesById;
+      
+      if (matches) {
+        console.log("✅ QRCodeModal: Order claimed/released via socket, closing modal", {
+          matchesByNumber,
+          matchesById,
+          eventOrderNumber,
+          modalOrderNumber: orderNumber,
+          eventOrderId,
+          modalOrderId: orderId,
+          eventData
+        });
+        hasClosedRef.current = true;
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        onClose();
+      } else {
+        console.log("⚠️ QRCodeModal: Order number/ID mismatch in order:claimed event", { 
+          eventOrderNumber, 
+          modalOrderNumber: orderNumber,
+          eventOrderId,
+          modalOrderId: orderId,
+          matchesByNumber,
+          matchesById,
+          eventData
+        });
+      }
+    };
+
+    // Listen for order updated events
+    const handleOrderUpdated = (data) => {
+      console.log("📡 QRCodeModal: Received order:updated event", data);
+      
+      // Extract order identifiers from event data (checking multiple locations)
+      const eventData = extractOrderIdentifiers(data);
+      const eventOrderNumber = eventData.orderNumber;
+      const eventOrderId = eventData.orderId;
+      const status = eventData.status;
+      
+      // Try to match by order number or order ID using enhanced matching
+      const matchesByNumber = matchOrderNumber(eventOrderNumber, orderNumber);
+      const matchesById = matchOrderId(eventOrderId, orderId);
+      const matches = matchesByNumber || matchesById;
+      
+      if (matches && (status === "claimed" || status === "completed")) {
+        console.log("✅ QRCodeModal: Order status updated to claimed via socket, closing modal", {
+          matchesByNumber,
+          matchesById,
+          eventOrderNumber,
+          modalOrderNumber: orderNumber,
+          eventOrderId,
+          modalOrderId: orderId,
+          status,
+          eventData
+        });
+        hasClosedRef.current = true;
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        onClose();
+      } else if (matches) {
+        console.log("⚠️ QRCodeModal: Order matches but status is not claimed:", { 
+          status, 
+          matchesByNumber, 
+          matchesById,
+          eventData
+        });
+      } else {
+        console.log("⚠️ QRCodeModal: Order number/ID mismatch in order:updated event", { 
+          eventOrderNumber, 
+          modalOrderNumber: orderNumber,
+          eventOrderId,
+          modalOrderId: orderId,
+          status,
+          matchesByNumber,
+          matchesById,
+          eventData
+        });
+      }
+    };
+
+    // Set up socket listeners
+    on("order:claimed", handleOrderClaimed);
+    on("order:updated", handleOrderUpdated);
+
+    // Cleanup function
+    return () => {
+      console.log("🧹 QRCodeModal: Cleaning up listeners and polling");
+      off("order:claimed", handleOrderClaimed);
+      off("order:updated", handleOrderUpdated);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
+      }
+    };
+  }, [isConnected, order, onClose, on, off, normalizeOrderNumber, matchOrderId, matchOrderNumber, extractOrderIdentifiers, startPolling]);
 
   // Create structured order data for QR generation
   const minimalQRData = {
@@ -173,7 +458,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
 
         {/* QR Code Container */}
         <div className="flex justify-center mb-4 sm:mb-6">
-          <div className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border-4 sm:border-6 md:border-8 border-[#003363] shadow-lg">
+          <div 
+            ref={qrContainerRef}
+            className="bg-white p-3 sm:p-4 md:p-6 rounded-lg border-4 sm:border-6 md:border-8 border-[#003363] shadow-lg"
+            data-qr-container="true"
+          >
             {qrError ? (
               <div className="text-center p-4 w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[256px] md:h-[256px] flex items-center justify-center">
                 <div>
@@ -211,22 +500,79 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
           </button>
           <button
             onClick={() => {
-              // Find the SVG element (react-qr-code generates SVG)
-              const svgElement = document.querySelector('svg[data-qr-code="true"]');
-              if (!svgElement) {
-                // Fallback: try to find any SVG in the modal container
-                const modalContainer = document.querySelector('.bg-white.p-3\\ sm\\:p-4\\ md\\:p-6');
-                if (modalContainer) {
-                  const modalSvg = modalContainer.querySelector('svg');
-                  if (modalSvg) {
-                    downloadSVGAsPNG(modalSvg, `QR-${minimalQRData.orderNumber}.png`);
-                    return;
-                  }
-                }
-                alert("QR code not found. Please try again.");
+              // Download only the QR container (white box with border), not the entire modal
+              if (!qrContainerRef.current) {
+                alert("QR code container not found. Please try again.");
                 return;
               }
-              downloadSVGAsPNG(svgElement, `QR-${minimalQRData.orderNumber}.png`);
+
+              try {
+                const svgElement = qrContainerRef.current.querySelector('svg[data-qr-code="true"]');
+                if (!svgElement) {
+                  alert("QR code not found. Please try again.");
+                  return;
+                }
+
+                // Get container dimensions and styles
+                const containerRect = qrContainerRef.current.getBoundingClientRect();
+                const padding = 24; // p-6 = 24px padding
+                const borderWidth = 8; // border-8 = 8px border
+                const totalPadding = padding * 2; // padding on all sides
+                const totalBorder = borderWidth * 2; // border on all sides
+                
+                // Calculate size: container size minus padding and border
+                const qrSize = Math.min(containerRect.width, containerRect.height) - totalPadding - totalBorder;
+                const canvasSize = qrSize + totalPadding + totalBorder;
+                
+                // Create canvas with container dimensions
+                const canvas = document.createElement("canvas");
+                const ctx = canvas.getContext("2d");
+                canvas.width = canvasSize;
+                canvas.height = canvasSize;
+                
+                // Draw white background
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvasSize, canvasSize);
+                
+                // Draw border (simulate border-8 border-[#003363])
+                ctx.strokeStyle = "#003363";
+                ctx.lineWidth = borderWidth;
+                ctx.strokeRect(borderWidth / 2, borderWidth / 2, canvasSize - borderWidth, canvasSize - borderWidth);
+                
+                // Serialize SVG to string
+                const svgData = new XMLSerializer().serializeToString(svgElement);
+                const img = new Image();
+                
+                img.onload = () => {
+                  // Draw QR code in the center with padding
+                  const qrX = padding + borderWidth;
+                  const qrY = padding + borderWidth;
+                  ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+                  
+                  // Convert canvas to PNG and download
+                  const pngFile = canvas.toDataURL("image/png");
+                  const downloadLink = document.createElement("a");
+                  downloadLink.download = `QR-${minimalQRData.orderNumber}.png`;
+                  downloadLink.href = pngFile;
+                  document.body.appendChild(downloadLink);
+                  downloadLink.click();
+                  document.body.removeChild(downloadLink);
+                };
+                
+                img.onerror = () => {
+                  console.error("Failed to load SVG image");
+                  // Fallback to simple SVG download
+                  downloadSVGAsPNG(svgElement, `QR-${minimalQRData.orderNumber}.png`);
+                };
+                
+                // Convert SVG to data URL
+                const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+                const url = URL.createObjectURL(svgBlob);
+                img.src = url;
+              } catch (error) {
+                console.error("Error downloading QR code:", error);
+                alert("Failed to download QR code. Please try again.");
+              }
             }}
             className="flex-1 py-2 px-3 sm:px-4 text-xs sm:text-sm bg-white border-2 border-[#003363] text-[#003363] rounded-full font-semibold hover:bg-gray-50 transition-colors"
           >

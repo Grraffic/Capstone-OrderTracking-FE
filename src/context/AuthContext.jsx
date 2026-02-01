@@ -125,9 +125,9 @@ export const AuthProvider = ({ children }) => {
             educationLevel: userData.educationLevel ?? userData.education_level ?? null,
             studentType: userData.studentType ?? userData.student_type ?? null,
             onboardingCompleted:
-              userData.onboardingCompleted ??
-              userData.onboarding_completed ??
-              null,
+              userData.onboardingCompleted === true || userData.onboarding_completed === true
+                ? true
+                : false,
             onboardingCompletedAt:
               userData.onboardingCompletedAt ??
               userData.onboarding_completed_at ??

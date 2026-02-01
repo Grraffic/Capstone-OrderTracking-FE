@@ -209,12 +209,12 @@
   }
 }
 
-/* Custom toast animations for react-hot-toast - slide in from right */
-/* Toast container spacing - prevent overlap */
+/* Custom toast styles for react-hot-toast - no transitions */
+/* Toast container spacing - minimal gap */
 .toast-container {
   display: flex !important;
   flex-direction: column !important;
-  gap: 6px !important;
+  gap: 2px !important;
   align-items: flex-end !important;
 }
 
@@ -224,9 +224,10 @@
   position: relative !important;
 }
 
-/* Target the toast container and all toast elements - prevent overlap */
+/* Target the toast container and all toast elements - no animation */
 .toast-container > div > div {
-  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: none !important;
+  transition: none !important;
   margin-bottom: 0 !important;
   margin-top: 0 !important;
   position: relative !important;
@@ -234,17 +235,19 @@
 
 /* Target react-hot-toast generated classes (fallback) */
 div[class*="go4109123758"] {
-  margin-bottom: 6px !important;
+  margin-bottom: 2px !important;
 }
 
 div[class*="go4109123758"] > div[class*="go2072408551"] {
-  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: none !important;
+  transition: none !important;
   margin-bottom: 0 !important;
 }
 
-/* Custom toast class */
+/* Custom toast class - no animation */
 .custom-toast {
-  animation: slideInFromRight 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  animation: none !important;
+  transition: none !important;
   margin-bottom: 0 !important;
 }
 
@@ -253,6 +256,7 @@ div[class*="go4109123758"] > div[class*="go2072408551"] {
 div[class*="go4109123758"][data-animation="exit"] > div[class*="go2072408551"],
 .custom-toast[data-animation="exit"] {
   animation: none !important;
+  transition: none !important;
 }
 
 /* Force single card on mobile (375px - 430px) */

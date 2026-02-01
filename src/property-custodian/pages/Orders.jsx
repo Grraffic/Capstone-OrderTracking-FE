@@ -643,8 +643,8 @@ const Orders = () => {
 
       {/* Order Details Modal - shows after QR scan with design: Name, Education Level, Transaction No, Order Date, Item Ordered, Size */}
       {scannedOrder && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col relative z-[10001]">
             <div className="flex justify-center px-6 pt-8 pb-4 border-b border-gray-200">
               <h3 className="text-xl font-bold tracking-tight text-center">
                 <span className="text-[#0C2340]">Order</span>{" "}
@@ -758,8 +758,8 @@ const Orders = () => {
 
       {/* Release Success Modal - centered, checkmark, message, X top right */}
       {qrSuccess && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden relative">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden relative z-[10001]">
             <button
               onClick={() => {
                 clearSuccess();
@@ -842,8 +842,8 @@ const Orders = () => {
 
       {/* Processing Overlay */}
       {qrProcessing && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000]">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md relative z-[10001]">
             <div className="text-center">
               <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-[#0C2340] mx-auto mb-4"></div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">

@@ -79,7 +79,7 @@ const OrderSuccessPage = () => {
           <div className="relative z-30 flex flex-col items-center justify-center min-h-[600px] md:min-h-[700px] gap-6">
             <OrderSuccessCard 
               userName={getUserName()}
-              onOrderAgain={() => navigate('/all-products')}
+              onOrderAgain={() => navigate('/student/profile', { state: { activeTab: 'orders' } })}
             />
           </div>
         </div>

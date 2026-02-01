@@ -61,44 +61,72 @@ export const ActivityProvider = ({ children }) => {
 
     // Listen for order claimed events
     const handleOrderClaimed = (data) => {
-      console.log("📡 Received order claimed event:", data);
-      console.log("🔍 Current user.id:", user?.id);
-      console.log("🔍 Current user.uid:", user?.uid);
-      console.log("🔍 Event userId:", data.userId);
+      console.log("📡 ActivityContext: Received order claimed event:", data);
+      console.log("🔍 ActivityContext: Current user.id:", user?.id);
+      console.log("🔍 ActivityContext: Current user.uid:", user?.uid);
+      console.log("🔍 ActivityContext: Event userId:", data?.userId);
 
       // Only track activity if this order belongs to the current user
-      // Prioritize user.uid (Supabase Auth UID) for matching
-      const currentUserId = user?.uid || user?.id; // Changed: uid first
-      const eventUserId = data.userId;
+      // Check both user.uid and user.id against event userId for robust matching
+      const currentUserId = user?.uid || user?.id;
+      const eventUserId = data?.userId;
+      
+      // Enhanced matching: check both uid and id, handle string/number conversions
       const isMatch = eventUserId && currentUserId && (
         eventUserId === currentUserId || 
-        String(eventUserId) === String(currentUserId)
+        String(eventUserId) === String(currentUserId) ||
+        eventUserId === user?.id ||
+        eventUserId === user?.uid ||
+        String(eventUserId) === String(user?.id) ||
+        String(eventUserId) === String(user?.uid)
       );
-      console.log("🔍 Match?", isMatch);
+      
+      console.log("🔍 ActivityContext: User match result:", isMatch);
+      console.log("🔍 ActivityContext: Comparing - Event:", eventUserId, "vs Current (uid):", user?.uid, "vs Current (id):", user?.id);
       
       if (isMatch) {
-        // Calculate total items count
-        const itemCount = data.items?.length || 0;
+        try {
+          // Validate and calculate total items count
+          const itemCount = Array.isArray(data.items) ? data.items.length : (data.itemCount || 0);
+          const orderNumber = data.orderNumber || data.order_number || "N/A";
+          const orderId = data.orderId || data.order_id || null;
 
-        // Create "order_released" activity (order was released by property custodian)
-        const releasedActivity = {
-          id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          userId: user.id,
-          timestamp: new Date().toISOString(),
-          type: "order_released",
-          description: `Your order #${data.orderNumber} with ${itemCount} item(s) has been released`,
-          orderId: data.orderId,
-          orderNumber: data.orderNumber,
-          items: data.items,
-          itemCount: itemCount,
-        };
+          // Create description with fallback handling
+          const itemText = itemCount === 1 ? "item" : "items";
+          let description = "";
+          
+          if (orderNumber && orderNumber !== "N/A") {
+            description = `Your order #${orderNumber} with ${itemCount} ${itemText} has been successfully claimed.`;
+          } else if (orderId) {
+            description = `Your order with ${itemCount} ${itemText} has been successfully claimed.`;
+          } else {
+            description = `Your order with ${itemCount} ${itemText} has been successfully claimed.`;
+          }
 
-        setActivities((prev) => [releasedActivity, ...prev]);
-        console.log("✅ Activity tracked: Order released");
+          // Create "order_released" activity (order was released by property custodian)
+          const releasedActivity = {
+            id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            userId: user.id || user.uid,
+            timestamp: new Date().toISOString(),
+            type: "order_released",
+            description: description,
+            orderId: orderId,
+            orderNumber: orderNumber !== "N/A" ? orderNumber : null,
+            items: Array.isArray(data.items) ? data.items : [],
+            itemCount: itemCount,
+          };
+
+          console.log("✅ ActivityContext: Creating order_released activity:", releasedActivity);
+          setActivities((prev) => [releasedActivity, ...prev]);
+          console.log("✅ ActivityContext: Activity tracked successfully - Order released");
+        } catch (error) {
+          console.error("❌ ActivityContext: Error creating order_released activity:", error);
+          console.error("❌ ActivityContext: Event data:", data);
+        }
       } else {
-        console.log("⚠️ Order claimed event received but userId doesn't match current user");
-        console.log("⚠️ Expected:", currentUserId);
-        console.log("⚠️ Received:", eventUserId);
+        console.log("⚠️ ActivityContext: Order claimed event received but userId doesn't match current user");
+        console.log("⚠️ ActivityContext: Expected (uid):", user?.uid, "Expected (id):", user?.id);
+        console.log("⚠️ ActivityContext: Received:", eventUserId);
       }
     };
 

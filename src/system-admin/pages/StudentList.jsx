@@ -4,6 +4,8 @@ import StudentTable from "../components/StudentManagement/StudentTable";
 import StudentFilters from "../components/StudentManagement/StudentFilters";
 import EditTableModal from "../components/StudentManagement/EditTableModal";
 import EditStudentOrderLimitsModal from "../components/StudentManagement/EditStudentOrderLimitsModal";
+import DeleteStudentModal from "../components/StudentManagement/DeleteStudentModal";
+import AddStudentModal from "../components/StudentManagement/AddStudentModal";
 import UserModal from "../components/UserManagement/UserModal";
 import { useUsers } from "../hooks/useUsers";
 import { userAPI } from "../../services/user.service";
@@ -29,14 +31,22 @@ const StudentList = () => {
   const [isEditTableModalOpen, setIsEditTableModalOpen] = useState(false);
   const [isOrderLimitsModalOpen, setIsOrderLimitsModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isAddStudentModalOpen, setIsAddStudentModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingPage, setEditingPage] = useState(false);
+  const [pageInputValue, setPageInputValue] = useState("");
+  
+  // Delete student confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState(null);
 
   const { 
     users, 
     loading, 
     pagination, 
     fetchUsers, 
+    createUser,
     updateUser, 
     deleteUser,
   } = useUsers();
@@ -158,6 +168,48 @@ const StudentList = () => {
     }
   };
 
+  const handleGoToPage = (pageNumber) => {
+    const page = parseInt(pageNumber);
+    if (isNaN(page) || page < 1 || page > pagination.totalPages) {
+      toast.error(`Please enter a page number between 1 and ${pagination.totalPages}`);
+      setEditingPage(false);
+      return;
+    }
+    setCurrentPage(page);
+    setEditingPage(false);
+    const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
+    fetchUsers({
+      page: page,
+      search: search || "",
+      role: "student",
+      education_level: mapEducationLevelToDB(educationLevel),
+      course_year_level: mapGradeLevelToDB(gradeLevel),
+      school_year: schoolYearPrefix,
+    });
+  };
+
+  const handlePageClick = () => {
+    setEditingPage(true);
+    setPageInputValue(currentPage.toString());
+  };
+
+  const handlePageInputBlur = () => {
+    if (pageInputValue && pageInputValue !== currentPage.toString()) {
+      handleGoToPage(pageInputValue);
+    } else {
+      setEditingPage(false);
+    }
+  };
+
+  const handlePageInputKeyDown = (e) => {
+    if (e.key === "Enter") {
+      handleGoToPage(pageInputValue);
+    } else if (e.key === "Escape") {
+      setEditingPage(false);
+      setPageInputValue("");
+    }
+  };
+
   const handleSelectStudent = (studentId) => {
     setSelectedStudents((prev) =>
       prev.includes(studentId)
@@ -230,16 +282,79 @@ const StudentList = () => {
     }
   };
 
-  const handleDeleteStudent = async (studentId) => {
-    if (window.confirm("Are you sure you want to delete this student?")) {
-      try {
-        await deleteUser(studentId);
-        toast.success("Student deleted successfully");
-        // Remove from selected if it was selected
-        setSelectedStudents((prev) => prev.filter((id) => id !== studentId));
-      } catch (error) {
-        toast.error(error.message || "Failed to delete student");
+  // Calculate education level from course year level (same logic as EditStudentOrderLimitsModal)
+  const getEducationLevel = (courseYearLevel) => {
+    if (!courseYearLevel) return null;
+    if (courseYearLevel === "Prekindergarten" || courseYearLevel === "Kindergarten" || courseYearLevel === "Kinder") {
+      return "Kindergarten";
+    }
+    if (courseYearLevel.match(/^Grade [1-6]$/)) {
+      return "Elementary";
+    }
+    if (courseYearLevel.match(/^Grade (7|8|9|10)$/)) {
+      return "Junior High School";
+    }
+    if (courseYearLevel.match(/^Grade (11|12)$/)) {
+      return "Senior High School";
+    }
+    if (courseYearLevel.match(/^(BSIS|BSA|BSAIS|BSSW|BAB|ACT) (1st|2nd|3rd|4th) (Year|yr)$/i)) {
+      return "College";
+    }
+    return null;
+  };
+
+  const handleAddStudent = async (studentData) => {
+    try {
+      // Calculate education_level from course_year_level
+      const calculatedEducationLevel = getEducationLevel(studentData.course_year_level);
+      if (calculatedEducationLevel) {
+        studentData.education_level = calculatedEducationLevel;
       }
+
+      const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
+      const refreshParams = {
+        page: currentPage,
+        search: search || "",
+        role: "student",
+        education_level: mapEducationLevelToDB(educationLevel),
+        course_year_level: mapGradeLevelToDB(gradeLevel),
+        school_year: schoolYearPrefix,
+      };
+      await createUser(studentData, refreshParams);
+      toast.success("Student created successfully");
+      setIsAddStudentModalOpen(false);
+    } catch (error) {
+      toast.error(error.message || "Failed to create student");
+    }
+  };
+
+  const handleDeleteStudent = (studentId) => {
+    const student = users.find((u) => u.id === studentId);
+    setStudentToDelete({ id: studentId, name: student?.name || "this student" });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteStudent = async () => {
+    if (!studentToDelete) return;
+    
+    try {
+      const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
+      const refreshParams = {
+        page: currentPage,
+        search: search || "",
+        role: "student",
+        education_level: mapEducationLevelToDB(educationLevel),
+        course_year_level: mapGradeLevelToDB(gradeLevel),
+        school_year: schoolYearPrefix,
+      };
+      await deleteUser(studentToDelete.id, refreshParams);
+      toast.success("Student deleted successfully");
+      // Remove from selected if it was selected
+      setSelectedStudents((prev) => prev.filter((id) => id !== studentToDelete.id));
+      setIsDeleteModalOpen(false);
+      setStudentToDelete(null);
+    } catch (error) {
+      toast.error(error.message || "Failed to delete student");
     }
   };
 
@@ -280,7 +395,7 @@ const StudentList = () => {
   const isFuture = isFutureSchoolYear(schoolYear);
   const stats = {
     totalStudents: isFuture ? 0 : (pagination.total || 0),
-    currentlyEnrolled: isFuture ? 0 : users.filter((u) => u.enrollment_status === "currently_enrolled").length,
+    currentlyEnrolled: isFuture ? 0 : (pagination.total || 0),
     eligibleForEnrollment: isFuture ? 0 : users.filter((u) => u.enrollment_status === "eligible_for_enrollment").length,
     notEligible: isFuture ? 0 : users.filter((u) => u.enrollment_status === "not_eligible").length,
     droppedOfficially: isFuture ? 0 : users.filter((u) => u.enrollment_status === "dropped_officially").length,
@@ -365,6 +480,7 @@ const StudentList = () => {
           gradeLevel={gradeLevel}
           onGradeLevelChange={setGradeLevel}
           onEditTable={() => setIsEditTableModalOpen(true)}
+          onAddUser={() => setIsAddStudentModalOpen(true)}
           selectedCount={selectedStudents.length}
         />
 
@@ -389,10 +505,31 @@ const StudentList = () => {
             {/* Pagination Controls */}
             {pagination.totalPages > 0 && (
               <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between rounded-b-lg shadow-sm">
-                {/* Left: Page Indicator */}
-                <div className="text-sm text-gray-600">
-                  Page <span className="font-semibold">{currentPage}</span> of{" "}
-                  <span className="font-semibold">{pagination.totalPages}</span>
+                {/* Left: Page Indicator with Editable Page Number */}
+                <div className="text-sm text-gray-600 flex items-center gap-1">
+                  Page{" "}
+                  {editingPage ? (
+                    <input
+                      type="number"
+                      min="1"
+                      max={pagination.totalPages}
+                      value={pageInputValue}
+                      onChange={(e) => setPageInputValue(e.target.value)}
+                      onBlur={handlePageInputBlur}
+                      onKeyDown={handlePageInputKeyDown}
+                      autoFocus
+                      className="w-12 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm text-center font-semibold"
+                    />
+                  ) : (
+                    <span
+                      className="font-semibold cursor-pointer hover:text-[#0C2340] hover:underline"
+                      onClick={handlePageClick}
+                      title="Click to edit page number"
+                    >
+                      {currentPage}
+                    </span>
+                  )}{" "}
+                  of <span className="font-semibold">{pagination.totalPages}</span>
                 </div>
 
                 {/* Right: Navigation Buttons */}
@@ -454,6 +591,108 @@ const StudentList = () => {
           }}
           user={editingStudent}
           onSave={handleSaveStudent}
+        />
+
+        {/* Add Student Modal */}
+        <AddStudentModal
+          isOpen={isAddStudentModalOpen}
+          onClose={() => setIsAddStudentModalOpen(false)}
+          onSave={handleAddStudent}
+          educationLevels={[
+            "Preschool",
+            "Elementary",
+            "Junior Highschool",
+            "Senior Highschool",
+            "College",
+          ]}
+          gradeLevelOptions={(() => {
+            // Get grade level options based on current education level
+            const getGradeLevelOptions = (eduLevel) => {
+              const gradeLevelMap = {
+                "All Education Levels": [
+                  "Grade Level",
+                  "Prekindergarten",
+                  "Kindergarten",
+                  "Grade 1",
+                  "Grade 2",
+                  "Grade 3",
+                  "Grade 4",
+                  "Grade 5",
+                  "Grade 6",
+                  "Grade 7",
+                  "Grade 8",
+                  "Grade 9",
+                  "Grade 10",
+                  "Grade 11",
+                  "Grade 12",
+                  "BSA 1st yr",
+                  "BSA 2nd yr",
+                  "BSA 3rd yr",
+                  "BSA 4th yr",
+                  "BSAIS 1st year",
+                  "BSAIS 2nd year",
+                  "BSAIS 3rd year",
+                  "BSAIS 4th year",
+                  "BAB 1st year",
+                  "BAB 2nd year",
+                  "BAB 3rd year",
+                  "BAB 4th year",
+                  "BSSW 1st year",
+                  "BSSW 2nd year",
+                  "BSSW 3rd year",
+                  "BSSW 4th year",
+                  "BSIS 1st year",
+                  "BSIS 2nd year",
+                  "BSIS 3rd year",
+                  "BSIS 4th year",
+                  "ACT 1st year",
+                  "ACT 2nd year",
+                ],
+                "Preschool": ["Grade Level", "Prekindergarten", "Kindergarten"],
+                "Elementary": ["Grade Level", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"],
+                "Junior Highschool": ["Grade Level", "Grade 7", "Grade 8", "Grade 9", "Grade 10"],
+                "Senior Highschool": ["Grade Level", "Grade 11", "Grade 12"],
+                "College": [
+                  "Grade Level",
+                  "BSA 1st yr",
+                  "BSA 2nd yr",
+                  "BSA 3rd yr",
+                  "BSA 4th yr",
+                  "BSAIS 1st yr",
+                  "BSAIS 2nd yr",
+                  "BSAIS 3rd yr",
+                  "BSAIS 4th yr",
+                  "BAB 1st yr",
+                  "BAB 2nd yr",
+                  "BAB 3rd yr",
+                  "BAB 4th yr",
+                  "BSSW 1st yr",
+                  "BSSW 2nd yr",
+                  "BSSW 3rd yr",
+                  "BSSW 4th yr",
+                  "BSIS 1st yr",
+                  "BSIS 2nd yr",
+                  "BSIS 3rd yr",
+                  "BSIS 4th yr",
+                  "ACT 1st yr",
+                  "ACT 2nd yr",
+                ],
+              };
+              return gradeLevelMap[eduLevel] || ["Grade Level"];
+            };
+            return getGradeLevelOptions(educationLevel === "All Education Levels" ? "All Education Levels" : educationLevel);
+          })()}
+        />
+
+        {/* Delete Student Confirmation Modal */}
+        <DeleteStudentModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setStudentToDelete(null);
+          }}
+          onConfirm={confirmDeleteStudent}
+          studentName={studentToDelete?.name || ""}
         />
       </div>
     </SystemAdminLayout>

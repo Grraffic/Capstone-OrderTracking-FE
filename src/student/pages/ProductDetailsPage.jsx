@@ -465,20 +465,36 @@ const ProductDetailsPage = () => {
       ? (Number(alreadyOrdered["jogging pants"]) || 0)
       : 0;
   const alreadyOrderedForItem = Math.max(baseAlready, joggingFallback);
-  // Check if item is claimed - if so, disable ordering permanently
+  // Check if item is claimed - disable ordering if claimed count has reached the max limit
   const baseClaimed = product ? (Number(claimedItems[productResolvedKey]) || 0) : 0;
   const joggingClaimedFallback =
     product && normalizeItemName(product.name || "").includes("jogging pants")
       ? (Number(claimedItems["jogging pants"]) || 0)
       : 0;
-  const claimedForItem = Math.max(baseClaimed, joggingClaimedFallback);
-  const isClaimed = claimedForItem > 0;
+  let claimedForItem = Math.max(baseClaimed, joggingClaimedFallback);
+  // FORCE DISABLE: Item is disabled if claimed count has reached or exceeded the max limit
+  // This is a hard requirement - no exceptions
+  const isClaimedMaxReached = maxForItem > 0 && claimedForItem >= maxForItem;
+  
+  // Debug logging for logo patch items
+  if (productResolvedKey === "logo patch") {
+    console.log(`[ProductDetailsPage] Item: ${product?.name}, Key: ${productResolvedKey}, Max: ${maxForItem}, Claimed: ${claimedForItem}, isClaimedMaxReached: ${isClaimedMaxReached}`, {
+      claimedItemsLogoPatch: claimedItems["logo patch"],
+      claimedForItem,
+      maxForItem: maxForItem
+    });
+  }
+  
+  // FORCE: When claimed max is reached, effectiveMax MUST be 0 - completely block ordering
   const effectiveMax = product
-    ? (isClaimed ? 0 : Math.min(
-        Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem),
+    ? (isClaimedMaxReached ? 0 : Math.min(
+        Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem - claimedForItem),
         effectiveStock || 999
       ))
     : getDefaultMaxForItem("");
+  
+  // FORCE: If claimed max is reached, also set isDisabled to true
+  const isDisabledDueToClaimed = isClaimedMaxReached;
 
   // Clamp quantity when effectiveMax decreases (e.g. after maxQuantities loads)
   useEffect(() => {
@@ -512,20 +528,36 @@ const ProductDetailsPage = () => {
       const notAllowedForStudentType =
         isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
-      const claimedForItem = claimedItems[key] ?? 0;
-      const isClaimed = claimedForItem > 0;
+      // Get claimed count for this item
+      let claimedForItem = claimedItems[key] ?? 0;
+      // FORCE DISABLE: Item is disabled if claimed count has reached or exceeded the max limit
+      const isClaimedMaxReached = max > 0 && claimedForItem >= max;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-      const effectiveMaxItem = isClaimed ? 0 : Math.max(0, max - inCart - alreadyOrd);
+      const effectiveMaxItem = isClaimedMaxReached ? 0 : Math.max(0, max - inCart - alreadyOrd - claimedForItem);
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewTypeItem =
         totalItemLimit != null &&
         Number(totalItemLimit) > 0 &&
         isNewItemType &&
         cartSlotCount >= slotsLeftForThisOrder;
-      const _orderLimitReached = effectiveMaxItem < 1 || isClaimed;
-      const _isDisabled = _orderLimitReached || blockedDueToVoid || slotsFullForNewTypeItem || notAllowedForStudentType;
+      const _orderLimitReached = effectiveMaxItem < 1 || isClaimedMaxReached;
+      // FORCE DISABLE: Include claimed max reached in disabled check for related products
+      const _isDisabled = _orderLimitReached || isClaimedMaxReached || blockedDueToVoid || slotsFullForNewTypeItem || notAllowedForStudentType;
+      
+      // Debug logging for logo patch related products
+      if (key === "logo patch" && isClaimedMaxReached) {
+        console.log(`[ProductDetailsPage] Related product logo patch disabled:`, {
+          name: p.name,
+          key,
+          max,
+          claimedForItem,
+          isClaimedMaxReached,
+          _isDisabled
+        });
+      }
+      
       return {
         ...p,
         _orderLimitReached,
@@ -580,9 +612,11 @@ const ProductDetailsPage = () => {
   const isOrderDisabled =
     requiresSizeSelection && (!selectedSize || !sizeConfirmed) || genderMismatch;
   // Same disabled treatment as All Products card: grayscale image + gray text when item cannot be ordered
+  // FORCE DISABLE: Include claimed max reached in disabled check - this is mandatory
   const isDisabled =
     (!user || limitsLoaded) &&
     (effectiveMax < 1 ||
+      isClaimedMaxReached || // FORCE: If claimed max reached, item MUST be disabled
       blockedDueToVoid ||
       slotsFullForNewType ||
       limitNotSet ||
@@ -908,7 +942,7 @@ const ProductDetailsPage = () => {
                 {/* Bottom Section - Fixed at Bottom */}
                 <div className="mt-auto pt-4 space-y-3 border-t border-gray-200">
                   {/* Already ordered — message removed per design
-                  {(effectiveMax < 1 && alreadyOrderedForItem > 0) || isClaimed && (
+                  {(effectiveMax < 1 && alreadyOrderedForItem > 0) || isClaimedMaxReached && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                       <p className="font-medium">This item is already in your orders.</p>
                       <p className="mt-1 text-amber-700">Add to Cart and Order Now are disabled for this item, same as when it is in your cart. You have already ordered the maximum. You can only claim it when your order is ready.</p>
@@ -923,8 +957,15 @@ const ProductDetailsPage = () => {
                       <p className="font-medium">You cannot place new orders because a previous order was not claimed in time and was voided. Contact your administrator if you need assistance.</p>
                     </div>
                   )}
+                  {/* Maximum claimed: student has already claimed the maximum allowed quantity for this item. */}
+                  {isClaimedMaxReached && !blockedDueToVoid && (
+                    <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
+                      <p className="font-medium">You have already claimed the maximum allowed quantity for this item ({claimedForItem}/{maxForItem}).</p>
+                      <p className="mt-1 text-red-700">Add to Cart and Order Now are disabled. You cannot order more of this item.</p>
+                    </div>
+                  )}
                   {/* Order limit not set: student cannot add to cart or place order until admin sets Total Item Limit. Hide when cause is voided (red banner shows instead). */}
-                  {limitNotSet && !blockedDueToVoid && (
+                  {limitNotSet && !blockedDueToVoid && !isClaimedMaxReached && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                       <p className="font-medium">Your order limit has not been set. Ask your administrator to set Total Item Limit before you can add or place orders.</p>
                     </div>
@@ -974,7 +1015,7 @@ const ProductDetailsPage = () => {
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button
                       onClick={handleAddToCart}
-                      disabled={isOrderDisabled || effectiveMax < 1 || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
+                      disabled={isOrderDisabled || effectiveMax < 1 || isClaimedMaxReached || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
                       className="w-full sm:w-auto px-5 py-2 bg-white border-2 border-[#003363] text-[#003363] font-semibold rounded-full hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md text-sm"
                     >
                       <ShoppingCart className="w-4 h-4" /> Add to Cart
@@ -982,7 +1023,7 @@ const ProductDetailsPage = () => {
 
                     <button
                       onClick={handleOrderNow}
-                      disabled={isOrderDisabled || effectiveMax < 1 || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
+                      disabled={isOrderDisabled || effectiveMax < 1 || isClaimedMaxReached || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
                       className="w-full sm:w-auto px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
                     >
                       {requiresSizeSelection && selectedSize

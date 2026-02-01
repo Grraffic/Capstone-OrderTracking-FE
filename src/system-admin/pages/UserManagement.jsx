@@ -7,6 +7,7 @@ import RolesList from "../components/UserManagement/RolesList";
 import RoleDetails from "../components/UserManagement/RoleDetails";
 import CreateRoleModal from "../components/UserManagement/CreateRoleModal";
 import DisableUserModal from "../components/UserManagement/DisableUserModal";
+import DeleteUserModal from "../components/UserManagement/DeleteUserModal";
 import { useUsers } from "../hooks/useUsers";
 import { userAPI } from "../../services/user.service";
 import { roleAPI } from "../../services/role.service";
@@ -31,6 +32,10 @@ const UserManagement = () => {
   // Disable user confirmation modal state
   const [isDisableModalOpen, setIsDisableModalOpen] = useState(false);
   const [userToDisable, setUserToDisable] = useState(null);
+  
+  // Delete user confirmation modal state
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
   
   // Roles & Permissions state
   const [roles, setRoles] = useState([]);
@@ -239,22 +244,30 @@ const UserManagement = () => {
     }
   };
 
-  const handleDeleteUser = async (userId) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      try {
-        const roleToFilter = roleFilter === "All Roles" ? "" : roleFilter;
-        const refreshParams = {
-          page: currentPage,
-          search: search || "",
-          role: roleToFilter === "student" ? "" : roleToFilter, // Don't filter by student
-          status: statusFilter === "All Status" ? "" : statusFilter,
-          excludeRole: "student", // Always exclude students
-        };
-        await deleteUser(userId, refreshParams);
-        toast.success("User deleted successfully");
-      } catch (error) {
-        toast.error(error.message || "Failed to delete user");
-      }
+  const handleDeleteUser = (userId) => {
+    const user = users.find((u) => u.id === userId);
+    setUserToDelete({ id: userId, name: user?.name || "this user" });
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    try {
+      const roleToFilter = roleFilter === "All Roles" ? "" : roleFilter;
+      const refreshParams = {
+        page: currentPage,
+        search: search || "",
+        role: roleToFilter === "student" ? "" : roleToFilter, // Don't filter by student
+        status: statusFilter === "All Status" ? "" : statusFilter,
+        excludeRole: "student", // Always exclude students
+      };
+      await deleteUser(userToDelete.id, refreshParams);
+      toast.success("User deleted successfully");
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+    } catch (error) {
+      toast.error(error.message || "Failed to delete user");
     }
   };
 
@@ -509,6 +522,17 @@ const UserManagement = () => {
             }
           }}
           userName={userToDisable?.name || ""}
+        />
+
+        {/* Delete User Confirmation Modal */}
+        <DeleteUserModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => {
+            setIsDeleteModalOpen(false);
+            setUserToDelete(null);
+          }}
+          onConfirm={confirmDeleteUser}
+          userName={userToDelete?.name || ""}
         />
       </div>
     </SystemAdminLayout>
