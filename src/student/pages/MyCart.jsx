@@ -229,11 +229,12 @@ const MyCart = () => {
     }
 
     try {
-      // Remove all selected items
-      await Promise.all(selectedItems.map((itemId) => removeFromCart(itemId)));
+      const itemCount = selectedItems.length;
+      // Remove all selected items (suppress individual toasts)
+      await Promise.all(selectedItems.map((itemId) => removeFromCart(itemId, { suppressToast: true })));
       setSelectedItems([]);
       setEditMode(false);
-      toast.success(`${selectedItems.length} item(s) removed from cart`);
+      toast.success(`${itemCount} item(s) removed from cart`);
     } catch (error) {
       console.error("Failed to remove items:", error);
       toast.error("Failed to remove items");

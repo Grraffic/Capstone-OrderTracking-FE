@@ -15,10 +15,8 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const maxAllowed = product._maxAllowed || 0;
 
   const handleProductClick = () => {
-    // FORCE DISABLE: If item is claimed or not allowed for student type, prevent navigation
-    if (isClaimed || notAllowedForStudentType) {
-      return; // Block click entirely when item has reached claimed max or is not allowed
-    }
+    // Allow navigation even when disabled - students can still view product details
+    // The product details page will handle showing disabled state for ordering
     // Suggested For You may use placeholder id (n-Name); go to all products then
     const id = product.id;
     const isPlaceholderId = typeof id === "string" && id.startsWith("n-");

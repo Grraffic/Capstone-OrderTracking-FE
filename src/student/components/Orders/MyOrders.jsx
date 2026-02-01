@@ -1710,15 +1710,12 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
           </div>
         )}
 
-        {/* Title Row with Dynamic Title and Info Icon */}
+        {/* Title Row with Dynamic Title */}
         <div className="flex items-center justify-between mb-3 sm:mb-4 md:mb-4 gap-2 sm:gap-4">
           <h1 className="text-2xl sm:text-3xl md:text-3xl lg:text-4xl font-bold">
             <span className="text-[#003363]">{titleParts.first} </span>
             <span className="text-[#F28C28]">{titleParts.second}</span>
           </h1>
-          <button className="p-1.5 sm:p-2 md:p-2 hover:bg-gray-100 rounded-full transition-colors flex-shrink-0">
-            <span className="text-lg sm:text-xl md:text-2xl text-[#003363]">ⓘ</span>
-          </button>
         </div>
 
         {/* Orders List (or Order History card grid) */}

@@ -10,6 +10,7 @@ import { useItems } from "../../property-custodian/hooks/items/useItems";
 import { useSearchDebounce, useProductPagination } from "../hooks";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import { useSocket } from "../../context/SocketContext";
 import { authAPI } from "../../services/api";
 import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../utils/maxQuantityKeys";
 import { categoryFromItemType } from "../constants/studentProducts";
@@ -49,6 +50,7 @@ const AllProducts = () => {
   // Get user from auth context and cart for "already in cart" check
   const { user } = useAuth();
   const { items: cartItems } = useCart();
+  const { on, off, isConnected } = useSocket();
 
   // Fetch user profile to get education level
   useEffect(() => {
@@ -158,6 +160,26 @@ const AllProducts = () => {
     };
     fetchMaxQuantities();
   }, [user, limitsRefreshTrigger]);
+
+  // Listen for Socket.IO order:created events to refresh max-quantities in real-time
+  useEffect(() => {
+    if (!isConnected) {
+      return;
+    }
+
+    const handleOrderCreated = (data) => {
+      console.log("📡 [AllProducts] Received order:created event via Socket.IO, refreshing max-quantities:", data);
+      // Trigger refresh of max-quantities to update alreadyOrdered counts
+      setLimitsRefreshTrigger((t) => t + 1);
+    };
+
+    on("order:created", handleOrderCreated);
+
+    // Cleanup on unmount
+    return () => {
+      off("order:created", handleOrderCreated);
+    };
+  }, [isConnected, on, off]);
 
   // Fetch items with skipInitialFetch so we don't show all products before profile loads.
   // Only fetch once we have profile (or know user is logged out), then use eligibility level.
@@ -377,33 +399,38 @@ const AllProducts = () => {
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
       
-      // FORCE DISABLE: Check if claimed count has reached or exceeded the max limit
-      // This is a hard requirement - no exceptions, regardless of effectiveMax
-      // IMPORTANT: Always use the same max that was calculated above (from permissions, default, or maxQuantities)
-      // For logo patch and other items, this ensures consistent behavior - if max is 3 and claimed is 3, it's disabled
+      // FORCE DISABLE: Check if total (alreadyOrdered + claimedItems) has reached or exceeded the max limit
+      // For items with max > 1 (like logo patch with max 3): Check alreadyOrdered + claimedItems >= max
+      // For items with max = 1: Only check claimedItems (alreadyOrdered is already handled separately)
+      // This ensures that when a student places an order with max quantity, the item is immediately disabled
       const maxForClaimedCheck = max; // Use the same max that was determined above
-      const isClaimedMaxReached = maxForClaimedCheck > 0 && claimedForItem >= maxForClaimedCheck;
+      const totalUsed = alreadyOrd + claimedForItem;
+      // For items with max > 1, check total used (alreadyOrdered + claimedItems)
+      // For items with max = 1, only check claimedItems (alreadyOrdered prevents duplicate orders separately)
+      const isMaxReached = maxForClaimedCheck > 0 && (
+        maxForClaimedCheck > 1 
+          ? totalUsed >= maxForClaimedCheck  // For logo patch (max 3): check alreadyOrdered + claimedItems >= 3
+          : claimedForItem >= maxForClaimedCheck  // For max = 1: only check claimedItems
+      );
       
       // Calculate effective max: max allowed minus what's already ordered/claimed/in cart
       // For manually granted permissions (old students): The max from permissions is the NEW total allowed
-      // Only when items are claimed do they count toward the permanent limit
-      // For items with max > 1 (like logo patch with max 3), students can place multiple orders
-      // Only subtract claimedItems and items already in cart - NOT pending orders (alreadyOrdered)
+      // For items with max > 1 (like logo patch), subtract both alreadyOrdered and claimedItems
+      // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
       let effectiveMax;
-      if (isClaimedMaxReached) {
-        // If claimed max is reached, completely block ordering
+      if (isMaxReached) {
+        // If max is reached (alreadyOrdered + claimedItems >= max), completely block ordering
         effectiveMax = 0;
       } else if (isOldStudent && maxQuantities[key] != null) {
         // Old student with manually granted permission: max from permissions is the NEW total
-        // For items with max > 1, allow multiple orders - only subtract claimed and in-cart items
-        // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
         const newMaxFromPermissions = maxQuantities[key];
         const shouldAllowMultipleOrders = newMaxFromPermissions > 1;
+        // For items with max > 1, subtract both alreadyOrdered and claimedItems
+        // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
         const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
         effectiveMax = Math.max(0, newMaxFromPermissions - inCart - (subtractAlreadyOrdered ? alreadyOrd : 0) - claimedForItem);
       } else {
-        // Regular calculation: For items with max > 1, allow multiple orders
-        // Only subtract claimedItems and items in cart - NOT pending orders
+        // Regular calculation: For items with max > 1, subtract both alreadyOrdered and claimedItems
         // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
         const shouldAllowMultipleOrders = max > 1;
         const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
@@ -420,17 +447,19 @@ const AllProducts = () => {
           maxQuantitiesKey: maxQuantities[key],
           max, // The max being used (from permissions, default, or maxQuantities)
           maxForClaimedCheck,
+          alreadyOrdered: alreadyOrd,
           claimedForItem,
-          isClaimedMaxReached,
-          _isClaimed: isClaimedMaxReached,
-          _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached,
+          totalUsed,
+          isMaxReached,
+          _isMaxReached: isMaxReached,
+          _orderLimitReached: effectiveMax < 1 || isMaxReached,
           effectiveMax,
         });
       }
       
       // Debug logging for manually granted permissions (old students) and logo patch
       if ((isOldStudent && key) || key === "logo patch" || key === "jogging pants") {
-        console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, Claimed: ${claimedForItem}, isClaimedMaxReached: ${isClaimedMaxReached}`, {
+        console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, AlreadyOrdered: ${alreadyOrd}, Claimed: ${claimedForItem}, TotalUsed: ${totalUsed}, isMaxReached: ${isMaxReached}`, {
           isOldStudent,
           keyMissing,
           maxQuantitiesKey: maxQuantities[key],
@@ -438,9 +467,10 @@ const AllProducts = () => {
           alreadyOrdered: alreadyOrd,
           inCart,
           claimedForItem,
+          totalUsed,
           effectiveMax,
-          _isClaimed: isClaimedMaxReached,
-          _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached,
+          _isMaxReached: isMaxReached,
+          _orderLimitReached: effectiveMax < 1 || isMaxReached,
           maxQuantitiesKeys: Object.keys(maxQuantities),
         });
       }
@@ -452,15 +482,17 @@ const AllProducts = () => {
         cartSlotCount >= slotsLeftForThisOrder;
       return {
         ...p,
-        // FORCE DISABLE: If claimed max is reached, item is ALWAYS disabled
-        _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached,
-        _isClaimed: isClaimedMaxReached, // This forces ProductCard to disable the item
+        // FORCE DISABLE: If max is reached (alreadyOrdered + claimedItems >= max), item is ALWAYS disabled
+        _orderLimitReached: effectiveMax < 1 || isMaxReached,
+        _isClaimed: isMaxReached, // This forces ProductCard to disable the item
         _slotsFullForNewType: slotsFullForNewType,
         _notAllowedForStudentType: notAllowedForStudentType,
         _claimedCount: claimedForItem,
+        _alreadyOrderedCount: alreadyOrd,
+        _totalUsed: totalUsed,
         _maxAllowed: max,
-        // Force effectiveMax to 0 when claimed max is reached
-        _effectiveMax: isClaimedMaxReached ? 0 : effectiveMax,
+        // Force effectiveMax to 0 when max is reached
+        _effectiveMax: isMaxReached ? 0 : effectiveMax,
       };
     });
     // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).

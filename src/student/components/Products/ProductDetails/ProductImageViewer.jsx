@@ -54,10 +54,10 @@ const ProductImageViewer = ({ product, selectedSize, isDisabled = false }) => {
 
   return (
     <div className="relative rounded-2xl overflow-hidden h-full">
-      {/* Product Image Container - same disabled styling as ProductCard; no transition when disabled to avoid blink */}
+      {/* Product Image Container - no background color when disabled, but image still shows disabled styling */}
       <div
         className={`relative flex items-center justify-center p-1 sm:p-2 min-h-[300px] sm:min-h-[400px] md:min-h-[500px] lg:min-h-[600px] h-full ${
-          isDisabled ? "bg-gray-200" : "transition-all duration-300"
+          isDisabled ? "" : "transition-all duration-300"
         }`}
       >
         <img

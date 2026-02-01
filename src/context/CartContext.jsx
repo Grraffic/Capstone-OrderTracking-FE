@@ -208,8 +208,10 @@ export const CartProvider = ({ children }) => {
   /**
    * Remove item from cart
    * @param {string} cartItemId - Cart item ID
+   * @param {Object} options - Options object
+   * @param {boolean} options.suppressToast - If true, don't show the "Item removed from cart" toast
    */
-  const removeFromCart = async (cartItemId) => {
+  const removeFromCart = async (cartItemId, options = {}) => {
     try {
       if (!user?.id) {
         toast.error("Please login to remove items from cart");
@@ -232,7 +234,9 @@ export const CartProvider = ({ children }) => {
         }
         
         dispatch({ type: "REMOVE_ITEM", payload: cartItemId });
-        toast.success("Item removed from cart");
+        if (!options.suppressToast) {
+          toast.success("Item removed from cart");
+        }
       }
     } catch (error) {
       console.error("Remove from cart error:", error);

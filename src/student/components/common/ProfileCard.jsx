@@ -32,7 +32,7 @@ const ProfileCard = ({
       {/* Profile card container - overlaps hero section slightly */}
       <div className="-mt-8 lg:-mt-10">
         {/* Hamburger Menu Icon – original position with margin-top for banner clearance */}
-        <div className="absolute -left-1 top-12 mt-4 z-40 lg:mt-6">
+        <div className="absolute left-1 top-20 mt-4 z-40 lg:mt-6">
           <button
             onClick={toggleProfileVisibility}
             className="p-3 bg-white hover:bg-gray-50 rounded-lg transition-colors shadow-md border-2 border-gray-200"
