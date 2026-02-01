@@ -15,9 +15,9 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const maxAllowed = product._maxAllowed || 0;
 
   const handleProductClick = () => {
-    // FORCE DISABLE: If item is claimed, prevent navigation
-    if (isClaimed) {
-      return; // Block click entirely when item has reached claimed max
+    // FORCE DISABLE: If item is claimed or not allowed for student type, prevent navigation
+    if (isClaimed || notAllowedForStudentType) {
+      return; // Block click entirely when item has reached claimed max or is not allowed
     }
     // Suggested For You may use placeholder id (n-Name); go to all products then
     const id = product.id;
@@ -30,9 +30,10 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   };
 
   const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType && !isClaimed;
-  // FORCE DISABLE: When blocked due to void, slot limit, or claimed max reached, card is ALWAYS disabled
+  // FORCE DISABLE: When blocked due to void, slot limit, claimed max reached, or not allowed for student type, card is ALWAYS disabled
   // isClaimed takes priority - if item has reached claimed max, it MUST be disabled
-  const isDisabled = isAlreadyOrdered || isClaimed || blockedDueToVoid || slotsFullForNewType;
+  // notAllowedForStudentType: item not enabled by admin for old students
+  const isDisabled = isAlreadyOrdered || isClaimed || blockedDueToVoid || slotsFullForNewType || notAllowedForStudentType;
 
   return (
     <div
@@ -68,14 +69,6 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           }}
         />
 
-        {/* Old students: item not in allowed list (logo patch, number patch per level only) */}
-        {notAllowedForStudentType && !isOutOfStock && !isDisabled && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
-            <span className="px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">
-              For New Students only
-            </span>
-          </div>
-        )}
         {/* Pre-Order Button Overlay - Only show when out of stock and not blocked */}
         {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">

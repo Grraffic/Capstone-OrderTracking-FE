@@ -73,9 +73,13 @@ const AllProducts = () => {
     }
   }, [user]);
 
+  // Check if user is old student (used for permission-based ordering and refresh mechanism)
+  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+
   // Refetch limits when an order was just created (e.g. after checkout) or when tab regains focus.
   // When visible and logged in, always refetch so "already ordered" is up to date (e.g. checkout in another tab).
   // On pageshow persisted (bfcache): page restored via Back button; refetch so item stays disabled.
+  // Also refresh periodically for old students to pick up admin permission changes
   useEffect(() => {
     const onOrderCreated = () => setLimitsRefreshTrigger((t) => t + 1);
     const onVisible = () => {
@@ -88,6 +92,17 @@ const AllProducts = () => {
     const onPageShow = (e) => {
       if (e.persisted && user) setLimitsRefreshTrigger((t) => t + 1);
     };
+    
+    // Periodic refresh to pick up admin permission changes (every 30 seconds when page is visible)
+    let refreshInterval = null;
+    if (user && isOldStudent) {
+      refreshInterval = setInterval(() => {
+        if (document.visibilityState === "visible") {
+          setLimitsRefreshTrigger((t) => t + 1);
+        }
+      }, 30000); // Refresh every 30 seconds for old students to pick up admin changes
+    }
+    
     window.addEventListener("order-created", onOrderCreated);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", onPageShow);
@@ -95,8 +110,9 @@ const AllProducts = () => {
       window.removeEventListener("order-created", onOrderCreated);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", onPageShow);
+      if (refreshInterval) clearInterval(refreshInterval);
     };
-  }, [user]);
+  }, [user, isOldStudent]);
 
   // On mount, if we came back after checkout (or landing as logged-in user), refetch limits so "already ordered" is up to date
   useEffect(() => {
@@ -168,10 +184,8 @@ const AllProducts = () => {
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);
 
-  // Old students: only allowed items (logo patch, number patch per level) have max > 0; others are disallowed.
-  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
-
   // Transform inventory items to match product format expected by components
+  // Note: isOldStudent is already defined above for refresh mechanism
   // Group by (name, educationLevel) to remove duplicates caused by different sizes
   const transformedProducts = useMemo(() => {
     // Filter out "New Logo Patch" for old students - they should only see "Logo Patch"
@@ -326,44 +340,108 @@ const AllProducts = () => {
 
   // Enrich products with "already at order limit" and "slots full for new type"
   // Only placed orders count toward the limit—cart does not.
-  // Items for "All Education Levels" (or General) are allowed for everyone, including old students—use default max when key missing.
+  // For old students: ALL items (including "All Education Levels") must be explicitly enabled by admin to be orderable.
   const productsWithLimit = useMemo(() => {
     let list = paginatedItems.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
       const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
-      const educationLevelRaw = (p.educationLevel || p.education_level || "").toString().trim().toLowerCase();
-      const isForAllEducationLevels =
-        educationLevelRaw === "all education levels" || educationLevelRaw === "general";
-      const treatAsAllowedForOldStudent = isForAllEducationLevels;
-      const max =
-        isOldStudent && keyMissing && !treatAsAllowedForOldStudent
-          ? 0
-          : (maxQuantities[key] ?? getDefaultMaxForItem(p.name));
-      const notAllowedForStudentType =
-        isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
+      // For old students: Items must be explicitly enabled in permissions to be orderable
+      // If item is not in maxQuantities (not enabled by admin), it should be disabled (max = 0)
+      // This applies to ALL items, including "All Education Levels" items like logo patch
+      // Only items explicitly enabled by system admin can be ordered
+      let max;
+      if (isOldStudent) {
+        if (keyMissing) {
+          // Old student, item not in maxQuantities (not enabled by admin) → disabled
+          // This applies to ALL items, including "All Education Levels" items
+          max = 0;
+        } else {
+          // Item is in maxQuantities (explicitly enabled by admin) → use that value
+          max = maxQuantities[key];
+        }
+      } else {
+        // New student: Use maxQuantities if available, otherwise default
+        max = maxQuantities[key] ?? getDefaultMaxForItem(p.name);
+      }
+      
+      // For old students: item is not allowed if not in maxQuantities (not enabled by admin)
+      // This applies to ALL items, including "All Education Levels" items
+      const notAllowedForStudentType = isOldStudent && keyMissing;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
       // Get claimed count for this item
       let claimedForItem = claimedItems[key] ?? 0;
-      // FORCE DISABLE: Item is disabled if claimed count has reached or exceeded the max limit
-      // This ensures items with claimed orders cannot be ordered again
-      const isClaimedMaxReached = max > 0 && claimedForItem >= max;
+      // Check if this item has a manually granted permission (for old students)
+      // If it does, allow ordering up to the new max even if previously claimed
+      // The max from permissions is the NEW total allowed, so we calculate remaining
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-      // FORCE: When claimed max is reached, effectiveMax MUST be 0 - no exceptions
-      const effectiveMax = isClaimedMaxReached ? 0 : Math.max(0, max - inCart - alreadyOrd - claimedForItem);
       
-      // Debug logging for logo patch items (after all variables are calculated)
+      // FORCE DISABLE: Check if claimed count has reached or exceeded the max limit
+      // This is a hard requirement - no exceptions, regardless of effectiveMax
+      // IMPORTANT: Always use the same max that was calculated above (from permissions, default, or maxQuantities)
+      // For logo patch and other items, this ensures consistent behavior - if max is 3 and claimed is 3, it's disabled
+      const maxForClaimedCheck = max; // Use the same max that was determined above
+      const isClaimedMaxReached = maxForClaimedCheck > 0 && claimedForItem >= maxForClaimedCheck;
+      
+      // Calculate effective max: max allowed minus what's already ordered/claimed/in cart
+      // For manually granted permissions (old students): The max from permissions is the NEW total allowed
+      // Only when items are claimed do they count toward the permanent limit
+      // For items with max > 1 (like logo patch with max 3), students can place multiple orders
+      // Only subtract claimedItems and items already in cart - NOT pending orders (alreadyOrdered)
+      let effectiveMax;
+      if (isClaimedMaxReached) {
+        // If claimed max is reached, completely block ordering
+        effectiveMax = 0;
+      } else if (isOldStudent && maxQuantities[key] != null) {
+        // Old student with manually granted permission: max from permissions is the NEW total
+        // For items with max > 1, allow multiple orders - only subtract claimed and in-cart items
+        // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+        const newMaxFromPermissions = maxQuantities[key];
+        const shouldAllowMultipleOrders = newMaxFromPermissions > 1;
+        const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+        effectiveMax = Math.max(0, newMaxFromPermissions - inCart - (subtractAlreadyOrdered ? alreadyOrd : 0) - claimedForItem);
+      } else {
+        // Regular calculation: For items with max > 1, allow multiple orders
+        // Only subtract claimedItems and items in cart - NOT pending orders
+        // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+        const shouldAllowMultipleOrders = max > 1;
+        const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+        effectiveMax = Math.max(0, max - inCart - (subtractAlreadyOrdered ? alreadyOrd : 0) - claimedForItem);
+      }
+      
+      // Debug logging specifically for logo patch to track disable logic (after effectiveMax is calculated)
       if (key === "logo patch") {
-        console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, Claimed: ${claimedForItem}, isClaimedMaxReached: ${isClaimedMaxReached}`, {
-          claimedItemsLogoPatch: claimedItems["logo patch"],
-          claimedForItem,
+        console.log(`[AllProducts Logo Patch] Disable Check:`, {
+          itemName: p.name,
+          key,
+          isOldStudent,
+          keyMissing,
           maxQuantitiesKey: maxQuantities[key],
+          max, // The max being used (from permissions, default, or maxQuantities)
+          maxForClaimedCheck,
+          claimedForItem,
+          isClaimedMaxReached,
+          _isClaimed: isClaimedMaxReached,
+          _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached,
+          effectiveMax,
+        });
+      }
+      
+      // Debug logging for manually granted permissions (old students) and logo patch
+      if ((isOldStudent && key) || key === "logo patch" || key === "jogging pants") {
+        console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, Claimed: ${claimedForItem}, isClaimedMaxReached: ${isClaimedMaxReached}`, {
+          isOldStudent,
+          keyMissing,
+          maxQuantitiesKey: maxQuantities[key],
+          max,
           alreadyOrdered: alreadyOrd,
           inCart,
+          claimedForItem,
           effectiveMax,
           _isClaimed: isClaimedMaxReached,
-          _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached
+          _orderLimitReached: effectiveMax < 1 || isClaimedMaxReached,
+          maxQuantitiesKeys: Object.keys(maxQuantities),
         });
       }
       const isNewItemType = key && !cartSlotKeys.has(key);

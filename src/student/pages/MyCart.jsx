@@ -174,7 +174,15 @@ const MyCart = () => {
   // Handle quantity update (cap by max per student for this item, including already placed orders)
   const handleQuantityChange = async (itemId, currentQuantity, change, itemName) => {
     let newQuantity = currentQuantity + change;
-    if (newQuantity < 1) return;
+    if (newQuantity < 1) {
+      // If trying to go below 1, remove the item instead
+      try {
+        await removeFromCart(itemId);
+      } catch (error) {
+        console.error("Failed to remove item:", error);
+      }
+      return;
+    }
 
     const key = itemName != null ? resolveItemKeyForMaxQuantity(itemName) : "";
     const maxForItem = key ? getEffectiveMaxForItem(key) : getDefaultMaxForItem(itemName ?? "");
@@ -183,19 +191,33 @@ const MyCart = () => {
       .reduce((s, i) => s + (Number(i.quantity) || 0), 0);
     const alreadyOrderedForItem = (alreadyOrdered[key] || 0);
     const claimedForItem = (claimedItems[key] || 0);
-    const isClaimed = claimedForItem > 0;
-    // If item is claimed, set quantity to 0 (effectively removing it)
-    if (isClaimed) {
-      newQuantity = 0;
-    } else {
-      const roomForThisLine = maxForItem - (totalForItem - currentQuantity) - alreadyOrderedForItem;
-      newQuantity = Math.min(newQuantity, Math.max(1, roomForThisLine), maxForItem - alreadyOrderedForItem);
+    
+    // Calculate effective max: For items with max > 1, only subtract claimed items
+    // For items with max = 1, subtract both claimed and already ordered to prevent duplicates
+    const shouldAllowMultipleOrders = maxForItem > 1;
+    const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+    const effectiveMax = Math.max(0, maxForItem - (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) - claimedForItem);
+    
+    // Calculate room available for this line item
+    const roomForThisLine = effectiveMax - (totalForItem - currentQuantity);
+    newQuantity = Math.min(newQuantity, Math.max(1, roomForThisLine), effectiveMax);
+
+    // If new quantity would be 0 or less, remove the item instead
+    if (newQuantity < 1) {
+      try {
+        await removeFromCart(itemId);
+        toast.info("Item removed - maximum quantity reached");
+      } catch (error) {
+        console.error("Failed to remove item:", error);
+      }
+      return;
     }
 
     try {
       await updateCartItem(itemId, newQuantity);
     } catch (error) {
       console.error("Failed to update quantity:", error);
+      toast.error("Failed to update quantity");
     }
   };
 
@@ -232,9 +254,14 @@ const MyCart = () => {
     }
     const summary = Object.entries(byKey)
       .filter(([, v]) => {
-        // Block if claimed count has reached max, OR if (cart + already ordered) exceeds max
+        // Block if claimed count has reached max
         const isClaimedMaxReached = v.max > 0 && v.claimed >= v.max;
-        const exceedsMax = (v.total + v.alreadyOrdered) > v.max;
+        // For items with max > 1, only check cart + claimed (don't include already ordered)
+        // For items with max = 1, check cart + claimed + already ordered
+        const shouldAllowMultipleOrders = v.max > 1;
+        const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+        const totalUsed = v.claimed + (subtractAlreadyOrdered ? v.alreadyOrdered : 0) + v.total;
+        const exceedsMax = totalUsed > v.max;
         return isClaimedMaxReached || exceedsMax;
       })
       .map(([key, v]) => ({ key, ...v }));
@@ -436,8 +463,47 @@ const MyCart = () => {
                     const alreadyOrderedForItem = alreadyOrdered[key] || 0;
                     // Get claimed count for this item
                     let claimedForItem = claimedItems[key] || 0;
+                    const isClaimed = claimedForItem > 0;
+                    // For items with max > 1, only count claimed items toward the limit
+                    // For items with max = 1, count both claimed and already ordered to prevent duplicates
+                    const shouldAllowMultipleOrders = maxForItem > 1;
+                    const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+                    // Calculate total used: For max > 1, only claimed + cart; for max = 1, include already ordered
+                    const totalUsed = claimedForItem + (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) + totalForItem;
+                    // Check if adding 1 more would exceed the limit
+                    // Only disable if we would exceed the max (not if we're exactly at max)
+                    // Note: totalUsed already includes current cart quantity, so we check if totalUsed + 1 > maxForItem
+                    const wouldExceedLimit = maxForItem > 0 && (totalUsed + 1) > maxForItem;
+                    // Also disable if claimed items alone have reached the max (can't add any more)
                     const isClaimedMaxReached = maxForItem > 0 && claimedForItem >= maxForItem;
-                    const isOverLimit = isClaimedMaxReached || (totalForItem + alreadyOrderedForItem) > maxForItem;
+                    const isOverLimit = isClaimedMaxReached || totalUsed > maxForItem;
+                    
+                    // Additional check: If maxForItem seems wrong (e.g., 1 for logo patch when it should be 3),
+                    // log a warning but still use the value from API (system admin may have set it intentionally)
+                    if (key === "logo patch" && maxForItem === 1 && claimedForItem === 0 && alreadyOrderedForItem === 0) {
+                      console.warn(`[MyCart] Logo patch maxForItem is 1, but default should be 3. Check system admin settings. maxQuantities["logo patch"]:`, maxQuantities[key]);
+                    }
+                    
+                    // Debug logging for logo patch
+                    if (key === "logo patch" && editMode) {
+                      console.log(`[MyCart Logo Patch Debug]`, {
+                        key,
+                        maxQuantitiesKey: maxQuantities[key],
+                        maxForItem,
+                        getDefaultMaxByKey: getDefaultMaxByKey(key),
+                        isOldStudent,
+                        qty,
+                        totalForItem,
+                        alreadyOrderedForItem,
+                        claimedForItem,
+                        totalUsed,
+                        wouldExceedLimit,
+                        isClaimedMaxReached,
+                        isOverLimit,
+                        buttonDisabled: isClaimedMaxReached || wouldExceedLimit || maxForItem <= 0,
+                        maxQuantitiesObject: maxQuantities
+                      });
+                    }
                     return (
                       <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${isOverLimit ? "bg-amber-50/50" : ""}`}>
                         {editMode && (
@@ -490,7 +556,7 @@ const MyCart = () => {
                                 <button
                                   onClick={() => handleQuantityChange(item.id, qty, 1, name)}
                                   className="w-8 h-8 flex items-center justify-center bg-gray-100 hover:bg-gray-200 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                  disabled={isClaimed || (totalForItem + alreadyOrderedForItem) >= maxForItem}
+                                  disabled={isClaimedMaxReached || wouldExceedLimit || maxForItem <= 0}
                                 >
                                   <Plus className="w-4 h-4 text-gray-700" />
                                 </button>
@@ -539,7 +605,18 @@ const MyCart = () => {
                 const alreadyOrderedForItem = alreadyOrdered[key] || 0;
                 const claimedForItem = claimedItems[key] || 0;
                 const isClaimed = claimedForItem > 0;
-                const isOverLimit = (totalForItem + alreadyOrderedForItem) > maxForItem;
+                // For items with max > 1, only count claimed items toward the limit
+                // For items with max = 1, count both claimed and already ordered to prevent duplicates
+                const shouldAllowMultipleOrders = maxForItem > 1;
+                const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+                // Calculate total used: For max > 1, only claimed + cart; for max = 1, include already ordered
+                const totalUsed = claimedForItem + (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) + totalForItem;
+                // Check if adding 1 more would exceed the limit
+                // Only disable if we would exceed the max (not if we're exactly at max, since we might want to add more)
+                const wouldExceedLimit = maxForItem > 0 && (totalUsed + 1) > maxForItem;
+                // Also disable if claimed items alone have reached the max (can't add any more)
+                const isClaimedMaxReached = maxForItem > 0 && claimedForItem >= maxForItem;
+                const isOverLimit = isClaimedMaxReached || totalUsed > maxForItem;
                 return (
                   <div key={item.id} className={`p-4 ${isOverLimit ? "bg-amber-50/50" : ""}`}>
                     <div className="flex items-start space-x-4">
@@ -604,7 +681,7 @@ const MyCart = () => {
                               <button
                                 onClick={() => handleQuantityChange(item.id, qty, 1, name)}
                                 className="w-7 h-7 flex items-center justify-center bg-white hover:bg-gray-100 rounded-full border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                                disabled={isClaimed || (totalForItem + alreadyOrderedForItem) >= maxForItem}
+                                disabled={isClaimedMaxReached || wouldExceedLimit || maxForItem <= 0}
                               >
                                 <Plus className="w-3 h-3 text-gray-700" />
                               </button>

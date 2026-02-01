@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { X, Plus } from "lucide-react";
 import { splitDisplayName } from "../../../utils/displayName";
+import studentPermissionsAPI from "../../../services/studentPermissions.service";
+import { toast } from "react-hot-toast";
+import { getDefaultMaxForItem, normalizeItemName } from "../../../utils/maxQuantityKeys";
+import api from "../../../services/api";
 
 /**
  * EditStudentOrderLimitsModal Component
  *
  * Modal for editing a single student's information including total_item_limit, student_number, course_year_level, and student_type.
+ * Also includes item eligibility management with checkboxes and quantities.
  * Used when the row Edit (pencil) is clicked.
  */
 const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
@@ -80,6 +85,9 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
   });
 
   const [errors, setErrors] = useState({});
+  const [items, setItems] = useState([]);
+  const [itemPermissions, setItemPermissions] = useState({}); // {itemName: {enabled: boolean, quantity: number|null}}
+  const [loadingItems, setLoadingItems] = useState(false);
 
   // Prefill from student when modal opens or student changes
   useEffect(() => {
@@ -99,6 +107,57 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     }
   }, [isOpen, student]);
 
+  // Fetch items when modal opens and student data is available
+  useEffect(() => {
+    if (isOpen && student?.id) {
+      fetchItems();
+    }
+  }, [isOpen, student, formData.courseYearLevel, formData.studentType, formData.gender]);
+
+  // Update permissions when student type changes (only for items without existing permissions)
+  useEffect(() => {
+    if (items.length > 0 && formData.studentType && isOpen) {
+      const isOldStudent = String(formData.studentType).toLowerCase() === "old";
+      const educationLevel = getEducationLevel(formData.courseYearLevel) || "";
+      
+      setItemPermissions((prevPermissions) => {
+        const updatedPermissions = { ...prevPermissions };
+        
+        items.forEach((item) => {
+          // Only set defaults if this item doesn't have a permission yet
+          if (!updatedPermissions[item.normalizedName]) {
+            const normalizedItemName = normalizeItemName(item.name);
+            const isLogoPatch = normalizedItemName.includes("logo patch");
+            
+            if (isOldStudent) {
+              updatedPermissions[item.normalizedName] = {
+                enabled: isLogoPatch, // Only logo patch enabled for old students
+                quantity: getDefaultQuantityForItem(
+                  item.name,
+                  educationLevel,
+                  formData.studentType,
+                  formData.gender || ""
+                ),
+              };
+            } else {
+              updatedPermissions[item.normalizedName] = {
+                enabled: true, // All items enabled for new students
+                quantity: getDefaultQuantityForItem(
+                  item.name,
+                  educationLevel,
+                  formData.studentType,
+                  formData.gender || ""
+                ),
+              };
+            }
+          }
+        });
+        
+        return updatedPermissions;
+      });
+    }
+  }, [formData.studentType, items.length, isOpen]);
+
   // Reset when closed
   useEffect(() => {
     if (!isOpen) {
@@ -111,8 +170,147 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
         gender: "",
       });
       setErrors({});
+      setItems([]);
+      setItemPermissions({});
     }
   }, [isOpen]);
+
+  const fetchItems = async () => {
+    if (!student?.id) return;
+
+    const educationLevel = getEducationLevel(formData.courseYearLevel) || 
+                          student.education_level || 
+                          student.educationLevel || 
+                          "";
+    
+    if (!educationLevel) {
+      // Don't fetch if education level is not set yet
+      return;
+    }
+
+    setLoadingItems(true);
+    try {
+      // Fetch items directly from the items API (property custodian)
+      const studentType = formData.studentType || student.student_type || "new";
+      const response = await api.get("/items", {
+        params: {
+          userEducationLevel: educationLevel,
+          studentType: studentType,
+          limit: 10000,
+          page: 1,
+        },
+      });
+
+      if (response.data?.success) {
+        // Get all items from the response - handle different response structures
+        const allItems = response.data?.data?.items || response.data?.data || response.data?.items || [];
+        
+        if (allItems.length === 0) {
+          console.warn("No items returned from API");
+          setItems([]);
+          setItemPermissions({});
+          setLoadingItems(false);
+          return;
+        }
+        
+        // Normalize items and remove duplicates by normalized name
+        const itemsMap = new Map();
+        allItems.forEach((item) => {
+          const normalizedName = normalizeItemName(item.name);
+          if (!itemsMap.has(normalizedName)) {
+            itemsMap.set(normalizedName, {
+              id: item.id,
+              name: item.name,
+              normalizedName: normalizedName,
+              category: item.category,
+              itemType: item.item_type,
+              educationLevel: item.education_level || item.educationLevel,
+            });
+          }
+        });
+
+        const uniqueItems = Array.from(itemsMap.values());
+        setItems(uniqueItems);
+
+        // Get existing permissions for this student
+        let existingPermissions = {};
+        try {
+          const permResponse = await studentPermissionsAPI.getStudentItemPermissions(student.id);
+          if (permResponse.data?.success && permResponse.data?.data) {
+            existingPermissions = permResponse.data.data;
+          }
+        } catch (permError) {
+          console.warn("Could not fetch existing permissions:", permError);
+        }
+
+        // Initialize permissions based on student type
+        const initialPermissions = {};
+        const isOldStudent = String(studentType).toLowerCase() === "old";
+        
+        uniqueItems.forEach((item) => {
+          const defaultQuantity = getDefaultQuantityForItem(
+            item.name,
+            educationLevel,
+            studentType,
+            formData.gender || student.gender || ""
+          );
+          
+          // Check if this is a logo patch item
+          const normalizedItemName = normalizeItemName(item.name);
+          const isLogoPatch = normalizedItemName.includes("logo patch");
+          
+          // For old students: logo patch is unchecked by default, other items remain unchecked
+          // For new students: all items are enabled by default
+          let defaultEnabled = false;
+          if (isOldStudent) {
+            // Logo patch is unchecked by default for old students
+            // Other items also remain unchecked (no special treatment)
+            defaultEnabled = false;
+          } else {
+            defaultEnabled = true; // All items enabled for new students
+          }
+          
+          // Use existing permission if available, otherwise use defaults
+          const existingPerm = existingPermissions[item.normalizedName];
+          if (existingPerm) {
+            // Existing permission found - use it
+            initialPermissions[item.normalizedName] = {
+              enabled: typeof existingPerm === "object" ? existingPerm.enabled : existingPerm,
+              quantity: typeof existingPerm === "object" && existingPerm.quantity != null 
+                ? existingPerm.quantity 
+                : defaultQuantity,
+            };
+          } else {
+            // No existing permission - use defaults
+            initialPermissions[item.normalizedName] = {
+              enabled: defaultEnabled,
+              quantity: defaultQuantity,
+            };
+          }
+        });
+        setItemPermissions(initialPermissions);
+      } else {
+        const errorMsg = response.data?.error || response.data?.message || "Failed to fetch items";
+        console.error("Failed to fetch items:", errorMsg);
+        toast.error(errorMsg);
+        setItems([]);
+        setItemPermissions({});
+      }
+    } catch (error) {
+      console.error("Error fetching items:", error);
+      const errorMsg = error.response?.data?.message || error.message || "Failed to fetch items";
+      toast.error(errorMsg);
+      setItems([]);
+      setItemPermissions({});
+    } finally {
+      setLoadingItems(false);
+    }
+  };
+
+  const getDefaultQuantityForItem = (itemName, educationLevel, studentType, gender) => {
+    // Use the default max from the utility
+    return getDefaultMaxForItem(itemName);
+  };
 
   const handleInputChange = (field, value) => {
     // For numeric fields (maxItemsPerOrder), only allow numbers
@@ -149,6 +347,39 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     }));
   };
 
+  const handleItemQuantityChange = (itemName, quantity) => {
+    const numericValue = quantity.replace(/[^0-9]/g, "");
+    setItemPermissions((prev) => ({
+      ...prev,
+      [itemName]: {
+        ...prev[itemName],
+        quantity: numericValue ? parseInt(numericValue, 10) : null,
+      },
+    }));
+  };
+
+  const handleItemQuantityIncrement = (itemName) => {
+    const currentPerm = itemPermissions[itemName] || { enabled: false, quantity: 1 };
+    const currentQuantity = currentPerm.quantity || 1;
+    setItemPermissions((prev) => ({
+      ...prev,
+      [itemName]: {
+        ...prev[itemName],
+        quantity: currentQuantity + 1,
+      },
+    }));
+  };
+
+  const handleItemEligibilityChange = (itemName, enabled) => {
+    setItemPermissions((prev) => ({
+      ...prev,
+      [itemName]: {
+        ...(prev[itemName] || { quantity: 1 }),
+        enabled: enabled,
+      },
+    }));
+  };
+
   const validateForm = () => {
     const newErrors = {};
     
@@ -176,11 +407,46 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateForm()) {
       return;
     }
 
+    const updateData = buildUpdateData();
+
+    // Save item permissions if student ID exists
+    if (student?.id) {
+      try {
+        const response = await studentPermissionsAPI.updateStudentItemPermissions(
+          student.id,
+          itemPermissions
+        );
+        
+        if (response.data?.success) {
+          toast.success("Student data and item permissions updated successfully");
+        } else {
+          const errorMsg = response.data?.error || response.data?.message || "Failed to save permissions";
+          console.error("Error saving permissions:", errorMsg);
+          toast.error(errorMsg);
+          return;
+        }
+      } catch (error) {
+        console.error("Error saving permissions:", error);
+        const errorMsg = error.response?.data?.error || error.response?.data?.message || error.message || "Failed to save item permissions";
+        toast.error(errorMsg);
+        
+        // If table doesn't exist, provide helpful message
+        if (errorMsg.includes("does not exist") || errorMsg.includes("42P01")) {
+          toast.error("Database table missing. Please run migrations first.");
+        }
+        return;
+      }
+    }
+
+    onSave(updateData);
+  };
+
+  const buildUpdateData = () => {
     const updateData = {};
     // Total Item Limit is optional - only include if provided
     if (formData.maxItemsPerOrder && formData.maxItemsPerOrder.trim() !== "") {
@@ -206,20 +472,23 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     if (formData.gender !== undefined) {
       updateData.gender = formData.gender.trim() || null;
     }
-
-    onSave(updateData);
+    return updateData;
   };
 
   if (!isOpen) return null;
 
   const displayName = student ? splitDisplayName(student.name || "").displayName || "Student" : "Student";
+  const educationLevel = getEducationLevel(formData.courseYearLevel) || student?.education_level || student?.educationLevel || "";
+
+  // Items are already filtered by education level in fetchItems, so we can use them directly
+  const filteredItems = items;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-[9999] flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full z-[10000]">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full z-[10000] max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
           <h2 className="text-xl font-semibold text-[#0C2340]">
-            <span className="text-[#e68b00]">Edit Order Limits</span>
+            <span className="text-[#e68b00]">Edit User</span>
           </h2>
           <button
             onClick={onClose}
@@ -237,215 +506,256 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
             </p>
           </div>
 
+          {/* Student Information - New Layout */}
+          <div className="space-y-4">
+            {/* Row 1: Student Name (left) and Student Number (right) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Student Name
+                </label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  placeholder="Enter student name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Student Number
+                </label>
+                <input
+                  type="text"
+                  value={formData.studentNumber}
+                  onChange={(e) => handleInputChange("studentNumber", e.target.value)}
+                  placeholder="e.g. 22-11223"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
+                />
+              </div>
+            </div>
 
-          {/* Student Information Table */}
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
-                    Field
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider border-b border-gray-200">
-                    Value
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {/* Student ID */}
-                <tr>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">
-                    Student ID
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="text"
-                      value={formData.studentNumber}
-                      onChange={(e) => handleInputChange("studentNumber", e.target.value)}
-                      placeholder="e.g. 22-11223"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
-                    />
-                  </td>
-                </tr>
-                {/* Student Name */}
-                <tr>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">
-                    Student Name
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="text"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="Enter student name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm"
-                    />
-                  </td>
-                </tr>
-                {/* Grade Level */}
-                <tr>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">
-                    Grade Level <span className="text-red-500">*</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={formData.courseYearLevel}
-                      onChange={(e) => handleInputChange("courseYearLevel", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
-                        errors.courseYearLevel ? "border-red-500" : "border-gray-300"
-                      }`}
-                    >
-                      <option value="">Select Grade Level</option>
-                      <optgroup label="Preschool">
-                        {gradeLevelOptions
-                          .filter((opt) => opt.category === "Preschool")
-                          .map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                      <optgroup label="Elementary">
-                        {gradeLevelOptions
-                          .filter((opt) => opt.category === "Elementary")
-                          .map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                      <optgroup label="Junior High School">
-                        {gradeLevelOptions
-                          .filter((opt) => opt.category === "Junior High School")
-                          .map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                      <optgroup label="Senior High School">
-                        {gradeLevelOptions
-                          .filter((opt) => opt.category === "Senior High School")
-                          .map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                      <optgroup label="College">
-                        {gradeLevelOptions
-                          .filter((opt) => opt.category === "College")
-                          .map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                      </optgroup>
-                    </select>
-                    {errors.courseYearLevel && (
-                      <p className="text-red-600 text-xs mt-1">{errors.courseYearLevel}</p>
-                    )}
-                  </td>
-                </tr>
-                {/* Student Type */}
-                <tr>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">
-                    Student Type <span className="text-red-500">*</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={formData.studentType}
-                      onChange={(e) => handleInputChange("studentType", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
-                        errors.studentType ? "border-red-500" : "border-gray-300"
-                      }`}
-                    >
-                      <option value="">Select Student Type</option>
-                      <option value="new">New Student</option>
-                      <option value="old">Old Student</option>
-                    </select>
-                    {errors.studentType && (
-                      <p className="text-red-600 text-xs mt-1">{errors.studentType}</p>
-                    )}
-                  </td>
-                </tr>
-                {/* Gender */}
-                <tr>
-                  <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">
-                    Gender <span className="text-red-500">*</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => handleInputChange("gender", e.target.value)}
-                      className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
-                        errors.gender ? "border-red-500" : "border-gray-300"
-                      }`}
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                    </select>
-                    {errors.gender && (
-                      <p className="text-red-600 text-xs mt-1">{errors.gender}</p>
-                    )}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {/* Row 2: Grade Level (left) and Student Type (right) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Grade Level <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.courseYearLevel}
+                  onChange={(e) => handleInputChange("courseYearLevel", e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                    errors.courseYearLevel ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select Grade Level</option>
+                  <optgroup label="Preschool">
+                    {gradeLevelOptions
+                      .filter((opt) => opt.category === "Preschool")
+                      .map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Elementary">
+                    {gradeLevelOptions
+                      .filter((opt) => opt.category === "Elementary")
+                      .map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Junior High School">
+                    {gradeLevelOptions
+                      .filter((opt) => opt.category === "Junior High School")
+                      .map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="Senior High School">
+                    {gradeLevelOptions
+                      .filter((opt) => opt.category === "Senior High School")
+                      .map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                  <optgroup label="College">
+                    {gradeLevelOptions
+                      .filter((opt) => opt.category === "College")
+                      .map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                  </optgroup>
+                </select>
+                {errors.courseYearLevel && (
+                  <p className="text-red-600 text-xs mt-1">{errors.courseYearLevel}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Student Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.studentType}
+                  onChange={(e) => handleInputChange("studentType", e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                    errors.studentType ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select Student Type</option>
+                  <option value="new">New Student</option>
+                  <option value="old">Old Student</option>
+                </select>
+                {errors.studentType && (
+                  <p className="text-red-600 text-xs mt-1">{errors.studentType}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Row 3: Gender (left) and Total Item Limit (right) */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Gender <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={formData.gender}
+                  onChange={(e) => handleInputChange("gender", e.target.value)}
+                  className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                    errors.gender ? "border-red-500" : "border-gray-300"
+                  }`}
+                >
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+                {errors.gender && (
+                  <p className="text-red-600 text-xs mt-1">{errors.gender}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Total Item Limit <span className="text-gray-400 text-xs">(Optional)</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formData.maxItemsPerOrder}
+                    onChange={(e) => handleInputChange("maxItemsPerOrder", e.target.value)}
+                    placeholder="e.g. 5"
+                    className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
+                      errors.maxItemsPerOrder ? "border-red-500" : "border-gray-300"
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleIncrement("maxItemsPerOrder")}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                    title="Increment"
+                  >
+                    <Plus size={18} className="text-gray-600" />
+                  </button>
+                </div>
+                {errors.maxItemsPerOrder && (
+                  <p className="text-red-600 text-xs mt-1">{errors.maxItemsPerOrder}</p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Students cannot place orders until this is set.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Item Eligibility Table - 3 Columns */}
+          <div className="mt-6 border-t border-gray-200 pt-6">
+            <h3 className="text-lg font-semibold text-[#0C2340] mb-4">Item Eligibility</h3>
+            
+            {loadingItems ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="text-gray-500">Loading items...</div>
+              </div>
+            ) : filteredItems.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                {educationLevel ? "No items found for this education level." : "Please select Grade Level to see items."}
+              </div>
+            ) : (
+              <div className="border border-gray-200 rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-[#0C2340] text-white">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold">Item Name</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold">Eligible Item</th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold">Quantity</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredItems.map((item) => {
+                      const permission = itemPermissions[item.normalizedName] || { enabled: false, quantity: 1 };
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
+                          <td className="px-4 py-3 text-center">
+                            <input
+                              type="checkbox"
+                              checked={permission.enabled}
+                              onChange={(e) => handleItemEligibilityChange(item.normalizedName, e.target.checked)}
+                              className="w-5 h-5 text-[#0C2340] border-gray-300 rounded focus:ring-[#0C2340] focus:ring-2"
+                            />
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <input
+                                type="text"
+                                value={permission.quantity || ""}
+                                onChange={(e) => handleItemQuantityChange(item.normalizedName, e.target.value)}
+                                placeholder="1"
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm text-center"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleItemQuantityIncrement(item.normalizedName)}
+                                className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                                title="Increment"
+                              >
+                                <Plus size={16} className="text-gray-600" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 border-t border-gray-200">
-          {/* Total Item Limit - Optional field next to buttons */}
-          <div className="flex-1 sm:flex-initial">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Total Item Limit <span className="text-gray-400 text-xs">(Optional)</span>
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={formData.maxItemsPerOrder}
-                onChange={(e) => handleInputChange("maxItemsPerOrder", e.target.value)}
-                placeholder="e.g. 5"
-                className={`w-full sm:w-32 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm ${
-                  errors.maxItemsPerOrder ? "border-red-500" : "border-gray-300"
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => handleIncrement("maxItemsPerOrder")}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                title="Increment"
-              >
-                <Plus size={18} className="text-gray-600" />
-              </button>
-            </div>
-            {errors.maxItemsPerOrder && (
-              <p className="text-red-600 text-xs mt-1">{errors.maxItemsPerOrder}</p>
-            )}
-            <p className="text-xs text-gray-500 mt-1">
-              Students cannot place orders until this is set.
-            </p>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex gap-3 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-4 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium"
-            >
-              Save
-            </button>
-          </div>
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 p-6 border-t border-gray-200 sticky bottom-0 bg-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-4 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium"
+          >
+            Save
+          </button>
         </div>
       </div>
     </div>

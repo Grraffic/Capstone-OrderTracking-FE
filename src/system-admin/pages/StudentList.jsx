@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import StudentTable from "../components/StudentManagement/StudentTable";
 import StudentFilters from "../components/StudentManagement/StudentFilters";
@@ -8,6 +8,7 @@ import DeleteStudentModal from "../components/StudentManagement/DeleteStudentMod
 import AddStudentModal from "../components/StudentManagement/AddStudentModal";
 import UserModal from "../components/UserManagement/UserModal";
 import { useUsers } from "../hooks/useUsers";
+import { useSocketStudentUpdates } from "../hooks/useSocketStudentUpdates";
 import { userAPI } from "../../services/user.service";
 import { toast } from "react-hot-toast";
 import { ChevronLeft, ChevronRight, GraduationCap, FileCheck, DollarSign, XCircle, FileX } from "lucide-react";
@@ -90,6 +91,22 @@ const StudentList = () => {
     return false;
   };
 
+  // Function to refresh student list with current filters
+  const refreshStudentList = useCallback(() => {
+    const mappedEducationLevel = mapEducationLevelToDB(educationLevel);
+    const mappedGradeLevel = mapGradeLevelToDB(gradeLevel);
+    const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
+    
+    fetchUsers({
+      page: currentPage,
+      search: search || "",
+      role: "student",
+      education_level: mappedEducationLevel,
+      course_year_level: mappedGradeLevel,
+      school_year: schoolYearPrefix,
+    });
+  }, [currentPage, search, educationLevel, gradeLevel, schoolYear, fetchUsers]);
+
   // Fetch students when filters change (reset to page 1)
   // This handles both initial load and filter changes
   useEffect(() => {
@@ -134,6 +151,37 @@ const StudentList = () => {
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, educationLevel, gradeLevel, schoolYear]);
+
+  // Handle real-time student updates via WebSocket
+  const handleStudentUpdate = useCallback((event) => {
+    const { type, data } = event;
+    console.log(`📡 [StudentList] Received student update: ${type}`, data);
+
+    // Refresh the student list to reflect changes
+    // This ensures the list stays in sync with the current filters
+    refreshStudentList();
+
+    // Show toast notifications for user feedback
+    switch (type) {
+      case "created":
+        // Don't show toast for created - the modal already shows success
+        break;
+      case "updated":
+        // Don't show toast for updated - the modal already shows success
+        break;
+      case "deleted":
+        // Don't show toast for deleted - the modal already shows success
+        break;
+      case "bulk-updated":
+        // Don't show toast for bulk updated - the modal already shows success
+        break;
+      default:
+        console.log(`📡 [StudentList] Unknown student update type: ${type}`);
+    }
+  }, [refreshStudentList]);
+
+  // Connect to WebSocket for real-time updates
+  useSocketStudentUpdates(handleStudentUpdate);
 
   // Handle pagination
   const handleNextPage = () => {
@@ -568,6 +616,7 @@ const StudentList = () => {
           isOpen={isEditTableModalOpen}
           onClose={() => setIsEditTableModalOpen(false)}
           selectedCount={selectedStudents.length}
+          selectedStudents={users.filter((user) => selectedStudents.includes(user.id))}
           onSave={handleBulkUpdate}
         />
 

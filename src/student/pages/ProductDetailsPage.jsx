@@ -98,7 +98,12 @@ const ProductDetailsPage = () => {
 
   // Refetch limits when an order was just created (e.g. after checkout) or when tab regains focus.
   // When visible and logged in, always refetch so "already ordered" is up to date (e.g. checkout in another tab).
+  // Check if user is old student (used for permission-based ordering and refresh mechanism)
+  // Must be defined before useEffect that uses it
+  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+
   // On pageshow persisted (bfcache): page was restored via Back button; refetch so item stays disabled.
+  // Also refresh periodically to pick up admin permission changes
   useEffect(() => {
     const onOrderCreated = () => setLimitsRefreshTrigger((t) => t + 1);
     const onVisible = () => {
@@ -111,6 +116,17 @@ const ProductDetailsPage = () => {
     const onPageShow = (e) => {
       if (e.persisted && user) setLimitsRefreshTrigger((t) => t + 1);
     };
+    
+    // Periodic refresh to pick up admin permission changes (every 30 seconds when page is visible)
+    let refreshInterval = null;
+    if (user && isOldStudent) {
+      refreshInterval = setInterval(() => {
+        if (document.visibilityState === "visible") {
+          setLimitsRefreshTrigger((t) => t + 1);
+        }
+      }, 30000); // Refresh every 30 seconds for old students to pick up admin changes
+    }
+    
     window.addEventListener("order-created", onOrderCreated);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", onPageShow);
@@ -118,8 +134,9 @@ const ProductDetailsPage = () => {
       window.removeEventListener("order-created", onOrderCreated);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", onPageShow);
+      if (refreshInterval) clearInterval(refreshInterval);
     };
-  }, [user]);
+  }, [user, isOldStudent]);
 
   // On mount / when user is set: refetch limits so "already ordered" disables Add/Order (e.g. after checkout)
   useEffect(() => {
@@ -398,8 +415,7 @@ const ProductDetailsPage = () => {
     (s) => s.size === selectedSize
   );
 
-  // Old students: only allowed items (logo patch, number patch per level) have max > 0; others are disallowed.
-  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+  // Note: isOldStudent is already defined above for refresh mechanism
 
   // Resolve product name to the key used by GET /auth/max-quantities (e.g. "jogging pants" -> 1 for Kindergarten)
   const maxQuantityKey = product ? resolveItemKeyForMaxQuantity(product.name) : "";
@@ -410,17 +426,32 @@ const ProductDetailsPage = () => {
     resolvedMaxKey = matchingKeys.sort((a, b) => b.length - a.length)[0] ?? maxQuantityKey;
   }
   const keyNotInMaxQuantities = product && (maxQuantities[resolvedMaxKey] === undefined || maxQuantities[resolvedMaxKey] === null);
-  const productEducationLevelRaw = (product?.educationLevel || product?.education_level || "").toString().trim().toLowerCase();
-  const productIsForAllEducationLevels =
-    productEducationLevelRaw === "all education levels" || productEducationLevelRaw === "general";
-  const treatMainProductAllowedForOldStudent = productIsForAllEducationLevels;
-  const maxForItem =
-    product && maxQuantities[resolvedMaxKey] != null
-      ? maxQuantities[resolvedMaxKey]
-      : isOldStudent && keyNotInMaxQuantities && !treatMainProductAllowedForOldStudent
-        ? 0
-        : getDefaultMaxForItem(product?.name);
-  const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities && !treatMainProductAllowedForOldStudent;
+  // For old students: Items must be explicitly enabled in permissions to be orderable
+  // If item is not in maxQuantities (not enabled by admin), it should be disabled (max = 0)
+  // This applies to ALL items, including "All Education Levels" items like logo patch
+  // Only items explicitly enabled by system admin can be ordered
+  let maxForItem;
+  if (product) {
+    if (isOldStudent) {
+      if (maxQuantities[resolvedMaxKey] != null) {
+        // Item is in maxQuantities (explicitly enabled by admin) → use that value
+        maxForItem = maxQuantities[resolvedMaxKey];
+      } else {
+        // Old student, item not in maxQuantities (not enabled by admin) → disabled
+        // This applies to ALL items, including "All Education Levels" items
+        maxForItem = 0;
+      }
+    } else {
+      // New student: Use maxQuantities if available, otherwise default
+      maxForItem = maxQuantities[resolvedMaxKey] ?? getDefaultMaxForItem(product?.name);
+    }
+  } else {
+    maxForItem = 0;
+  }
+  
+  // For old students: item is not allowed if not in maxQuantities (not enabled by admin)
+  // This applies to ALL items, including "All Education Levels" items
+  const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities;
   const effectiveStock = product
     ? (requiresSizeSelection
         ? (selectedSizeData?.stock ?? product?.stock ?? 999)
@@ -472,9 +503,15 @@ const ProductDetailsPage = () => {
       ? (Number(claimedItems["jogging pants"]) || 0)
       : 0;
   let claimedForItem = Math.max(baseClaimed, joggingClaimedFallback);
+  
+  // For manually granted permissions (old students): Check if this item has a permission
+  // If it does, the max from permissions is the NEW total allowed, so we should use that for claimed check
+  const hasManualPermission = isOldStudent && maxQuantities[productResolvedKey] != null;
+  const maxForClaimedCheck = hasManualPermission ? maxQuantities[productResolvedKey] : maxForItem;
+  
   // FORCE DISABLE: Item is disabled if claimed count has reached or exceeded the max limit
   // This is a hard requirement - no exceptions
-  const isClaimedMaxReached = maxForItem > 0 && claimedForItem >= maxForItem;
+  const isClaimedMaxReached = maxForClaimedCheck > 0 && claimedForItem >= maxForClaimedCheck;
   
   // Debug logging for logo patch items
   if (productResolvedKey === "logo patch") {
@@ -485,13 +522,57 @@ const ProductDetailsPage = () => {
     });
   }
   
-  // FORCE: When claimed max is reached, effectiveMax MUST be 0 - completely block ordering
-  const effectiveMax = product
-    ? (isClaimedMaxReached ? 0 : Math.min(
-        Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem - claimedForItem),
+  // For manually granted permissions (old students): The max from permissions is the NEW total allowed
+  // Only when items are claimed do they count toward the permanent limit
+  // For items with max > 1 (like logo patch with max 3), students can place multiple orders
+  // Only subtract claimedItems and items already in cart - NOT pending orders (alreadyOrdered)
+  let effectiveMax;
+  if (product) {
+    if (isClaimedMaxReached) {
+      // If claimed max is reached, completely block ordering
+      effectiveMax = 0;
+    } else if (isOldStudent && maxQuantities[productResolvedKey] != null) {
+      // Old student with manually granted permission: max from permissions is the NEW total
+      // For items with max > 1, allow multiple orders - only subtract claimed and in-cart items
+      // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+      const newMaxFromPermissions = maxQuantities[productResolvedKey];
+      const shouldAllowMultipleOrders = newMaxFromPermissions > 1;
+      const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+      effectiveMax = Math.min(
+        Math.max(0, newMaxFromPermissions - alreadyInCart - (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) - claimedForItem),
         effectiveStock || 999
-      ))
-    : getDefaultMaxForItem("");
+      );
+    } else {
+      // Regular calculation: For items with max > 1, allow multiple orders
+      // Only subtract claimedItems and items in cart - NOT pending orders
+      // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+      const shouldAllowMultipleOrders = maxForItem > 1;
+      const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+      effectiveMax = Math.min(
+        Math.max(0, maxForItem - alreadyInCart - (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) - claimedForItem),
+        effectiveStock || 999
+      );
+    }
+  } else {
+    effectiveMax = getDefaultMaxForItem("");
+  }
+
+  // Debug logging for manually granted permissions (old students)
+  if (product && isOldStudent && productResolvedKey) {
+    console.log(`[ProductDetailsPage] Permission Debug for ${product.name}:`, {
+      itemKey: productResolvedKey,
+      maxQuantitiesKey: maxQuantities[productResolvedKey],
+      maxForItem,
+      newMaxFromPermissions: isOldStudent && maxQuantities[productResolvedKey] != null ? maxQuantities[productResolvedKey] : null,
+      alreadyInCart,
+      alreadyOrderedForItem,
+      claimedForItem,
+      effectiveMax,
+      isClaimedMaxReached,
+      maxQuantitiesKeys: Object.keys(maxQuantities),
+      calculationType: isOldStudent && maxQuantities[productResolvedKey] != null ? "permission-based (re-order allowed)" : "standard",
+    });
+  }
   
   // FORCE: If claimed max is reached, also set isDisabled to true
   const isDisabledDueToClaimed = isClaimedMaxReached;
@@ -517,16 +598,29 @@ const ProductDetailsPage = () => {
     return filtered.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
       const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
-      const educationLevelRaw = (p.educationLevel || p.education_level || "").toString().trim().toLowerCase();
-      const isForAllEducationLevels =
-        educationLevelRaw === "all education levels" || educationLevelRaw === "general";
-      const treatAsAllowedForOldStudent = isForAllEducationLevels;
-      const max =
-        isOldStudent && keyMissing && !treatAsAllowedForOldStudent
-          ? 0
-          : (maxQuantities[key] ?? getDefaultMaxForItem(p.name));
-      const notAllowedForStudentType =
-        isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
+      
+      // For old students: Items must be explicitly enabled in permissions to be orderable
+      // If item is not in maxQuantities (not enabled by admin), it should be disabled (max = 0)
+      // This applies to ALL items, including "All Education Levels" items like logo patch
+      // Only items explicitly enabled by system admin can be ordered
+      let max;
+      if (isOldStudent) {
+        if (keyMissing) {
+          // Old student, item not in maxQuantities (not enabled by admin) → disabled
+          // This applies to ALL items, including "All Education Levels" items
+          max = 0;
+        } else {
+          // Item is in maxQuantities (explicitly enabled by admin) → use that value
+          max = maxQuantities[key];
+        }
+      } else {
+        // New student: Use maxQuantities if available, otherwise default
+        max = maxQuantities[key] ?? getDefaultMaxForItem(p.name);
+      }
+      
+      // For old students: item is not allowed if not in maxQuantities (not enabled by admin)
+      // This applies to ALL items, including "All Education Levels" items
+      const notAllowedForStudentType = isOldStudent && keyMissing;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
       // Get claimed count for this item
       let claimedForItem = claimedItems[key] ?? 0;
@@ -971,12 +1065,6 @@ const ProductDetailsPage = () => {
                     </div>
                   )}
                   {/* Old students: this item is not in the allowed list (logo patch, number patch per level only). */}
-                  {notAllowedForStudentType && (
-                    <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                      <p className="font-medium">This item is only available for New Students.</p>
-                      <p className="mt-1 text-amber-700">As an Old Student you can only order: Logo Patch (max 3) and, for Elementary/Junior High/Senior High, Number Patch per grade (max 3).</p>
-                    </div>
-                  )}
                   {/* Quantity Selector */}
                   <div className="space-y-2 sm:space-y-3">
                     <h3 className="text-xs sm:text-sm font-semibold text-gray-700">
