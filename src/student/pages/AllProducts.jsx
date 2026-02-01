@@ -168,11 +168,24 @@ const AllProducts = () => {
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);
 
+  // Old students: only allowed items (logo patch, number patch per level) have max > 0; others are disallowed.
+  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
+
   // Transform inventory items to match product format expected by components
   // Group by (name, educationLevel) to remove duplicates caused by different sizes
   const transformedProducts = useMemo(() => {
+    // Filter out "New Logo Patch" for old students - they should only see "Logo Patch"
+    let itemsToProcess = items;
+    if (isOldStudent) {
+      itemsToProcess = items.filter((item) => {
+        const itemName = (item.name || "").toLowerCase();
+        // Exclude "new logo patch" items for old students
+        return !itemName.includes("new logo patch");
+      });
+    }
+
     // Group items by name and education level
-    const groupedItems = items.reduce((acc, item) => {
+    const groupedItems = itemsToProcess.reduce((acc, item) => {
       const key = `${item.name}-${item.educationLevel}`;
 
       if (!acc[key]) {
@@ -223,7 +236,7 @@ const AllProducts = () => {
         _originalItem: baseItem,
       };
     });
-  }, [items]);
+  }, [items, isOldStudent]);
 
   // Filter products by category and search
   // Note: Education level filtering is now handled by the backend via eligibility table
@@ -310,9 +323,6 @@ const AllProducts = () => {
     totalItemLimit != null && Number(totalItemLimit) > 0
       ? Math.max(0, Number(totalItemLimit) - (Number(slotsUsedFromPlacedOrders) || 0))
       : 0;
-
-  // Old students: only allowed items (new logo patch, number patch per level) have max > 0; others are disallowed.
-  const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
 
   // Enrich products with "already at order limit" and "slots full for new type"
   // Only placed orders count toward the limit—cart does not.

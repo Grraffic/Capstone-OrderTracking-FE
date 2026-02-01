@@ -68,7 +68,7 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           }}
         />
 
-        {/* Old students: item not in allowed list (new logo patch, number patch per level only) */}
+        {/* Old students: item not in allowed list (logo patch, number patch per level only) */}
         {notAllowedForStudentType && !isOutOfStock && !isDisabled && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#F3F3F3]/60">
             <span className="px-4 py-2 bg-gray-600 text-white text-sm font-semibold rounded-full shadow-lg text-center">

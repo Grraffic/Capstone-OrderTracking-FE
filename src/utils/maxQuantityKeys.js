@@ -7,7 +7,7 @@
 /** Default max when API/profile hasn't supplied a limit. Every item has a max; use 1 to be conservative. */
 export const DEFAULT_MAX_WHEN_UNKNOWN = 1;
 
-/** Logo patch (not "new logo patch") max per student per spec. */
+/** Logo patch max per student per spec. (Both "logo patch" and "new logo patch" are the same item.) */
 export const LOGO_PATCH_MAX_PER_STUDENT = 3;
 
 /**
@@ -18,7 +18,8 @@ export const LOGO_PATCH_MAX_PER_STUDENT = 3;
  */
 export function getDefaultMaxForItem(name) {
   const n = normalizeItemName(name || "");
-  return n.includes("logo patch") && !n.includes("new logo patch")
+  // Both "logo patch" and "new logo patch" are the same item
+  return n.includes("logo patch")
     ? LOGO_PATCH_MAX_PER_STUDENT
     : DEFAULT_MAX_WHEN_UNKNOWN;
 }
@@ -72,21 +73,22 @@ const ITEM_ALIASES_FOR_MAX_QUANTITY = {
   "logo patch (junior high school)": "logo patch",
   "logo patch (senior high school)": "logo patch",
   "logo patch (college)": "logo patch",
-  "new logo patch": "new logo patch",
-  "new logo patch (kindergarten)": "new logo patch",
-  "new logo patch - kindergarten": "new logo patch",
-  "new logo patch (preschool)": "new logo patch",
-  "new logo patch - preschool": "new logo patch",
-  "new logo patch (prekindergarten)": "new logo patch",
-  "new logo patch - prekindergarten": "new logo patch",
-  "new logo patch (elementary)": "new logo patch",
-  "new logo patch - elementary": "new logo patch",
-  "new logo patch (junior high school)": "new logo patch",
-  "new logo patch - junior high school": "new logo patch",
-  "new logo patch (senior high school)": "new logo patch",
-  "new logo patch - senior high school": "new logo patch",
-  "new logo patch (college)": "new logo patch",
-  "new logo patch - college": "new logo patch",
+  // All "new logo patch" variants map to "logo patch" (same item as "logo patch")
+  "new logo patch": "logo patch",
+  "new logo patch (kindergarten)": "logo patch",
+  "new logo patch - kindergarten": "logo patch",
+  "new logo patch (preschool)": "logo patch",
+  "new logo patch - preschool": "logo patch",
+  "new logo patch (prekindergarten)": "logo patch",
+  "new logo patch - prekindergarten": "logo patch",
+  "new logo patch (elementary)": "logo patch",
+  "new logo patch - elementary": "logo patch",
+  "new logo patch (junior high school)": "logo patch",
+  "new logo patch - junior high school": "logo patch",
+  "new logo patch (senior high school)": "logo patch",
+  "new logo patch - senior high school": "logo patch",
+  "new logo patch (college)": "logo patch",
+  "new logo patch - college": "logo patch",
   "kinder dress (kindergarten)": "kinder dress",
   "kinder dress - kindergarten": "kinder dress",
   "kinder necktie (kindergarten)": "kinder necktie",
@@ -141,9 +143,8 @@ export function resolveItemKeyForMaxQuantity(name) {
   const n = normalizeItemName(name);
   // Any "X Jogging Pants" (e.g. "Small Jogging Pants") counts as "jogging pants" for limits
   if (n && n.includes("jogging pants")) return "jogging pants";
-  // "New Logo Patch" variants (old-student allowed item) map to "new logo patch"
-  if (n && n.includes("new logo patch")) return "new logo patch";
-  // Any other "Logo Patch" (e.g. "Logo Patch (Prekindergarten)") maps to "logo patch" to match backend
-  if (n && n.includes("logo patch")) return "logo patch";
+  // "New Logo Patch" and "Logo Patch" are the SAME item - always normalize to "logo patch"
+  // The "new" is just text, they're identical items (matches backend itemMaxOrder.js)
+  if (n && (n.includes("new logo patch") || n.includes("logo patch"))) return "logo patch";
   return ITEM_ALIASES_FOR_MAX_QUANTITY[n] ?? n;
 }

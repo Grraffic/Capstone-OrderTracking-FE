@@ -398,7 +398,7 @@ const ProductDetailsPage = () => {
     (s) => s.size === selectedSize
   );
 
-  // Old students: only allowed items (new logo patch, number patch per level) have max > 0; others are disallowed.
+  // Old students: only allowed items (logo patch, number patch per level) have max > 0; others are disallowed.
   const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
 
   // Resolve product name to the key used by GET /auth/max-quantities (e.g. "jogging pants" -> 1 for Kindergarten)
@@ -970,11 +970,11 @@ const ProductDetailsPage = () => {
                       <p className="font-medium">Your order limit has not been set. Ask your administrator to set Total Item Limit before you can add or place orders.</p>
                     </div>
                   )}
-                  {/* Old students: this item is not in the allowed list (new logo patch, number patch per level only). */}
+                  {/* Old students: this item is not in the allowed list (logo patch, number patch per level only). */}
                   {notAllowedForStudentType && (
                     <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
                       <p className="font-medium">This item is only available for New Students.</p>
-                      <p className="mt-1 text-amber-700">As an Old Student you can only order: New Logo Patch (max 3) and, for Elementary/Junior High/Senior High, Number Patch per grade (max 3).</p>
+                      <p className="mt-1 text-amber-700">As an Old Student you can only order: Logo Patch (max 3) and, for Elementary/Junior High/Senior High, Number Patch per grade (max 3).</p>
                     </div>
                   )}
                   {/* Quantity Selector */}
