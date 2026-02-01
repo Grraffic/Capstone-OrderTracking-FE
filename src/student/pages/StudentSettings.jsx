@@ -71,24 +71,50 @@ const StudentSettings = () => {
   const [imageLoadError, setImageLoadError] = useState(false);
   const { user } = useAuth();
 
-  // Step-based onboarding state (first-time students)
-  const [onboardingStep, setOnboardingStep] = useState(1); // 1: gender, 2: student no., 3: course/year, 4: student type
-  
   // Persist onboarding dismissal in localStorage
   const getOnboardingDismissedKey = useCallback(() => {
     const userId = user?.id || user?.uid || "anonymous";
     return `onboarding_dismissed_${userId}`;
   }, [user?.id, user?.uid]);
 
+  // Get localStorage key for onboarding step
+  const getOnboardingStepKey = useCallback(() => {
+    const userId = user?.id || user?.uid || "anonymous";
+    return `onboarding_step_${userId}`;
+  }, [user?.id, user?.uid]);
+
+  // Initialize onboarding step from localStorage
+  const [onboardingStep, setOnboardingStep] = useState(() => {
+    if (typeof window === "undefined") return 1;
+    const userId = user?.id || user?.uid || "anonymous";
+    const key = `onboarding_step_${userId}`;
+    const savedStep = localStorage.getItem(key);
+    if (savedStep) {
+      const step = parseInt(savedStep, 10);
+      return (step >= 1 && step <= 3) ? step : 1;
+    }
+    return 1;
+  });
+
   // Initialize onboarding dismissed state - will be set from localStorage once user is available
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+
+  // Helper function to update onboarding step and persist to localStorage
+  const handleOnboardingStepChange = useCallback((newStep) => {
+    setOnboardingStep(newStep);
+    const stepKey = getOnboardingStepKey();
+    localStorage.setItem(stepKey, String(newStep));
+  }, [getOnboardingStepKey]);
 
   // Helper function to dismiss onboarding and persist to localStorage
   const handleDismissOnboarding = useCallback(() => {
     setOnboardingDismissed(true);
     const key = getOnboardingDismissedKey();
     localStorage.setItem(key, "true");
-  }, [getOnboardingDismissedKey]);
+    // Clear the step from localStorage when dismissed
+    const stepKey = getOnboardingStepKey();
+    localStorage.removeItem(stepKey);
+  }, [getOnboardingDismissedKey, getOnboardingStepKey]);
 
   // Fetch settings data and functions from hook
   const {
@@ -114,18 +140,41 @@ const StudentSettings = () => {
     Boolean(formData.courseYearLevel && String(formData.courseYearLevel).trim());
     // Student type is auto-detected from student number, not required in completion check
 
-  // Check localStorage on mount and when user changes to restore dismissal state
+  // Check localStorage on mount and when user changes to restore dismissal state and step
   useEffect(() => {
     if (typeof window === "undefined") return;
     const userId = user?.id || user?.uid;
     if (!userId) return; // Wait for user to be available
     
-    const key = `onboarding_dismissed_${userId}`;
-    const wasDismissed = localStorage.getItem(key) === "true";
+    // Restore dismissal state
+    const dismissedKey = `onboarding_dismissed_${userId}`;
+    const wasDismissed = localStorage.getItem(dismissedKey) === "true";
     if (wasDismissed) {
       setOnboardingDismissed(true);
+      return; // Don't restore step if dismissed
     }
-  }, [user?.id, user?.uid]);
+    
+    // Check if onboarding should be active (not completed, first time student)
+    const isFirstTime = user?.role === "student" && user?.onboardingCompleted !== true;
+    const fieldsComplete = Boolean(
+      formData.gender && String(formData.gender).trim() &&
+      formData.studentNumber && String(formData.studentNumber).trim() &&
+      formData.courseYearLevel && String(formData.courseYearLevel).trim()
+    );
+    
+    // Restore onboarding step (only if onboarding is still active and we haven't restored it yet)
+    // Only restore if we're on step 1 (initial state) and formData has loaded
+    if (isFirstTime && !fieldsComplete && onboardingStep === 1 && !loading) {
+      const stepKey = `onboarding_step_${userId}`;
+      const savedStep = localStorage.getItem(stepKey);
+      if (savedStep) {
+        const step = parseInt(savedStep, 10);
+        if (step >= 1 && step <= 3) {
+          setOnboardingStep(step);
+        }
+      }
+    }
+  }, [user?.id, user?.uid, user?.role, user?.onboardingCompleted, formData.gender, formData.studentNumber, formData.courseYearLevel, onboardingStep, loading]);
 
   // Persist dismissal to localStorage when fields are complete
   useEffect(() => {
@@ -135,6 +184,9 @@ const StudentSettings = () => {
         const key = `onboarding_dismissed_${userId}`;
         localStorage.setItem(key, "true");
         setOnboardingDismissed(true);
+        // Clear the step from localStorage when completed
+        const stepKey = `onboarding_step_${userId}`;
+        localStorage.removeItem(stepKey);
       }
     }
   }, [isOnboardingFieldsComplete, user?.id, user?.uid]);
@@ -205,9 +257,9 @@ const StudentSettings = () => {
     const value = formData[current.field];
     const filled = value != null && String(value).trim() !== "";
     if (filled && current.id < ONBOARDING_STEPS.length) {
-      setOnboardingStep(current.id + 1);
+      handleOnboardingStepChange(current.id + 1);
     }
-  }, [shouldShowGuide, onboardingStep, formData.gender, formData.studentNumber, formData.courseYearLevel, ONBOARDING_STEPS]);
+  }, [shouldShowGuide, onboardingStep, formData.gender, formData.studentNumber, formData.courseYearLevel, ONBOARDING_STEPS, handleOnboardingStepChange]);
 
   // Course & Year Level options - Combined dropdown
   const courseYearLevelOptions = [
@@ -578,11 +630,11 @@ const StudentSettings = () => {
                         {shouldShowGuide && onboardingStep === 1 && (
                           <OnboardingStepCard
                             step={1}
-                            totalSteps={4}
+                            totalSteps={3}
                             title="Gender"
                             description="Select your gender so we can show the right uniforms for you."
-                            onSkip={() => setOnboardingStep(2)}
-                            onContinue={() => setOnboardingStep(2)}
+                            onSkip={() => handleOnboardingStepChange(2)}
+                            onContinue={() => handleOnboardingStepChange(2)}
                             isLastStep={false}
                           />
                         )}
@@ -631,8 +683,8 @@ const StudentSettings = () => {
                             totalSteps={3}
                             title="Student Number"
                             description="Enter your student number so we can verify and track your orders."
-                            onSkip={() => setOnboardingStep(3)}
-                            onContinue={() => setOnboardingStep(3)}
+                            onSkip={() => handleOnboardingStepChange(3)}
+                            onContinue={() => handleOnboardingStepChange(3)}
                             isLastStep={false}
                           />
                         )}
