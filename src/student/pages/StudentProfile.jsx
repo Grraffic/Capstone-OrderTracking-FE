@@ -342,8 +342,8 @@ const StudentProfile = () => {
               {activeTab === "activities" && (
                 <>
                   {/* My Activities Heading */}
-                  <div className="mb-6">
-                    <h2 className="text-2xl font-bold">
+                  <div className="flex items-end justify-between mb-3 sm:mb-4 md:mb-4 gap-2 sm:gap-4">
+                    <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
                       <span className="text-[#003363]">My </span>
                       <span className="text-[#E68B00]">Activities</span>
                     </h2>
@@ -443,7 +443,7 @@ const StudentProfile = () => {
               {/* My Orders View */}
               {activeTab === "orders" && (
                 <div className="py-2 sm:py-3 md:py-4 lg:py-6">
-                  <MyOrders sortOrder={filter} />
+                  <MyOrders key="orders-tab" sortOrder={filter} />
                 </div>
               )}
 

@@ -44,10 +44,10 @@ const ProductCarousel = ({ products, onProductClick, currentProductId }) => {
           return (
             <div
               key={product.id}
-              onClick={() => !isCurrentProduct && !genderMismatch && !isDisabled && onProductClick(product)}
+              onClick={() => !isCurrentProduct && !genderMismatch && onProductClick(product)}
               className={`rounded-2xl shadow-lg overflow-hidden transition-all duration-300 flex flex-col h-full relative ${
                 isDisabled
-                  ? "bg-gray-100 cursor-default"
+                  ? "bg-gray-100 cursor-pointer hover:shadow-xl"
                   : isCurrentProduct
                   ? "bg-white ring-4 ring-[#F28C28] opacity-75 cursor-default"
                   : genderMismatch

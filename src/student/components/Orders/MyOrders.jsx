@@ -650,6 +650,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   }, [user, profileLoading, safeOrders.length, loading, fetchOrders]);
 
   // When variant="history", show claimed orders in detail view only (Order History)
+  // Always default to overview when not history view (unless location.state specifies otherwise)
   const [viewMode, setViewMode] = useState(
     isHistoryView ? "detail" : (location.state?.viewMode || "overview")
   );
@@ -1721,7 +1722,9 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
         {/* Orders List (or Order History card grid) */}
         {listForPagination.length === 0 ? (
           <div className="bg-white rounded-lg border-2 border-gray-200 p-8 sm:p-10 md:p-12 text-center">
-            <p className="text-sm sm:text-base text-gray-500">No orders found in this category</p>
+            <p className="text-sm sm:text-base text-gray-500">
+              {isHistoryView ? "No orders found in order history" : "No orders found in this category"}
+            </p>
           </div>
         ) : isHistoryView ? (
           /* Order History: card layout – image, title, View Details, Order Again only (no 1pc, FREE, Show QR) */

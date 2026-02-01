@@ -194,7 +194,7 @@ const ProfileCard = ({
                       onClick={() => navigate("/student/settings")}
                       className="w-full bg-[#003363] text-white py-3 rounded-lg font-semibold hover:bg-[#002347] transition-colors shadow-md"
                     >
-                      View Profile
+                    Profile Details
                     </button>
                   </>
                 )}

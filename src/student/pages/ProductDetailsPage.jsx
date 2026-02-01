@@ -35,6 +35,13 @@ const ProductDetailsPage = () => {
   const [product, setProduct] = useState(null);
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  
+  // Ensure quantity is always at least 1
+  useEffect(() => {
+    if (quantity < 1) {
+      setQuantity(1);
+    }
+  }, [quantity]);
   const [sizeConfirmed, setSizeConfirmed] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [availableSizesData, setAvailableSizesData] = useState([]);
@@ -141,13 +148,16 @@ const ProductDetailsPage = () => {
   }, [user, isOldStudent]);
 
   // On mount / when user is set: refetch limits so "already ordered" disables Add/Order (e.g. after checkout)
+  // Also ensure limitsLoaded is false when user first appears to immediately disable items
   useEffect(() => {
     try {
       if (sessionStorage.getItem("limitsNeedRefresh")) setLimitsRefreshTrigger((t) => t + 1);
     } catch (_) {}
-    // Refetch limits when we land on product details as a logged-in user,
-    // so after checkout the same item stays disabled (like when it was in cart).
-    if (user) setLimitsRefreshTrigger((t) => t + 1);
+    // When user first appears, ensure items are disabled until limits are loaded
+    if (user) {
+      setLimitsLoaded(false);
+      setLimitsRefreshTrigger((t) => t + 1);
+    }
   }, [user]);
 
   // When we navigate to this product page (e.g. back from order-success), refetch limits so "already ordered" is up to date
@@ -166,7 +176,11 @@ const ProductDetailsPage = () => {
         setLimitsLoaded(true);
         return;
       }
-      setLimitsLoaded(false);
+      // Only set limitsLoaded to false on initial load (when limitsRefreshTrigger is 0)
+      // On refresh triggers, keep the previous state to avoid flickering/blinking
+      if (limitsRefreshTrigger === 0) {
+        setLimitsLoaded(false);
+      }
       try {
         const res = await authAPI.getMaxQuantities();
         setMaxQuantities(res.data?.maxQuantities ?? {});
@@ -287,6 +301,17 @@ const ProductDetailsPage = () => {
           setSelectedSize("");
           setQuantity(1);
           setSizeConfirmed(false);
+          // Reset limitsLoaded to false and clear limits data when product changes
+          // This prevents items from appearing enabled using stale data
+          if (user) {
+            setLimitsLoaded(false);
+            // Clear limits data to prevent using stale data from previous product
+            setMaxQuantities({});
+            setAlreadyOrdered({});
+            setClaimedItems({});
+            setMaxItemsPerOrder(null);
+            setSlotsUsedFromPlacedOrders(0);
+          }
         }
         // Refetch limits when viewing this product so "already ordered" is up to date (avoids enabling Add/Order when they have it in My Orders)
         setLimitsRefreshTrigger((t) => t + 1);
@@ -770,8 +795,9 @@ const ProductDetailsPage = () => {
     requiresSizeSelection && (!selectedSize || !sizeConfirmed) || genderMismatch;
   // Same disabled treatment as All Products card: grayscale image + gray text when item cannot be ordered
   // FORCE DISABLE: Include claimed max reached in disabled check - this is mandatory
+  // Item is disabled if: limits not loaded (for logged-in users), or any of the disable conditions are met
   const isDisabled =
-    (!user || limitsLoaded) &&
+    limitsNotLoaded || // If limits are not loaded, item must be disabled
     (effectiveMax < 1 ||
       isMaxReached || // FORCE: If max reached (alreadyOrdered + claimedItems >= max), item MUST be disabled
       blockedDueToVoid ||
@@ -1143,7 +1169,7 @@ const ProductDetailsPage = () => {
                       </button>
 
                       <span className="text-lg sm:text-xl font-bold text-[#003363] min-w-[3rem] text-center">
-                        {quantity}
+                        {Math.max(1, quantity)}
                       </span>
 
                       <button
