@@ -24,6 +24,17 @@ export default function Header() {
 
   // IntersectionObserver to detect which section is in view
   useEffect(() => {
+    // Also check scroll position to set "featured" when at top
+    const handleScroll = () => {
+      const scrollY = window.scrollY || window.pageYOffset;
+      // If scrolled to top (within 100px), set featured as active
+      if (scrollY < 100) {
+        setActiveTab("featured");
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+
     const observerOptions = {
       root: null,
       rootMargin: "-20% 0px -60% 0px", // Trigger when section is 20% from top
@@ -34,6 +45,13 @@ export default function Header() {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const sectionId = entry.target.id;
+          const scrollY = window.scrollY || window.pageYOffset;
+
+          // If at top, always prioritize "featured"
+          if (scrollY < 100) {
+            setActiveTab("featured");
+            return;
+          }
 
           // Map section IDs to navigation tabs
           // Mission and Vision are part of the About section
@@ -67,6 +85,7 @@ export default function Header() {
 
     // Cleanup
     return () => {
+      window.removeEventListener("scroll", handleScroll);
       elements.forEach((element) => observer.unobserve(element));
     };
   }, []);

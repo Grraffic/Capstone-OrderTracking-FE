@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
+import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUp } from "lucide-react";
 import { useScrollOnState } from "../hooks/useScrollOnState";
@@ -219,6 +219,73 @@ export default function LandingPage() {
     };
   }, []);
 
+  // Manual navigation functions for desktop/tablet
+  const handleNextCards = useCallback(() => {
+    if (isMobile) return;
+    
+    const currentCards = visibleCardsRef.current;
+    if (isTablet) {
+      // Tablet: rotate through 2 cards
+      if (currentCards.length === 2) {
+        const nextCards = currentCards.map(card => (card + 1) % 4);
+        const exiting = currentCards.find(card => !nextCards.includes(card));
+        const entering = nextCards.find(card => !currentCards.includes(card));
+        if (exiting !== undefined) setExitingCard(exiting);
+        if (entering !== undefined) setEnteringCard(entering);
+        setTimeout(() => {
+          setVisibleCards(nextCards);
+          visibleCardsRef.current = nextCards;
+          setTimeout(() => {
+            setExitingCard(null);
+            setEnteringCard(null);
+          }, 1200);
+        }, 0);
+      }
+    } else {
+      // Desktop: rotate through 4 cards (all visible, but rotate which items are shown)
+      if (currentCards.length === 4) {
+        // Shift all cards forward by 1 position
+        const nextCards = currentCards.map(card => (card + 1) % 4);
+        // No cards exit or enter since all 4 are always visible, just the content rotates
+        setVisibleCards(nextCards);
+        visibleCardsRef.current = nextCards;
+      }
+    }
+  }, [isMobile, isTablet]);
+
+  const handlePrevCards = useCallback(() => {
+    if (isMobile) return;
+    
+    const currentCards = visibleCardsRef.current;
+    if (isTablet) {
+      // Tablet: rotate backwards through 2 cards
+      if (currentCards.length === 2) {
+        const nextCards = currentCards.map(card => (card - 1 + 4) % 4);
+        const exiting = currentCards.find(card => !nextCards.includes(card));
+        const entering = nextCards.find(card => !currentCards.includes(card));
+        if (exiting !== undefined) setExitingCard(exiting);
+        if (entering !== undefined) setEnteringCard(entering);
+        setTimeout(() => {
+          setVisibleCards(nextCards);
+          visibleCardsRef.current = nextCards;
+          setTimeout(() => {
+            setExitingCard(null);
+            setEnteringCard(null);
+          }, 1200);
+        }, 0);
+      }
+    } else {
+      // Desktop: rotate backwards through 4 cards (all visible, but rotate which items are shown)
+      if (currentCards.length === 4) {
+        // Shift all cards backward by 1 position
+        const nextCards = currentCards.map(card => (card - 1 + 4) % 4);
+        // No cards exit or enter since all 4 are always visible, just the content rotates
+        setVisibleCards(nextCards);
+        visibleCardsRef.current = nextCards;
+      }
+    }
+  }, [isMobile, isTablet]);
+
   // Card rotation logic - different for mobile, tablet, and desktop
   useEffect(() => {
     // Force mobile to show only 1 card immediately
@@ -332,15 +399,8 @@ export default function LandingPage() {
           // Step 4: After another 5.5 seconds (21.5s total), Higher Education out, Basic Education in
           scheduleTransition(21500, [0, 1], [3, 0], true);
         } else {
-          // Desktop: 3 cards rotation
-          // Step 1: After 5 seconds, Senior High out, Higher Education in
-          scheduleTransition(5000, [3, 1, 2], currentCards, true);
-
-          // Step 2: After another 5.5 seconds (10.5s total), Basic Education out, Senior High in
-          scheduleTransition(10500, [3, 0, 2], [3, 1, 2], true);
-
-          // Step 3: After another 5.5 seconds (16s total), reset to initial state
-          scheduleTransition(16000, [0, 1, 2], [3, 0, 2], false);
+          // Desktop: All 4 cards are always visible, no auto-rotation needed
+          // Cards will only change when user clicks navigation buttons
         }
       };
 
@@ -349,8 +409,9 @@ export default function LandingPage() {
         setVisibleCards([0, 1]); // Senior High, Basic Education
         visibleCardsRef.current = [0, 1];
       } else {
-        setVisibleCards([0, 1, 2]); // Senior High, Basic Education, PE Uniforms
-        visibleCardsRef.current = [0, 1, 2];
+        // Desktop: Show all 4 cards in one row
+        setVisibleCards([0, 1, 2, 3]); // Senior High, Basic Education, PE Uniforms, Higher Education
+        visibleCardsRef.current = [0, 1, 2, 3];
       }
 
       // Run initial cycle
@@ -474,7 +535,7 @@ export default function LandingPage() {
                 ? "overflow-hidden min-h-[400px] !grid !grid-cols-1 mobile-single-card" 
                 : isTablet
                 ? "overflow-hidden min-h-[400px]"
-                : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8"
+                : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8"
             }`}
             style={isMobile ? { 
               display: 'grid',
@@ -483,6 +544,27 @@ export default function LandingPage() {
               maxWidth: '100%'
             } : {}}
           >
+            {/* Navigation Buttons - Desktop and Tablet only */}
+            {!isMobile && (
+              <>
+                {/* Left Button */}
+                <button
+                  onClick={handlePrevCards}
+                  className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-1/2 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-[#f59301] text-white flex items-center justify-center shadow-lg hover:bg-orange-700 z-30 text-sm sm:text-base md:text-lg min-w-[44px] min-h-[44px] transition-colors"
+                  aria-label="Previous cards"
+                >
+                  ←
+                </button>
+                {/* Right Button */}
+                <button
+                  onClick={handleNextCards}
+                  className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-1/2 w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-full bg-[#f59301] text-white flex items-center justify-center shadow-lg hover:bg-orange-700 z-30 text-sm sm:text-base md:text-lg min-w-[44px] min-h-[44px] transition-colors"
+                  aria-label="Next cards"
+                >
+                  →
+                </button>
+              </>
+            )}
             {/* Card 1 - Senior High */}
             {(visibleCards.includes(0) || exitingCard === 0) && (
               <div
@@ -505,6 +587,10 @@ export default function LandingPage() {
                     right: 0,
                     bottom: 0,
                     zIndex: visibleCards.includes(0) ? 10 : 0
+                  } : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(0) ? {
+                    // Use CSS order to control grid position in desktop view
+                    order: visibleCards.indexOf(0) + 1,
                   } : {}),
                   animation: exitingCard === 0
                     ? "fadeOutLeft 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
@@ -594,6 +680,10 @@ export default function LandingPage() {
                     bottom: 0,
                     zIndex: visibleCards.includes(1) ? 10 : 0
                   } : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(1) ? {
+                    // Use CSS order to control grid position in desktop view
+                    order: visibleCards.indexOf(1) + 1,
+                  } : {}),
                   animation: exitingCard === 1
                     ? "fadeOutLeft 1s ease-in-out"
                     : enteringCard === 1
@@ -680,6 +770,10 @@ export default function LandingPage() {
                     bottom: 0,
                     zIndex: visibleCards.includes(2) ? 10 : 0
                   } : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(2) ? {
+                    // Use CSS order to control grid position in desktop view
+                    order: visibleCards.indexOf(2) + 1,
+                  } : {}),
                   animation: exitingCard === 2
                     ? "fadeOutLeft 1s ease-in-out"
                     : enteringCard === 2
@@ -763,11 +857,14 @@ export default function LandingPage() {
                     bottom: 0,
                     zIndex: visibleCards.includes(3) ? 10 : 0
                   } : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(3) ? {
+                    // Use CSS order to control grid position in desktop view
+                    order: visibleCards.indexOf(3) + 1,
+                  } : {}),
                   animation: exitingCard === 3
                     ? "fadeOutLeft 1s ease-in-out"
-                    : enteringCard === 3
-                    ? "slideInFromRight 1s ease-in-out"
                     : "",
+                  willChange: exitingCard === 3 ? "transform, opacity" : "auto",
                 }}
               >
                 <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
@@ -959,18 +1056,18 @@ export default function LandingPage() {
         </div>
 
         {/* BOTTOM SECTION: Google Maps */}
-        <div className="w-full flex flex-col items-center mt-12 sm:mt-16 lg:mt-24 px-4 sm:px-6 lg:px-8">
-          <div className="text-lg sm:text-xl lg:text-2xl text-center font-bold text-[#163869] mb-3">
+        <div className="w-full flex flex-col items-center mt-12 sm:mt-16 lg:mt-24">
+          <div className="text-lg sm:text-xl lg:text-2xl text-center font-bold text-[#163869] mb-3 px-4 sm:px-6 lg:px-8">
             Find Us on <span className="text-[#E68B00]">Google Maps</span>
           </div>
-          <p className="mt-2 sm:mt-3 text-[#163869] text-sm sm:text-base text-center max-w-xl mb-6 sm:mb-8 leading-relaxed px-4">
+          <p className="mt-2 sm:mt-3 text-[#163869] text-sm sm:text-base text-center max-w-xl mb-6 sm:mb-8 leading-relaxed px-4 sm:px-6 lg:px-8">
             If you have any inquiries, require assistance, or wish to provide
             feedback, we are here to assist you
           </p>
-          <div className="w-full max-w-7xl">
+          <div className="w-full">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d123347.40710675181!2d120.61418624335936!3d14.959002300000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x33965634a341dc6f%3A0x17091aa8b0043f89!2sLa%20Verdad%20Christian%20College!5e0!3m2!1sen!2sph!4v1737910779201!5m2!1sen!2sph"
-              className="w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px] rounded-lg shadow-lg"
+              className="w-full h-[300px] sm:h-[400px] md:h-[500px] lg:h-[600px]"
               allowFullScreen=""
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"

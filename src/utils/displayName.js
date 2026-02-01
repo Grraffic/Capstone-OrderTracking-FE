@@ -1,5 +1,6 @@
 /**
  * Split full name for display: handles "Rafael Ramos" (space) and "leorenzbien.rodriguez" (dot).
+ * For names with 3+ words (e.g., "Leorenz bien rodriguez"), takes first word as firstName and last word as lastName.
  * Returns { firstName, lastName, displayName } with displayName as "First Last" (capitalized).
  */
 export function splitDisplayName(fullName) {
@@ -12,22 +13,32 @@ export function splitDisplayName(fullName) {
   let firstName = "";
   let lastName = "";
   if (bySpace.length >= 2) {
-    firstName = bySpace[0];
-    lastName = bySpace.slice(1).join(" ");
+    // For 2+ words: all words except the last are firstName, last word is lastName
+    firstName = bySpace.slice(0, -1).join(" "); // All words except the last
+    lastName = bySpace[bySpace.length - 1]; // Take only the last word
   } else if (bySpace[0].includes(".")) {
     const byDot = bySpace[0].split(".");
     if (byDot.length >= 2) {
+      // For dot-separated names: first part is firstName, last part is lastName
       firstName = byDot[0];
-      lastName = byDot.slice(1).join(".");
+      lastName = byDot[byDot.length - 1]; // Take only the last part
     } else {
       firstName = bySpace[0];
     }
   } else {
     firstName = bySpace[0];
   }
-  const displayName = [firstName, lastName]
+  // Capitalize each word in firstName and lastName separately
+  const capitalizeWords = (str) => {
+    if (!str) return "";
+    return str
+      .split(/\s+/)
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
+  };
+  
+  const displayName = [capitalizeWords(firstName), capitalizeWords(lastName)]
     .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase())
     .join(" ");
   return { firstName, lastName, displayName };
 }
