@@ -28,7 +28,6 @@ const OnboardingStepCard = ({
   totalSteps,
   title,
   description,
-  onSkip,
   onContinue,
   isLastStep = false,
 }) => {
@@ -44,13 +43,6 @@ const OnboardingStepCard = ({
         <h2 className="text-base font-bold text-[#003363] mb-1">{title}</h2>
         <p className="text-sm text-gray-700 mb-4">{description}</p>
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onSkip}
-            className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
-          >
-            Skip
-          </button>
           <button
             type="button"
             onClick={onContinue}
@@ -633,7 +625,6 @@ const StudentSettings = () => {
                             totalSteps={3}
                             title="Gender"
                             description="Select your gender so we can show the right uniforms for you."
-                            onSkip={() => handleOnboardingStepChange(2)}
                             onContinue={() => handleOnboardingStepChange(2)}
                             isLastStep={false}
                           />
@@ -683,7 +674,6 @@ const StudentSettings = () => {
                             totalSteps={3}
                             title="Student Number"
                             description="Enter your student number so we can verify and track your orders."
-                            onSkip={() => handleOnboardingStepChange(3)}
                             onContinue={() => handleOnboardingStepChange(3)}
                             isLastStep={false}
                           />
@@ -705,13 +695,6 @@ const StudentSettings = () => {
                             <h2 className="text-base font-bold text-[#003363] mb-1">Course & Year Level</h2>
                             <p className="text-sm text-gray-700 mb-4">Choose your course and year level so we can show only the uniforms you are eligible for.</p>
                             <div className="flex flex-wrap items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={handleDismissOnboarding}
-                                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
-                              >
-                                Skip
-                              </button>
                               <button
                                 type="button"
                                 onClick={handleDismissOnboarding}
