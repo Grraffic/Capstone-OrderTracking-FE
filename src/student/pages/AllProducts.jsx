@@ -331,7 +331,21 @@ const AllProducts = () => {
       });
     }
 
-    return filtered;
+    // Sort products: available items first (in stock), disabled items (out of stock) at the end
+    // This ensures users see orderable items first
+    const sorted = [...filtered].sort((a, b) => {
+      const aIsOutOfStock = a.status === "out_of_stock";
+      const bIsOutOfStock = b.status === "out_of_stock";
+      
+      // Available items (in stock) come first
+      if (aIsOutOfStock && !bIsOutOfStock) return 1; // a goes to end
+      if (!aIsOutOfStock && bIsOutOfStock) return -1; // a comes first
+      
+      // If both have same stock status, maintain original order
+      return 0;
+    });
+
+    return sorted;
   }, [
     transformedProducts,
     selectedCategory,
@@ -519,8 +533,36 @@ const AllProducts = () => {
         _effectiveMax: isMaxReached ? 0 : effectiveMax,
       };
     });
+    
+    // Sort products: available items first, disabled items at the end
+    // An item is disabled if: orderLimitReached, isClaimed, slotsFullForNewType, notAllowedForStudentType, or out of stock
+    const sortedList = [...list].sort((a, b) => {
+      // Check if item A is disabled
+      const aIsDisabled = 
+        a._orderLimitReached || 
+        a._isClaimed || 
+        a._slotsFullForNewType || 
+        a._notAllowedForStudentType || 
+        a.status === "out_of_stock";
+      
+      // Check if item B is disabled
+      const bIsDisabled = 
+        b._orderLimitReached || 
+        b._isClaimed || 
+        b._slotsFullForNewType || 
+        b._notAllowedForStudentType || 
+        b.status === "out_of_stock";
+      
+      // Available items (not disabled) come first
+      if (aIsDisabled && !bIsDisabled) return 1; // a goes to end
+      if (!aIsDisabled && bIsDisabled) return -1; // a comes first
+      
+      // If both have same availability status, maintain original order
+      return 0;
+    });
+    
     // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).
-    return list;
+    return sortedList;
   }, [paginatedItems, maxQuantities, alreadyOrdered, claimedItems, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent, limitsLoaded]);
 
   const limitNotSet =

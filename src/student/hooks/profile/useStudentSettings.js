@@ -36,6 +36,42 @@ export const useStudentSettings = () => {
   const [originalImageUrl, setOriginalImageUrl] = useState(null);
   const [hasChanges, setHasChanges] = useState(false);
 
+  // Get localStorage key for form draft data
+  const getFormDraftKey = useCallback(() => {
+    const userId = user?.id || user?.uid || "anonymous";
+    return `student_settings_draft_${userId}`;
+  }, [user?.id, user?.uid]);
+
+  // Load draft data from localStorage
+  const loadDraftData = useCallback(() => {
+    if (typeof window === "undefined") return null;
+    const key = getFormDraftKey();
+    const draft = localStorage.getItem(key);
+    if (draft) {
+      try {
+        return JSON.parse(draft);
+      } catch (e) {
+        console.error("Error parsing draft data:", e);
+        return null;
+      }
+    }
+    return null;
+  }, [getFormDraftKey]);
+
+  // Save draft data to localStorage
+  const saveDraftData = useCallback((data) => {
+    if (typeof window === "undefined") return;
+    const key = getFormDraftKey();
+    localStorage.setItem(key, JSON.stringify(data));
+  }, [getFormDraftKey]);
+
+  // Clear draft data from localStorage
+  const clearDraftData = useCallback(() => {
+    if (typeof window === "undefined") return;
+    const key = getFormDraftKey();
+    localStorage.removeItem(key);
+  }, [getFormDraftKey]);
+
   // Editable form fields - Name comes from Google account (read-only in UI)
   const [formData, setFormData] = useState({
     courseYearLevel: "", // Combined field (e.g., "BSIS 1st Year", "Grade 10")
@@ -89,13 +125,22 @@ export const useStudentSettings = () => {
       const rawCourseYearLevel = profile.courseYearLevel !== "N/A" ? profile.courseYearLevel : "";
       const normalizedCourseYearLevel = normalizeCourseYearLevel(rawCourseYearLevel);
 
-      setFormData({
+      // Check if there's draft data in localStorage, otherwise use profile data
+      const draft = loadDraftData();
+      const finalFormData = draft ? {
+        courseYearLevel: draft.courseYearLevel || normalizedCourseYearLevel,
+        studentNumber: draft.studentNumber || (profile.studentNumber !== "N/A" ? profile.studentNumber : ""),
+        gender: draft.gender || profile.gender || "",
+        studentType: draft.studentType || (rawStudentType || "").toLowerCase() || "",
+      } : {
         courseYearLevel: normalizedCourseYearLevel,
         studentNumber:
           profile.studentNumber !== "N/A" ? profile.studentNumber : "",
         gender: profile.gender || "",
         studentType: (rawStudentType || "").toLowerCase() || "",
-      });
+      };
+
+      setFormData(finalFormData);
     } catch (err) {
       console.error("Error fetching profile:", err);
       const serverMessage = err.response?.data?.message || err.response?.data?.details;
@@ -125,7 +170,7 @@ export const useStudentSettings = () => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, loadDraftData, saveDraftData]);
 
   useEffect(() => {
     fetchProfileData();
@@ -214,10 +259,15 @@ export const useStudentSettings = () => {
    * Handle form field changes
    */
   const handleFieldChange = (field, value) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [field]: value,
+      };
+      // Save to localStorage as draft
+      saveDraftData(updated);
+      return updated;
+    });
     setHasChanges(true);
     // Clear field error when user starts typing/selecting
     if (fieldErrors[field]) {
@@ -341,6 +391,9 @@ export const useStudentSettings = () => {
         setImageFile(null);
         setHasChanges(false);
 
+        // Clear draft data since we've successfully saved
+        clearDraftData();
+
         // Update auth context
         if (updateUser) {
           updateUser({
@@ -431,6 +484,9 @@ export const useStudentSettings = () => {
       setImageFile(null);
       setHasChanges(false);
 
+      // Clear draft data since we've successfully saved
+      clearDraftData();
+
       // Update auth context with returned profile (including gender, studentType) so it persists in session
       if (updateUser) {
         const onboardingCompleted =
@@ -485,6 +541,7 @@ export const useStudentSettings = () => {
     updateUser,
     fetchProfileData,
     navigate,
+    clearDraftData,
   ]);
 
   /**
@@ -501,17 +558,22 @@ export const useStudentSettings = () => {
       : "";
     const normalizedCourseYearLevel = normalizeCourseYearLevel(rawCourseYearLevel);
 
-    setFormData({
+    const resetFormData = {
       courseYearLevel: normalizedCourseYearLevel,
       studentNumber:
         profileData?.studentNumber !== "N/A" ? profileData?.studentNumber : "",
       gender: profileData?.gender || "",
       studentType: (profileData?.studentType || "").toLowerCase() || "",
-    });
+    };
+
+    setFormData(resetFormData);
+    
+    // Clear draft data when discarding (restore to saved state)
+    clearDraftData();
 
     setHasChanges(false);
     toast.success("Changes discarded");
-  }, [profileData, originalImageUrl]);
+  }, [profileData, originalImageUrl, clearDraftData]);
 
   return {
     profileData,

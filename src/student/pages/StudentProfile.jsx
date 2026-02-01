@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ShoppingCart, Package, CheckCircle, Bell, ChevronLeft } from "lucide-react";
+import { ShoppingCart, Package, CheckCircle, Bell, ChevronLeft, ClipboardList } from "lucide-react";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import ProfileCard from "../components/common/ProfileCard";
@@ -276,11 +276,11 @@ const StudentProfile = () => {
                     <span className="text-sm font-medium sm:hidden">Browse all products</span>
                   </button>
 
-                  {/* Tabs: [Activities] [Orders] [History] - centered */}
+                  {/* Tabs: [My Activities] [My Orders] [History] - centered */}
                   <div className="flex items-stretch gap-0 min-w-0 overflow-x-auto overflow-y-hidden sm:overflow-visible flex-1 justify-center">
                     {[
                       { key: "activities", label: "Activities", icon: Bell },
-                      { key: "orders", label: "Orders", icon: ShoppingCart },
+                      { key: "orders", label: "My Orders", icon: ClipboardList },
                       { key: "history", label: "History", icon: Package },
                     ].map((tab) => {
                       const isActive = activeTab === tab.key;
@@ -341,6 +341,14 @@ const StudentProfile = () => {
               {/* Activity List */}
               {activeTab === "activities" && (
                 <>
+                  {/* My Activities Heading */}
+                  <div className="mb-6">
+                    <h2 className="text-2xl font-bold">
+                      <span className="text-[#003363]">My </span>
+                      <span className="text-[#E68B00]">Activities</span>
+                    </h2>
+                  </div>
+
                   <div className="space-y-4">
                     {activitiesLoading ? (
                       // Skeleton loader for activities

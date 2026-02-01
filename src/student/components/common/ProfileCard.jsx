@@ -188,13 +188,13 @@ const ProfileCard = ({
                       </div>
                     </div>
 
-                    {/* Edit Profile Button */}
+                    {/* View Profile Button */}
                     <button
                       type="button"
                       onClick={() => navigate("/student/settings")}
                       className="w-full bg-[#003363] text-white py-3 rounded-lg font-semibold hover:bg-[#002347] transition-colors shadow-md"
                     >
-                      Edit Profile
+                      View Profile
                     </button>
                   </>
                 )}

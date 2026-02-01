@@ -8,6 +8,7 @@ import {
   User,
   Settings,
   LogOut,
+  ClipboardList,
   Check,
   Trash2,
 } from "lucide-react";
@@ -333,7 +334,7 @@ const Navbar = () => {
                     }}
                     className="w-full flex items-center space-x-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                   >
-                    <ShoppingCart className="w-4 h-4" />
+                    <ClipboardList className="w-4 h-4" />
                     <span>My Orders</span>
                   </button>
 
@@ -484,7 +485,7 @@ const Navbar = () => {
                 }}
                 className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 rounded-lg transition-colors"
               >
-                <ShoppingCart className="w-5 h-5 text-gray-700" />
+                <ClipboardList className="w-5 h-5 text-gray-700" />
                 <span className="text-sm font-medium text-gray-700">
                   My Orders
                 </span>

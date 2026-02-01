@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo, useEffect } from "react";
+import React, { useRef, useState, useMemo, useEffect, useCallback } from "react";
 import { Camera, ArrowLeft, AlertCircle, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
@@ -73,7 +73,22 @@ const StudentSettings = () => {
 
   // Step-based onboarding state (first-time students)
   const [onboardingStep, setOnboardingStep] = useState(1); // 1: gender, 2: student no., 3: course/year, 4: student type
+  
+  // Persist onboarding dismissal in localStorage
+  const getOnboardingDismissedKey = useCallback(() => {
+    const userId = user?.id || user?.uid || "anonymous";
+    return `onboarding_dismissed_${userId}`;
+  }, [user?.id, user?.uid]);
+
+  // Initialize onboarding dismissed state - will be set from localStorage once user is available
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+
+  // Helper function to dismiss onboarding and persist to localStorage
+  const handleDismissOnboarding = useCallback(() => {
+    setOnboardingDismissed(true);
+    const key = getOnboardingDismissedKey();
+    localStorage.setItem(key, "true");
+  }, [getOnboardingDismissedKey]);
 
   // Fetch settings data and functions from hook
   const {
@@ -98,6 +113,31 @@ const StudentSettings = () => {
     Boolean(formData.studentNumber && String(formData.studentNumber).trim()) &&
     Boolean(formData.courseYearLevel && String(formData.courseYearLevel).trim());
     // Student type is auto-detected from student number, not required in completion check
+
+  // Check localStorage on mount and when user changes to restore dismissal state
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const userId = user?.id || user?.uid;
+    if (!userId) return; // Wait for user to be available
+    
+    const key = `onboarding_dismissed_${userId}`;
+    const wasDismissed = localStorage.getItem(key) === "true";
+    if (wasDismissed) {
+      setOnboardingDismissed(true);
+    }
+  }, [user?.id, user?.uid]);
+
+  // Persist dismissal to localStorage when fields are complete
+  useEffect(() => {
+    if (isOnboardingFieldsComplete) {
+      const userId = user?.id || user?.uid;
+      if (userId) {
+        const key = `onboarding_dismissed_${userId}`;
+        localStorage.setItem(key, "true");
+        setOnboardingDismissed(true);
+      }
+    }
+  }, [isOnboardingFieldsComplete, user?.id, user?.uid]);
 
   const shouldShowGuide =
     isFirstTimeStudent && !onboardingDismissed && !isOnboardingFieldsComplete;
@@ -133,6 +173,16 @@ const StudentSettings = () => {
     ],
     []
   );
+
+  // During onboarding, ALL fields should be read-only
+  // Users must complete the entire onboarding process before they can edit any fields
+  const isFieldEditableDuringOnboarding = (fieldName) => {
+    if (isProfileCompleted) return false; // Profile completed, no editing
+    if (shouldShowGuide) return false; // During onboarding, all fields are read-only
+    
+    // Not in onboarding and profile not completed, allow editing
+    return true;
+  };
 
   const scrollToId = (id) => {
     const el = document.getElementById(id);
@@ -505,9 +555,9 @@ const StudentSettings = () => {
                           onChange={(e) =>
                             handleFieldChange("gender", e.target.value)
                           }
-                          disabled={isProfileCompleted}
+                          disabled={isProfileCompleted || !isFieldEditableDuringOnboarding("gender")}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
-                            isProfileCompleted
+                            isProfileCompleted || !isFieldEditableDuringOnboarding("gender")
                               ? "bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300"
                               : fieldErrors?.gender
                               ? "border-red-500 focus:ring-red-500"
@@ -549,11 +599,11 @@ const StudentSettings = () => {
                           onChange={(e) =>
                             handleFieldChange("studentNumber", e.target.value)
                           }
-                          disabled={isProfileCompleted}
+                          disabled={isProfileCompleted || !isFieldEditableDuringOnboarding("studentNumber")}
                           placeholder={STUDENT_NUMBER_PLACEHOLDER}
                           maxLength={11}
                           className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
-                            isProfileCompleted
+                            isProfileCompleted || !isFieldEditableDuringOnboarding("studentNumber")
                               ? "bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300"
                               : fieldErrors?.studentNumber
                               ? "border-red-500 focus:ring-red-500"
@@ -605,14 +655,14 @@ const StudentSettings = () => {
                             <div className="flex flex-wrap items-center justify-end gap-2">
                               <button
                                 type="button"
-                                onClick={() => setOnboardingDismissed(true)}
+                                onClick={handleDismissOnboarding}
                                 className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors font-medium text-sm"
                               >
                                 Skip
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setOnboardingDismissed(true)}
+                                onClick={handleDismissOnboarding}
                                 className="px-5 py-2 bg-[#003363] text-white rounded-lg hover:bg-[#002347] transition-colors font-medium text-sm"
                               >
                                 Finish
@@ -631,9 +681,9 @@ const StudentSettings = () => {
                         onChange={(e) =>
                           handleFieldChange("courseYearLevel", e.target.value)
                         }
-                        disabled={isProfileCompleted}
+                        disabled={isProfileCompleted || !isFieldEditableDuringOnboarding("courseYearLevel")}
                         className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#003363] focus:border-transparent transition-all ${
-                          isProfileCompleted
+                          isProfileCompleted || !isFieldEditableDuringOnboarding("courseYearLevel")
                             ? "bg-gray-100 text-gray-600 cursor-not-allowed border-gray-300"
                             : fieldErrors?.courseYearLevel
                             ? "border-red-500 focus:ring-red-500"

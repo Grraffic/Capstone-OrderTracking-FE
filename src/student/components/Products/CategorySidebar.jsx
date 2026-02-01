@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
-  Grid,
+  Layers,
   Shirt,
   Trophy,
-  Package,
+  ShoppingBag,
 } from "lucide-react";
 import { PRODUCT_CATEGORIES } from "../../constants/studentProducts";
 
@@ -29,13 +29,13 @@ const CategorySidebar = ({
   // Map category IDs to icons
   const getCategoryIcon = (categoryId) => {
     const iconMap = {
-      all: Grid,
+      all: Layers, // Layers icon for "All Products" - represents multiple items/products
       uniform: Shirt,
       school_uniform: Shirt,
       pe_uniform: Trophy,
-      other_items: Package,
+      other_items: ShoppingBag, // ShoppingBag icon for "Other Items" - distinct from Layers and represents miscellaneous items
     };
-    const IconComponent = iconMap[categoryId] || Grid;
+    const IconComponent = iconMap[categoryId] || Layers;
     return <IconComponent className="w-5 h-5" />;
   };
 
