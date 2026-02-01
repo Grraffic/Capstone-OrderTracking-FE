@@ -305,7 +305,56 @@ export const useStudentSettings = () => {
     try {
       setSaving(true);
 
-      // Validate required fields for onboarding
+      // Check if profile is completed
+      const isProfileCompleted = Boolean(profileData?.onboardingCompleted) || Boolean(user?.onboardingCompleted);
+
+      // If profile is completed, only allow saving profile image changes
+      // Other fields are locked and cannot be changed
+      if (isProfileCompleted) {
+        // Only save if there's an image change
+        if (!imageFile) {
+          toast.error("No changes to save");
+          setSaving(false);
+          return;
+        }
+
+        // Upload image and save only photoURL
+        let imageUrl = originalImageUrl;
+        try {
+          imageUrl = await profileService.uploadProfileImage(imageFile);
+        } catch (error) {
+          console.error("Image upload failed:", error);
+          toast.error("Failed to upload profile image");
+          setSaving(false);
+          return;
+        }
+
+        // Update only photoURL when profile is completed
+        const updateData = {
+          photoURL: imageUrl,
+        };
+
+        await authAPI.updateProfile(updateData);
+
+        // Update local state
+        setOriginalImageUrl(imageUrl);
+        setImageFile(null);
+        setHasChanges(false);
+
+        // Update auth context
+        if (updateUser) {
+          updateUser({
+            photoURL: imageUrl,
+          });
+        }
+
+        toast.success("Profile picture updated successfully");
+        await fetchProfileData();
+        setSaving(false);
+        return;
+      }
+
+      // For onboarding (profile not completed), validate all required fields
       const newFieldErrors = {};
       let hasErrors = false;
       let normalizedStudentNumber = null;
@@ -432,6 +481,7 @@ export const useStudentSettings = () => {
     imageFile,
     originalImageUrl,
     user,
+    profileData?.onboardingCompleted,
     updateUser,
     fetchProfileData,
     navigate,

@@ -91,8 +91,32 @@ const ProfileCard = ({
           >
             {/* Profile Content */}
             {profileLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003363]"></div>
+              <div className="animate-pulse">
+                {/* Profile Image skeleton */}
+                <div className="flex justify-center mb-6">
+                  <div className="w-40 h-40 rounded-full bg-gray-200 border-[6px] border-gray-300"></div>
+                </div>
+                {/* Profile Details skeleton */}
+                {isProfileVisible && (
+                  <>
+                    <div className="text-center mb-8">
+                      <div className="h-8 bg-gray-200 rounded mb-2 w-3/4 mx-auto"></div>
+                      <div className="h-5 bg-gray-200 rounded mb-1 w-2/3 mx-auto"></div>
+                      <div className="h-5 bg-gray-200 rounded w-1/3 mx-auto"></div>
+                    </div>
+                    <div className="space-y-4 mb-8">
+                      <div>
+                        <div className="h-4 bg-gray-200 rounded mb-2 w-1/2"></div>
+                        <div className="h-5 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                      <div>
+                        <div className="h-4 bg-gray-200 rounded mb-2 w-1/2"></div>
+                        <div className="h-5 bg-gray-200 rounded w-full"></div>
+                      </div>
+                    </div>
+                    <div className="h-12 bg-gray-200 rounded-lg"></div>
+                  </>
+                )}
               </div>
             ) : profileError ? (
               <div className="text-center text-red-600 py-8">

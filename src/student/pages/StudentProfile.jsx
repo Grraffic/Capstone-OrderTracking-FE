@@ -343,9 +343,25 @@ const StudentProfile = () => {
                 <>
                   <div className="space-y-4">
                     {activitiesLoading ? (
-                      <div className="flex justify-center items-center h-64">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#003363]"></div>
-                      </div>
+                      // Skeleton loader for activities
+                      <>
+                        {[1, 2, 3, 4, 5].map((i) => (
+                          <div
+                            key={i}
+                            className="flex items-start gap-3 sm:gap-5 pb-4 border-b border-gray-200 last:border-b-0 animate-pulse"
+                          >
+                            {/* Icon skeleton */}
+                            <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gray-200 rounded-full"></div>
+                            {/* Content skeleton */}
+                            <div className="flex-1 min-w-0">
+                              <div className="h-5 bg-gray-200 rounded mb-2 w-3/4"></div>
+                              <div className="h-4 bg-gray-200 rounded mb-1 w-full"></div>
+                              <div className="h-4 bg-gray-200 rounded mb-2 w-2/3"></div>
+                              <div className="h-3 bg-gray-200 rounded w-24"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </>
                     ) : activities.length === 0 ? (
                       <div className="text-center text-gray-500 py-16">
                         <p>No activities found</p>

@@ -235,11 +235,9 @@ const StudentSettings = () => {
     navigate("/all-products");
   };
 
-  // Trigger file input click
+  // Trigger file input click - always allow profile image changes
   const triggerFileInput = () => {
-    if (!isProfileCompleted) {
-      fileInputRef.current?.click();
-    }
+    fileInputRef.current?.click();
   };
 
   const courseLevel = formData.courseYearLevel || profileData?.courseYearLevel;
@@ -319,9 +317,9 @@ const StudentSettings = () => {
               <p>Failed to load settings</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 items-stretch">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
               {/* Left Side – Student profile card: responsive mobile → tablet → laptop */}
-              <div className="md:col-span-1 flex flex-col min-h-0">
+              <div className="md:col-span-1 lg:col-span-1 flex flex-col min-h-0">
                 <div className="relative bg-white rounded-2xl border-2 sm:border-4 border-gray-200 shadow-sm overflow-visible p-4 sm:p-5 md:p-6 flex flex-col justify-center items-center h-full">
                   {/* Profile image + banner: banner anchored to image, scales with viewport */}
                   <div className="flex justify-center">
@@ -329,7 +327,7 @@ const StudentSettings = () => {
                       {/* Banner – on mobile: less in the border (right/down); desktop: left -17px, top -19px */}
                       {bannerStyle.label && (
                         <div
-                          className={`absolute left-[-8px] top-[-12px] lg:left-[-17px] lg:top-[-19px] z-10 w-11 h-[139px] flex flex-col items-center justify-center gap-2 py-4 shadow-xl origin-top-left
+                          className={`absolute left-[-16px] top-[-18px] md:top-[-27px] lg:left-[-17px] lg:top-[-29px] z-10 w-11 h-[139px] flex flex-col items-center justify-center gap-2 py-4 shadow-xl origin-top-left
                             scale-[0.75] sm:scale-[0.833] md:scale-[0.917] lg:scale-100
                             ${bannerStyle.bg} ${bannerStyle.text}`}
                         >
@@ -359,19 +357,17 @@ const StudentSettings = () => {
                           )}
                         </div>
                       )}
-                      <div className={`relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-[#E68B00] shadow-xl ${isProfileCompleted ? "" : "group"}`}>
+                      <div className="relative w-full h-full rounded-xl sm:rounded-2xl overflow-hidden border-2 sm:border-4 border-[#E68B00] shadow-xl">
                         {showImage ? (
                           <img
                             src={imagePreview}
                             alt="Profile"
-                            className={`absolute inset-0 w-full h-full object-cover transition-opacity ${isProfileCompleted ? "cursor-default" : "cursor-pointer group-hover:opacity-90"}`}
-                            onClick={triggerFileInput}
+                            className="absolute inset-0 w-full h-full object-cover"
                             onError={() => setImageLoadError(true)}
                           />
                         ) : (
                           <div
-                            className={`absolute inset-0 min-w-full min-h-full bg-[#003363] flex items-center justify-center transition-opacity ${isProfileCompleted ? "cursor-default" : "cursor-pointer group-hover:opacity-90"}`}
-                            onClick={triggerFileInput}
+                            className="absolute inset-0 min-w-full min-h-full bg-[#003363] flex items-center justify-center"
                             role="img"
                             aria-label={displayNameForCard ? `Profile for ${displayNameForCard}` : "Profile picture"}
                           >
@@ -380,16 +376,32 @@ const StudentSettings = () => {
                             </span>
                           </div>
                         )}
-                        {!isProfileCompleted && (
-                          <div
-                            className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer bg-black/30 z-20"
-                            onClick={triggerFileInput}
+                        {/* Edit icon button - bottom right, always visible to allow profile image changes */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            triggerFileInput();
+                          }}
+                          className="absolute bottom-2 right-2 w-10 h-10 bg-[#E68B00] rounded-full flex items-center justify-center shadow-lg hover:bg-[#d97a1f] transition-colors cursor-pointer z-10"
+                          title="Change profile picture"
+                          aria-label="Change profile picture"
+                        >
+                          <svg
+                            className="w-5 h-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                            xmlns="http://www.w3.org/2000/svg"
                           >
-                            <div className="bg-white/95 rounded-full p-2 sm:p-2.5">
-                              <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-[#003363]" />
-                            </div>
-                          </div>
-                        )}
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                            />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -435,7 +447,7 @@ const StudentSettings = () => {
               </div>
 
               {/* Right Side - Personal Information */}
-              <div id="personal-information" className="md:col-span-2 scroll-mt-24">
+              <div id="personal-information" className="md:col-span-1 lg:col-span-2 scroll-mt-24">
                 <div className="bg-gray-50 rounded-xl p-6">
                   <h2 className="text-lg font-semibold text-[#E68B00] mb-6">
                     Personal Information
@@ -741,7 +753,7 @@ const StudentSettings = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row justify-end gap-4 mt-6">
+                <div className="flex flex-col md:flex-row justify-end gap-4 mt-6">
                   <button
                     onClick={() => {
                       if (hasChanges) {
@@ -749,7 +761,7 @@ const StudentSettings = () => {
                       }
                     }}
                     disabled={!hasChanges || isProfileCompleted}
-                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    className={`px-6 py-3 rounded-lg  font-medium transition-colors ${
                       hasChanges && !isProfileCompleted
                         ? "border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
                         : "border-2 border-gray-200 text-gray-400 cursor-not-allowed"
@@ -761,9 +773,9 @@ const StudentSettings = () => {
                   <button
                     id="onboard-save"
                     onClick={handleSaveChanges}
-                    disabled={!hasChanges || saving || isProfileCompleted}
+                    disabled={!hasChanges || saving}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      hasChanges && !saving && !isProfileCompleted
+                      hasChanges && !saving
                         ? "bg-[#E68B00] text-white hover:bg-[#d97d00]"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
