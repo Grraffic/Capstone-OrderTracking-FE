@@ -1358,7 +1358,7 @@ const ItemsModals = ({
   // Add/Edit Item Modal - responsive: Mobile M 375, Mobile L 425, Tablet 768, Laptop 1024
   return createPortal(
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] py-2 pl-[5.5rem] pr-3 mobile-m:pl-[5.5rem] mobile-m:pr-3 mobile-l:py-3 mobile-l:pl-[5.75rem] mobile-l:pr-4 tablet:p-6 tablet:pl-10 tablet:pt-10 tablet:pr-6 tablet:pb-6 laptop:p-5 laptop:pl-5 laptop:pt-5"
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 mobile-m:p-5 mobile-l:p-6 tablet:p-6 tablet:pt-10 tablet:pb-6 laptop:p-5"
       onClick={(e) => {
         // Close modal when clicking backdrop
         if (e.target === e.currentTarget) {
@@ -1367,14 +1367,14 @@ const ItemsModals = ({
       }}
     >
       <div 
-        className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-full mobile-l:max-w-[405px] tablet:max-w-[600px] laptop:max-w-3xl max-h-[90vh] mobile-l:max-h-[82vh] tablet:max-h-[82vh] laptop:max-h-[90vh] overflow-hidden flex flex-col mt-5 mobile-m:mt-6 mobile-l:mt-6 tablet:mt-8 laptop:mt-0"
+        className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-[460px] mobile-m:max-w-[calc(100vw-2rem)] mobile-m:w-[calc(100vw-2rem)] mobile-l:max-w-[560px] tablet:max-w-[600px] laptop:max-w-3xl max-h-[90vh] mobile-m:max-h-[85vh] mobile-l:max-h-[82vh] tablet:max-h-[82vh] laptop:max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Pre-Order Notification Banner - Only for Add mode */}
         {modalState.mode === "add" &&
           preOrderCount > 0 &&
           parseInt(formData.stock || 0) > 0 && (
-            <div className="px-3 py-2 mobile-m:px-4 mobile-l:px-4 mobile-l:py-2.5 tablet:px-6 tablet:py-3 bg-blue-50 border-b border-blue-200">
+            <div className="px-4 py-2.5 mobile-m:px-5 mobile-l:px-6 mobile-l:py-3 tablet:px-6 tablet:py-3 bg-blue-50 border-b border-blue-200">
               <div className="flex items-center gap-1.5 mobile-l:gap-2 text-blue-800">
                 <Users size={14} className="mobile-l:w-[18px] mobile-l:h-[18px] shrink-0" />
                 <p className="text-xs font-medium mobile-l:text-sm">
@@ -1395,10 +1395,10 @@ const ItemsModals = ({
         {/* Content - Single Column Centered Card */}
         <form
           onSubmit={handleSubmit}
-          className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-3 pt-3 pb-6 mobile-m:px-4 mobile-m:pt-4 mobile-l:px-4 mobile-l:pt-4 mobile-l:pb-6 tablet:px-5 tablet:pt-4 tablet:pb-8 laptop:px-6 laptop:pb-8"
+          className="flex-1 overflow-y-auto min-h-0 bg-gray-50 px-4 pt-4 pb-6 mobile-m:px-5 mobile-m:pt-5 mobile-m:pb-7 mobile-l:px-6 mobile-l:pt-6 mobile-l:pb-8 tablet:px-5 tablet:pt-4 tablet:pb-8 laptop:px-6 laptop:pb-8"
         >
           {/* Breadcrumb (outside white card) */}
-          <div className="max-w-2xl mx-auto mb-3 mobile-l:mb-4">
+          <div className="w-full mx-auto mb-3 mobile-m:mb-4 mobile-l:mb-5">
             <div className="text-xs text-gray-500">
               <button
                 type="button"
@@ -1412,9 +1412,9 @@ const ItemsModals = ({
             </div>
           </div>
 
-          <div className="max-w-2xl mx-auto bg-white rounded-xl mobile-l:rounded-2xl shadow-sm border border-gray-100 p-3 mobile-m:p-4 mobile-l:p-4 tablet:p-5 laptop:p-6 space-y-4 mobile-l:space-y-5 tablet:space-y-6">
+          <div className="w-full mx-auto bg-white rounded-xl mobile-l:rounded-2xl shadow-sm border border-gray-100 p-4 mobile-m:p-5 mobile-l:p-6 tablet:p-5 laptop:p-6 space-y-4 mobile-m:space-y-5 mobile-l:space-y-6 tablet:space-y-6 overflow-hidden">
             {/* Header: Title, Size Guide, and Centered Image Upload */}
-            <div className="space-y-3 mobile-l:space-y-4">
+            <div className="space-y-3 mobile-m:space-y-4 mobile-l:space-y-5">
               {/* Item name + item type with size info on the right */}
               <div className="flex items-center justify-between gap-2 mobile-l:gap-3">
                 <div className="flex-1 min-w-0">
@@ -1478,13 +1478,12 @@ const ItemsModals = ({
 
             {/* Item Details Form */}
             <div
-              className={`space-y-5 rounded-xl border border-gray-100 bg-gray-50/60 p-5 transition-colors duration-200 ${
+              className={`space-y-4 transition-colors duration-200 ${
                 focusedSection === "Item Details" ? "ring-1 ring-blue-200" : ""
               }`}
               onFocus={() => setFocusedSection("Item Details")}
               onBlur={() => setFocusedSection(null)}
             >
-              <div className="space-y-4">
                 {/* Education Level only (e.g. All Education Levels for Logo Patch, ID Lace) */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">
@@ -1624,9 +1623,9 @@ const ItemsModals = ({
                     <label className="text-sm font-medium text-gray-700">
                       Description / Note
                     </label>
-                    <div className="rounded-xl border border-gray-300 bg-white overflow-visible">
+                    <div className="rounded-xl border border-gray-300 bg-white overflow-hidden">
                       {/* Rich text toolbar (Google Docs–style basic controls) */}
-                      <div className="flex items-center gap-1 px-2 py-1.5 border-b border-gray-200 text-gray-600 relative">
+                      <div className="flex items-center flex-wrap gap-1 px-2 py-1.5 border-b border-gray-200 text-gray-600 relative">
                         {/* Remove Formatting */}
                         <button
                           type="button"
@@ -1803,14 +1802,14 @@ const ItemsModals = ({
                     </p>
 
                     {/* Bottom card: Size / Stock / Unit Price + Add another option value */}
-                    <div className="rounded-xl border border-gray-200 bg-white">
-                      <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                        <span>Size</span>
-                        <span>Stock</span>
-                        <span>Unit Price</span>
+                    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                      <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                        <span className="truncate">Size</span>
+                        <span className="truncate">Stock</span>
+                        <span className="truncate">Unit Price</span>
                       </div>
                       <div
-                        className="px-4 py-3 space-y-2 text-sm"
+                        className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto"
                         ref={sizeDropdownRef}
                       >
                         {variants[0].values.map((value, index) => {
@@ -1818,9 +1817,9 @@ const ItemsModals = ({
                           return (
                             <div
                               key={index}
-                              className="grid grid-cols-3 gap-4 items-center"
+                              className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
                             >
-                            <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0">
                               <input
                                 type="checkbox"
                                 checked={selectedVariantIndices.includes(index)}
@@ -1895,72 +1894,74 @@ const ItemsModals = ({
                                   }
                                 }}
                                 disabled={existing}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 disabled:opacity-60 disabled:cursor-not-allowed"
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 disabled:opacity-60 disabled:cursor-not-allowed shrink-0 flex-shrink-0"
                               />
                               {existing ? (
-                                <span className="text-gray-800">
+                                <span className="text-gray-800 truncate min-w-0 flex-1">
                                   {value ||
                                     (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : `Size ${index + 1}`)}
                                 </span>
                               ) : (
-                                <div className="relative flex-1 min-w-0 flex items-center gap-2">
-                                  <input
-                                    type="text"
-                                    value={value}
-                                    onChange={(e) =>
-                                      handleVariantValueChange(0, index, e.target.value)
-                                    }
-                                    onFocus={() =>
-                                      setOpenSizeDropdownIndex(index)
-                                    }
-                                    placeholder={
-                                      index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "e.g. Large (L), XSmall (XS)"
-                                    }
-                                    className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                  />
-                                  {openSizeDropdownIndex === index && (() => {
-                                    const filtered = SUGGESTED_SIZES.filter(
-                                      (s) =>
-                                        (value || "").trim() === "" ||
-                                        s
-                                          .toLowerCase()
-                                          .includes(
-                                            (value || "").toLowerCase().trim()
-                                          )
-                                    );
-                                    return (
-                                      filtered.length > 0 && (
-                                        <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                                          {filtered.map((s) => (
-                                            <button
-                                              key={s}
-                                              type="button"
-                                              className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
-                                              onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                handleVariantValueChange(
-                                                  0,
-                                                  index,
-                                                  s
-                                                );
-                                                setOpenSizeDropdownIndex(null);
-                                              }}
-                                            >
-                                              {s}
-                                            </button>
-                                          ))}
-                                        </div>
-                                      )
-                                    );
-                                  })()}
+                                <div className="relative flex-1 min-w-0 flex items-center gap-1.5 mobile-m:gap-2">
+                                  <div className="flex-1 min-w-0 relative">
+                                    <input
+                                      type="text"
+                                      value={value}
+                                      onChange={(e) =>
+                                        handleVariantValueChange(0, index, e.target.value)
+                                      }
+                                      onFocus={() =>
+                                        setOpenSizeDropdownIndex(index)
+                                      }
+                                      placeholder={
+                                        index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "e.g. Large (L), XSmall (XS)"
+                                      }
+                                      className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                    {openSizeDropdownIndex === index && (() => {
+                                      const filtered = SUGGESTED_SIZES.filter(
+                                        (s) =>
+                                          (value || "").trim() === "" ||
+                                          s
+                                            .toLowerCase()
+                                            .includes(
+                                              (value || "").toLowerCase().trim()
+                                            )
+                                      );
+                                      return (
+                                        filtered.length > 0 && (
+                                          <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[200px] max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                                            {filtered.map((s) => (
+                                              <button
+                                                key={s}
+                                                type="button"
+                                                className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none whitespace-nowrap"
+                                                onMouseDown={(e) => {
+                                                  e.preventDefault();
+                                                  handleVariantValueChange(
+                                                    0,
+                                                    index,
+                                                    s
+                                                  );
+                                                  setOpenSizeDropdownIndex(null);
+                                                }}
+                                              >
+                                                {s}
+                                              </button>
+                                            ))}
+                                          </div>
+                                        )
+                                      );
+                                    })()}
+                                  </div>
                                   {variants[0].values.length > 1 && (
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveVariantValue(0, index)}
-                                      className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg shrink-0"
+                                      className="p-1.5 mobile-m:p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg shrink-0 flex-shrink-0 z-10"
                                       title="Remove this option value"
                                     >
-                                      <Trash2 size={16} />
+                                      <Trash2 size={16} className="mobile-m:w-[18px] mobile-m:h-[18px]" />
                                     </button>
                                   )}
                                 </div>
@@ -1979,7 +1980,7 @@ const ItemsModals = ({
                               placeholder="0"
                               disabled={existing}
                               readOnly={existing}
-                              className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
+                              className={`w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
                             />
                             <input
                               type="number"
@@ -2007,7 +2008,7 @@ const ItemsModals = ({
                               placeholder="Php 0.00"
                               disabled={existing}
                               readOnly={existing}
-                              className={`w-full px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
+                              className={`w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
                             />
                           </div>
                           );
@@ -2038,19 +2039,19 @@ const ItemsModals = ({
                     </div>
 
                     {/* Stock & Price Entries Card */}
-                    <div className="rounded-xl border border-gray-200 bg-white">
-                      <div className="grid grid-cols-3 gap-4 px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                        <span>Entry</span>
-                        <span>Stock</span>
-                        <span>Unit Price</span>
+                    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                      <div className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                        <span className="truncate">Entry</span>
+                        <span className="truncate">Stock</span>
+                        <span className="truncate">Unit Price</span>
                       </div>
-                      <div className="px-4 py-3 space-y-2 text-sm">
+                      <div className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto">
                         {accessoryStocks.map((_, index) => (
                           <div
                             key={index}
-                            className="grid grid-cols-3 gap-4 items-center"
+                            className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
                               <input
                                 type="checkbox"
                                 checked={selectedAccessoryIndices.includes(
@@ -2085,9 +2086,9 @@ const ItemsModals = ({
                                     });
                                   }
                                 }}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0"
                               />
-                              <span className="text-gray-800">
+                              <span className="text-gray-800 truncate min-w-0">
                                 Entry {index + 1}
                               </span>
                             </div>
@@ -2102,9 +2103,9 @@ const ItemsModals = ({
                                 setAccessoryStocks(next);
                               }}
                               placeholder="0"
-                              className="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             />
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
                               <input
                                 type="number"
                                 min="0"
@@ -2129,7 +2130,7 @@ const ItemsModals = ({
                                   }
                                 }}
                                 placeholder="Php 0.00"
-                                className="flex-1 px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                               />
                               {accessoryStocks.length > 1 && (
                                 <button
@@ -2159,17 +2160,16 @@ const ItemsModals = ({
                     </div>
                   </div>
                 )}
-              </div>
             </div>
           </div>
         </form>
 
         {/* Footer - responsive padding */}
-        <div className="flex items-center justify-end gap-2 mobile-l:gap-3 px-3 py-4 mobile-m:px-4 mobile-l:px-4 tablet:px-6 tablet:py-5 border-t bg-white flex-shrink-0">
+            <div className="flex items-center justify-end gap-2 mobile-m:gap-2.5 mobile-l:gap-3 px-4 py-4 mobile-m:px-5 mobile-m:py-4.5 mobile-l:px-6 mobile-l:py-5 tablet:px-6 tablet:py-5 border-t bg-white flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
-            className="px-3 py-1.5 mobile-l:px-4 mobile-l:py-2 text-xs mobile-l:text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium"
+            className="px-2.5 py-1.5 mobile-m:px-3 mobile-m:py-1.5 mobile-l:px-4 mobile-l:py-2 text-xs mobile-m:text-xs mobile-l:text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition font-medium"
           >
             Back
           </button>
@@ -2177,7 +2177,7 @@ const ItemsModals = ({
             type="submit"
             onClick={handleSubmit}
             disabled={!validateFormComplete}
-            className={`px-4 py-1.5 mobile-l:px-6 mobile-l:py-2.5 text-xs mobile-l:text-sm rounded-lg shadow-sm font-semibold transition ${
+            className={`px-3 py-1.5 mobile-m:px-4 mobile-m:py-1.5 mobile-l:px-6 mobile-l:py-2.5 text-xs mobile-m:text-xs mobile-l:text-sm rounded-lg shadow-sm font-semibold transition ${
               validateFormComplete
                 ? "bg-orange-500 text-white hover:bg-orange-600 cursor-pointer"
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"

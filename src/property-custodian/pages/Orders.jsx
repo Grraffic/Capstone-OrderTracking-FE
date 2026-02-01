@@ -1,5 +1,6 @@
 import { QrCode, Search, X, CheckCircle } from "lucide-react";
 import { subDays, format } from "date-fns";
+import { createPortal } from "react-dom";
 import AdminLayout from "../components/layouts/AdminLayout";
 import DateRangePicker from "../components/common/DateRangePicker";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
@@ -642,9 +643,9 @@ const Orders = () => {
       />
 
       {/* Order Details Modal - shows after QR scan with design: Name, Education Level, Transaction No, Order Date, Item Ordered, Size */}
-      {scannedOrder && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col relative z-[10001]">
+      {scannedOrder && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4" style={{ zIndex: 10000 }}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col relative z-[10001]" style={{ zIndex: 10001 }}>
             <div className="flex justify-center px-6 pt-8 pb-4 border-b border-gray-200">
               <h3 className="text-xl font-bold tracking-tight text-center">
                 <span className="text-[#0C2340]">Order</span>{" "}
@@ -753,13 +754,14 @@ const Orders = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Release Success Modal - centered, checkmark, message, X top right */}
-      {qrSuccess && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden relative z-[10001]">
+      {qrSuccess && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[10000] p-4" style={{ zIndex: 10000 }}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden relative z-[10001]" style={{ zIndex: 10001 }}>
             <button
               onClick={() => {
                 clearSuccess();
@@ -786,7 +788,8 @@ const Orders = () => {
               </p>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Error Notification */}

@@ -687,17 +687,40 @@ const Inventory = () => {
       }
     };
 
+    // Listen for order updated events (when order status changes)
+    const handleOrderUpdated = (data) => {
+      console.log("📡 [Inventory] Received order updated event:", data);
+      // Refresh inventory data to show updated stock
+      fetchInventoryData();
+      // Refresh transactions if on transaction tab
+      if (activeTab === "transaction") {
+        refreshTransactions();
+      }
+    };
+
+    // Listen for item archived events (when items are archived)
+    const handleItemArchived = (data) => {
+      console.log("📡 [Inventory] Received item archived event:", data);
+      // Refresh inventory data to remove archived items
+      fetchInventoryData();
+    };
+
+    // Register all socket event listeners
     on("item:updated", handleItemUpdate);
     on("item:created", handleItemCreated);
+    on("item:archived", handleItemArchived);
     on("order:created", handleOrderCreated);
     on("order:claimed", handleOrderClaimed);
+    on("order:updated", handleOrderUpdated);
 
     // Cleanup on unmount
     return () => {
       off("item:updated", handleItemUpdate);
       off("item:created", handleItemCreated);
+      off("item:archived", handleItemArchived);
       off("order:created", handleOrderCreated);
       off("order:claimed", handleOrderClaimed);
+      off("order:updated", handleOrderUpdated);
     };
   }, [isConnected, on, off, activeTab, fetchInventoryData, refreshTransactions]);
 
