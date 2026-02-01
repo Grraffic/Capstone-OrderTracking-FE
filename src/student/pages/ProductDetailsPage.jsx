@@ -474,6 +474,11 @@ const ProductDetailsPage = () => {
   // For old students: item is not allowed if not in maxQuantities (not enabled by admin)
   // This applies to ALL items, including "All Education Levels" items
   const notAllowedForStudentType = isOldStudent && keyNotInMaxQuantities;
+  
+  // If limits are not loaded yet, treat item as disabled to prevent misleading "blinking" effect
+  // This ensures items start disabled and only become enabled once we have confirmed their actual availability
+  const limitsNotLoaded = user && !limitsLoaded;
+  
   const effectiveStock = product
     ? (requiresSizeSelection
         ? (selectedSizeData?.stock ?? product?.stock ?? 999)
@@ -560,7 +565,10 @@ const ProductDetailsPage = () => {
   // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
   let effectiveMax;
   if (product) {
-    if (isMaxReached) {
+    // If limits are not loaded yet, set effectiveMax to 0 to prevent misleading availability
+    if (limitsNotLoaded) {
+      effectiveMax = 0;
+    } else if (isMaxReached) {
       // If max is reached (alreadyOrdered + claimedItems >= max), completely block ordering
       effectiveMax = 0;
     } else if (isOldStudent && maxQuantities[productResolvedKey] != null) {
@@ -627,6 +635,18 @@ const ProductDetailsPage = () => {
         return fg === "Unisex" || fg === user.gender;
       })
       .slice(0, 3);
+    
+    // If limits are not loaded yet, treat all items as disabled to prevent misleading "blinking" effect
+    if (!limitsLoaded) {
+      return filtered.map((p) => ({
+        ...p,
+        _orderLimitReached: true, // Disable until limits are loaded
+        _slotsFullForNewType: false,
+        _notAllowedForStudentType: false,
+        _isDisabled: true,
+      }));
+    }
+    
     return filtered.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
       const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
@@ -707,6 +727,7 @@ const ProductDetailsPage = () => {
     user?.gender,
     maxQuantities,
     alreadyOrdered,
+    claimedItems,
     cartItems,
     cartSlotKeys,
     cartSlotCount,
@@ -714,6 +735,7 @@ const ProductDetailsPage = () => {
     slotsLeftForThisOrder,
     isOldStudent,
     blockedDueToVoid,
+    limitsLoaded,
   ]);
 
   if (!product) {

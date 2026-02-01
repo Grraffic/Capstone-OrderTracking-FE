@@ -308,6 +308,7 @@ export const useStudentSettings = () => {
       // Validate required fields for onboarding
       const newFieldErrors = {};
       let hasErrors = false;
+      let normalizedStudentNumber = null;
 
       if (!formData.gender) {
         newFieldErrors.gender = "Gender is required";
@@ -317,7 +318,7 @@ export const useStudentSettings = () => {
         newFieldErrors.studentNumber = "Student number is required";
         hasErrors = true;
       } else {
-        const normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
+        normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
         if (!isValidStudentNumber(normalizedStudentNumber)) {
           newFieldErrors.studentNumber = "Student number must match format: YY-NNNNNIII (e.g. 22-00023RSR)";
           hasErrors = true;

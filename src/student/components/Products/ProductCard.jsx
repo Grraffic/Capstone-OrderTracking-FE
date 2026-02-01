@@ -38,26 +38,21 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
       className={`relative rounded-2xl shadow-md overflow-hidden flex flex-col h-full cursor-pointer ${
         isDisabled
           ? "bg-gray-100 hover:shadow-md"
-          : "bg-white hover:shadow-xl transition-all duration-300"
+          : "bg-white hover:shadow-xl"
       }`}
       onClick={handleProductClick}
-      style={
-        isDisabled
-          ? undefined
-          : { transition: "all 0.3s ease-in-out, transform 0.3s ease-in-out" }
-      }
     >
       {/* Product Image */}
       <div
         className={`relative aspect-square ${
-          isDisabled ? "bg-gray-200" : "bg-gray-50 transition-all duration-300"
+          isDisabled ? "bg-gray-200" : "bg-gray-50"
         }`}
       >
         <img
           src={product.image}
           alt={product.name}
           className={`w-full h-full object-cover ${
-            isDisabled ? "grayscale opacity-70" : "transition-all duration-300"
+            isDisabled ? "grayscale opacity-70" : ""
           }`}
           loading="lazy"
           decoding="async"

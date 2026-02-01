@@ -232,7 +232,7 @@ const StudentSettings = () => {
   const confirmDiscard = () => {
     handleDiscardChanges();
     setShowDiscardModal(false);
-    navigate(-1);
+    navigate("/all-products");
   };
 
   // Trigger file input click

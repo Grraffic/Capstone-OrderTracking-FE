@@ -125,15 +125,21 @@ const AllProducts = () => {
   }, [user]);
 
   // Fetch max-quantities and alreadyOrdered so we can disable add/order for items already at limit (e.g. jogging pants in orders)
+  // Optimized: Fetch immediately without blocking UI, items are disabled until limits load
   useEffect(() => {
     const fetchMaxQuantities = async () => {
       if (!user) {
         setLimitsLoaded(false);
         return;
       }
-      setLimitsLoaded(false);
+      // Only set limitsLoaded to false on initial load (when user first appears)
+      // On refresh triggers, keep the previous state to avoid flickering
+      if (limitsRefreshTrigger === 0) {
+        setLimitsLoaded(false);
+      }
       try {
         const res = await authAPI.getMaxQuantities();
+        // Update all state at once for better performance
         setMaxQuantities(res.data?.maxQuantities ?? {});
         setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
         setClaimedItems(res.data?.claimedItems ?? {});
@@ -146,6 +152,7 @@ const AllProducts = () => {
         setLimitsLoaded(true);
       } catch (err) {
         if (err?.response?.status === 400) {
+          // Update all state at once for better performance
           setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
           setClaimedItems(err?.response?.data?.claimedItems ?? {});
           setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
@@ -364,6 +371,23 @@ const AllProducts = () => {
   // Only placed orders count toward the limit—cart does not.
   // For old students: ALL items (including "All Education Levels") must be explicitly enabled by admin to be orderable.
   const productsWithLimit = useMemo(() => {
+    // If limits are not loaded yet, treat all items as disabled to prevent misleading "blinking" effect
+    // Items will only be enabled once we have confirmed their actual availability
+    if (!limitsLoaded) {
+      return paginatedItems.map((p) => ({
+        ...p,
+        _orderLimitReached: true, // Disable until limits are loaded
+        _isClaimed: false,
+        _slotsFullForNewType: false,
+        _notAllowedForStudentType: false,
+        _claimedCount: 0,
+        _alreadyOrderedCount: 0,
+        _totalUsed: 0,
+        _maxAllowed: 0,
+        _effectiveMax: 0,
+      }));
+    }
+
     let list = paginatedItems.map((p) => {
       const key = resolveItemKeyForMaxQuantity(p.name);
       const keyMissing = maxQuantities[key] === undefined || maxQuantities[key] === null;
@@ -497,7 +521,7 @@ const AllProducts = () => {
     });
     // Old students still see all items at their education level; disallowed items are disabled (For New Students only overlay).
     return list;
-  }, [paginatedItems, maxQuantities, alreadyOrdered, claimedItems, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent]);
+  }, [paginatedItems, maxQuantities, alreadyOrdered, claimedItems, cartItems, cartSlotKeys, cartSlotCount, totalItemLimit, slotsLeftForThisOrder, isOldStudent, limitsLoaded]);
 
   const limitNotSet =
     user &&
@@ -517,6 +541,25 @@ const AllProducts = () => {
     setIsSidebarOpen(false); // Close mobile sidebar after selection
   };
 
+  // Skeleton loader component for product cards
+  const ProductCardSkeleton = () => (
+    <div className="relative rounded-2xl shadow-md overflow-hidden flex flex-col h-full bg-white animate-pulse">
+      {/* Image skeleton */}
+      <div className="relative aspect-square bg-gray-200"></div>
+      {/* Content skeleton */}
+      <div className="p-5 flex flex-col flex-grow">
+        {/* Title skeleton */}
+        <div className="h-6 bg-gray-200 rounded mb-2 w-3/4"></div>
+        {/* Education level skeleton */}
+        <div className="h-5 bg-gray-200 rounded mb-4 w-1/2"></div>
+        {/* Spacer */}
+        <div className="flex-grow"></div>
+        {/* Status skeleton */}
+        <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+      </div>
+    </div>
+  );
+
   // Show full-page loading only for profile or initial products fetch, so the layout is the same for all users.
   // Do not block on limits: show the full All Products layout (sidebar, header, grid) and let limits load in the background;
   // cards will show disabled/overlays once limits are loaded (avoids stuck "Checking order limits..." and design difference per user).
@@ -526,12 +569,47 @@ const AllProducts = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="pt-16 flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">
-              {isWaitingForProfile ? "Loading your profile..." : "Loading products..."}
-            </p>
+        <HeroSection heading="Item Card" align="bottom-center" />
+        
+        {/* Main Content – white card close to hero/building */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-20 pb-12 -mt-28">
+          {/* Main Container - White card */}
+          <div className="bg-white rounded-3xl shadow-gray-800 shadow-md mb-8 relative">
+            {/* Header skeleton */}
+            <div className="z-20 rounded-t-3xl px-6 md:px-8 lg:px-10 py-4 md:py-5 border-b border-gray-100 shadow-sm min-h-[139px] flex flex-col justify-center items-center">
+              <div className="w-full flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 md:gap-6">
+                {/* Left: Hamburger + Title skeleton */}
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 bg-gray-200 rounded-lg animate-pulse"></div>
+                  <div className="h-8 bg-gray-200 rounded w-48 animate-pulse"></div>
+                </div>
+                {/* Right: Search skeleton */}
+                <div className="flex-1 max-w-md">
+                  <div className="h-10 bg-gray-200 rounded-lg animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Grid skeleton */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 px-6 md:px-8 lg:px-10 pb-6 md:pb-8 lg:pb-10">
+              {/* Sidebar skeleton (Desktop) */}
+              <div className="hidden lg:block lg:col-span-3">
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="h-12 bg-gray-200 rounded-lg animate-pulse"></div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Products Grid skeleton */}
+              <div className="lg:col-span-9">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <ProductCardSkeleton key={i} />
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -634,12 +712,6 @@ const AllProducts = () => {
               </div>
             </div>
 
-            {user && !limitsLoaded && (
-              <div className="mt-4 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-500 border-t-transparent flex-shrink-0" />
-                <p className="text-sm text-blue-800">Checking order limits...</p>
-              </div>
-            )}
 
             {!userEducationLevel && !profileLoading && (
               <div className="mt-4 flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg px-4 py-3">
