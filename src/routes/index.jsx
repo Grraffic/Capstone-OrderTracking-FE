@@ -13,14 +13,15 @@ import Items from "../property-custodian/pages/Items";
 import Inventory from "../property-custodian/pages/Inventory";
 import Orders from "../property-custodian/pages/Orders";
 import Settings from "../property-custodian/pages/Settings";
+import StudentList from "../property-custodian/pages/StudentList";
+import EligibilityManagement from "../property-custodian/pages/EligibilityManagement";
 
 // System Admin Pages
 import SystemAdminDashboard from "../system-admin/pages/SystemAdminDashboard";
-import StudentList from "../system-admin/pages/StudentList";
-import EligibilityManagement from "../system-admin/pages/EligibilityManagement";
 import ItemApproval from "../system-admin/pages/ItemApproval";
 import SystemSettings from "../system-admin/pages/SystemSettings";
 import ArchiveUsers from "../system-admin/pages/ArchiveUsers";
+import RecentAudits from "../system-admin/pages/RecentAudits";
 
 // Student Pages - lazy-loaded for smaller initial bundle
 const StudentDashboard = lazy(() => import("../student/pages/StudentDashboard"));
@@ -94,6 +95,22 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/property-custodian/students"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
+            <StudentList />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/property-custodian/eligibility"
+        element={
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
+            <EligibilityManagement />
+          </ProtectedRoute>
+        }
+      />
       
       {/* Legacy admin routes - redirect to property-custodian for backward compatibility */}
       <Route
@@ -147,14 +164,6 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/system-admin/students"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <StudentList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/system-admin/archive-users"
         element={
           <ProtectedRoute requiredRoles={["system_admin"]}>
@@ -163,18 +172,18 @@ const AppRoutes = () => {
         }
       />
       <Route
-        path="/system-admin/eligibility"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <EligibilityManagement />
-          </ProtectedRoute>
-        }
-      />
-      <Route
         path="/system-admin/item-approval"
         element={
           <ProtectedRoute requiredRoles={["system_admin"]}>
             <ItemApproval />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/system-admin/recent-audits"
+        element={
+          <ProtectedRoute requiredRoles={["system_admin"]}>
+            <RecentAudits />
           </ProtectedRoute>
         }
       />
