@@ -55,11 +55,18 @@ class RateLimiter {
   }
 }
 
+// Check if rate limiting is disabled via environment variable
+const RATE_LIMIT_DISABLED = import.meta.env.VITE_RATE_LIMIT_ENABLED === 'false';
+
 // Create rate limiters for different API call types
-// Aligned with backend: 100 requests per 15 minutes (900000ms)
-export const apiRateLimiter = new RateLimiter(90, 15 * 60 * 1000); // 90 requests per 15 minutes (slightly below backend limit)
-export const authRateLimiter = new RateLimiter(4, 15 * 60 * 1000); // 4 auth requests per 15 minutes (below backend limit of 5)
-export const writeRateLimiter = new RateLimiter(90, 15 * 60 * 1000); // 90 write requests per 15 minutes (below backend limit of 100)
+// If disabled, set very high limits (effectively unlimited)
+const API_MAX = RATE_LIMIT_DISABLED ? 999999 : (parseInt(import.meta.env.VITE_RATE_LIMIT_MAX_REQUESTS, 10) || 90);
+const AUTH_MAX = RATE_LIMIT_DISABLED ? 999999 : (parseInt(import.meta.env.VITE_AUTH_RATE_LIMIT_MAX_REQUESTS, 10) || 4);
+const WRITE_MAX = RATE_LIMIT_DISABLED ? 999999 : (parseInt(import.meta.env.VITE_WRITE_RATE_LIMIT_MAX_REQUESTS, 10) || 90);
+
+export const apiRateLimiter = new RateLimiter(API_MAX, 15 * 60 * 1000);
+export const authRateLimiter = new RateLimiter(AUTH_MAX, 15 * 60 * 1000);
+export const writeRateLimiter = new RateLimiter(WRITE_MAX, 15 * 60 * 1000);
 
 /**
  * Throttle function to limit function calls
