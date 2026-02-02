@@ -73,6 +73,7 @@ const Items = () => {
     variation: null,
     variations: [],
   });
+  const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   const menuRef = useRef(null);
   const filterButtonRef = useRef(null);
   // Note: AdminLayout handles sidebar state internally
@@ -190,6 +191,40 @@ const Items = () => {
 
   const totalPagesGrouped = Math.max(1, Math.ceil(groupedItems.length / itemsPerPage));
   const hasPagination = groupedItems.length > itemsPerPage;
+
+  // Sync page input value when currentPage changes
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  // Handle page input change
+  const handlePageInputChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setPageInputValue(value);
+    }
+  };
+
+  // Handle page input submission
+  const handlePageInputSubmit = (e) => {
+    e.preventDefault();
+    const page = parseInt(pageInputValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPagesGrouped) {
+      goToPage(page);
+    } else {
+      // Reset to current page if invalid
+      setPageInputValue(currentPage.toString());
+    }
+  };
+
+  // Handle page input blur (when user clicks away)
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInputValue, 10);
+    if (isNaN(page) || page < 1 || page > totalPagesGrouped) {
+      setPageInputValue(currentPage.toString());
+    }
+  };
 
   // Item Details Modal (new enhanced view modal)
   const {
@@ -839,6 +874,22 @@ const Items = () => {
                   <span className="hidden sm:inline">Previous</span>
                   <span className="sm:hidden">Prev</span>
                 </button>
+                
+                {/* Page Number Input */}
+                <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
+                  <input
+                    type="text"
+                    value={pageInputValue}
+                    onChange={handlePageInputChange}
+                    onBlur={handlePageInputBlur}
+                    className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                    aria-label="Page number"
+                    min="1"
+                    max={totalPagesGrouped}
+                  />
+                  
+                </form>
+
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage + 1)}

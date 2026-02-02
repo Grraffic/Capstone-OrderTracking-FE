@@ -1915,7 +1915,87 @@ const ItemsModals = ({
                                         const inputValue = e.target.value.trim();
                                         if (!inputValue) return;
                                         
-                                        // Normalize: remove extra spaces, fix common typos
+                                        // Helper function to normalize for matching (case-insensitive, ignoring parentheses)
+                                        const normalizeForMatch = (str) => 
+                                          str.toLowerCase().replace(/\s*\([^)]*\)\s*/g, "").trim();
+                                        
+                                        // Common typo corrections for size names
+                                        const typoCorrections = {
+                                          // Medium typos (common misspellings)
+                                          "mediuem": "medium",
+                                          "mediium": "medium",
+                                          "meduim": "medium",
+                                          "mediam": "medium",
+                                          "meduium": "medium",
+                                          "medum": "medium",
+                                          "medim": "medium",
+                                          // Small typos
+                                          "smal": "small",
+                                          "smll": "small",
+                                          "smaal": "small",
+                                          // Large typos
+                                          "lareg": "large",
+                                          "lrage": "large",
+                                          "larage": "large",
+                                          // XSmall typos
+                                          "xsmal": "xsmall",
+                                          "xsmll": "xsmall",
+                                          // XLarge typos
+                                          "xlareg": "xlarge",
+                                          "xlrage": "xlarge",
+                                          "xlarage": "xlarge",
+                                          // 2XLarge typos
+                                          "2xlareg": "2xlarge",
+                                          "2xlrage": "2xlarge",
+                                          // 3XLarge typos
+                                          "3xlareg": "3xlarge",
+                                          "3xlrage": "3xlarge",
+                                        };
+                                        
+                                        // Helper function to calculate Levenshtein distance (edit distance)
+                                        const levenshteinDistance = (str1, str2) => {
+                                          const m = str1.length;
+                                          const n = str2.length;
+                                          const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+                                          
+                                          for (let i = 0; i <= m; i++) dp[i][0] = i;
+                                          for (let j = 0; j <= n; j++) dp[0][j] = j;
+                                          
+                                          for (let i = 1; i <= m; i++) {
+                                            for (let j = 1; j <= n; j++) {
+                                              if (str1[i - 1] === str2[j - 1]) {
+                                                dp[i][j] = dp[i - 1][j - 1];
+                                              } else {
+                                                dp[i][j] = Math.min(
+                                                  dp[i - 1][j] + 1,     // deletion
+                                                  dp[i][j - 1] + 1,     // insertion
+                                                  dp[i - 1][j - 1] + 1  // substitution
+                                                );
+                                              }
+                                            }
+                                          }
+                                          
+                                          return dp[m][n];
+                                        };
+                                        
+                                        // First, check for direct typo matches
+                                        
+                                        // Check if input (without parentheses) matches a typo
+                                        const inputWithoutParens = normalizeForMatch(inputValue);
+                                        if (typoCorrections[inputWithoutParens]) {
+                                          // Find the suggested size that matches the corrected typo
+                                          const correctedTypo = typoCorrections[inputWithoutParens];
+                                          const matchingSize = SUGGESTED_SIZES.find(s => {
+                                            const sNormalized = normalizeForMatch(s);
+                                            return sNormalized === correctedTypo;
+                                          });
+                                          if (matchingSize) {
+                                            handleVariantValueChange(0, index, matchingSize);
+                                            return;
+                                          }
+                                        }
+                                        
+                                        // Normalize: remove extra spaces, fix repeated letters
                                         let normalized = inputValue
                                           .replace(/\s+/g, " ") // Multiple spaces to single space
                                           .replace(/([a-z])\1{2,}/gi, (match) => {
@@ -1923,11 +2003,20 @@ const ItemsModals = ({
                                             return match[0] + match[0];
                                           });
                                         
-                                        // Try to match against suggested sizes (case-insensitive, ignoring parentheses)
-                                        const normalizeForMatch = (str) => 
-                                          str.toLowerCase().replace(/\s*\([^)]*\)\s*/g, "").trim();
-                                        
                                         const inputNormalized = normalizeForMatch(normalized);
+                                        
+                                        // Check if normalized input matches a typo
+                                        if (typoCorrections[inputNormalized]) {
+                                          const correctedTypo = typoCorrections[inputNormalized];
+                                          const matchingSize = SUGGESTED_SIZES.find(s => {
+                                            const sNormalized = normalizeForMatch(s);
+                                            return sNormalized === correctedTypo;
+                                          });
+                                          if (matchingSize) {
+                                            handleVariantValueChange(0, index, matchingSize);
+                                            return;
+                                          }
+                                        }
                                         
                                         // Check if input is reversed (e.g., "llams" -> "small")
                                         const reversedInput = inputNormalized.split("").reverse().join("");
@@ -1935,7 +2024,7 @@ const ItemsModals = ({
                                         // Find best match from suggested sizes (check both normal and reversed)
                                         let bestMatch = null;
                                         
-                                        // First, try normal match
+                                        // First, try normal match (exact or prefix/suffix match)
                                         bestMatch = SUGGESTED_SIZES.find(s => {
                                           const sNormalized = normalizeForMatch(s);
                                           return sNormalized === inputNormalized || 
@@ -1953,17 +2042,54 @@ const ItemsModals = ({
                                           });
                                         }
                                         
+                                        // If still no match, try fuzzy matching using Levenshtein distance
+                                        if (!bestMatch && inputNormalized.length >= 3) {
+                                          let minDistance = Infinity;
+                                          let closestMatch = null;
+                                          
+                                          SUGGESTED_SIZES.forEach(s => {
+                                            const sNormalized = normalizeForMatch(s);
+                                            const distance = levenshteinDistance(inputNormalized, sNormalized);
+                                            
+                                            // If distance is small (1-2 edits) and within reasonable length difference
+                                            if (distance <= 2 && Math.abs(inputNormalized.length - sNormalized.length) <= 2) {
+                                              if (distance < minDistance) {
+                                                minDistance = distance;
+                                                closestMatch = s;
+                                              }
+                                            }
+                                          });
+                                          
+                                          if (closestMatch) {
+                                            bestMatch = closestMatch;
+                                          }
+                                        }
+                                        
                                         // If we found a match and the input doesn't already match exactly, auto-correct
                                         if (bestMatch && normalizeForMatch(normalized) !== normalizeForMatch(bestMatch)) {
-                                          // Check if input is close enough (within 2 characters difference)
+                                          // Check if input is close enough (within 2 characters difference or fuzzy match found)
                                           const inputLen = inputNormalized.length;
                                           const matchLen = normalizeForMatch(bestMatch).length;
                                           if (Math.abs(inputLen - matchLen) <= 2 || inputNormalized.length >= 3) {
                                             handleVariantValueChange(0, index, bestMatch);
                                           }
-                                        } else if (normalized !== inputValue) {
-                                          // Apply normalization even if no exact match
-                                          handleVariantValueChange(0, index, normalized);
+                                        } else {
+                                          // If no reasonable match was found, fall back to a generic size label
+                                          // This avoids saving random gibberish as a size visible to students
+                                          const fallbackSize =
+                                            index === 0
+                                              ? "Small (S)"
+                                              : index === 1
+                                              ? "Medium (M)"
+                                              : `Size ${index + 1}`;
+                                          
+                                          // Only apply fallback when we truly have no match and input looks invalid
+                                          if (!bestMatch && inputNormalized.length >= 3) {
+                                            handleVariantValueChange(0, index, fallbackSize);
+                                          } else if (normalized !== inputValue) {
+                                            // Apply normalization even if no exact match
+                                            handleVariantValueChange(0, index, normalized);
+                                          }
                                         }
                                       }}
                                       onFocus={() =>

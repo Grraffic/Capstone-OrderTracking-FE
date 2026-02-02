@@ -1,5 +1,6 @@
 import React from "react";
 import { Check } from "lucide-react";
+import { getSizeMeasurements } from "../../../../utils/sizeMeasurements";
 
 /**
  * SizeSelector Component
@@ -21,16 +22,6 @@ const SizeSelector = ({
   disabledReason,
   isPreOrder = false,
 }) => {
-  // Size measurement guide (extensible: add more sizes as needed; display uses whatever API returns)
-  const sizeMeasurements = {
-    XS: { chest: "32-34", length: "24-26" },
-    S: { chest: "34-36", length: "26-28" },
-    M: { chest: "38-40", length: "28-30" },
-    L: { chest: "42-44", length: "30-32" },
-    XL: { chest: "46-48", length: "32-34" },
-    XXL: { chest: "50-52", length: "34-36" },
-    "3XL": { chest: "54-56", length: "36-38" },
-  };
 
   // Map size abbreviations to full names (matching ItemDetailsModal format)
   const sizeNameMapping = {
@@ -124,45 +115,28 @@ const SizeSelector = ({
       </div>
 
       {/* Size Measurements */}
-      {selectedSize && sizeMeasurements[selectedSize] && (
-        <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
-          <h4 className="text-xs sm:text-sm font-semibold text-[#003363] mb-2">
-            Size {selectedSize} Measurements:
-          </h4>
-          <div className="text-xs sm:text-sm text-gray-700 space-y-1">
-            <p>
-              <span className="font-medium">Chest:</span>{" "}
-              {sizeMeasurements[selectedSize].chest} in (
-              {(
-                parseFloat(sizeMeasurements[selectedSize].chest.split("-")[0]) *
-                2.54
-              ).toFixed(1)}
-              -
-              {(
-                parseFloat(sizeMeasurements[selectedSize].chest.split("-")[1]) *
-                2.54
-              ).toFixed(1)}{" "}
-              cm)
-            </p>
-            <p>
-              <span className="font-medium">Shirt Length:</span>{" "}
-              {sizeMeasurements[selectedSize].length} in (
-              {(
-                parseFloat(
-                  sizeMeasurements[selectedSize].length.split("-")[0]
-                ) * 2.54
-              ).toFixed(1)}
-              -
-              {(
-                parseFloat(
-                  sizeMeasurements[selectedSize].length.split("-")[1]
-                ) * 2.54
-              ).toFixed(1)}{" "}
-              cm)
-            </p>
+      {selectedSize && (() => {
+        const measurements = getSizeMeasurements(selectedSize);
+        if (!measurements) return null;
+        
+        return (
+          <div className="bg-blue-50 rounded-lg p-3 sm:p-4 border border-blue-200">
+            <h4 className="text-xs sm:text-sm font-semibold text-[#003363] mb-2">
+              Size {selectedSize} Measurements:
+            </h4>
+            <div className="text-xs sm:text-sm text-gray-700 space-y-1">
+              <p>
+                <span className="font-medium">Chest:</span>{" "}
+                {measurements.chest.min}–{measurements.chest.max} in / {measurements.chest.minCm}–{measurements.chest.maxCm} cm
+              </p>
+              <p>
+                <span className="font-medium">Shirt Length:</span>{" "}
+                {measurements.length.min}–{measurements.length.max} in / {measurements.length.minCm}–{measurements.length.maxCm} cm
+              </p>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Size Confirmation Checkbox */}
       {selectedSize && !sizeConfirmed && (

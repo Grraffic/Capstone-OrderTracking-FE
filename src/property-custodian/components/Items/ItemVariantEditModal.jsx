@@ -10,6 +10,7 @@ import {
   AlignRight,
   RemoveFormatting,
 } from "lucide-react";
+import { getSizeGuideNote } from "../../../utils/sizeMeasurements";
 
 /**
  * ItemVariantEditModal
@@ -45,17 +46,22 @@ const ItemVariantEditModal = ({
     if (!currentVariation) return;
     setSizeChoices(currentVariation.size ?? "");
     const raw = currentVariation.note;
-    const noteStr =
-      typeof raw === "string" ? raw.trim() : "";
-    const isJson =
-      noteStr.startsWith("{") ||
-      noteStr.startsWith("[");
-    const noteContent = isJson ? "" : noteStr;
+    const noteStr = typeof raw === "string" ? raw.trim() : "";
+    const isJson = noteStr.startsWith("{") || noteStr.startsWith("[");
+    const baseNote = isJson ? "" : noteStr;
+
+    // If there is no saved note, auto-fill a guide based on size (XS/S/M/L/XL/2XL)
+    const sizeGuide = getSizeGuideNote(currentVariation.size);
+    const noteContent = baseNote || sizeGuide || "";
+
     setNote(noteContent);
+
     // Sync to rich-text editor when it's mounted (defer so ref is set after open)
     const id = setTimeout(() => {
       const el = noteEditorRef.current;
-      if (el) el.innerHTML = noteContent;
+      if (el) {
+        el.innerHTML = noteContent;
+      }
     }, 0);
     setUnitPrice(
       currentVariation.price != null ? String(currentVariation.price) : ""
@@ -89,7 +95,22 @@ const ItemVariantEditModal = ({
   };
 
   const handleNoteInput = () => {
-    if (noteEditorRef.current) setNote(noteEditorRef.current.innerHTML);
+    if (!noteEditorRef.current) return;
+    const html = noteEditorRef.current.innerHTML;
+    setNote(html);
+  };
+
+  const handleNoteBlur = () => {
+    if (!noteEditorRef.current) return;
+    const textContent =
+      noteEditorRef.current.textContent || noteEditorRef.current.innerText || "";
+    // Treat pure whitespace as empty so CSS placeholder can appear
+    if (!textContent.trim()) {
+      noteEditorRef.current.innerHTML = "";
+      setNote("");
+    } else {
+      setNote(noteEditorRef.current.innerHTML);
+    }
   };
 
   const handleSubmit = (e) => {
@@ -125,6 +146,18 @@ const ItemVariantEditModal = ({
     parentItem?.image || variation?.image || currentVariation?.image;
   const isCurrent = (v) =>
     getVariationKey(v) === getVariationKey(currentVariation);
+  
+  // Get placeholder text based on current size (default to Small if not found)
+  const placeholderText = (() => {
+    const sizeGuide = getSizeGuideNote(displaySize);
+    if (sizeGuide) {
+      // Extract just the measurement part (without the size name)
+      const lines = sizeGuide.split('\n');
+      return lines.length > 1 ? lines[1] : sizeGuide;
+    }
+    // Fallback to Small (S) measurements
+    return "Chest: 32–34 in / 81–86 cm; Shirt Length: 24–26 in / 61–66 cm";
+  })();
 
   return createPortal(
     <div
@@ -304,11 +337,12 @@ const ItemVariantEditModal = ({
                     </div>
                     <div
                       ref={noteEditorRef}
-                      className="w-full px-3 py-2.5 text-sm min-h-[100px] outline-none"
+                      className="w-full px-3 py-2.5 text-sm min-h-[100px] outline-none rich-text-editor"
                       contentEditable
                       onInput={handleNoteInput}
+                      onBlur={handleNoteBlur}
                       suppressContentEditableWarning
-                      data-placeholder="Chest and shirt length (e.g. Chest: 32-34 in / 81-86 cm; Shirt Length: 24-26 in)"
+                      data-placeholder={placeholderText}
                     />
                   </div>
                 </div>

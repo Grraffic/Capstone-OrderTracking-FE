@@ -56,10 +56,27 @@ class RateLimiter {
 }
 
 // Create rate limiters for different API call types
-// Aligned with backend: 100 requests per 15 minutes (900000ms)
-export const apiRateLimiter = new RateLimiter(90, 15 * 60 * 1000); // 90 requests per 15 minutes (slightly below backend limit)
-export const authRateLimiter = new RateLimiter(4, 15 * 60 * 1000); // 4 auth requests per 15 minutes (below backend limit of 5)
-export const writeRateLimiter = new RateLimiter(90, 15 * 60 * 1000); // 90 write requests per 15 minutes (below backend limit of 100)
+// Aligned with backend: 300 requests per 15 minutes (900000ms) in production
+// Keep frontend slightly below backend so the browser-side limiter trips first
+// Use environment variables if available (Vite exposes them via import.meta.env)
+const getEnvInt = (key, defaultValue) => {
+  const value = import.meta.env[key];
+  return value ? parseInt(value, 10) : defaultValue;
+};
+
+// Check if rate limiting is disabled via environment variable
+const RATE_LIMIT_DISABLED = import.meta.env.VITE_RATE_LIMIT_ENABLED === 'false';
+
+const API_WINDOW_MS = getEnvInt('VITE_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000);
+const API_MAX_REQUESTS = RATE_LIMIT_DISABLED ? 999999 : getEnvInt('VITE_RATE_LIMIT_MAX_REQUESTS', 260);
+const AUTH_WINDOW_MS = getEnvInt('VITE_AUTH_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000);
+const AUTH_MAX_REQUESTS = RATE_LIMIT_DISABLED ? 999999 : getEnvInt('VITE_AUTH_RATE_LIMIT_MAX_REQUESTS', 4);
+const WRITE_WINDOW_MS = getEnvInt('VITE_WRITE_RATE_LIMIT_WINDOW_MS', 15 * 60 * 1000);
+const WRITE_MAX_REQUESTS = RATE_LIMIT_DISABLED ? 999999 : getEnvInt('VITE_WRITE_RATE_LIMIT_MAX_REQUESTS', 260);
+
+export const apiRateLimiter = new RateLimiter(API_MAX_REQUESTS, API_WINDOW_MS);
+export const authRateLimiter = new RateLimiter(AUTH_MAX_REQUESTS, AUTH_WINDOW_MS);
+export const writeRateLimiter = new RateLimiter(WRITE_MAX_REQUESTS, WRITE_WINDOW_MS);
 
 /**
  * Throttle function to limit function calls

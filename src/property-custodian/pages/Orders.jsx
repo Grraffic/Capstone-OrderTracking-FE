@@ -13,7 +13,6 @@ import {
   useSocketOrderUpdates,
   useSearchDebounce,
 } from "../hooks";
-import useOrdersStats from "../hooks/orders/useOrdersStats";
 import useOrdersFilters from "../hooks/orders/useOrdersFilters";
 import { EDUCATION_LEVELS, ORDER_STATUS } from "../constants/ordersOptions";
 import { useState, useMemo, useEffect, useCallback } from "react";
@@ -48,10 +47,8 @@ const Orders = () => {
   // Orders filters management
   const {
     educationLevelFilter,
-    statusFilter,
     searchTerm,
     setEducationLevelFilter,
-    setStatusFilter,
     setSearchTerm,
   } = useOrdersFilters();
 
@@ -79,10 +76,14 @@ const Orders = () => {
   // Active status tab (Pre-orders, Orders, Claimed)
   const [activeStatusTab, setActiveStatusTab] = useState("Orders");
 
-  // Date range state - initialize to "Last 7 days"
-  const today = new Date();
-  const [startDate, setStartDate] = useState(subDays(today, 6));
-  const [endDate, setEndDate] = useState(today);
+  // Reset pagination when switching tabs
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeStatusTab]);
+
+  // Date range state - initialize to null (show all orders by default)
+  const [startDate, setStartDate] = useState(null);
+  const [endDate, setEndDate] = useState(null);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -123,6 +124,15 @@ const Orders = () => {
         : null,
     search: debouncedSearchTerm || null,
   });
+
+  // Debug: Log API orders
+  useEffect(() => {
+    console.log(`[Orders] API returned ${apiOrders.length} orders for tab: ${activeStatusTab}`, {
+      orderType: activeStatusTab === "Pre-orders" ? "pre-order" : activeStatusTab === "Orders" ? "regular" : null,
+      status: activeStatusTab === "Claimed" ? "claimed" : null,
+      orders: apiOrders.map(o => ({ id: o.id, status: o.status, order_type: o.order_type }))
+    });
+  }, [apiOrders, activeStatusTab]);
 
   // Transform API orders to match the expected format for the table
   const transformedOrders = useMemo(() => {
@@ -169,8 +179,9 @@ const Orders = () => {
   const filteredOrders = useMemo(() => {
     let filtered = mockOrders;
 
-    // Apply date range filter
-    if (startDate || endDate) {
+    // Apply date range filter only if both dates are set
+    // If date range is not set or invalid, show all orders
+    if (startDate && endDate) {
       filtered = filtered.filter((order) => {
         // Use appropriate date based on order status
         // For claimed orders, use claimed_date or updated_at
@@ -188,11 +199,17 @@ const Orders = () => {
         }
 
         // If no date found, include the order (don't filter out)
-        if (!orderDate) return true;
+        if (!orderDate) {
+          console.warn("Order missing date, including it:", order.id);
+          return true;
+        }
 
         try {
           const orderDateObj = new Date(orderDate);
-          if (isNaN(orderDateObj.getTime())) return true; // Invalid date, include it
+          if (isNaN(orderDateObj.getTime())) {
+            console.warn("Invalid order date, including order:", order.id, orderDate);
+            return true; // Invalid date, include it
+          }
 
           const orderDateOnly = new Date(
             orderDateObj.getFullYear(),
@@ -233,17 +250,29 @@ const Orders = () => {
       });
     }
 
+    // Debug: Log filtered results
+    console.log(`[Orders] Filtered orders: ${filtered.length} out of ${mockOrders.length} (tab: ${activeStatusTab}, date range: ${startDate ? format(startDate, 'MMM d') : 'none'} - ${endDate ? format(endDate, 'MMM d') : 'none'})`);
+
     return filtered;
-  }, [mockOrders, startDate, endDate]);
+  }, [mockOrders, startDate, endDate, activeStatusTab]);
 
   // Fetch all orders for accurate counts (not paginated)
-  // We need to fetch orders with different statuses separately to get accurate counts
-  // because the backend filters out claimed/cancelled when status is null
-  const { orders: allActiveOrdersForCount } = useOrders({
+  // We need to fetch orders separately by type to get accurate counts
+  // because the backend filters differently when orderType is set vs null
+  const { orders: allPreOrdersForCount } = useOrders({
     page: 1,
     limit: 10000,
-    orderType: null,
-    status: null, // This gets active orders: pending, processing, ready, payment_pending
+    orderType: "pre-order", // Fetch all pre-orders (except cancelled)
+    status: null,
+    educationLevel: null,
+    search: null,
+  });
+
+  const { orders: allRegularOrdersForCount } = useOrders({
+    page: 1,
+    limit: 10000,
+    orderType: "regular", // Fetch all regular orders (except cancelled and claimed)
+    status: null,
     educationLevel: null,
     search: null,
   });
@@ -257,67 +286,38 @@ const Orders = () => {
     search: null,
   });
 
-  // Calculate statistics from ALL orders (not just filtered/current tab)
-  // Combine active and claimed orders to get accurate stats regardless of active tab
-  const allOrdersForStats = useMemo(() => {
-    const combined = [
-      ...(allActiveOrdersForCount || []),
-      ...(allClaimedOrdersForCount || []),
-    ];
-    
-    // Debug: Log claimed orders to verify they're included
-    const claimedInStats = combined.filter(o => {
-      const status = o.status?.toLowerCase() || o.originalOrder?.status?.toLowerCase() || "";
-      return status === "claimed" || status === "completed";
-    });
-    console.log(`📊 Orders Stats: Total orders for stats: ${combined.length}, Claimed orders: ${claimedInStats.length}`);
-    
-    return combined;
-  }, [allActiveOrdersForCount, allClaimedOrdersForCount]);
-  
-  const stats = useOrdersStats(allOrdersForStats);
 
   // Calculate order counts for tabs
   const orderCounts = useMemo(() => {
-    // Combine active and claimed orders for counting
-    const allOrdersForCount = [
-      ...(allActiveOrdersForCount || []),
-      ...(allClaimedOrdersForCount || []),
-    ];
-
-    if (!allOrdersForCount || allOrdersForCount.length === 0) {
-      return {
-        preOrders: 0,
-        orders: 0,
-        claimed: 0,
-      };
-    }
-
-    const allPreOrders = allOrdersForCount.filter(
-      (order) => order.order_type === "pre-order"
+    // Count pre-orders (all pre-orders except cancelled are already fetched)
+    const allPreOrders = (allPreOrdersForCount || []).filter(
+      (order) => {
+        const status = order.status?.toLowerCase();
+        return status !== "cancelled";
+      }
     ).length;
 
-    const allRegularOrders = allOrdersForCount.filter((order) => {
-      const orderType = order.order_type?.toLowerCase() || "regular";
+    // Count regular orders (all regular orders except cancelled and claimed are already fetched)
+    const allRegularOrders = (allRegularOrdersForCount || []).filter((order) => {
       const status = order.status?.toLowerCase();
-      return (
-        orderType !== "pre-order" &&
-        status !== "claimed" &&
-        status !== "cancelled" // Exclude cancelled/voided orders
-      );
+      return status !== "claimed" && status !== "cancelled";
     }).length;
 
-    const allClaimed = allOrdersForCount.filter((order) => {
-      const status = order.status?.toLowerCase();
-      return status === "claimed";
-    }).length;
+    // Count claimed orders (all claimed orders are already fetched)
+    const allClaimed = (allClaimedOrdersForCount || []).length;
+
+    // Calculate total: pre-orders + regular orders + claimed orders
+    const total = allPreOrders + allRegularOrders + allClaimed;
+
+    console.log(`📊 Order Counts: Pre-orders: ${allPreOrders}, Regular: ${allRegularOrders}, Claimed: ${allClaimed}, Total: ${total}`);
 
     return {
       preOrders: allPreOrders,
       orders: allRegularOrders,
       claimed: allClaimed,
+      total: total,
     };
-  }, [allActiveOrdersForCount, allClaimedOrdersForCount]);
+  }, [allPreOrdersForCount, allRegularOrdersForCount, allClaimedOrdersForCount]);
 
   // Use API pagination
   const totalPages = apiPagination.totalPages || 1;
@@ -355,9 +355,9 @@ const Orders = () => {
   const handleOrderUpdate = useCallback(
     (data) => {
       console.log("📡 Real-time order update received:", data);
-      // Refetch all order queries to update stats and counts
+      // Refetch all order queries to update counts
       refetchOrders();
-      // Note: allActiveOrdersForCount and allClaimedOrdersForCount will auto-refetch
+      // Note: allPreOrdersForCount, allRegularOrdersForCount, and allClaimedOrdersForCount will auto-refetch
       // because they use the same useOrders hook which listens to changes
     },
     [refetchOrders]
@@ -503,7 +503,10 @@ const Orders = () => {
             )}
           </button>
           <button
-            onClick={() => setActiveStatusTab("Orders")}
+            onClick={() => {
+              setActiveStatusTab("Orders");
+              setCurrentPage(1); // Reset pagination
+            }}
             className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap px-0.5 sm:px-1 md:px-2 ${
               activeStatusTab === "Orders"
                 ? "text-[#e68b00]"
@@ -527,7 +530,10 @@ const Orders = () => {
             )}
           </button>
           <button
-            onClick={() => setActiveStatusTab("Claimed")}
+            onClick={() => {
+              setActiveStatusTab("Claimed");
+              setCurrentPage(1); // Reset pagination
+            }}
             className={`pb-2 sm:pb-3 font-semibold transition-colors relative text-xs sm:text-sm md:text-base lg:text-lg whitespace-nowrap px-0.5 sm:px-1 md:px-2 ${
               activeStatusTab === "Claimed"
                 ? "text-[#e68b00]"
@@ -606,16 +612,48 @@ const Orders = () => {
 
         {/* Orders Table - Always shown */}
         {!ordersLoading && !ordersError && (
-          <OrdersTable
-            orders={paginatedOrders}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPrevPage={prevPage}
-            onNextPage={nextPage}
-            onGoToPage={goToPage}
-            onOrderUpdated={refetchOrders}
-            onOpenQRScanner={openQRScanner}
-          />
+          <>
+            {paginatedOrders.length === 0 ? (
+              <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <div className="p-8 sm:p-12 text-center">
+                  <div className="text-gray-400 mb-3 sm:mb-4">
+                    <svg
+                      className="w-12 h-12 sm:w-16 sm:h-16 mx-auto"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">
+                    No {activeStatusTab} Found
+                  </h3>
+                  <p className="text-sm sm:text-base text-gray-500 px-4">
+                    {startDate && endDate
+                      ? `No ${activeStatusTab.toLowerCase()} found in the selected date range. Try adjusting the date filter.`
+                      : `There are no ${activeStatusTab.toLowerCase()} to display at the moment.`}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <OrdersTable
+                orders={paginatedOrders}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPrevPage={prevPage}
+                onNextPage={nextPage}
+                onGoToPage={goToPage}
+                onOrderUpdated={refetchOrders}
+                onOpenQRScanner={openQRScanner}
+              />
+            )}
+          </>
         )}
 
         {/* Results Info */}

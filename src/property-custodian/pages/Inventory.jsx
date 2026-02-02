@@ -26,6 +26,7 @@ const Inventory = () => {
   // Note: AdminLayout handles sidebar state internally
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   const [searchQuery, setSearchQuery] = useState("");
   const [gradeLevel, setGradeLevel] = useState("all");
   const [activeTab, setActiveTab] = useState("inventory");
@@ -1001,6 +1002,40 @@ const Inventory = () => {
     }
   };
 
+  // Sync page input value when currentPage changes
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  // Handle page input change
+  const handlePageInputChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setPageInputValue(value);
+    }
+  };
+
+  // Handle page input submission
+  const handlePageInputSubmit = (e) => {
+    e.preventDefault();
+    const page = parseInt(pageInputValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      setCurrentPage(page);
+    } else {
+      // Reset to current page if invalid
+      setPageInputValue(currentPage.toString());
+    }
+  };
+
+  // Handle page input blur (when user clicks away)
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInputValue, 10);
+    if (isNaN(page) || page < 1 || page > totalPages) {
+      setPageInputValue(currentPage.toString());
+    }
+  };
+
   return (
     <AdminLayout showTitle={false} noPadding={true}>
       {/* Inventory Content - SF Pro Medium font */}
@@ -1180,8 +1215,7 @@ const Inventory = () => {
         {activeTab === "inventory" && totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-4 py-2 sm:py-3 mt-3 sm:mt-4 md:mt-6">
             <div className="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 font-sf-medium">
-              Page <span className="font-semibold">{currentPage}</span> of{" "}
-              <span className="font-semibold">{totalPages}</span>
+              Page <span className="font-semibold">{currentPage}</span>
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
               <button
@@ -1195,6 +1229,21 @@ const Inventory = () => {
               >
                 Previous
               </button>
+              
+              {/* Page Number Input */}
+              <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
+                <input
+                  type="text"
+                  value={pageInputValue}
+                  onChange={handlePageInputChange}
+                  onBlur={handlePageInputBlur}
+                  className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                  aria-label="Page number"
+                  min="1"
+                  max={totalPages}
+                />
+              </form>
+
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import EditOrderModal from "./EditOrderModal";
 
@@ -38,10 +38,46 @@ const OrdersTable = ({
 }) => {
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [openMenuId, setOpenMenuId] = useState(null);
+  const [expandedOrders, setExpandedOrders] = useState(new Set()); // Track expanded orders
+  const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   
   // Modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Sync page input value when currentPage changes
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  // Handle page input change
+  const handlePageInputChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setPageInputValue(value);
+    }
+  };
+
+  // Handle page input submission
+  const handlePageInputSubmit = (e) => {
+    e.preventDefault();
+    const page = parseInt(pageInputValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= totalPages) {
+      onGoToPage(page);
+    } else {
+      // Reset to current page if invalid
+      setPageInputValue(currentPage.toString());
+    }
+  };
+
+  // Handle page input blur (when user clicks away)
+  const handlePageInputBlur = () => {
+    const page = parseInt(pageInputValue, 10);
+    if (isNaN(page) || page < 1 || page > totalPages) {
+      setPageInputValue(currentPage.toString());
+    }
+  };
 
   // Handle edit click
   const handleEditClick = (order) => {
@@ -71,6 +107,17 @@ const OrdersTable = ({
     } else {
       setSelectedRows(new Set(orders.map((order) => order.id)));
     }
+  };
+
+  // Toggle expanded state for an order
+  const toggleExpandedOrder = (orderId) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrders(newExpanded);
   };
 
   return (
@@ -125,6 +172,11 @@ const OrdersTable = ({
           return "text-gray-600";
         };
 
+        const isExpanded = expandedOrders.has(order.id);
+        const originalOrder = order.originalOrder;
+        const allItems = originalOrder?.items || [];
+        const hasMultipleItems = allItems.length > 1;
+
         return (
           <div
             key={order.id}
@@ -144,17 +196,14 @@ const OrdersTable = ({
                 <div className="text-xs sm:text-sm font-semibold text-[#0C2340] mb-1 truncate">
                   {order.itemOrdered}
                 </div>
-                {order.moreItems && (
-                  <a
-                    href="#"
-                    className="text-xs text-gray-500 hover:text-[#e68b00] transition-colors"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      console.log("See more clicked for order:", order.id);
-                    }}
+                {hasMultipleItems && (
+                  <button
+                    type="button"
+                    className="text-xs text-gray-500 hover:text-[#e68b00] transition-colors cursor-pointer"
+                    onClick={() => toggleExpandedOrder(order.id)}
                   >
-                    See more
-                  </a>
+                    {isExpanded ? "Show less" : order.moreItems || "See more"}
+                  </button>
                 )}
               </div>
 
@@ -200,6 +249,35 @@ const OrdersTable = ({
               </div>
             </div>
 
+            {/* Expanded Items List - Desktop */}
+            {isExpanded && hasMultipleItems && (
+              <div className="hidden lg:block border-t border-gray-200 bg-gray-50 px-4 sm:px-5 lg:px-6 py-3 sm:py-4">
+                <div className="text-xs sm:text-sm font-semibold text-[#0C2340] mb-2">
+                  All Items ({allItems.length}):
+                </div>
+                <div className="space-y-2">
+                  {allItems.map((item, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between py-2 px-3 bg-white rounded-lg border border-gray-200"
+                    >
+                      <div className="flex-1">
+                        <div className="text-xs sm:text-sm font-medium text-[#0C2340]">
+                          {item.name || "N/A"}
+                        </div>
+                        <div className={`text-xs text-gray-600 mt-0.5 ${getSizeColor(item.size)}`}>
+                          Size: {item.size || "N/A"}
+                        </div>
+                      </div>
+                      <div className="text-xs sm:text-sm font-medium text-gray-700 ml-4">
+                        Qty: {item.quantity || 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Mobile/Tablet Layout - Stacked */}
             <div className="lg:hidden p-3 sm:p-4 space-y-2.5 sm:space-y-3">
               {/* Transaction No & Actions */}
@@ -236,17 +314,14 @@ const OrdersTable = ({
                 <div className="text-sm sm:text-base font-semibold text-[#0C2340] break-words">
                   {order.itemOrdered}
                 </div>
-                {order.moreItems && (
-                  <a
-                    href="#"
+                {hasMultipleItems && (
+                  <button
+                    type="button"
                     className="text-xs text-gray-500 hover:text-[#e68b00] transition-colors inline-block mt-1"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      console.log("See more clicked for order:", order.id);
-                    }}
+                    onClick={() => toggleExpandedOrder(order.id)}
                   >
-                    See more
-                  </a>
+                    {isExpanded ? "Show less" : order.moreItems || "See more"}
+                  </button>
                 )}
               </div>
 
@@ -276,6 +351,35 @@ const OrdersTable = ({
                   {order.gradeOrProgram}
                 </div>
               </div>
+
+              {/* Expanded Items List - Mobile/Tablet */}
+              {isExpanded && hasMultipleItems && (
+                <div className="border-t border-gray-200 pt-3 mt-3">
+                  <div className="text-xs sm:text-sm font-semibold text-[#0C2340] mb-2">
+                    All Items ({allItems.length}):
+                  </div>
+                  <div className="space-y-2">
+                    {allItems.map((item, index) => (
+                      <div
+                        key={index}
+                        className="py-2 px-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="text-xs sm:text-sm font-medium text-[#0C2340]">
+                          {item.name || "N/A"}
+                        </div>
+                        <div className="flex items-center justify-between mt-1">
+                          <div className={`text-xs text-gray-600 ${getSizeColor(item.size)}`}>
+                            Size: {item.size || "N/A"}
+                          </div>
+                          <div className="text-xs sm:text-sm font-medium text-gray-700">
+                            Qty: {item.quantity || 1}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -286,8 +390,7 @@ const OrdersTable = ({
       <div className="bg-white border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         {/* Left: Page Indicator */}
         <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left w-full sm:w-auto">
-          Page <span className="font-semibold">{currentPage}</span> of{" "}
-          <span className="font-semibold">{totalPages}</span>
+          Page <span className="font-semibold">{currentPage}</span>
         </div>
 
         {/* Right: Navigation Buttons */}
@@ -304,6 +407,20 @@ const OrdersTable = ({
             <span className="hidden sm:inline">Previous</span>
             <span className="sm:hidden">Prev</span>
           </button>
+
+          {/* Page Number Input */}
+          <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
+            <input
+              type="text"
+              value={pageInputValue}
+              onChange={handlePageInputChange}
+              onBlur={handlePageInputBlur}
+              className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+              aria-label="Page number"
+              min="1"
+              max={totalPages}
+            />
+          </form>
 
           {/* Next Button */}
           <button

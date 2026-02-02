@@ -57,7 +57,11 @@ api.interceptors.request.use(
     
     // Determine which rate limiter to use
     let limiter;
-    if (url.includes("/auth")) {
+    // Profile endpoints are GET requests, not auth attempts, so use general API limiter
+    if (url.includes("/auth/profile") || url.includes("/auth/me") || url.includes("/auth/max-quantities")) {
+      limiter = apiRateLimiter;
+    } else if (url.includes("/auth") && method !== "GET") {
+      // Only apply strict auth limiter to non-GET auth endpoints (login, register, etc.)
       limiter = authRateLimiter;
     } else if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
       limiter = writeRateLimiter;

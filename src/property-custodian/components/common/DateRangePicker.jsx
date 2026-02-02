@@ -13,7 +13,50 @@ import "react-datepicker/dist/react-datepicker.css";
  * - Right: Calendar date range selector with formatted display
  */
 const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = "" }) => {
-  const [preset, setPreset] = useState("Last 7 days");
+  // Initialize preset based on current dates
+  const getInitialPreset = () => {
+    if (!startDate || !endDate) {
+      return "All dates";
+    }
+    // Check if it matches any preset
+    const today = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Normalize dates for comparison
+    const normalizeDate = (date) => {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    };
+    
+    const normalizedStart = normalizeDate(start);
+    const normalizedEnd = normalizeDate(end);
+    const normalizedToday = normalizeDate(today);
+    
+    if (normalizedStart.getTime() === subDays(normalizedToday, 6).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      return "Last 7 days";
+    }
+    if (normalizedStart.getTime() === subDays(normalizedToday, 29).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      return "Last 30 days";
+    }
+    if (normalizedStart.getTime() === subDays(normalizedToday, 89).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      return "Last 90 days";
+    }
+    if (normalizedStart.getTime() === startOfMonth(normalizedToday).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      return "This month";
+    }
+    if (normalizedStart.getTime() === startOfYear(normalizedToday).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      return "This year";
+    }
+    
+    return "Custom range";
+  };
+  
+  const [preset, setPreset] = useState(getInitialPreset());
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
   const calendarRef = useRef(null);
@@ -23,6 +66,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
 
   // Preset options
   const presetOptions = [
+    "All dates",
     "Last 7 days",
     "Last 30 days",
     "Last 90 days",
@@ -116,6 +160,11 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
     let newStartDate, newEndDate;
 
     switch (presetValue) {
+      case "All dates":
+        // Clear date filter to show all orders
+        newStartDate = null;
+        newEndDate = null;
+        break;
       case "Last 7 days":
         newStartDate = subDays(today, 6);
         newEndDate = today;
@@ -146,14 +195,61 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
         // Don't change dates, just allow calendar selection
         return;
       default:
-        newStartDate = subDays(today, 6);
-        newEndDate = today;
+        newStartDate = null;
+        newEndDate = null;
     }
 
     if (onDateRangeChange) {
       onDateRangeChange(newStartDate, newEndDate);
     }
   };
+
+  // Update preset when dates change externally
+  useEffect(() => {
+    if (!startDate || !endDate) {
+      if (preset !== "All dates") {
+        setPreset("All dates");
+      }
+      return;
+    }
+    
+    // Check if it matches any preset
+    const today = new Date();
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Normalize dates for comparison
+    const normalizeDate = (date) => {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    };
+    
+    const normalizedStart = normalizeDate(start);
+    const normalizedEnd = normalizeDate(end);
+    const normalizedToday = normalizeDate(today);
+    
+    let newPreset = "Custom range";
+    if (normalizedStart.getTime() === normalizeDate(subDays(normalizedToday, 6)).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      newPreset = "Last 7 days";
+    } else if (normalizedStart.getTime() === normalizeDate(subDays(normalizedToday, 29)).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      newPreset = "Last 30 days";
+    } else if (normalizedStart.getTime() === normalizeDate(subDays(normalizedToday, 89)).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      newPreset = "Last 90 days";
+    } else if (normalizedStart.getTime() === startOfMonth(normalizedToday).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      newPreset = "This month";
+    } else if (normalizedStart.getTime() === startOfYear(normalizedToday).getTime() && 
+        normalizedEnd.getTime() === normalizedToday.getTime()) {
+      newPreset = "This year";
+    }
+    
+    if (newPreset !== preset) {
+      setPreset(newPreset);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate]);
 
   // Handle preset selection
   const handlePresetChange = (event) => {
@@ -223,7 +319,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
   // Format date range for display
   const formatDateRange = () => {
     if (!startDate || !endDate) {
-      return "Select dates";
+      return "All dates";
     }
     return `${format(startDate, "d MMM")} - ${format(endDate, "d MMM")}`;
   };

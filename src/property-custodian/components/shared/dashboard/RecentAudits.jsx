@@ -95,7 +95,36 @@ const RecentAudits = ({ transactions = [] }) => {
                     })()}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-sm text-gray-700">
-                    {transaction.user}
+                    {(() => {
+                      // Check if transaction has separate user_name and user_role fields
+                      // If user is a string, parse it; otherwise use the fields directly
+                      const userName = transaction.user_name || (typeof transaction.user === 'string' && transaction.user.split(' (')[0]) || 'System';
+                      const userRole = transaction.user_role || (typeof transaction.user === 'string' && transaction.user.match(/\(([^)]+)\)/)?.[1]) || 'system';
+                      
+                      // Format role for display
+                      const formattedRole = userRole === "property_custodian" 
+                        ? "Property Custodian" 
+                        : userRole === "student" 
+                        ? "Student" 
+                        : userRole === "system_admin" 
+                        ? "System Admin"
+                        : userRole === "finance_staff"
+                        ? "Finance Staff"
+                        : userRole === "accounting_staff"
+                        ? "Accounting Staff"
+                        : userRole === "department_head"
+                        ? "Department Head"
+                        : userRole === "system"
+                        ? "System"
+                        : userRole || "Unknown";
+                      
+                      return (
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-900">{userName}</span>
+                          <span className="text-xs text-gray-500 mt-0.5">{formattedRole}</span>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-4 sm:px-6 py-4 text-sm text-gray-700">
                     {transaction.action}

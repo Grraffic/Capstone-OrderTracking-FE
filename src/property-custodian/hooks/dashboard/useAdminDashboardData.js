@@ -454,17 +454,9 @@ export const useAdminDashboardData = (startDate, endDate) => {
           });
           const dateTime = `${formattedDate} ${formattedTime}`;
 
-          // Format user name and role
-          const userRole = tx.user_role === "property_custodian" 
-            ? "Property Custodian" 
-            : tx.user_role === "student" 
-            ? "Student" 
-            : tx.user_role === "system_admin" 
-            ? "System Admin" 
-            : tx.user_role || "";
-          const user = tx.user_name 
-            ? `${tx.user_name}${userRole ? ` (${userRole})` : ""}` 
-            : userRole || "Unknown User";
+          // Format user name and role - keep them separate for display
+          const userName = tx.user_name || "System";
+          const userRole = tx.user_role || "system";
 
           // Map transaction type to display type (for status column)
           let displayType = tx.type;
@@ -485,7 +477,9 @@ export const useAdminDashboardData = (startDate, endDate) => {
           return {
             id: tx.id,
             dateTime: dateTime,
-            user: user,
+            user: userName, // Keep for backward compatibility
+            user_name: userName, // Pass separately for new display format
+            user_role: userRole, // Pass separately for new display format
             action: tx.action || "N/A",
             details: tx.details || "No details available",
             status: displayType,

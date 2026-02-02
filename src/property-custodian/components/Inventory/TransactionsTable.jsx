@@ -8,14 +8,61 @@ import React from "react";
  */
 const TransactionsTable = ({ transactions }) => {
   // Helper function to parse user information
-  const parseUserInfo = (user) => {
-    // Parse user field: "Jeremy Amponget Property Custodian"
-    // Split by "Property Custodian" or "Student" etc.
-    const nameMatch = user.match(/^(.+?)\s+(Property Custodian|Student|Admin|Teacher)$/i);
-    const name = nameMatch ? nameMatch[1].trim() : user;
-    const role = nameMatch ? nameMatch[2] : "";
+  const parseUserInfo = (transaction) => {
+    // First check if transaction has separate user_name and user_role fields
+    if (transaction.user_name || transaction.user_role) {
+      const userName = transaction.user_name || "System";
+      const userRole = transaction.user_role || "system";
+      
+      // Format role for display
+      const formattedRole = userRole === "property_custodian" 
+        ? "Property Custodian" 
+        : userRole === "student" 
+        ? "Student" 
+        : userRole === "system_admin" 
+        ? "System Admin"
+        : userRole === "finance_staff"
+        ? "Finance Staff"
+        : userRole === "accounting_staff"
+        ? "Accounting Staff"
+        : userRole === "department_head"
+        ? "Department Head"
+        : userRole === "system"
+        ? "System"
+        : userRole || "Unknown";
+      
+      return { name: userName, role: formattedRole };
+    }
     
-    return { name, role };
+    // Fallback: Parse user field if it's a combined string
+    const user = transaction.user || "";
+    // Parse user field: "Jeremy Amponget Property Custodian" or "System (system)"
+    const nameMatch = user.match(/^(.+?)\s+(Property Custodian|Student|Admin|Teacher|System)$/i);
+    const parenMatch = user.match(/^(.+?)\s*\(([^)]+)\)$/);
+    
+    if (parenMatch) {
+      // Format: "System (system)" or "yasuor446 (Property Custodian)"
+      const name = parenMatch[1].trim();
+      const roleRaw = parenMatch[2].trim();
+      const formattedRole = roleRaw === "property_custodian" 
+        ? "Property Custodian" 
+        : roleRaw === "student" 
+        ? "Student" 
+        : roleRaw === "system_admin" 
+        ? "System Admin"
+        : roleRaw === "system"
+        ? "System"
+        : roleRaw;
+      return { name, role: formattedRole };
+    }
+    
+    if (nameMatch) {
+      const name = nameMatch[1].trim();
+      const role = nameMatch[2];
+      return { name, role };
+    }
+    
+    return { name: user || "System", role: "System" };
   };
 
   // Helper function to extract item name from action or metadata
@@ -264,14 +311,12 @@ const TransactionsTable = ({ transactions }) => {
                   </td>
                   <td className="px-3 lg:px-4 py-3 text-xs lg:text-sm text-gray-700">
                     {(() => {
-                      const userInfo = parseUserInfo(transaction.user);
+                      const userInfo = parseUserInfo(transaction);
                       return (
                         <div className="flex flex-col">
-                          {userInfo.name && (
-                            <span className="font-medium">{userInfo.name}</span>
-                          )}
+                          <span className="font-medium text-gray-900">{userInfo.name}</span>
                           {userInfo.role && (
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-gray-500 mt-0.5">
                               {userInfo.role}
                             </span>
                           )}
@@ -364,12 +409,10 @@ const TransactionsTable = ({ transactions }) => {
                 {/* User Info */}
                 <div className="mb-3">
                   {(() => {
-                    const userInfo = parseUserInfo(transaction.user);
+                    const userInfo = parseUserInfo(transaction);
                     return (
                       <div className="flex flex-col">
-                        {userInfo.name && (
-                          <span className="text-sm font-semibold text-gray-900">{userInfo.name}</span>
-                        )}
+                        <span className="text-sm font-semibold text-gray-900">{userInfo.name}</span>
                         {userInfo.role && (
                           <span className="text-xs text-gray-500 mt-0.5">
                             {userInfo.role}

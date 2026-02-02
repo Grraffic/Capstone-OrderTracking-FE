@@ -161,6 +161,22 @@
   }
 }
 
+/* ContentEditable placeholder styling */
+[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+  position: absolute;
+}
+
+[contenteditable][data-placeholder]:not(:focus):empty:before {
+  color: #9ca3af;
+}
+
+[contenteditable][data-placeholder]:focus:empty:before {
+  color: #d1d5db;
+}
+
 /* Fade in animation for featured items rotation */
 @keyframes fadeIn {
   from {

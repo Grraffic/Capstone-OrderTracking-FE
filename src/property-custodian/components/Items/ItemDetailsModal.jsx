@@ -217,7 +217,7 @@ const ItemDetailsModal = ({
                 {/* Item Attributes - Inside Card - tighter at Mobile L */}
                 <div className="space-y-1 mobile-m:space-y-1.5 mobile-l:space-y-1.5 p-2 mobile-m:p-2.5 mobile-l:p-2.5 tablet:space-y-2.5 tablet:p-3 laptop:space-y-3 laptop:p-4">
                   <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
-                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
+                    <span className="text-xs mobile-m:text-[13px] tablet:text-sm font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Item Name:
                     </span>
                     <span className="text-[10px] font-semibold text-[#0C2340] break-words mobile-m:text-xs tablet:text-sm">
@@ -225,7 +225,7 @@ const ItemDetailsModal = ({
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
-                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
+                    <span className="text-xs mobile-m:text-[13px] tablet:text-sm font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Item Type:
                     </span>
                     <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
@@ -233,7 +233,7 @@ const ItemDetailsModal = ({
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
-                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
+                    <span className="text-xs mobile-m:text-[13px] tablet:text-sm font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Item Size:
                     </span>
                     <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
@@ -241,7 +241,7 @@ const ItemDetailsModal = ({
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
-                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
+                    <span className="text-xs mobile-m:text-[13px] tablet:text-sm font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Education Level:
                     </span>
                     <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
@@ -256,8 +256,22 @@ const ItemDetailsModal = ({
                       })()}
                     </span>
                   </div>
+                  <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5">
+                    <span className="text-xs mobile-m:text-[13px] tablet:text-sm font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
+                      Gender:
+                    </span>
+                    <span className="text-[10px] text-[#0C2340] mobile-m:text-xs tablet:text-sm">
+                      {(() => {
+                        const gender = displayItem.forGender || displayItem.for_gender || "Unisex";
+                        // Format gender for display
+                        if (gender.toLowerCase() === "male") return "Male";
+                        if (gender.toLowerCase() === "female") return "Female";
+                        return "Unisex";
+                      })()}
+                    </span>
+                  </div>
                   <div className="flex flex-wrap gap-x-1 gap-y-0.5 mobile-l:gap-x-1.5 pt-1.5 mobile-l:pt-1.5 tablet:pt-2 tablet:mt-1.5 laptop:pt-3 laptop:mt-2 border-t border-gray-100">
-                    <span className="text-[10px] font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
+                    <span className="text-xs mobile-m:text-[13px] tablet:text-sm font-medium text-[#e68b00] shrink-0 min-w-[5.5rem] mobile-m:min-w-[6rem] mobile-l:min-w-[6.5rem] tablet:min-w-[10rem]">
                       Cost Summary:
                     </span>
                     <span className="text-[10px] font-bold text-[#003363] mobile-m:text-xs tablet:text-sm">
