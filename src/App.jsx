@@ -9,6 +9,7 @@ import { ActivityProvider } from "./context/ActivityContext";
 import { CheckoutProvider } from "./context/CheckoutContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import ErrorBoundary from "./components/common/ErrorBoundary";
+import RateLimitHandler from "./components/common/RateLimitHandler";
 import AppRoutes from "./routes";
 
 export default function App() {
@@ -55,6 +56,7 @@ export default function App() {
                             },
                           }}
                         />
+                        <RateLimitHandler />
                         <AppRoutes />
                       </BrowserRouter>
                     </OrderProvider>

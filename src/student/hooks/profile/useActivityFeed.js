@@ -34,6 +34,14 @@ export const useActivityFeed = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
 
+  // Update activeTab when location state changes (e.g., from navigation)
+  useEffect(() => {
+    if (location.state?.activeTab && location.state.activeTab !== activeTab) {
+      console.log(`🔄 useActivityFeed: Updating activeTab from "${activeTab}" to "${location.state.activeTab}"`);
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state?.activeTab]);
+
   useEffect(() => {
     if (user?.id) {
       fetchActivities();

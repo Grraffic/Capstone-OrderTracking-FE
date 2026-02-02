@@ -100,8 +100,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
 
             // Filter by date range if provided
             if (startDate && endDate && item.created_at) {
-              const createdDate = new Date(item.created_at);
-              if (createdDate < startDate || createdDate > endDate) {
+              if (!isDateInRange(item.created_at, startDate, endDate)) {
                 return; // Skip items outside date range
               }
             }
@@ -171,11 +170,29 @@ export const useAdminDashboardData = (startDate, endDate) => {
     fetchOutOfStockItems();
   }, [startDate, endDate]);
 
+  // Helper function to normalize date to start of day (00:00:00.000)
+  const normalizeToStartOfDay = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  };
+
+  // Helper function to normalize date to end of day (23:59:59.999)
+  const normalizeToEndOfDay = (date) => {
+    if (!date) return null;
+    const d = new Date(date);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+  };
+
   // Helper function to check if date is within range
   const isDateInRange = (dateString, start, end) => {
     if (!dateString || !start || !end) return true; // If no date range, include all
     const date = new Date(dateString);
-    return date >= start && date <= end;
+    const normalizedStart = normalizeToStartOfDay(start);
+    const normalizedEnd = normalizeToEndOfDay(end);
+    const normalizedDate = normalizeToStartOfDay(date);
+    // Compare dates at day level (ignore time)
+    return normalizedDate >= normalizedStart && normalizedDate <= normalizedEnd;
   };
 
   // Filter orders by date range
@@ -357,22 +374,22 @@ export const useAdminDashboardData = (startDate, endDate) => {
       const filterEndDate = endDate || new Date();
       
       // Normalize dates to ensure proper comparison
-      // Use UTC dates to avoid timezone conversion issues
-      // Set startDate to beginning of day (00:00:00.000) in UTC
-      const normalizedStartDate = new Date(Date.UTC(
+      // Use local dates to match the date picker's timezone
+      // Set startDate to beginning of day (00:00:00.000) in local time
+      const normalizedStartDate = new Date(
         filterStartDate.getFullYear(),
         filterStartDate.getMonth(),
         filterStartDate.getDate(),
         0, 0, 0, 0
-      ));
+      );
       
-      // Set endDate to end of day (23:59:59.999) in UTC
-      const normalizedEndDate = new Date(Date.UTC(
+      // Set endDate to end of day (23:59:59.999) in local time
+      const normalizedEndDate = new Date(
         filterEndDate.getFullYear(),
         filterEndDate.getMonth(),
         filterEndDate.getDate(),
         23, 59, 59, 999
-      ));
+      );
       
       console.log("[Dashboard] 📅 Filtering Recent Audits by date range:", {
         originalStartDate: filterStartDate.toISOString(),
@@ -397,25 +414,17 @@ export const useAdminDashboardData = (startDate, endDate) => {
         console.log("[Dashboard] 📥 Received transactions from API:", response.data.length);
         
         // Additional client-side filtering to ensure dates are within range
-        // Compare dates by converting to date strings (YYYY-MM-DD) to avoid timezone issues
+        // Use the isDateInRange helper function for consistent date comparison
         const filteredTransactions = response.data.filter((tx) => {
           if (!tx.created_at) return false;
-          const txDate = new Date(tx.created_at);
           
-          // Convert to date strings (YYYY-MM-DD) for comparison
-          const txDateStr = txDate.toISOString().split('T')[0];
-          const startDateStr = normalizedStartDate.toISOString().split('T')[0];
-          const endDateStr = normalizedEndDate.toISOString().split('T')[0];
-          
-          // Compare date strings: transaction date must be >= startDate and <= endDate
-          const isInRange = txDateStr >= startDateStr && txDateStr <= endDateStr;
+          // Use the same date range helper function for consistency
+          const isInRange = isDateInRange(tx.created_at, normalizedStartDate, normalizedEndDate);
           
           if (!isInRange) {
             console.log("[Dashboard] ⚠️ Transaction filtered out:", {
-              txDate: txDate.toISOString(),
-              txDateStr,
-              startDateStr,
-              endDateStr,
+              txDate: tx.created_at,
+              txDateLocal: new Date(tx.created_at).toLocaleString(),
               startDateLocal: normalizedStartDate.toLocaleString(),
               endDateLocal: normalizedEndDate.toLocaleString(),
             });

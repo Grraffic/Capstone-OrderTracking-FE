@@ -27,8 +27,15 @@ const getDefaultRoute = (user) => {
   // Backend determines role based on email domain and admin config
   if (user.role === "system_admin") {
     return "/system-admin";
-  } else if (user.role === "property_custodian" || user.role === "admin") {
+  } else if (
+    user.role === "property_custodian" || 
+    user.role === "admin" ||
+    user.role === "finance_staff" ||
+    user.role === "accounting_staff" ||
+    user.role === "department_head"
+  ) {
     // Handle both new and old role names for backward compatibility
+    // Include all staff roles that can access property custodian pages
     return "/property-custodian";
   } else if (user.role === "student") {
     return "/all-products";

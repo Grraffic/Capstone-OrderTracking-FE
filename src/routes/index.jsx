@@ -16,7 +16,6 @@ import Settings from "../property-custodian/pages/Settings";
 
 // System Admin Pages
 import SystemAdminDashboard from "../system-admin/pages/SystemAdminDashboard";
-import UserManagement from "../system-admin/pages/UserManagement";
 import StudentList from "../system-admin/pages/StudentList";
 import EligibilityManagement from "../system-admin/pages/EligibilityManagement";
 import ItemApproval from "../system-admin/pages/ItemApproval";
@@ -54,11 +53,11 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Property Custodian Routes - Protected to property_custodian role (with backward compatibility for admin) */}
+      {/* Property Custodian Routes - Protected to property_custodian role and related staff roles (with backward compatibility for admin) */}
       <Route
         path="/property-custodian"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <AdminDashboard />
           </ProtectedRoute>
         }
@@ -66,7 +65,7 @@ const AppRoutes = () => {
       <Route
         path="/property-custodian/items"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Items />
           </ProtectedRoute>
         }
@@ -74,7 +73,7 @@ const AppRoutes = () => {
       <Route
         path="/property-custodian/inventory"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Inventory />
           </ProtectedRoute>
         }
@@ -82,7 +81,7 @@ const AppRoutes = () => {
       <Route
         path="/property-custodian/orders"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Orders />
           </ProtectedRoute>
         }
@@ -90,7 +89,7 @@ const AppRoutes = () => {
       <Route
         path="/property-custodian/settings"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Settings />
           </ProtectedRoute>
         }
@@ -100,7 +99,7 @@ const AppRoutes = () => {
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <AdminDashboard />
           </ProtectedRoute>
         }
@@ -108,7 +107,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/items"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Items />
           </ProtectedRoute>
         }
@@ -116,7 +115,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/inventory"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Inventory />
           </ProtectedRoute>
         }
@@ -124,7 +123,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/orders"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Orders />
           </ProtectedRoute>
         }
@@ -132,7 +131,7 @@ const AppRoutes = () => {
       <Route
         path="/admin/settings"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin"]}>
+          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
             <Settings />
           </ProtectedRoute>
         }
@@ -144,14 +143,6 @@ const AppRoutes = () => {
         element={
           <ProtectedRoute requiredRoles={["system_admin"]}>
             <SystemAdminDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/system-admin/users"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <UserManagement />
           </ProtectedRoute>
         }
       />

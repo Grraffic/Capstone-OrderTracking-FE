@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback, useRef } from "react";
 import { userAPI } from "../../services/user.service";
 
 /**
@@ -23,13 +23,17 @@ export const useUsers = () => {
     totalPages: 0,
   });
 
-  // Fetch users with filters
-  const fetchUsers = async (params = {}) => {
+  // Use ref to store latest pagination to avoid stale closures
+  const paginationRef = useRef(pagination);
+  paginationRef.current = pagination;
+
+  // Fetch users with filters - memoized to prevent unnecessary re-renders
+  const fetchUsers = useCallback(async (params = {}) => {
     try {
       setLoading(true);
       setError(null);
 
-      const pageToFetch = params.page || pagination.page;
+      const pageToFetch = params.page || paginationRef.current.page;
       const limitToUse = params.limit || 8; // Always use 8 per page
 
       const response = await userAPI.getUsers({
@@ -46,7 +50,7 @@ export const useUsers = () => {
 
       if (response.data && response.data.success) {
         setUsers(response.data.data || []);
-        const newPagination = response.data.pagination || pagination;
+        const newPagination = response.data.pagination || paginationRef.current;
         setPagination(newPagination);
       }
     } catch (err) {
@@ -55,7 +59,7 @@ export const useUsers = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Create user
   const createUser = async (userData, refreshParams = null) => {
@@ -95,6 +99,25 @@ export const useUsers = () => {
 
   // Update user
   const updateUser = async (userId, updates, refreshParams = null) => {
+    // Store original state for rollback on error
+    const originalUsers = [...users];
+    
+    // Optimistic update: immediately update the UI
+    if (updates.is_active !== undefined) {
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId ? { ...user, is_active: updates.is_active } : user
+        )
+      );
+    } else {
+      // For other updates, merge the updates
+      setUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId ? { ...user, ...updates } : user
+        )
+      );
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -102,7 +125,7 @@ export const useUsers = () => {
       const response = await userAPI.updateUser(userId, updates);
       
       if (response.data && response.data.success) {
-        // Refresh users list with provided params or default
+        // Refresh users list with provided params or default to get latest data
         if (refreshParams) {
           await fetchUsers(refreshParams);
         } else {
@@ -111,6 +134,9 @@ export const useUsers = () => {
         return response.data.data;
       }
     } catch (err) {
+      // Rollback optimistic update on error
+      setUsers(originalUsers);
+      
       console.error("Error updating user:", err);
       // Extract error message from response if available
       const errorMessage = err.response?.data?.error || 

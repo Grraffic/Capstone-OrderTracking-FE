@@ -248,17 +248,22 @@ const StudentProfile = () => {
         {(type === "claimed" || type === "order_released") && (
           <button 
             onClick={() => {
-              // Navigate to orders tab and show the specific order
+              // Navigate to history tab (claimed orders table) and show the specific order
               if (activity.orderId || activity.orderNumber) {
-                navigate('/student/profile', { 
-                  state: { 
-                    activeTab: 'orders',
-                    activeCategory: 'claimed',
-                    viewMode: 'detail',
-                    orderId: activity.orderId,
-                    orderNumber: activity.orderNumber
-                  } 
-                });
+                // First, change the tab to history
+                handleTabChange('history');
+                // Then navigate with state to pass order details for scrolling
+                setTimeout(() => {
+                  navigate('/student/profile', { 
+                    replace: false,
+                    state: { 
+                      activeTab: 'history',
+                      viewMode: 'detail',
+                      orderId: activity.orderId,
+                      orderNumber: activity.orderNumber
+                    } 
+                  });
+                }, 50);
               }
             }}
             className="mt-3 px-4 py-1.5 border-2 border-[#003363] text-[#003363] rounded-lg text-sm font-medium hover:bg-[#003363] hover:text-white transition-colors"

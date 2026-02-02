@@ -76,8 +76,15 @@ const AuthCallback = () => {
 
       if (role === "system_admin") {
         navigate("/system-admin", { replace: true });
-      } else if (role === "property_custodian" || role === "admin") {
+      } else if (
+        role === "property_custodian" || 
+        role === "admin" ||
+        role === "finance_staff" ||
+        role === "accounting_staff" ||
+        role === "department_head"
+      ) {
         // Handle both new and old role names for backward compatibility
+        // Include all staff roles that can access property custodian pages
         navigate("/property-custodian", { replace: true });
       } else if (role === "student") {
         // Students are always redirected to /all-products

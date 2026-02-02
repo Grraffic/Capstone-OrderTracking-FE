@@ -1,15 +1,11 @@
 import { NavLink, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   Home,
-  Users,
   GraduationCap,
   FileCheck,
   Settings,
   LogOut,
-  ChevronDown,
-  ChevronRight,
-  UserCog,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -38,47 +34,10 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]); // Close sidebar whenever the route changes on mobile/tablet
 
-  // User Management dropdown sub-items (order: List of Employees, List of Students)
-  const userManagementPaths = ["/system-admin/users", "/system-admin/students"];
-  const isUserManagementActive = userManagementPaths.some((path) =>
-    location.pathname === path || location.pathname.startsWith(path + "/")
-  );
-  const [userDropdownOpen, setUserDropdownOpen] = useState(isUserManagementActive);
-  const [collapsedFlyoutOpen, setCollapsedFlyoutOpen] = useState(false);
-  const collapsedFlyoutRef = useRef(null);
-
-  // Keep dropdown open when on a user management sub-route
-  useEffect(() => {
-    if (isUserManagementActive) {
-      setUserDropdownOpen(true);
-    }
-  }, [isUserManagementActive]);
-
-  // Close collapsed flyout when clicking outside or when sidebar opens
-  useEffect(() => {
-    if (isOpen) setCollapsedFlyoutOpen(false);
-  }, [isOpen]);
-  useEffect(() => {
-    if (!collapsedFlyoutOpen) return;
-    const handleClickOutside = (e) => {
-      if (
-        collapsedFlyoutRef.current &&
-        !collapsedFlyoutRef.current.contains(e.target)
-      ) {
-        setCollapsedFlyoutOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [collapsedFlyoutOpen]);
-
-  const userManagementSubItems = [
-    { to: "/system-admin/users", label: "List of Employees", icon: UserCog },
-    { to: "/system-admin/students", label: "List of Students", icon: GraduationCap },
-  ];
 
   const navItems = [
     { to: "/system-admin", label: "Home", icon: Home },
+    { to: "/system-admin/students", label: "List of Students", icon: GraduationCap },
     { to: "/system-admin/eligibility", label: "Eligibility Management", icon: FileCheck },
     { to: "/system-admin/settings", label: "System Settings", icon: Settings },
   ];
@@ -220,101 +179,6 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
       <nav className="flex flex-col gap-2 flex-1">
         {/* Home */}
         <div>{navItem("/system-admin", "Home", Home, true)}</div>
-
-        {/* User Management with dropdown */}
-        <div
-          ref={collapsedFlyoutRef}
-          onClick={(e) => e.stopPropagation()}
-          className={`relative ${userDropdownOpen && isOpen ? "rounded-r-full -ml-4 mr-2 py-1 pr-3 pl-4" : ""} ${!isOpen ? "flex justify-center" : ""}`}
-        >
-          <button
-            type="button"
-            onClick={() => {
-              if (isOpen) {
-                setUserDropdownOpen(true);
-                navigate("/system-admin/users");
-              } else {
-                navigate("/system-admin/users");
-                setCollapsedFlyoutOpen((prev) => !prev);
-              }
-            }}
-            className={`group relative flex w-full items-center gap-3 text-sm font-medium min-h-[44px] ${
-              !isOpen ? "justify-center min-w-[44px] rounded-lg" : ""
-            } ${
-              (isUserManagementActive || userDropdownOpen || (collapsedFlyoutOpen && !isOpen))
-                ? isOpen
-                  ? "bg-[#0C2340] text-white py-4 pl-8 pr-3 -ml-4 mr-2 rounded-r-full"
-                  : "bg-[#0C2340] text-white py-4 px-4 rounded-lg justify-center"
-                : isOpen
-                ? "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg"
-                : "text-[#0C2340] hover:bg-[#f3f6fb] px-4 py-3 rounded-lg justify-center"
-            }`}
-            title={!isOpen ? "User Management" : ""}
-            aria-expanded={isOpen ? userDropdownOpen : collapsedFlyoutOpen}
-            aria-haspopup="true"
-          >
-            <Users size={20} className="flex-shrink-0" />
-            {isOpen && (
-              <>
-                <span className="flex-1 text-left whitespace-nowrap">User Management</span>
-                {userDropdownOpen ? (
-                  <ChevronDown size={18} className="flex-shrink-0" />
-                ) : (
-                  <ChevronRight size={18} className="flex-shrink-0" />
-                )}
-              </>
-            )}
-            {!isOpen && !collapsedFlyoutOpen && (
-              <div className="absolute left-full ml-2 px-3 py-2 bg-[#0C2340] text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50">
-                User Management
-              </div>
-            )}
-          </button>
-          {/* Collapsed sidebar flyout with sub-links */}
-          {!isOpen && collapsedFlyoutOpen && (
-            <div className="absolute left-full top-0 ml-2 py-1.5 min-w-[200px] bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-              {userManagementSubItems.map((sub) => (
-                <NavLink
-                  key={sub.to}
-                  to={sub.to}
-                  onClick={() => setCollapsedFlyoutOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[#0C2340] hover:bg-[#f3f6fb] ${
-                      isActive ? "bg-[#0C2340] text-white hover:bg-[#0C2340]" : ""
-                    }`
-                  }
-                  title={sub.label}
-                >
-                  <sub.icon size={18} className="flex-shrink-0" />
-                  <span>{sub.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
-          {isOpen && userDropdownOpen && (
-            <div className="mt-1 ml-4 pl-4 border-l-2 border-[#003363]/30 space-y-0.5 py-2">
-              {userManagementSubItems.map((sub) => (
-                  <div key={sub.to} onClick={(e) => e.stopPropagation()}>
-                    <NavLink
-                      to={sub.to}
-                      onClick={(e) => e.stopPropagation()}
-                      className={({ isActive }) =>
-                        `group/sub flex items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
-                          isActive
-                            ? "bg-[#0C2340] text-white"
-                            : "text-[#0C2340] hover:bg-[#003363]/10"
-                        }`
-                      }
-                      title={sub.label}
-                    >
-                      <sub.icon size={18} className="flex-shrink-0" />
-                      <span>{sub.label}</span>
-                    </NavLink>
-                  </div>
-              ))}
-            </div>
-          )}
-        </div>
 
         {navItems.slice(1).map((item) => (
           <div key={item.to}>

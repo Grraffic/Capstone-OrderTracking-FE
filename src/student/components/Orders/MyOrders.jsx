@@ -753,22 +753,26 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
     }
   }, [user, profileLoading, eligibilityLevel, studentType, fetchAllItems]);
 
-  // Update state when location state changes (e.g., navigation from checkout). Skip when history variant.
+  // Update state when location state changes (e.g., navigation from checkout or check receipt button)
   useEffect(() => {
-    if (isHistoryView) return;
-    if (location.state?.viewMode) {
-      setViewMode(location.state.viewMode);
+    // For non-history view, update viewMode and activeCategory from location state
+    if (!isHistoryView) {
+      if (location.state?.viewMode) {
+        setViewMode(location.state.viewMode);
+      }
+      if (location.state?.activeCategory) {
+        setActiveCategory(location.state.activeCategory);
+      }
     }
-    if (location.state?.activeCategory) {
-      setActiveCategory(location.state.activeCategory);
-    }
-    // Scroll to specific order if orderNumber is provided
+    
+    // Scroll to specific order if orderNumber is provided (works for both history and orders views)
     if (location.state?.orderNumber && location.state?.viewMode === 'detail') {
       // Wait for orders to load and DOM to render
       const scrollToOrder = () => {
         const orderElementId = `order-${location.state.orderNumber}`;
         const orderElement = document.getElementById(orderElementId);
         if (orderElement) {
+          console.log(`📍 MyOrders: Scrolling to order ${location.state.orderNumber} (element: ${orderElementId})`);
           // Small delay to ensure the view has switched to detail mode
           setTimeout(() => {
             orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -779,12 +783,20 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
               orderElement.style.backgroundColor = '';
             }, 2000);
           }, 300);
+        } else {
+          console.log(`⚠️ MyOrders: Order element not found: ${orderElementId}, will retry...`);
         }
       };
-      // Try scrolling immediately and also after a delay in case orders are still loading
+      // Try scrolling multiple times with increasing delays to handle slow loads
       scrollToOrder();
-      const timeoutId = setTimeout(scrollToOrder, 1000);
-      return () => clearTimeout(timeoutId);
+      const timeoutId = setTimeout(scrollToOrder, 500);
+      const timeoutId2 = setTimeout(scrollToOrder, 1000);
+      const timeoutId3 = setTimeout(scrollToOrder, 2000);
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(timeoutId2);
+        clearTimeout(timeoutId3);
+      };
     }
     // Clear location state after reading it to prevent stale state
     if (location.state) {
@@ -997,7 +1009,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
   // Use all products for "Suggested For You" (same as AllProducts)
   const rawSuggestedProducts = useMemo(() => {
-    return filteredAllProducts.slice(0, 5); // Show max 5 products
+    return filteredAllProducts.slice(0, 3); // Show max 3 products
   }, [filteredAllProducts]);
 
   // Cart slot count and slots left (same logic as AllProducts) for enriching suggested products
@@ -1026,28 +1038,79 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
       const isForAllEducationLevels =
         educationLevelRaw === "all education levels" || educationLevelRaw === "general";
       const treatAsAllowedForOldStudent = isForAllEducationLevels;
-      const max =
-        isOldStudent && keyMissing && !treatAsAllowedForOldStudent
-          ? 0
-          : (maxQuantities[key] ?? getDefaultMaxForItem(p.name));
-      const notAllowedForStudentType =
-        isOldStudent && keyMissing && !treatAsAllowedForOldStudent;
+      
+      // For old students: Items must be explicitly enabled in permissions to be orderable
+      // If item is not in maxQuantities (not enabled by admin), it should be disabled (max = 0)
+      let max;
+      if (isOldStudent) {
+        if (keyMissing) {
+          // Old student, item not in maxQuantities (not enabled by admin) → disabled
+          max = 0;
+        } else {
+          // Item is in maxQuantities (explicitly enabled by admin) → use that value
+          max = maxQuantities[key];
+        }
+      } else {
+        // New student: Use maxQuantities if available, otherwise default
+        max = maxQuantities[key] ?? getDefaultMaxForItem(p.name);
+      }
+      
+      // For old students: item is not allowed if not in maxQuantities (not enabled by admin)
+      const notAllowedForStudentType = isOldStudent && keyMissing;
       const alreadyOrd = alreadyOrdered[key] ?? 0;
       const claimedForItem = claimedItems[key] ?? 0;
       const isClaimed = claimedForItem > 0;
       const inCart = (cartItems || []).filter(
         (i) => resolveItemKeyForMaxQuantity(i.inventory?.name || i.name) === key
       ).reduce((s, i) => s + (Number(i.quantity) || 0), 0);
-      const effectiveMax = Math.max(0, max - inCart - alreadyOrd);
+      
+      // FORCE DISABLE: Check if total (alreadyOrdered + claimedItems) has reached or exceeded the max limit
+      // For items with max > 1 (like logo patch with max 3): Check alreadyOrdered + claimedItems >= max
+      // For items with max = 1: Only check claimedItems (alreadyOrdered is already handled separately)
+      const maxForClaimedCheck = max;
+      const totalUsed = alreadyOrd + claimedForItem;
+      // For items with max > 1, check total used (alreadyOrdered + claimedItems)
+      // For items with max = 1, only check claimedItems (alreadyOrdered prevents duplicate orders separately)
+      const isMaxReached = maxForClaimedCheck > 0 && (
+        maxForClaimedCheck > 1 
+          ? totalUsed >= maxForClaimedCheck  // For logo patch (max 3): check alreadyOrdered + claimedItems >= 3
+          : claimedForItem >= maxForClaimedCheck  // For max = 1: only check claimedItems
+      );
+      
+      // Calculate effective max: max allowed minus what's already ordered/claimed/in cart
+      // For manually granted permissions (old students): The max from permissions is the NEW total allowed
+      // For items with max > 1 (like logo patch), subtract both alreadyOrdered and claimedItems
+      // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+      let effectiveMax;
+      if (isMaxReached) {
+        // If max is reached (alreadyOrdered + claimedItems >= max), completely block ordering
+        effectiveMax = 0;
+      } else if (isOldStudent && maxQuantities[key] != null) {
+        // Old student with manually granted permission: max from permissions is the NEW total
+        const newMaxFromPermissions = maxQuantities[key];
+        const shouldAllowMultipleOrders = newMaxFromPermissions > 1;
+        // For items with max > 1, subtract both alreadyOrdered and claimedItems
+        // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+        const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+        effectiveMax = Math.max(0, newMaxFromPermissions - inCart - (subtractAlreadyOrdered ? alreadyOrd : 0) - claimedForItem);
+      } else {
+        // Regular calculation: For items with max > 1, subtract both alreadyOrdered and claimedItems
+        // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+        const shouldAllowMultipleOrders = max > 1;
+        const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
+        effectiveMax = Math.max(0, max - inCart - (subtractAlreadyOrdered ? alreadyOrd : 0) - claimedForItem);
+      }
+      
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewType =
         totalItemLimit != null &&
         Number(totalItemLimit) > 0 &&
         isNewItemType &&
         cartSlotCount >= slotsLeftForThisOrder;
+      
       return {
         ...p,
-        _orderLimitReached: effectiveMax < 1 || isClaimed,
+        _orderLimitReached: effectiveMax < 1 || isMaxReached,
         _isClaimed: isClaimed,
         _slotsFullForNewType: slotsFullForNewType,
         _notAllowedForStudentType: notAllowedForStudentType,
@@ -1673,8 +1736,8 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
             </div>
 
             {/* Product Grid - use ProductCard so disabled state matches All Products */}
-            {/* Mobile M (375px): 2 cols, Mobile L (425px): 2 cols, Tablet (768px): 3 cols, Laptop (1024px): 4 cols */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2.5 sm:gap-3 md:gap-4 lg:gap-5 xl:gap-6">
+            {/* Reduced columns to make cards wider: Mobile: 1 col, Small: 2 cols, Tablet: 2 cols, Laptop: 3 cols */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
               {suggestedProductsWithLimit.map((product, index) => (
                 <ProductCard
                   key={product.id || index}

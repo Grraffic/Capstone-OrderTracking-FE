@@ -1,4 +1,5 @@
 import axios from "axios";
+import { apiRateLimiter, authRateLimiter, writeRateLimiter } from "../utils/rateLimiter";
 
 // Export API base URL for use in services that don't use axios
 // Dev: fallback to local backend if VITE_API_URL not set. Prod: warn if missing (set in deployment e.g. Vercel).
@@ -23,13 +24,56 @@ const api = axios.create({
   },
 });
 
-// Add a request interceptor to attach auth token
+// Track if we're currently rate limited (from backend)
+let isRateLimited = false;
+let rateLimitResetTime = null;
+
+// Add a request interceptor to attach auth token and check rate limits
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("authToken");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Check if we're still rate limited from backend
+    if (isRateLimited && rateLimitResetTime) {
+      const now = new Date();
+      if (now < new Date(rateLimitResetTime)) {
+        const error = new Error("Rate limit exceeded. Please wait before making another request.");
+        error.code = "RATE_LIMIT_EXCEEDED";
+        error.waitTime = new Date(rateLimitResetTime) - now;
+        return Promise.reject(error);
+      } else {
+        // Rate limit expired
+        isRateLimited = false;
+        rateLimitResetTime = null;
+      }
+    }
+
+    // Client-side rate limiting
+    const url = config.url || "";
+    const method = config.method?.toUpperCase() || "GET";
+    
+    // Determine which rate limiter to use
+    let limiter;
+    if (url.includes("/auth")) {
+      limiter = authRateLimiter;
+    } else if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      limiter = writeRateLimiter;
+    } else {
+      limiter = apiRateLimiter;
+    }
+
+    // Check if request can be made
+    if (!limiter.canMakeRequest()) {
+      const waitTime = limiter.getTimeUntilNextRequest();
+      const error = new Error("Rate limit exceeded. Please wait before making another request.");
+      error.waitTime = waitTime;
+      error.code = "RATE_LIMIT_EXCEEDED";
+      return Promise.reject(error);
+    }
+
     return config;
   },
   (error) => {
@@ -37,11 +81,45 @@ api.interceptors.request.use(
   }
 );
 
-// Add a response interceptor to handle quota / billing errors (e.g., Supabase 402)
+// Add a response interceptor to handle quota / billing errors and rate limits
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     const status = error?.response?.status;
+
+    // 429 Too Many Requests - Rate limit exceeded
+    if (status === 429) {
+      const retryAfter = error.response?.headers?.["retry-after"] || 
+                        error.response?.headers?.["x-ratelimit-reset"] ||
+                        error.response?.data?.retryAfter ||
+                        "15 minutes";
+      
+      const resetTime = error.response?.data?.resetTime || null;
+      const message = error.response?.data?.message || "Too many requests";
+      
+      // Set global rate limit state to prevent further requests
+      isRateLimited = true;
+      if (resetTime) {
+        rateLimitResetTime = resetTime;
+      } else {
+        // Calculate reset time from retryAfter
+        const minutes = parseInt(retryAfter) || 15;
+        rateLimitResetTime = new Date(Date.now() + minutes * 60 * 1000).toISOString();
+      }
+      
+      console.warn(`Rate limit exceeded. Retry after: ${retryAfter}`, { resetTime: rateLimitResetTime });
+      
+      // Show user-friendly error message
+      if (typeof window !== "undefined" && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent("rate-limit-exceeded", {
+          detail: { 
+            retryAfter, 
+            message,
+            resetTime: rateLimitResetTime,
+          }
+        }));
+      }
+    }
 
     // 402 Payment Required - often returned when the backend/Supabase hits plan limits
     if (status === 402) {
