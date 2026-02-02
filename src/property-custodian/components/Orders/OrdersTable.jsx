@@ -404,7 +404,6 @@ const OrdersTable = ({
           >
             Previous
           </button>
-<<<<<<< HEAD
 
           {/* Page Number Input */}
           <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
@@ -421,36 +420,6 @@ const OrdersTable = ({
           </form>
 
           {/* Next Button */}
-=======
-          <input
-            type="number"
-            min="1"
-            max={totalPages}
-            value={currentPage}
-            onChange={(e) => {
-              const page = parseInt(e.target.value);
-              if (page >= 1 && page <= totalPages && onGoToPage) {
-                onGoToPage(page);
-              }
-            }}
-            onBlur={(e) => {
-              const page = parseInt(e.target.value);
-              if (!page || page < 1) {
-                if (onGoToPage) onGoToPage(1);
-              } else if (page > totalPages) {
-                if (onGoToPage) onGoToPage(totalPages);
-              } else {
-                if (onGoToPage) onGoToPage(page);
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.target.blur();
-              }
-            }}
-            className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
-          />
->>>>>>> test3
           <button
             onClick={onNextPage}
             disabled={currentPage >= totalPages}

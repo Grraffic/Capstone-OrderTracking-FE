@@ -1235,16 +1235,9 @@ const Inventory = () => {
 
         {/* Pagination - Only show for inventory tab and when there's more than 1 page */}
         {activeTab === "inventory" && totalPages > 1 && (
-<<<<<<< HEAD
           <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-4 py-2 sm:py-3 mt-3 sm:mt-4 md:mt-6">
             <div className="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 font-sf-medium">
               Page <span className="font-semibold">{currentPage}</span>
-=======
-          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
-            {/* Left side - Page info */}
-            <div className="text-sm text-gray-600">
-              Page {currentPage} of {totalPages}
->>>>>>> test3
             </div>
             
             {/* Right side - Navigation buttons */}
