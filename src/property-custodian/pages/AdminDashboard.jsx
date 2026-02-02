@@ -2,9 +2,9 @@ import { useState } from "react";
 import AdminLayout from "../components/layouts/AdminLayout";
 import {
   InventoryHealth,
-  InventoryAlerts,
   OrderTracking,
   RecentAudits,
+  RecentOrders,
 } from "../components/shared";
 import DateRangePicker from "../components/common/DateRangePicker";
 import { useAdminDashboardData } from "../hooks";
@@ -73,16 +73,16 @@ const AdminDashboard = () => {
             />
           </div>
 
-          {/* Inventory Alerts and Order Tracking - Side by Side */}
+          {/* Order Tracking and Recent Orders - Side by Side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            {/* Left: Inventory Alerts */}
-            <div>
-              <InventoryAlerts items={outOfStockItems} />
-            </div>
-
-            {/* Right: Order Tracking */}
+            {/* Left: Order Tracking */}
             <div>
               <OrderTracking stats={orderTracking} />
+            </div>
+
+            {/* Right: Recent Orders */}
+            <div>
+              <RecentOrders />
             </div>
           </div>
 

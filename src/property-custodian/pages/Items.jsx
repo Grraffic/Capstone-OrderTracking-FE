@@ -822,33 +822,61 @@ const Items = () => {
 
           {/* Pagination: Previous / Next */}
           {hasPagination && (
-            <div className="mt-4 sm:mt-6 flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
-              <div className="text-xs sm:text-sm text-gray-600 font-sf-medium">
-                Page <span className="font-semibold">{currentPage}</span> of{" "}
-                <span className="font-semibold">{totalPagesGrouped}</span>
+            <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+              {/* Left side - Page info */}
+              <div className="text-sm text-gray-600">
+                Page {currentPage} of {totalPagesGrouped}
               </div>
-              <div className="flex items-center gap-1.5 sm:gap-2">
+              
+              {/* Right side - Navigation buttons */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage <= 1}
-                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
                   aria-label="Previous page"
                 >
-                  <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
-                  <span className="hidden sm:inline">Previous</span>
-                  <span className="sm:hidden">Prev</span>
+                  Previous
                 </button>
+                <input
+                  type="number"
+                  min="1"
+                  max={totalPagesGrouped}
+                  value={currentPage}
+                  onChange={(e) => {
+                    const page = parseInt(e.target.value);
+                    if (page >= 1 && page <= totalPagesGrouped) {
+                      goToPage(page);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const page = parseInt(e.target.value);
+                    if (!page || page < 1) {
+                      goToPage(1);
+                    } else if (page > totalPagesGrouped) {
+                      goToPage(totalPagesGrouped);
+                    } else {
+                      goToPage(page);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.target.blur();
+                    }
+                  }}
+                  className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+                />
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage >= totalPagesGrouped}
-                  className="inline-flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-medium rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
                   aria-label="Next page"
                 >
-                  <span className="hidden sm:inline">Next</span>
+                  Next
                   <span className="sm:hidden">Next</span>
-                  <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
+                 
                 </button>
               </div>
             </div>

@@ -30,6 +30,9 @@ const Inventory = () => {
   const [gradeLevel, setGradeLevel] = useState("all");
   const [activeTab, setActiveTab] = useState("inventory");
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
+  // Transaction pagination state
+  const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
+  const transactionItemsPerPage = 8;
   // Date range state for transactions view only
   // Default to last 30 days to show more transactions
   const today = new Date();
@@ -964,6 +967,17 @@ const Inventory = () => {
       transaction.type.toLowerCase() === filterType.toLowerCase()
     );
   });
+
+  // Paginate filtered transactions (8 items per page)
+  const transactionTotalPages = Math.ceil(filteredTransactions.length / transactionItemsPerPage);
+  const transactionStartIndex = (transactionCurrentPage - 1) * transactionItemsPerPage;
+  const transactionEndIndex = transactionStartIndex + transactionItemsPerPage;
+  const paginatedTransactions = filteredTransactions.slice(transactionStartIndex, transactionEndIndex);
+
+  // Reset transaction page to 1 when filter changes
+  useEffect(() => {
+    setTransactionCurrentPage(1);
+  }, [transactionTypeFilter, startDate, endDate]);
   
   // Log filtered transactions for debugging
   useEffect(() => {
@@ -1171,30 +1185,64 @@ const Inventory = () => {
               transactionTypeFilter={transactionTypeFilter}
               onTransactionTypeFilterChange={setTransactionTypeFilter}
               transactionCounts={transactionCounts}
-              filteredTransactions={filteredTransactions}
+              filteredTransactions={paginatedTransactions}
+              transactionCurrentPage={transactionCurrentPage}
+              transactionPagination={{
+                page: transactionCurrentPage,
+                limit: transactionItemsPerPage,
+                total: filteredTransactions.length,
+                totalPages: transactionTotalPages,
+              }}
+              onTransactionPageChange={setTransactionCurrentPage}
             />
           );
         })()}
 
         {/* Pagination - Only show for inventory tab and when there's more than 1 page */}
         {activeTab === "inventory" && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-4 py-2 sm:py-3 mt-3 sm:mt-4 md:mt-6">
-            <div className="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 font-sf-medium">
-              Page <span className="font-semibold">{currentPage}</span> of{" "}
-              <span className="font-semibold">{totalPages}</span>
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+            {/* Left side - Page info */}
+            <div className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
             </div>
-            <div className="flex items-center gap-1.5 sm:gap-2">
+            
+            {/* Right side - Navigation buttons */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={handlePreviousPage}
                 disabled={currentPage === 1}
-                className={`px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-medium rounded-lg border transition-colors duration-200 ${
-                  currentPage === 1
-                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                }`}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
               >
                 Previous
               </button>
+              <input
+                type="number"
+                min="1"
+                max={totalPages}
+                value={currentPage}
+                onChange={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (page >= 1 && page <= totalPages) {
+                    setCurrentPage(page);
+                  }
+                }}
+                onBlur={(e) => {
+                  const page = parseInt(e.target.value);
+                  if (!page || page < 1) {
+                    setCurrentPage(1);
+                  } else if (page > totalPages) {
+                    setCurrentPage(totalPages);
+                  } else {
+                    setCurrentPage(page);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.target.blur();
+                  }
+                }}
+                className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+              />
               <button
                 onClick={handleNextPage}
                 disabled={currentPage === totalPages}
