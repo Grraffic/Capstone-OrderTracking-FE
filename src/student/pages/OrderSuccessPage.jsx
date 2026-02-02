@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Navbar from '../components/common/Navbar';
 import HeroSection from '../components/common/HeroSection';
@@ -7,13 +7,20 @@ import OrderSuccessCard from '../components/order/OrderSuccessCard';
 
 const OrderSuccessPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
+  
+  // Get order type from location state to determine which tab to navigate to
+  const orderType = location.state?.orderType || "regular";
 
   // Ensure limits (alreadyOrdered) are refetched when user leaves for product/cart so item stays disabled
   useEffect(() => {
     try {
       sessionStorage.setItem("limitsNeedRefresh", "1");
-    } catch (_) {}
+    } catch (error) {
+      // Ignore sessionStorage errors
+      console.warn("Failed to set limitsNeedRefresh:", error);
+    }
   }, []);
 
   // Extract user's first name from user data
@@ -80,6 +87,21 @@ const OrderSuccessPage = () => {
             <OrderSuccessCard 
               userName={getUserName()}
               onOrderAgain={() => navigate('/student/profile', { state: { activeTab: 'orders' } })}
+              onShowQR={() => {
+                // Navigate to detail view with the correct category and order info
+                const targetCategory = orderType === 'pre-order' ? 'preOrders' : 'orders';
+                const orderId = location.state?.orderId;
+                const orderNumber = location.state?.orderNumber;
+                navigate('/student/profile', { 
+                  state: { 
+                    activeTab: 'orders', 
+                    activeCategory: targetCategory,
+                    viewMode: 'detail',
+                    orderId: orderId,
+                    orderNumber: orderNumber
+                  } 
+                });
+              }}
             />
           </div>
         </div>

@@ -10,7 +10,6 @@ import { itemsAPI, authAPI } from "../../services/api";
 import { groupCartItemsByVariations } from "../../utils/groupCartItems";
 import { generateOrderReceiptQRData } from "../../utils/qrCodeGenerator";
 import { getDisplayPriceForFreeItem } from "../../utils/freeItemDisplayPrice";
-import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem, getDefaultMaxByKey } from "../../utils/maxQuantityKeys";
 import Navbar from "../components/common/Navbar";
 import HeroSection from "../components/common/HeroSection";
 import toast from "react-hot-toast";
@@ -39,43 +38,20 @@ const CheckoutPage = () => {
   const { trackCheckout } = useActivity();
   const [submitting, setSubmitting] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(new Set());
-  const [totalItemLimit, setMaxItemsPerOrder] = useState(null);
-  const [limitsLoaded, setLimitsLoaded] = useState(false);
   const [blockedDueToVoid, setBlockedDueToVoid] = useState(false);
-  const [maxQuantities, setMaxQuantities] = useState({});
-  const [claimedItems, setClaimedItems] = useState({});
-  const [alreadyOrdered, setAlreadyOrdered] = useState({});
-  const [slotsUsedFromPlacedOrders, setSlotsUsedFromPlacedOrders] = useState(0);
 
   useEffect(() => {
-    const fetchMaxQuantities = async () => {
+    const fetchBlockedStatus = async () => {
       if (!user) return;
       try {
         const res = await authAPI.getMaxQuantities();
-        setMaxItemsPerOrder(res.data?.totalItemLimit ?? null);
         setBlockedDueToVoid(res.data?.blockedDueToVoid === true);
-        setMaxQuantities(res.data?.maxQuantities ?? {});
-        setClaimedItems(res.data?.claimedItems ?? {});
-        setAlreadyOrdered(res.data?.alreadyOrdered ?? {});
-        setSlotsUsedFromPlacedOrders(res.data?.slotsUsedFromPlacedOrders ?? 0);
       } catch (err) {
-        setMaxItemsPerOrder(null);
         setBlockedDueToVoid(err?.response?.data?.blockedDueToVoid === true);
-        setMaxQuantities(err?.response?.data?.maxQuantities ?? {});
-        setClaimedItems(err?.response?.data?.claimedItems ?? {});
-        setAlreadyOrdered(err?.response?.data?.alreadyOrdered ?? {});
-        setSlotsUsedFromPlacedOrders(err?.response?.data?.slotsUsedFromPlacedOrders ?? 0);
-      } finally {
-        setLimitsLoaded(true);
       }
     };
-    fetchMaxQuantities();
+    fetchBlockedStatus();
   }, [user]);
-
-  const limitNotSet =
-    user &&
-    limitsLoaded &&
-    (totalItemLimit == null || totalItemLimit === undefined || Number(totalItemLimit) <= 0);
 
   // Determine which items to display: direct checkout items or cart items
   const items = isDirectCheckout ? checkoutItems : cartItems;
@@ -86,140 +62,7 @@ const CheckoutPage = () => {
     return groupCartItemsByVariations(items);
   }, [items]);
 
-  // Pre-validate items to disable checkout button if there are violations
-  const checkoutValidation = useMemo(() => {
-    if (!limitsLoaded || !user || items.length === 0) {
-      return { isValid: true, violations: [] }; // Don't block if data isn't loaded yet
-    }
-
-    const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
-    const getEffectiveMaxForItem = (key) => {
-      if (isOldStudent) {
-        if (maxQuantities[key] !== undefined && maxQuantities[key] !== null) {
-          return maxQuantities[key];
-        }
-        return getDefaultMaxByKey(key);
-      }
-      return maxQuantities[key] ?? getDefaultMaxByKey(key);
-    };
-
-    // Group items by resolved key and check limits
-    const itemsByKey = {};
-    for (const item of items) {
-      const name = item.inventory?.name || item.name || "Unknown Item";
-      const key = resolveItemKeyForMaxQuantity(name);
-      if (!key) continue;
-      if (!itemsByKey[key]) {
-        itemsByKey[key] = { items: [], totalQty: 0, displayName: name };
-      }
-      itemsByKey[key].items.push(item);
-      itemsByKey[key].totalQty += Number(item.quantity) || 0;
-    }
-
-    // Check each item type for violations
-    const violations = [];
-    for (const [key, data] of Object.entries(itemsByKey)) {
-      const max = getEffectiveMaxForItem(key);
-      const claimedCount = claimedItems[key] || 0;
-      const alreadyOrderedCount = alreadyOrdered[key] || 0;
-      const totalQty = data.totalQty;
-      
-      // Debug logging for logo patch to track validation
-      if (key === "logo patch") {
-        console.log(`[CheckoutPage Pre-Validation] Logo Patch:`, {
-          key,
-          max,
-          claimedCount,
-          alreadyOrderedCount,
-          totalQty,
-          maxQuantitiesKey: maxQuantities[key],
-          claimedItemsKey: claimedItems[key],
-          isOldStudent,
-          limitsLoaded,
-        });
-      }
-      
-      // FORCE DISABLE: Check if claimed count has reached or exceeded max
-      if (claimedCount >= max && max > 0) {
-        console.log(`[CheckoutPage Pre-Validation] Blocked: ${data.displayName} - claimed (${claimedCount}) >= max (${max})`);
-        violations.push({
-          itemName: data.displayName,
-          reason: `You have already claimed ${claimedCount} of this item (maximum: ${max}). You cannot order more.`,
-        });
-        continue;
-      }
-
-      // Check if (claimed + new order) would exceed max
-      const totalWithClaimed = claimedCount + totalQty;
-      if (totalWithClaimed > max && max > 0) {
-        console.log(`[CheckoutPage Pre-Validation] Blocked: ${data.displayName} - claimed (${claimedCount}) + order (${totalQty}) = ${totalWithClaimed} > max (${max})`);
-        violations.push({
-          itemName: data.displayName,
-          reason: `You have already claimed ${claimedCount} of this item. Adding ${totalQty} would exceed the maximum (${max}) per student.`,
-        });
-        continue;
-      }
-
-      // Check if (already ordered + new order) would exceed max
-      const totalAfterOrder = alreadyOrderedCount + totalQty;
-      if (totalAfterOrder > max && max > 0) {
-        violations.push({
-          itemName: data.displayName,
-          reason: `You have already ordered ${alreadyOrderedCount} of this item. Adding ${totalQty} would exceed the maximum (${max}) per student.`,
-        });
-      }
-    }
-    
-    // Check item type (slot) limit
-    if (totalItemLimit != null && Number(totalItemLimit) > 0) {
-      // Calculate unique item types (slots) in current checkout
-      const checkoutSlotKeys = new Set();
-      for (const item of items) {
-        const name = item.inventory?.name || item.name || "";
-        const key = resolveItemKeyForMaxQuantity(name);
-        if (key) checkoutSlotKeys.add(key);
-      }
-      const checkoutSlotCount = checkoutSlotKeys.size;
-      const slotsLeft = Math.max(0, Number(totalItemLimit) - slotsUsedFromPlacedOrders);
-      
-      // Debug logging for slot limit validation
-      console.log(`[CheckoutPage Slot Limit Validation]`, {
-        totalItemLimit,
-        slotsUsedFromPlacedOrders,
-        checkoutSlotCount,
-        slotsLeft,
-        checkoutSlotKeys: Array.from(checkoutSlotKeys),
-      });
-      
-      // Check if student has already reached their limit
-      if (slotsUsedFromPlacedOrders >= Number(totalItemLimit)) {
-        console.log(`[CheckoutPage Slot Limit] ❌ Blocked: Student has reached limit (${slotsUsedFromPlacedOrders} >= ${totalItemLimit})`);
-        violations.push({
-          itemName: "Item Type Limit",
-          reason: `You have already reached your item type limit. You have used ${slotsUsedFromPlacedOrders} item type${slotsUsedFromPlacedOrders !== 1 ? "s" : ""} in placed orders, which exceeds your maximum of ${totalItemLimit}. You cannot place any more orders until some of your existing orders are completed or cancelled.`,
-        });
-      } else if (checkoutSlotCount > slotsLeft) {
-        // Check if this order would exceed the remaining limit
-        console.log(`[CheckoutPage Slot Limit] ❌ Blocked: Order exceeds remaining slots (${checkoutSlotCount} > ${slotsLeft})`);
-        violations.push({
-          itemName: "Item Type Limit",
-          reason: `Order exceeds your item type limit. You have ${slotsLeft} item type${slotsLeft !== 1 ? "s" : ""} left for this order (max ${totalItemLimit} total; ${slotsUsedFromPlacedOrders} already used in placed orders). This order has ${checkoutSlotCount} different item type${checkoutSlotCount !== 1 ? "s" : ""}. Only placed orders count toward the limit—cart does not.`,
-        });
-      } else {
-        console.log(`[CheckoutPage Slot Limit] ✅ Allowed: ${checkoutSlotCount} slots in order, ${slotsLeft} slots left`);
-      }
-    }
-    
-    // Debug logging for validation result
-    if (violations.length > 0) {
-      console.log(`[CheckoutPage Pre-Validation] Found ${violations.length} violation(s):`, violations);
-    }
-
-    return {
-      isValid: violations.length === 0,
-      violations,
-    };
-  }, [items, limitsLoaded, user, maxQuantities, claimedItems, alreadyOrdered, totalItemLimit, slotsUsedFromPlacedOrders]);
+  // ORDER LIMIT CALCULATIONS DISABLED - No validation needed
 
   // Toggle group expansion
   const toggleGroup = (groupKey) => {
@@ -241,30 +84,11 @@ const CheckoutPage = () => {
       return;
     }
 
-    // Check validation before proceeding
-    if (!limitsLoaded) {
-      toast.error("Please wait while we check your order limits...");
-      return;
-    }
-
-    if (!checkoutValidation.isValid) {
-      // Show all validation errors
-      const errorMessages = checkoutValidation.violations.map(v => `${v.itemName}: ${v.reason}`).join("\n");
-      toast.error(errorMessages, { duration: 6000 });
-      console.error("[CheckoutPage] Validation failed:", checkoutValidation.violations);
-      return;
-    }
+    // ORDER LIMIT VALIDATION DISABLED - No limit checks needed
 
     if (!user) {
       toast.error("Please log in to place an order");
       navigate("/login");
-      return;
-    }
-
-    if (limitNotSet) {
-      toast.error(
-        "Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders."
-      );
       return;
     }
 
@@ -273,104 +97,7 @@ const CheckoutPage = () => {
       return;
     }
 
-    // Wait for limits to be loaded before validating
-    if (!limitsLoaded) {
-      toast.error("Please wait while we check your order limits...");
-      return;
-    }
-
-    // Validate items against max quantities and claimed items before submitting
-    const isOldStudent = (user?.studentType || user?.student_type || "").toLowerCase() === "old";
-    const getEffectiveMaxForItem = (key) => {
-      // For old students with manual permissions, use the permission max if it exists
-      // Otherwise, use default max (for items like logo patch that are always allowed)
-      if (isOldStudent) {
-        // If maxQuantities[key] is explicitly set (even if 0), use it
-        // If it's undefined/null, check if it's a default-allowed item (logo patch, number patch)
-        if (maxQuantities[key] !== undefined && maxQuantities[key] !== null) {
-          return maxQuantities[key];
-        }
-        // For old students, items not in maxQuantities are not allowed (return 0)
-        // Except for logo patch and number patch which have default max
-        return getDefaultMaxByKey(key);
-      }
-      // For new students, use maxQuantities or default
-      return maxQuantities[key] ?? getDefaultMaxByKey(key);
-    };
-
-    // Group items by resolved key and check limits
-    const itemsByKey = {};
-    for (const item of items) {
-      const name = item.inventory?.name || item.name || "Unknown Item";
-      const key = resolveItemKeyForMaxQuantity(name);
-      if (!key) continue;
-      if (!itemsByKey[key]) {
-        itemsByKey[key] = { items: [], totalQty: 0, displayName: name };
-      }
-      itemsByKey[key].items.push(item);
-      itemsByKey[key].totalQty += Number(item.quantity) || 0;
-    }
-
-    // Check each item type for violations
-    const violations = [];
-    for (const [key, data] of Object.entries(itemsByKey)) {
-      const max = getEffectiveMaxForItem(key);
-      const claimedCount = claimedItems[key] || 0;
-      const alreadyOrderedCount = alreadyOrdered[key] || 0;
-      const totalQty = data.totalQty;
-      
-      // Debug logging for logo patch to track validation
-      if (key === "logo patch") {
-        console.log(`[CheckoutPage Validation] Logo Patch:`, {
-          key,
-          max,
-          claimedCount,
-          alreadyOrderedCount,
-          totalQty,
-          maxQuantitiesKey: maxQuantities[key],
-          claimedItemsKey: claimedItems[key],
-          isOldStudent,
-        });
-      }
-      
-      // FORCE DISABLE: Check if claimed count has reached or exceeded max
-      // This is a hard requirement - no exceptions
-      if (claimedCount >= max && max > 0) {
-        console.log(`[CheckoutPage Validation] Blocked: ${data.displayName} - claimed (${claimedCount}) >= max (${max})`);
-        violations.push({
-          itemName: data.displayName,
-          reason: `You have already claimed ${claimedCount} of this item (maximum: ${max}). You cannot order more.`,
-        });
-        continue; // Skip other checks - item is completely blocked
-      }
-
-      // Check if (claimed + new order) would exceed max (for items with lifetime limits like logo patch)
-      // This catches cases where claimed < max but adding the new order would exceed it
-      const totalWithClaimed = claimedCount + totalQty;
-      if (totalWithClaimed > max && max > 0) {
-        console.log(`[CheckoutPage Validation] Blocked: ${data.displayName} - claimed (${claimedCount}) + order (${totalQty}) = ${totalWithClaimed} > max (${max})`);
-        violations.push({
-          itemName: data.displayName,
-          reason: `You have already claimed ${claimedCount} of this item. Adding ${totalQty} would exceed the maximum (${max}) per student.`,
-        });
-        continue; // Skip other checks - item is completely blocked
-      }
-
-      // Check if (already ordered + new order) would exceed max
-      const totalAfterOrder = alreadyOrderedCount + totalQty;
-      if (totalAfterOrder > max && max > 0) {
-        violations.push({
-          itemName: data.displayName,
-          reason: `You have already ordered ${alreadyOrderedCount} of this item. Adding ${totalQty} would exceed the maximum (${max}) per student.`,
-        });
-      }
-    }
-
-    if (violations.length > 0) {
-      const errorMessage = violations.map(v => `${v.itemName}: ${v.reason}`).join(" ");
-      toast.error(errorMessage);
-      return;
-    }
+    // ORDER LIMIT VALIDATION DISABLED - Skip all limit checks
 
     try {
       setSubmitting(true);
@@ -378,12 +105,6 @@ const CheckoutPage = () => {
       // Get student education level from first item (assuming all items are for the same level)
       // Backend returns education_level (snake_case), but also check camelCase for compatibility
       const educationLevel = items[0]?.inventory?.education_level || items[0]?.inventory?.educationLevel || "General";
-
-      // Generate order number
-      const orderNumber = `ORD-${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2, 9)
-        .toUpperCase()}`;
 
       // Check if any item is out of stock OR if selected size is not available
       // We need to check size-specific availability for uniform items
@@ -829,7 +550,9 @@ const CheckoutPage = () => {
         window.dispatchEvent(new CustomEvent("order-created"));
         try {
           sessionStorage.setItem("limitsNeedRefresh", "1");
-        } catch (_) {}
+        } catch {
+          // Ignore storage errors
+        }
       }
 
       // Show appropriate success message
@@ -853,11 +576,15 @@ const CheckoutPage = () => {
         );
       }
 
-      // Navigate to Order Success page; pass first order id for 10-second claim confirmation
+      // Navigate to Order Success page; pass first order id and type for navigation
       const firstOrder = createdOrders[0];
       navigate("/student/order-success", {
         state: firstOrder?.order?.id
-          ? { orderId: firstOrder.order.id, orderNumber: firstOrder.orderNumber || firstOrder.order?.order_number }
+          ? { 
+              orderId: firstOrder.order.id, 
+              orderNumber: firstOrder.orderNumber || firstOrder.order?.order_number,
+              orderType: firstOrder.type || firstOrder.order?.order_type || "regular"
+            }
           : undefined,
       });
     } catch (error) {
@@ -1047,16 +774,6 @@ const CheckoutPage = () => {
             </div>
           </div>
 
-          {/* Order limit not set: student cannot place order until admin sets Total Item Limit. */}
-          {items.length > 0 && limitNotSet && (
-            <div className="px-4 sm:px-6 lg:px-8 pb-2">
-              <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                <p className="font-medium">
-                  Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders.
-                </p>
-              </div>
-            </div>
-          )}
           {items.length > 0 && blockedDueToVoid && (
             <div className="px-4 sm:px-6 lg:px-8 pb-2">
               <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-800">
@@ -1071,16 +788,10 @@ const CheckoutPage = () => {
             <div className="p-4 sm:p-6 lg:p-8 pt-0">
               <button
                 onClick={handleCheckout}
-                disabled={loading || submitting || limitNotSet || blockedDueToVoid || !checkoutValidation.isValid || !limitsLoaded}
+                disabled={loading || submitting || blockedDueToVoid}
                 title={
-                  limitNotSet 
-                    ? "Your order limit has not been set. Please ask your administrator to set your Total Item Limit in System Admin before you can place orders." 
-                    : blockedDueToVoid 
+                  blockedDueToVoid 
                     ? "You cannot place new orders because a previous order was not claimed in time and was voided."
-                    : !limitsLoaded
-                    ? "Please wait while we check your order limits..."
-                    : !checkoutValidation.isValid
-                    ? checkoutValidation.violations.map(v => `${v.itemName}: ${v.reason}`).join(" ")
                     : undefined
                 }
                 className="w-full py-3 sm:py-4 bg-[#F28C28] text-white font-bold text-base sm:text-lg rounded-full hover:bg-[#d97a1f] transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"

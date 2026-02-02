@@ -1,7 +1,7 @@
 import React from 'react';
 import SuccessIcon from '../common/SuccessIcon';
 
-const OrderSuccessCard = ({ userName, onOrderAgain }) => {
+const OrderSuccessCard = ({ userName, onOrderAgain, onShowQR }) => {
   return (
     <div className="w-full p-8 md:p-12 lg:p-16">
       {/* Success Icon */}
@@ -23,9 +23,9 @@ const OrderSuccessCard = ({ userName, onOrderAgain }) => {
       <div className="flex justify-center">
         <button 
           className="px-10 py-3.5 bg-[#0C2340] text-white rounded-lg font-semibold text-base cursor-pointer transition-all duration-300 shadow-[0_4px_12px_rgba(12,35,64,0.2)] hover:bg-[#003363] hover:-translate-y-0.5 hover:shadow-[0_6px_16px_rgba(12,35,64,0.3)] active:translate-y-0"
-          onClick={onOrderAgain}
+          onClick={onShowQR || onOrderAgain}
         >
-          SHOW QR
+          SHOW ORDER
         </button>
       </div>
     </div>

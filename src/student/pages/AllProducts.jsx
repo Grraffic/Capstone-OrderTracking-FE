@@ -385,12 +385,12 @@ const AllProducts = () => {
   // Only placed orders count toward the limit—cart does not.
   // For old students: ALL items (including "All Education Levels") must be explicitly enabled by admin to be orderable.
   const productsWithLimit = useMemo(() => {
-    // If limits are not loaded yet, treat all items as disabled to prevent misleading "blinking" effect
-    // Items will only be enabled once we have confirmed their actual availability
+    // If limits are not loaded yet, treat all items as available (not disabled)
+    // Items will only be disabled once we have confirmed their actual unavailability
     if (!limitsLoaded) {
       return paginatedItems.map((p) => ({
         ...p,
-        _orderLimitReached: true, // Disable until limits are loaded
+        _orderLimitReached: false, // Available until limits are loaded and confirmed disabled
         _isClaimed: false,
         _slotsFullForNewType: false,
         _notAllowedForStudentType: false,

@@ -584,6 +584,7 @@ export const useStudentSettings = () => {
     hasChanges,
     formData,
     fieldErrors,
+    setFieldErrors,
     handleImageSelect,
     handleRemovePhoto,
     handleFieldChange,

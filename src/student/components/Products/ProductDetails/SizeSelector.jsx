@@ -96,15 +96,17 @@ const SizeSelector = ({
                 <div key={size} className="relative">
                   <button
                     onClick={() => onSizeSelect(size)}
-                    className={`relative px-4 py-1.5 sm:px-6 sm:py-2 rounded-lg transition-all duration-200 bg-white border-2 overflow-hidden ${
+                    className={`group relative px-4 py-1.5 sm:px-6 sm:py-2 rounded-lg transition-all duration-200 bg-white border-2 overflow-hidden ${
                       isSelected
                         ? "border-gray-300" // Selected state border
-                        : "border-gray-300 hover:border-[#F28C28]" // Default/Hover state
+                        : "border-gray-300 hover:border-[#F28C28] hover:bg-[#F28C28]" // Default/Hover state
                     } ${
                       !isInStock ? "opacity-75" : ""
                     }`}
                   >
-                    <p className="text-[10px] sm:text-xs font-medium text-[#e68b00]">
+                    <p className={`text-[10px] sm:text-xs font-medium transition-colors ${
+                      isSelected ? "text-[#e68b00]" : "text-[#e68b00] group-hover:text-white"
+                    }`}>
                       {formatSizeDisplay(size)}
                     </p>
                     

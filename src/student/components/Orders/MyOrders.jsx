@@ -604,6 +604,9 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
   );
 };
 
+// Export QRCodeModal for use in other components
+export { QRCodeModal };
+
 /**
  * MyOrders Component - Two View System
  * Overview: Category buttons + Suggested products
@@ -759,11 +762,35 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
     if (location.state?.activeCategory) {
       setActiveCategory(location.state.activeCategory);
     }
+    // Scroll to specific order if orderNumber is provided
+    if (location.state?.orderNumber && location.state?.viewMode === 'detail') {
+      // Wait for orders to load and DOM to render
+      const scrollToOrder = () => {
+        const orderElementId = `order-${location.state.orderNumber}`;
+        const orderElement = document.getElementById(orderElementId);
+        if (orderElement) {
+          // Small delay to ensure the view has switched to detail mode
+          setTimeout(() => {
+            orderElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // Highlight the order briefly
+            orderElement.style.transition = 'background-color 0.3s';
+            orderElement.style.backgroundColor = '#fef3c7';
+            setTimeout(() => {
+              orderElement.style.backgroundColor = '';
+            }, 2000);
+          }, 300);
+        }
+      };
+      // Try scrolling immediately and also after a delay in case orders are still loading
+      scrollToOrder();
+      const timeoutId = setTimeout(scrollToOrder, 1000);
+      return () => clearTimeout(timeoutId);
+    }
     // Clear location state after reading it to prevent stale state
     if (location.state) {
       window.history.replaceState({}, document.title);
     }
-  }, [location.state, isHistoryView]);
+  }, [location.state, isHistoryView, orders]);
 
 
   // Count orders by category

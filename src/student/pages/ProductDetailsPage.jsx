@@ -590,32 +590,54 @@ const ProductDetailsPage = () => {
   // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
   let effectiveMax;
   if (product) {
-    // If limits are not loaded yet, set effectiveMax to 0 to prevent misleading availability
+    // If limits are not loaded yet, use a reasonable default based on item type
+    // This prevents unlimited quantity selection while limits are loading
     if (limitsNotLoaded) {
-      effectiveMax = 0;
+      // Use the default max for this item type (e.g., 3 for Logo Patch, 1 for most items)
+      // This ensures quantity is capped even before limits are fully loaded
+      const defaultMax = getDefaultMaxForItem(product.name);
+      effectiveMax = defaultMax; // Use default max to prevent unlimited quantity
     } else if (isMaxReached) {
       // If max is reached (alreadyOrdered + claimedItems >= max), completely block ordering
+      effectiveMax = 0;
+    } else if (notAllowedForStudentType) {
+      // Old students without permission cannot order (including pre-orders)
       effectiveMax = 0;
     } else if (isOldStudent && maxQuantities[productResolvedKey] != null) {
       // Old student with manually granted permission: max from permissions is the NEW total
       const newMaxFromPermissions = maxQuantities[productResolvedKey];
       const shouldAllowMultipleOrders = newMaxFromPermissions > 1;
-      // For items with max > 1, subtract both alreadyOrdered and claimedItems
-      // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
-      const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
-      effectiveMax = Math.min(
-        Math.max(0, newMaxFromPermissions - alreadyInCart - (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) - claimedForItem),
-        effectiveStock || 999
-      );
+      // Always subtract alreadyOrdered to ensure total doesn't exceed the new max
+      // For Logo Patch with new max 3: if 2 already ordered, can only order 1 more (3 - 2 = 1)
+      const calculatedMax = Math.max(0, newMaxFromPermissions - alreadyInCart - alreadyOrderedForItem - claimedForItem);
+      // For items with max > 1 (like logo patch), allow ordering up to the remaining max in a single order
+      // Only cap by stock for items with max = 1 or when stock is the limiting factor
+      if (shouldAllowMultipleOrders) {
+        // For items with max > 1, allow ordering up to calculatedMax (remaining available)
+        // Don't cap by stock - the max limit is the constraint
+        effectiveMax = calculatedMax;
+      } else {
+        // For items with max = 1, cap by stock as well
+        effectiveMax = Math.min(calculatedMax, effectiveStock || 999);
+      }
     } else {
-      // Regular calculation: For items with max > 1, subtract both alreadyOrdered and claimedItems
-      // For items with max = 1, subtract alreadyOrdered to prevent duplicate orders
+      // Regular calculation: Calculate remaining quantity available to order
+      // For all items, subtract alreadyOrdered, claimedItems, and items in cart from the max
+      // This ensures users can't exceed their total limit across all orders
       const shouldAllowMultipleOrders = maxForItem > 1;
-      const subtractAlreadyOrdered = !shouldAllowMultipleOrders;
-      effectiveMax = Math.min(
-        Math.max(0, maxForItem - alreadyInCart - (subtractAlreadyOrdered ? alreadyOrderedForItem : 0) - claimedForItem),
-        effectiveStock || 999
-      );
+      // Always subtract alreadyOrdered to ensure total doesn't exceed max
+      // For Logo Patch (max 3): if 2 already ordered, can only order 1 more (3 - 2 = 1)
+      const calculatedMax = Math.max(0, maxForItem - alreadyInCart - alreadyOrderedForItem - claimedForItem);
+      // For items with max > 1 (like logo patch), allow ordering up to the remaining max in a single order
+      // Only cap by stock for items with max = 1 or when stock is the limiting factor
+      if (shouldAllowMultipleOrders) {
+        // For items with max > 1, allow ordering up to calculatedMax (remaining available)
+        // Don't cap by stock - the max limit is the constraint
+        effectiveMax = calculatedMax;
+      } else {
+        // For items with max = 1, cap by stock as well
+        effectiveMax = Math.min(calculatedMax, effectiveStock || 999);
+      }
     }
   } else {
     effectiveMax = getDefaultMaxForItem("");
@@ -661,14 +683,15 @@ const ProductDetailsPage = () => {
       })
       .slice(0, 3);
     
-    // If limits are not loaded yet, treat all items as disabled to prevent misleading "blinking" effect
+    // If limits are not loaded yet, treat all items as available (not disabled)
+    // Items will only be disabled once we have confirmed their actual unavailability
     if (!limitsLoaded) {
       return filtered.map((p) => ({
         ...p,
-        _orderLimitReached: true, // Disable until limits are loaded
+        _orderLimitReached: false, // Available until limits are loaded and confirmed disabled
         _slotsFullForNewType: false,
         _notAllowedForStudentType: false,
-        _isDisabled: true,
+        _isDisabled: false,
       }));
     }
     
@@ -795,16 +818,18 @@ const ProductDetailsPage = () => {
     requiresSizeSelection && (!selectedSize || !sizeConfirmed) || genderMismatch;
   // Same disabled treatment as All Products card: grayscale image + gray text when item cannot be ordered
   // FORCE DISABLE: Include claimed max reached in disabled check - this is mandatory
-  // Item is disabled if: limits not loaded (for logged-in users), or any of the disable conditions are met
+  // EXCEPTION: Out of stock items (pre-order) are NOT disabled - users can still place pre-orders
+  // UNLESS: Old students without permission cannot place pre-orders (same as eligibility check)
+  // Item is disabled only when we have confirmed data that it should be disabled
   const isDisabled =
-    limitsNotLoaded || // If limits are not loaded, item must be disabled
-    (effectiveMax < 1 ||
+    (!isOutOfStock && (effectiveMax < 1 ||
       isMaxReached || // FORCE: If max reached (alreadyOrdered + claimedItems >= max), item MUST be disabled
       blockedDueToVoid ||
       slotsFullForNewType ||
       limitNotSet ||
-      notAllowedForStudentType ||
-      genderMismatch);
+      notAllowedForStudentType || // Old students without permission cannot order (including pre-orders)
+      genderMismatch)) ||
+    (isOutOfStock && notAllowedForStudentType); // Disable pre-orders for old students without permission
 
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
@@ -1114,7 +1139,7 @@ const ProductDetailsPage = () => {
                         sizeConfirmed={sizeConfirmed}
                         onSizeConfirm={handleSizeConfirm}
                         loadingSizes={loadingSizes}
-                        disabled={effectiveMax < 1}
+                        disabled={(!isOutOfStock && effectiveMax < 1) || notAllowedForStudentType}
                         disabledReason={null}
                         isPreOrder={!(selectedSizeData && selectedSizeData.stock > 0)}
                       />
@@ -1192,7 +1217,7 @@ const ProductDetailsPage = () => {
                   <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                     <button
                       onClick={handleAddToCart}
-                      disabled={isOrderDisabled || effectiveMax < 1 || isMaxReached || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
+                      disabled={isOrderDisabled || effectiveMax < 1 || isMaxReached || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
                       className="w-full sm:w-auto px-5 py-2 bg-white border-2 border-[#003363] text-[#003363] font-semibold rounded-full hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow-md text-sm"
                     >
                       <ShoppingCart className="w-4 h-4" /> Add to Cart
@@ -1200,7 +1225,7 @@ const ProductDetailsPage = () => {
 
                     <button
                       onClick={handleOrderNow}
-                      disabled={isOrderDisabled || effectiveMax < 1 || isMaxReached || (user && !limitsLoaded) || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
+                      disabled={isOrderDisabled || effectiveMax < 1 || isMaxReached || slotsFullForNewType || limitNotSet || genderMismatch || notAllowedForStudentType || blockedDueToVoid}
                       className="w-full sm:w-auto px-6 py-2 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg text-sm"
                     >
                       {requiresSizeSelection && selectedSize

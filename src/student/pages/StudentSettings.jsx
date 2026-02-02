@@ -10,6 +10,8 @@ import {
   STUDENT_NUMBER_PLACEHOLDER,
   STUDENT_NUMBER_FORMAT_HINT,
   getSuggestedInitials,
+  isValidStudentNumber,
+  normalizeStudentNumber,
 } from "../../utils/studentNumberFormat";
 
 /**
@@ -60,6 +62,7 @@ const StudentSettings = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
+  const [showSaveConfirmation, setShowSaveConfirmation] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
   const { user } = useAuth();
 
@@ -118,6 +121,7 @@ const StudentSettings = () => {
     hasChanges,
     formData,
     fieldErrors,
+    setFieldErrors,
     handleImageSelect,
     handleFieldChange,
     handleSaveChanges,
@@ -131,6 +135,77 @@ const StudentSettings = () => {
     Boolean(formData.studentNumber && String(formData.studentNumber).trim()) &&
     Boolean(formData.courseYearLevel && String(formData.courseYearLevel).trim());
     // Student type is auto-detected from student number, not required in completion check
+  
+  // Check if form has any information (any field has a value)
+  const formHasInformation = useMemo(() => {
+    return Boolean(
+      (formData.gender && String(formData.gender).trim()) ||
+      (formData.studentNumber && String(formData.studentNumber).trim()) ||
+      (formData.courseYearLevel && String(formData.courseYearLevel).trim()) ||
+      (formData.studentType && String(formData.studentType).trim()) ||
+      imagePreview
+    );
+  }, [formData.gender, formData.studentNumber, formData.courseYearLevel, formData.studentType, imagePreview]);
+
+  // Validate form before showing confirmation
+  const validateForm = useCallback(() => {
+    const errors = [];
+    
+    if (!formData.gender || !String(formData.gender).trim()) {
+      errors.push("Gender is required");
+    }
+    
+    if (!formData.studentNumber || !String(formData.studentNumber).trim()) {
+      errors.push("Student number is required");
+    } else {
+      const normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
+      if (!isValidStudentNumber(normalizedStudentNumber)) {
+        errors.push("Student number must match format: YY-NNNNNIII (e.g. 22-00023RSR)");
+      }
+    }
+    
+    if (!formData.courseYearLevel || !String(formData.courseYearLevel).trim()) {
+      errors.push("Course & Year Level is required");
+    }
+    
+    return errors;
+  }, [formData.gender, formData.studentNumber, formData.courseYearLevel]);
+
+  // Handle save button click with validation
+  const handleSaveClick = useCallback(() => {
+    const validationErrors = validateForm();
+    
+    if (validationErrors.length > 0) {
+      // Set field errors instead of showing toast
+      const newFieldErrors = {};
+      
+      if (!formData.gender || !String(formData.gender).trim()) {
+        newFieldErrors.gender = "Gender is required";
+      }
+      
+      if (!formData.studentNumber || !String(formData.studentNumber).trim()) {
+        newFieldErrors.studentNumber = "Student number is required";
+      } else {
+        const normalizedStudentNumber = normalizeStudentNumber(formData.studentNumber);
+        if (!isValidStudentNumber(normalizedStudentNumber)) {
+          newFieldErrors.studentNumber = "Student number must match format: YY-NNNNNIII (e.g. 22-00023RSR)";
+        }
+      }
+      
+      if (!formData.courseYearLevel || !String(formData.courseYearLevel).trim()) {
+        newFieldErrors.courseYearLevel = "Course & Year Level is required";
+      }
+      
+      setFieldErrors(newFieldErrors);
+      return;
+    }
+    
+    // Clear any existing errors if validation passes
+    setFieldErrors({});
+    
+    // If validation passes, show confirmation
+    setShowSaveConfirmation(true);
+  }, [validateForm, formData, setFieldErrors, normalizeStudentNumber, isValidStudentNumber]);
 
   // Check localStorage on mount and when user changes to restore dismissal state and step
   useEffect(() => {
@@ -841,13 +916,13 @@ const StudentSettings = () => {
                 <div className="flex flex-col md:flex-row justify-end gap-4 mt-6">
                   <button
                     onClick={() => {
-                      if (hasChanges) {
+                      if (formHasInformation) {
                         setShowDiscardModal(true);
                       }
                     }}
-                    disabled={!hasChanges || isProfileCompleted}
+                    disabled={!formHasInformation || isProfileCompleted}
                     className={`px-6 py-3 rounded-lg  font-medium transition-colors ${
-                      hasChanges && !isProfileCompleted
+                      formHasInformation && !isProfileCompleted
                         ? "border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
                         : "border-2 border-gray-200 text-gray-400 cursor-not-allowed"
                     }`}
@@ -857,10 +932,10 @@ const StudentSettings = () => {
 
                   <button
                     id="onboard-save"
-                    onClick={handleSaveChanges}
-                    disabled={!hasChanges || saving}
+                    onClick={handleSaveClick}
+                    disabled={!formHasInformation || saving}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      hasChanges && !saving
+                      formHasInformation && !saving
                         ? "bg-[#E68B00] text-white hover:bg-[#d97d00]"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
@@ -903,6 +978,37 @@ const StudentSettings = () => {
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Discard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Changes Confirmation Modal */}
+      {showSaveConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-xl font-bold text-[#003363] mb-4">
+              Confirm Save Changes
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to save these changes to your profile?
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setShowSaveConfirmation(false)}
+                className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowSaveConfirmation(false);
+                  handleSaveChanges();
+                }}
+                className="px-4 py-2 bg-[#E68B00] text-white rounded-lg hover:bg-[#d97d00] transition-colors"
+              >
+                Confirm
               </button>
             </div>
           </div>

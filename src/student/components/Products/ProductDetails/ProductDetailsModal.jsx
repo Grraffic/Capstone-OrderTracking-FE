@@ -27,8 +27,8 @@ const ProductDetailsModal = ({
   if (!isOpen || !product) return null;
 
   const isOutOfStock = product.status === "out_of_stock";
-  const isOrderDisabled =
-    isOutOfStock || (requiresSizeSelection && !selectedSize);
+  // Allow ordering for out-of-stock items (pre-orders) - only disable if size selection is required but not selected
+  const isOrderDisabled = requiresSizeSelection && !selectedSize;
 
   const handleAddToCart = () => {
     if (isOrderDisabled) return;
@@ -132,34 +132,32 @@ const ProductDetailsModal = ({
                     />
                   )}
 
-                  {/* 5. Quantity Selector */}
-                  {!isOutOfStock && (
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold text-gray-700">
-                        Quantity:
-                      </h3>
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={() => onQuantityChange(quantity - 1)}
-                          disabled={quantity <= 1}
-                          className="p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
-                        >
-                          <Minus className="w-4 h-4 text-gray-700" />
-                        </button>
+                  {/* 5. Quantity Selector - Show for all items including pre-orders */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      Quantity:
+                    </h3>
+                    <div className="flex items-center gap-4">
+                      <button
+                        onClick={() => onQuantityChange(quantity - 1)}
+                        disabled={quantity <= 1}
+                        className="p-3 border-2 border-gray-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                      >
+                        <Minus className="w-4 h-4 text-gray-700" />
+                      </button>
 
-                        <span className="text-xl font-bold text-[#003363] min-w-[3rem] text-center">
-                          {quantity}
-                        </span>
+                      <span className="text-xl font-bold text-[#003363] min-w-[3rem] text-center">
+                        {quantity}
+                      </span>
 
-                        <button
-                          onClick={() => onQuantityChange(quantity + 1)}
-                          className="p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
-                        >
-                          <Plus className="w-4 h-4 text-gray-700" />
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => onQuantityChange(quantity + 1)}
+                        className="p-3 border-2 border-gray-300 rounded-lg hover:border-[#F28C28] hover:bg-orange-50 transition-all"
+                      >
+                        <Plus className="w-4 h-4 text-gray-700" />
+                      </button>
                     </div>
-                  )}
+                  </div>
 
                   {/* 6. Action Buttons */}
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -176,7 +174,7 @@ const ProductDetailsModal = ({
                       disabled={isOrderDisabled}
                       className="flex-1 px-6 py-3 bg-[#F28C28] text-white font-semibold rounded-full hover:bg-[#d97a1f] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-md hover:shadow-lg"
                     >
-                      Order Now
+                      {isOutOfStock ? "Pre-Order" : "Order Now"}
                     </button>
                   </div>
 

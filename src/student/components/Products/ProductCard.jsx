@@ -27,7 +27,10 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   // FORCE DISABLE: When blocked due to void, slot limit, claimed max reached, or not allowed for student type, card is ALWAYS disabled
   // isClaimed takes priority - if item has reached claimed max, it MUST be disabled
   // notAllowedForStudentType: item not enabled by admin for old students
-  const isDisabled = isAlreadyOrdered || isClaimed || blockedDueToVoid || slotsFullForNewType || notAllowedForStudentType;
+  // EXCEPTION: Out of stock items (pre-order) are NOT disabled - users can still place pre-orders
+  // UNLESS: Old students without permission cannot place pre-orders (same as eligibility check)
+  const isDisabled = (isAlreadyOrdered || isClaimed || blockedDueToVoid || slotsFullForNewType || notAllowedForStudentType) && 
+                     (!isOutOfStock || notAllowedForStudentType);
 
   return (
     <div
@@ -58,13 +61,13 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           }}
         />
 
-        {/* Background Overlay for Disabled Items */}
+        {/* Background Overlay for Disabled Items - Show for disabled items including pre-orders without permission */}
         {isDisabled && (
           <div className="absolute inset-0 bg-[#F3F3F3] opacity-50"></div>
         )}
 
         {/* Order Limit Badge - Show when order limit is reached */}
-        {orderLimitReached && (
+        {orderLimitReached && !isOutOfStock && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="bg-[#BFBFBF] text-white px-6 py-2 rounded-xl shadow-lg font-bold text-sm drop-shadow-md">
               Order Limit
@@ -72,8 +75,10 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           </div>
         )}
 
-        {/* Pre-Order Button Overlay - Only show when out of stock and not blocked */}
-        {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && !orderLimitReached && (
+
+        {/* Pre-Order Button Overlay - Show when out of stock and not blocked (even if order limit reached) */}
+        {/* Old students without permission cannot place pre-orders */}
+        {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && !notAllowedForStudentType && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
             <button
               type="button"
@@ -115,8 +120,8 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           </p>
         )}
 
-        {/* Order Limit Description - Show when item is disabled */}
-        {isDisabled && (
+        {/* Order Limit Description - Show when item is disabled but not out of stock */}
+        {isDisabled && !isOutOfStock && (
           <p className="text-xs italic text-[#F10000] opacity-60 mt-2">
             You have already reached your order quota for this school year
           </p>
