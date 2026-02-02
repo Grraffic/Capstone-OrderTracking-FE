@@ -13,6 +13,7 @@ import { ChevronDown } from "lucide-react";
  */
 const EducationLevelFilter = ({ value, onChange }) => {
   const options = [
+    { value: "all", label: "All Education Levels" },
     { value: "Preschool", label: "Preschool" },
     { value: "Elementary", label: "Elementary" },
     { value: "Junior High School", label: "Junior High School" },

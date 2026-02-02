@@ -14,10 +14,10 @@ import { ChevronRight } from "lucide-react";
 const RecentOrders = () => {
   const navigate = useNavigate();
 
-  // Fetch 3 most recent orders
+  // Fetch 6 most recent orders
   const { orders, loading } = useOrders({
     page: 1,
-    limit: 3,
+    limit: 6,
     status: null, // Get all orders
     orderType: null,
     educationLevel: null,

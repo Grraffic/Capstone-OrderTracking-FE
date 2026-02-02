@@ -34,7 +34,7 @@ const AtReorderPointTable = ({ data, loading, educationLevel }) => {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-8 text-center font-sf-medium">
         <p className="text-gray-500 text-sm">
-          No items at reorder point found for {educationLevel}.
+          No items at reorder point found for {educationLevel === "all" ? "All Education Levels" : educationLevel}.
         </p>
       </div>
     );

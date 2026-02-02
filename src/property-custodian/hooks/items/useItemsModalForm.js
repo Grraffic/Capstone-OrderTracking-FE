@@ -376,11 +376,13 @@ export const useItemsModalForm = (
           name: (formData.name || "").trim() || formData.category,
           category,
           adjustmentType,
+          // Include ID if editing (selectedItem should have id)
+          ...(selectedItem?.id && { id: selectedItem.id }),
         };
         onSubmit(submissionData);
       }
     },
-    [formData, adjustmentType, validateForm, onSubmit]
+    [formData, adjustmentType, validateForm, onSubmit, selectedItem?.id]
   );
 
   return {

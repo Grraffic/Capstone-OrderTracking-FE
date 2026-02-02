@@ -20,6 +20,7 @@ export const useInventoryOutOfStock = (educationLevel = "College") => {
    * Map frontend education level names to backend API values
    */
   const mapEducationLevelToAPI = (level) => {
+    if (level === "all" || !level) return null;
     const mapping = {
       "Preschool": "Kindergarten",
       "Elementary": "Elementary",
@@ -40,9 +41,11 @@ export const useInventoryOutOfStock = (educationLevel = "College") => {
       return [];
     }
 
-    // Filter items out of stock
+    // Filter items out of stock and exclude archived items
     const outOfStockItems = apiData.filter(
-      (item) => item.status === "Out of Stock"
+      (item) => 
+        item.status === "Out of Stock" &&
+        (!item.is_archived || item.is_archived === false || item.is_archived === null)
     );
 
     // Group items by name and education_level
@@ -95,9 +98,10 @@ export const useInventoryOutOfStock = (educationLevel = "College") => {
       setError(null);
 
       const apiEducationLevel = mapEducationLevelToAPI(educationLevel);
-      const filters = {
-        educationLevel: apiEducationLevel,
-      };
+      const filters = {};
+      if (apiEducationLevel) {
+        filters.educationLevel = apiEducationLevel;
+      }
 
       const response = await inventoryService.getInventoryReport(filters);
 

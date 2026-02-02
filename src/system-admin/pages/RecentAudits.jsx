@@ -39,17 +39,22 @@ const RecentAudits = () => {
       const result = await transactionService.getTransactions(filters);
 
       if (result.success && result.data) {
-        // Fetch user names for transactions that have "System" or missing user_name
+        // Fetch user names and roles for transactions
         const auditsWithUsers = await Promise.all(
           result.data.map(async (tx) => {
             let userName = tx.user_name || "System";
+            let userRole = tx.user_role || null;
             
-            // If user_name is "System" or missing, try to fetch the actual user name
+            // If user_name is "System" or missing, try to fetch the actual user name and role
             if ((!tx.user_name || tx.user_name === "System") && tx.user_id) {
               try {
                 const userResponse = await userAPI.getUserById(tx.user_id);
                 if (userResponse.data && userResponse.data.success && userResponse.data.data) {
                   userName = userResponse.data.data.name || tx.user_name || "System";
+                  // Only update role if it wasn't already set
+                  if (!userRole) {
+                    userRole = userResponse.data.data.role || null;
+                  }
                 }
               } catch (err) {
                 // If fetch fails, keep the original user_name or "System"
@@ -57,10 +62,20 @@ const RecentAudits = () => {
               }
             }
             
+            // Format role for display (capitalize first letter of each word)
+            const formatRole = (role) => {
+              if (!role || role === "system" || role === "unknown") return null;
+              return role
+                .split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            };
+            
             return {
               id: tx.id,
               dateTime: format(new Date(tx.created_at), "MMM d, yyyy h:mm a"),
               user: userName,
+              userRole: formatRole(userRole),
               action: tx.action || "Unknown Action",
               details: tx.details || "No details available",
               type: tx.type || "Unknown",
@@ -228,8 +243,13 @@ const RecentAudits = () => {
                             <span className="text-sm text-gray-900">{audit.dateTime}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-gray-900">{audit.user}</span>
+                        <td className="px-4 sm:px-6 py-4 text-sm text-gray-700">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-900">{audit.user}</span>
+                            {audit.userRole && (
+                              <span className="text-xs text-gray-500 mt-0.5">{audit.userRole}</span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4">
                           <span className="text-sm font-medium text-gray-900">{audit.action}</span>

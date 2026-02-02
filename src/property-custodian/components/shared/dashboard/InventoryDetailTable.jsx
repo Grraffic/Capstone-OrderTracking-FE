@@ -119,7 +119,7 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-4 sm:p-6 md:p-8 text-center">
         <p className="text-gray-500 text-xs sm:text-sm">
-          No inventory items found for {educationLevel}.
+          No inventory items found for {educationLevel === "all" ? "All Education Levels" : educationLevel}.
         </p>
       </div>
     );

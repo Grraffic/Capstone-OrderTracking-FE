@@ -41,6 +41,12 @@ export const useInventoryHealthStats = (startDate, endDate) => {
             });
           }
 
+          // Filter out archived items (safeguard - database view should already filter, but ensure frontend also filters)
+          rows = rows.filter((row) => {
+            // Exclude archived items: is_archived should be false, null, or undefined
+            return !row.is_archived || row.is_archived === false || row.is_archived === null;
+          });
+
           // Group rows by (name, education_level) - same grouping as OutOfStockSection
           const groupStatuses = new Map();
           rows.forEach((row) => {

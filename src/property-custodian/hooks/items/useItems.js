@@ -573,6 +573,13 @@ export const useItems = (options = {}) => {
         setLoading(true);
         setError(null);
 
+        // Validate that item has an ID before attempting update
+        if (!updatedItem || !updatedItem.id) {
+          const errorMsg = "Item ID is required for update";
+          setError(errorMsg);
+          throw new Error(errorMsg);
+        }
+
         // Transform camelCase to snake_case for backend
         const transformedItem = {
           name: updatedItem.name,

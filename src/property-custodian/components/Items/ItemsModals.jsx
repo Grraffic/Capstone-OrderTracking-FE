@@ -115,7 +115,11 @@ const ItemsModals = ({
       if (modalState.mode === "add") {
         onAdd(data);
       } else if (modalState.mode === "edit") {
-        onUpdate(data);
+        // Ensure ID is included when updating
+        onUpdate({
+          ...data,
+          id: selectedItem?.id || data.id,
+        });
       }
     },
     onClose,
@@ -369,11 +373,27 @@ const ItemsModals = ({
         accessoryPrices[firstSelectedIndex] || formData.price || 0;
 
       // Store all accessory entries in note field as JSON (no size field)
+      // Entry 1 (index 0) is beginning inventory, Entry 2+ are purchases
       const accessoryEntries = selectedAccessoryIndices.map((index) => {
-        return {
-          stock: Number(accessoryStocks[index]) || 0,
-          price: Number(accessoryPrices[index]) || Number(itemPrice) || 0,
-        };
+        const stock = Number(accessoryStocks[index]) || 0;
+        const price = Number(accessoryPrices[index]) || Number(itemPrice) || 0;
+        
+        // Entry 1 (index 0) is beginning inventory, Entry 2+ are purchases
+        if (index === 0) {
+          return {
+            stock,
+            price,
+            beginning_inventory: stock,
+            purchases: 0,
+          };
+        } else {
+          return {
+            stock,
+            price,
+            beginning_inventory: 0,
+            purchases: stock, // New entries are purchases
+          };
+        }
       });
 
       // Create item without size field
@@ -614,6 +634,14 @@ const ItemsModals = ({
         0
       );
       const firstPrice = sizeVariations[0]?.price ?? formData.price ?? 0;
+      
+      // Validate that selectedItem exists and has an ID before attempting update
+      if (!selectedItem || !selectedItem.id) {
+        console.error("Cannot update item: missing item or ID. This may be a new entry that needs to be created first.");
+        alert("Cannot update item: missing item or ID. Please ensure the item exists before adding entries.");
+        return;
+      }
+      
       const itemToUpdate = {
         ...formData,
         id: selectedItem.id,
@@ -633,8 +661,115 @@ const ItemsModals = ({
       } catch (err) {
         console.error("Error updating item:", err);
       }
+    }
+    // Edit mode + Accessories: handle accessoryEntries with beginning_inventory and purchases
+    else if (
+      isAccessories &&
+      modalState.mode === "edit" &&
+      selectedItem &&
+      selectedAccessoryIndices.length > 0
+    ) {
+      syncEditorToForm();
+      
+      // Validate that selectedItem exists and has an ID before attempting update
+      if (!selectedItem || !selectedItem.id) {
+        console.error("Cannot update item: missing item or ID. This may be a new entry that needs to be created first.");
+        alert("Cannot update item: missing item or ID. Please ensure the item exists before adding entries.");
+        return;
+      }
+
+      // Calculate total stock from all accessory entries
+      const totalStock = selectedAccessoryIndices.reduce((sum, index) => {
+        return sum + (Number(accessoryStocks[index]) || 0);
+      }, 0);
+
+      // Use the first selected entry's price, or formData.price as fallback
+      const firstSelectedIndex = selectedAccessoryIndices[0];
+      const itemPrice =
+        accessoryPrices[firstSelectedIndex] || formData.price || 0;
+
+      // Get existing accessoryEntries if they exist
+      let existingAccessoryEntries = null;
+      if (selectedItem.note) {
+        try {
+          const parsedNote = JSON.parse(selectedItem.note);
+          if (
+            parsedNote?._type === "accessoryEntries" &&
+            Array.isArray(parsedNote.accessoryEntries)
+          ) {
+            existingAccessoryEntries = parsedNote.accessoryEntries;
+          }
+        } catch (_) {
+          // Not JSON or parse error, continue without existing entries
+        }
+      }
+
+      // Build accessoryEntries with beginning_inventory and purchases
+      // Entry 1 (index 0) is beginning inventory, Entry 2+ are purchases
+      const accessoryEntries = selectedAccessoryIndices.map((index) => {
+        const stock = Number(accessoryStocks[index]) || 0;
+        const price = Number(accessoryPrices[index]) || Number(itemPrice) || 0;
+        
+        // Check if this entry already exists (by index)
+        const existingEntry = existingAccessoryEntries?.[index];
+        
+        if (index === 0) {
+          // Entry 1: preserve existing beginning_inventory if it exists, otherwise use stock
+          const beginningInventory = existingEntry?.beginning_inventory != null
+            ? Number(existingEntry.beginning_inventory) || 0
+            : stock;
+          return {
+            stock,
+            price,
+            beginning_inventory: beginningInventory,
+            purchases: 0,
+          };
+        } else {
+          // Entry 2+: these are purchases
+          // If entry already exists, preserve its beginning_inventory (should be 0)
+          // Otherwise, new entries are purchases
+          const beginningInventory = existingEntry?.beginning_inventory != null
+            ? Number(existingEntry.beginning_inventory) || 0
+            : 0;
+          return {
+            stock,
+            price,
+            beginning_inventory: beginningInventory,
+            purchases: stock, // New entries are purchases
+          };
+        }
+      });
+
+      // Calculate totals for item-level fields
+      const totalBeginningInventory = accessoryEntries[0]?.beginning_inventory || 0;
+      const totalPurchases = accessoryEntries.slice(1).reduce((sum, e) => sum + (Number(e.purchases) || 0), 0);
+
+      const itemToUpdate = {
+        ...formData,
+        id: selectedItem.id,
+        descriptionText:
+          editorRef.current?.innerHTML ?? formData.descriptionText,
+        stock: totalStock,
+        price: Number(itemPrice) || 0,
+        beginning_inventory: totalBeginningInventory,
+        purchases: totalPurchases,
+        note: JSON.stringify({
+          accessoryEntries: accessoryEntries,
+          _type: "accessoryEntries",
+        }),
+      };
+
+      // Remove size from the item data
+      delete itemToUpdate.size;
+
+      try {
+        await onUpdate(itemToUpdate);
+        onClose();
+      } catch (err) {
+        console.error("Error updating item:", err);
+      }
     } else {
-      // For edit (non-Uniforms) or single item, use normal submission
+      // For edit (non-Uniforms, non-Accessories) or single item, use normal submission
       handleFormSubmit(e);
     }
   };
@@ -2239,6 +2374,7 @@ const ItemsModals = ({
                                 checked={selectedAccessoryIndices.includes(
                                   index
                                 )}
+                                disabled={index === 0}
                                 onChange={(e) => {
                                   if (e.target.checked) {
                                     setSelectedAccessoryIndices((prev) => {
@@ -2268,9 +2404,9 @@ const ItemsModals = ({
                                     });
                                   }
                                 }}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0"
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                               />
-                              <span className="text-gray-800 truncate min-w-0">
+                              <span className={`text-gray-800 truncate min-w-0 ${index === 0 ? 'opacity-50' : ''}`}>
                                 Entry {index + 1}
                               </span>
                             </div>
@@ -2279,13 +2415,14 @@ const ItemsModals = ({
                               min="0"
                               step="1"
                               value={accessoryStocks[index] ?? ""}
+                              disabled={index === 0}
                               onChange={(e) => {
                                 const next = [...accessoryStocks];
                                 next[index] = e.target.value;
                                 setAccessoryStocks(next);
                               }}
                               placeholder="0"
-                              className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                             />
                             <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
                               <input
@@ -2293,6 +2430,7 @@ const ItemsModals = ({
                                 min="0"
                                 step="0.01"
                                 value={accessoryPrices[index] ?? ""}
+                                disabled={index === 0}
                                 onChange={(e) => {
                                   const next = [...accessoryPrices];
                                   next[index] = e.target.value;
@@ -2312,9 +2450,9 @@ const ItemsModals = ({
                                   }
                                 }}
                                 placeholder="Php 0.00"
-                                className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
                               />
-                              {accessoryStocks.length > 1 && (
+                              {accessoryStocks.length > 1 && index !== 0 && (
                                 <button
                                   type="button"
                                   onClick={() =>

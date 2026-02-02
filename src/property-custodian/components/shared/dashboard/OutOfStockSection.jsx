@@ -105,7 +105,7 @@ const OutOfStockSection = ({ totalOutOfStock }) => {
       <div className="px-4 sm:px-6 py-3 border-t border-gray-200 bg-gray-50">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-600">
-            Out of Stock - {selectedEducationLevel}: {totalItemsCount} Items
+            Out of Stock - {selectedEducationLevel === "all" ? "All Education Levels" : selectedEducationLevel}: {totalItemsCount} Items
           </p>
           
           {/* Pagination Controls */}

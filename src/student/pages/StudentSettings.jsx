@@ -627,7 +627,7 @@ const StudentSettings = () => {
                     {isProfileCompleted && (
                       <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
                         <p className="text-sm text-amber-800 font-medium">
-                          <span className="font-semibold">Profile Completed:</span> Your personal information has been submitted and is now locked. Only system administrators can update your information. Please contact an administrator if you need to make changes.
+                          <span className="font-semibold">Profile Completed:</span> Your personal information has been submitted and is now locked. Only Finance and Accounting Department can update your information. Please contact an Finance and Account if you need to make changes.
                         </p>
                       </div>
                     )}

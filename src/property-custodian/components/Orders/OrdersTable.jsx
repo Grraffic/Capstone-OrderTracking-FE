@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit2, ChevronLeft, ChevronRight } from "lucide-react";
 import EditOrderModal from "./EditOrderModal";
 
 /**
@@ -36,8 +36,6 @@ const OrdersTable = ({
   onOrderUpdated,
   onOpenQRScanner,
 }) => {
-  const [selectedRows, setSelectedRows] = useState(new Set());
-  const [openMenuId, setOpenMenuId] = useState(null);
   const [expandedOrders, setExpandedOrders] = useState(new Set()); // Track expanded orders
   const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   
@@ -91,23 +89,6 @@ const OrdersTable = ({
     setSelectedOrder(null);
   };
 
-  const toggleRowSelection = (id) => {
-    const newSelected = new Set(selectedRows);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedRows(newSelected);
-  };
-
-  const toggleAllRows = () => {
-    if (selectedRows.size === orders.length) {
-      setSelectedRows(new Set());
-    } else {
-      setSelectedRows(new Set(orders.map((order) => order.id)));
-    }
-  };
 
   // Toggle expanded state for an order
   const toggleExpandedOrder = (orderId) => {
@@ -180,9 +161,7 @@ const OrdersTable = ({
         return (
           <div
             key={order.id}
-            className={`bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-amber-50/30 transition-all duration-200 ${
-              selectedRows.has(order.id) ? "bg-amber-50/50" : ""
-            }`}
+            className="bg-white border border-gray-200 rounded-xl shadow-sm hover:bg-amber-50/30 transition-all duration-200"
           >
             {/* Desktop Layout - Grid */}
             <div className="hidden lg:grid lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-center p-4 sm:p-5 lg:p-6">
@@ -236,16 +215,6 @@ const OrdersTable = ({
                 >
                   <Edit2 size={16} className="text-gray-600" />
                 </button>
-                <button
-                  onClick={() => {
-                    console.log("Delete order:", order.id);
-                  }}
-                  className="p-1.5 hover:bg-red-50 rounded transition-colors"
-                  aria-label="Delete order"
-                  title="Delete order"
-                >
-                  <Trash2 size={16} className="text-red-500" />
-                </button>
               </div>
             </div>
 
@@ -295,15 +264,6 @@ const OrdersTable = ({
                     aria-label="Edit order"
                   >
                     <Edit2 size={16} className="text-gray-600" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      console.log("Delete order:", order.id);
-                    }}
-                    className="p-1.5 sm:p-2 hover:bg-red-50 rounded transition-colors"
-                    aria-label="Delete order"
-                  >
-                    <Trash2 size={16} className="text-red-500" />
                   </button>
                 </div>
               </div>

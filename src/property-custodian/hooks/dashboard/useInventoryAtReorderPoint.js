@@ -21,6 +21,7 @@ export const useInventoryAtReorderPoint = (educationLevel = "College") => {
    * Map frontend education level names to backend API values
    */
   const mapEducationLevelToAPI = (level) => {
+    if (level === "all" || !level) return null;
     const mapping = {
       "Preschool": "Kindergarten",
       "Elementary": "Elementary",
@@ -87,9 +88,10 @@ export const useInventoryAtReorderPoint = (educationLevel = "College") => {
       setError(null);
 
       const apiEducationLevel = mapEducationLevelToAPI(educationLevel);
-      const filters = {
-        educationLevel: apiEducationLevel,
-      };
+      const filters = {};
+      if (apiEducationLevel) {
+        filters.educationLevel = apiEducationLevel;
+      }
 
       const response = await inventoryService.getInventoryReport(filters);
 

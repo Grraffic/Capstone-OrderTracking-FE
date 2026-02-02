@@ -143,15 +143,17 @@ const ItemDetailsModal = ({
             </span>
           </div>
           <div className="flex items-center gap-1 mobile-l:gap-2 flex-shrink-0">
-            <button
-              type="button"
-              onClick={() => onEditItem?.(selectedItem)}
-              className="flex items-center gap-1 mobile-l:gap-2 px-1.5 py-1 mobile-l:px-2.5 mobile-l:py-1.5 tablet:px-3 tablet:py-2 rounded-lg bg-[#E68B00] text-white text-xs mobile-l:text-sm font-medium hover:bg-[#d67a00] transition-colors"
-              aria-label="Edit all variants"
-            >
-              <Pencil size={14} className="tablet:w-4 tablet:h-4" />
-              <span className="hidden tablet:inline">Edit</span>
-            </button>
+            {!selectedItem.is_archived && (
+              <button
+                type="button"
+                onClick={() => onEditItem?.(selectedItem)}
+                className="flex items-center gap-1 mobile-l:gap-2 px-1.5 py-1 mobile-l:px-2.5 mobile-l:py-1.5 tablet:px-3 tablet:py-2 rounded-lg bg-[#E68B00] text-white text-xs mobile-l:text-sm font-medium hover:bg-[#d67a00] transition-colors"
+                aria-label="Edit all variants"
+              >
+                <Pencil size={14} className="tablet:w-4 tablet:h-4" />
+                <span className="hidden tablet:inline">Edit</span>
+              </button>
+            )}
             <button
               onClick={onClose}
               className="w-6 h-6 mobile-l:w-7 mobile-l:h-7 tablet:w-8 tablet:h-8 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors flex-shrink-0"
@@ -446,27 +448,29 @@ const ItemDetailsModal = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              const variation = variations.find(
-                (v) => {
-                  const key = v._variationKey ||
-                    `${v.id}-${v.created_at}` ||
-                    v.id;
-                  return key === openMenuId;
+          {!selectedItem.is_archived && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const variation = variations.find(
+                  (v) => {
+                    const key = v._variationKey ||
+                      `${v.id}-${v.created_at}` ||
+                      v.id;
+                    return key === openMenuId;
+                  }
+                );
+                if (variation && onEdit) {
+                  onEdit(variation);
                 }
-              );
-              if (variation && onEdit) {
-                onEdit(variation);
-              }
-              setOpenMenuId(null);
-            }}
-            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
-            type="button"
-          >
-            Edit
-          </button>
+                setOpenMenuId(null);
+              }}
+              className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+              type="button"
+            >
+              Edit
+            </button>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation();

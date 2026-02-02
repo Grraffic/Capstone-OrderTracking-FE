@@ -101,6 +101,7 @@ export const useItemDetailsModal = (allItems = []) => {
           // This handles cases where sizes were added via duplicate detection
           // and stored in JSON even though the main size field is a single size
           let sizeVariationsData = null;
+          let accessoryEntriesData = null;
           try {
             if (matchingItem.note) {
               const parsedNote = JSON.parse(matchingItem.note);
@@ -115,12 +116,24 @@ export const useItemDetailsModal = (allItems = []) => {
                   `[useItemDetailsModal] Item ${matchingItem.id} has JSON sizeVariations:`,
                   sizeVariationsData.map((v) => v.size)
                 );
+              } else if (
+                parsedNote._type === "accessoryEntries" &&
+                parsedNote.accessoryEntries &&
+                Array.isArray(parsedNote.accessoryEntries) &&
+                parsedNote.accessoryEntries.length > 0
+              ) {
+                accessoryEntriesData = parsedNote.accessoryEntries;
+                console.log(
+                  `[useItemDetailsModal] Item ${matchingItem.id} has JSON accessoryEntries:`,
+                  accessoryEntriesData.length,
+                  "entries"
+                );
               }
             }
           } catch (e) {
-            // If note is not JSON or doesn't contain size variations, use defaults
+            // If note is not JSON or doesn't contain variation data, use defaults
             console.log(
-              `[useItemDetailsModal] Note field doesn't contain size variation data for item ${matchingItem.id}:`,
+              `[useItemDetailsModal] Note field doesn't contain variation data for item ${matchingItem.id}:`,
               e.message
             );
           }
@@ -131,9 +144,60 @@ export const useItemDetailsModal = (allItems = []) => {
             matchingItem.size.includes(",") &&
             matchingItem.size !== "N/A";
 
+          // If we have accessoryEntries, process them first (accessories don't have sizes)
+          if (accessoryEntriesData && accessoryEntriesData.length > 0) {
+            console.log(
+              `[useItemDetailsModal] Creating variations from JSON accessoryEntries for item ${matchingItem.id}`
+            );
+            accessoryEntriesData.forEach((entryData, index) => {
+              const begInv =
+                entryData.beginning_inventory !== undefined &&
+                entryData.beginning_inventory !== null
+                  ? Number(entryData.beginning_inventory) || 0
+                  : matchingItem.beginning_inventory || 0;
+              const storedStock =
+                entryData.stock !== undefined &&
+                entryData.stock !== null
+                  ? Number(entryData.stock) || 0
+                  : matchingItem.stock || 0;
+              const purch =
+                entryData.purchases !== undefined &&
+                entryData.purchases !== null
+                  ? Number(entryData.purchases) || 0
+                  : 0;
+              // Display stock as max(stored, beginning_inventory + purchases) so it's never inconsistent
+              const displayStock = Math.max(
+                storedStock,
+                begInv + purch
+              );
+              allVariations.push({
+                ...matchingItem,
+                // Keep original ID for edit/delete operations
+                id: matchingItem.id,
+                size: matchingItem.size || "N/A",
+                // Add a unique key for React rendering and selection
+                _variationKey: `${matchingItem.id}-accessory-${index}`,
+                // Use per-entry stock (display = stored or beginning_inventory + purchases)
+                stock: displayStock,
+                price:
+                  entryData.price !== undefined &&
+                  entryData.price !== null
+                    ? Number(entryData.price) || 0
+                    : matchingItem.price || 0,
+                beginning_inventory: begInv,
+                purchases: purch,
+                // Include beginning_inventory_unit_price for FIFO calculation
+                beginning_inventory_unit_price:
+                  entryData.beginning_inventory_unit_price !== undefined &&
+                  entryData.beginning_inventory_unit_price !== null
+                    ? Number(entryData.beginning_inventory_unit_price)
+                    : matchingItem.beginning_inventory_unit_price ?? matchingItem.price ?? 0,
+              });
+            });
+          }
           // If we have JSON variations, use those to create variations
           // This handles items where sizes were added via duplicate detection
-          if (sizeVariationsData && sizeVariationsData.length > 0) {
+          else if (sizeVariationsData && sizeVariationsData.length > 0) {
             console.log(
               `[useItemDetailsModal] Creating variations from JSON sizeVariations for item ${matchingItem.id}`
             );
@@ -178,6 +242,12 @@ export const useItemDetailsModal = (allItems = []) => {
                     : matchingItem.price || 0,
                 beginning_inventory: begInv,
                 purchases: purch,
+                // Include beginning_inventory_unit_price for FIFO calculation
+                beginning_inventory_unit_price:
+                  variationData.beginning_inventory_unit_price !== undefined &&
+                  variationData.beginning_inventory_unit_price !== null
+                    ? Number(variationData.beginning_inventory_unit_price)
+                    : matchingItem.beginning_inventory_unit_price,
               });
             });
           } else if (hasCommaSeparatedSizes) {
@@ -224,6 +294,12 @@ export const useItemDetailsModal = (allItems = []) => {
                 price: variationData?.price ?? matchingItem.price,
                 beginning_inventory: begInv,
                 purchases: purch,
+                // Include beginning_inventory_unit_price for FIFO calculation
+                beginning_inventory_unit_price:
+                  variationData?.beginning_inventory_unit_price !== undefined &&
+                  variationData?.beginning_inventory_unit_price !== null
+                    ? Number(variationData.beginning_inventory_unit_price)
+                    : matchingItem.beginning_inventory_unit_price,
               });
             });
           } else {
@@ -417,14 +493,33 @@ export const useItemDetailsModal = (allItems = []) => {
   }, []);
 
   /**
-   * Calculate total cost summary (sum of all variations' stock * price)
+   * Calculate total cost summary using FIFO (First In, First Out).
+   * Formula: (beginning_inventory * beginning_unit_price) + (purchases * purchase_price)
+   * If beginning_inventory_unit_price is not available, use current price as fallback for both.
    */
   const totalCostSummary = useMemo(() => {
     if (!variations.length) return 0;
     return variations.reduce((total, v) => {
-      const stock = Number(v.stock) || 0;
-      const price = Number(v.price) || 0;
-      return total + stock * price;
+      const beginningInventory = Number(v.beginning_inventory) || 0;
+      const purchases = Number(v.purchases) || 0;
+      const currentPrice = Number(v.price) || 0;
+      
+      // Get beginning_inventory_unit_price with proper fallback
+      let beginningUnitPrice = Number(v.beginning_inventory_unit_price);
+      if (isNaN(beginningUnitPrice) || beginningUnitPrice === 0) {
+        beginningUnitPrice = currentPrice || 0;
+      }
+      const purchaseUnitPrice = currentPrice || 0;
+      
+      // Ensure all values are valid numbers before calculation
+      if (isNaN(beginningInventory) || isNaN(purchases) || 
+          isNaN(beginningUnitPrice) || isNaN(purchaseUnitPrice)) {
+        return total; // Skip invalid variations
+      }
+      
+      // FIFO calculation: (beginning_inventory * beginning_unit_price) + (purchases * purchase_unit_price)
+      const variationCost = (beginningInventory * beginningUnitPrice) + (purchases * purchaseUnitPrice);
+      return total + (isNaN(variationCost) ? 0 : variationCost);
     }, 0);
   }, [variations]);
 
