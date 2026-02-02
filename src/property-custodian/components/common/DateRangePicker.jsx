@@ -40,7 +40,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
       const buttonRect = buttonRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const calendarWidth = 280;
+      const calendarWidth = 280; // Width for 1 month
       const calendarHeight = 300;
       
       let left = buttonRect.left;
@@ -173,15 +173,47 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
 
   // Handle calendar date changes
   const handleCalendarChange = (dates) => {
-    const [start, end] = dates;
+    // react-datepicker with selectsRange returns an array [startDate, endDate]
+    const [start, end] = Array.isArray(dates) ? dates : [dates, null];
+    
+    console.log("[DateRangePicker] Calendar change:", { start, end, dates, isArray: Array.isArray(dates) });
+    
     if (start) {
-      // If only start date is selected (no end), set end to same date for single-day selection
-      const finalEnd = end || start;
-      if (onDateRangeChange) {
-        onDateRangeChange(start, finalEnd);
+      // Normalize dates using date components to avoid timezone issues
+      const normalizedStart = new Date(
+        start.getFullYear(),
+        start.getMonth(),
+        start.getDate(),
+        0, 0, 0, 0
+      );
+      
+      let normalizedEnd;
+      if (end) {
+        normalizedEnd = new Date(
+          end.getFullYear(),
+          end.getMonth(),
+          end.getDate(),
+          23, 59, 59, 999
+        );
+      } else {
+        // If only start date is selected, set end to same date for single-day selection
+        normalizedEnd = new Date(
+          normalizedStart.getFullYear(),
+          normalizedStart.getMonth(),
+          normalizedStart.getDate(),
+          23, 59, 59, 999
+        );
       }
-      // If both dates are selected (or same date for single selection), close calendar
-      if (start && finalEnd) {
+      
+      console.log("[DateRangePicker] Normalized dates:", { normalizedStart, normalizedEnd });
+      
+      if (onDateRangeChange) {
+        onDateRangeChange(normalizedStart, normalizedEnd);
+      }
+      
+      // Only close calendar if both start and end dates are selected (for range selection)
+      // For single date selection, keep it open to allow selecting end date
+      if (start && end && normalizedStart.getTime() !== normalizedEnd.getTime()) {
         setShowCalendar(false);
         setPreset("Custom range");
       }
@@ -197,7 +229,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
   };
 
   return (
-    <div ref={containerRef} className={`flex items-center border border-gray-300 rounded-lg bg-white overflow-visible max-w-full ${className}`}>
+    <div ref={containerRef} className={`flex items-center border border-gray-300 rounded-lg bg-white overflow-visible max-w-[350px] sm:max-w-[400px] md:max-w-[450px] w-auto ${className}`}>
       {/* Left Section - Preset Dropdown */}
       <select
         ref={selectRef}
@@ -222,7 +254,7 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
       <div className="w-px h-7 sm:h-8 bg-gray-300 flex-shrink-0" />
 
       {/* Right Section - Calendar Date Range */}
-      <div className="relative flex-1 min-w-0 overflow-visible">
+      <div className="relative flex-1 min-w-0 overflow-visible max-w-[300px] sm:max-w-[350px] md:max-w-[400px]">
         <button
           ref={buttonRef}
           type="button"
@@ -248,11 +280,11 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
           style={{ 
             top: `${calendarPosition.top}px`,
             left: `${calendarPosition.left}px`,
-            width: '280px',
+            width: '260px',
             maxWidth: 'calc(100vw - 1rem)'
           }}
         >
-          <div className="bg-white border border-gray-300 rounded-lg shadow-lg p-2">
+          <div className="shadow-lg p-2 bg-transparent">
             <DatePicker
               selected={startDate}
               onChange={handleCalendarChange}
@@ -260,6 +292,19 @@ const DateRangePicker = ({ startDate, endDate, onDateRangeChange, className = ""
               endDate={endDate}
               selectsRange
               inline
+              calendarStartDay={1}
+              dateFormat="MMM d, yyyy"
+              shouldCloseOnSelect={false}
+              monthsShown={1}
+              fixedHeight
+              allowSameDay={true}
+              isClearable={false}
+              openToDate={startDate || new Date()}
+              disabledKeyboardNavigation={false}
+              onChangeRaw={(e) => {
+                // Prevent default input handling that might interfere with date selection
+                e.preventDefault();
+              }}
             />
           </div>
         </div>,

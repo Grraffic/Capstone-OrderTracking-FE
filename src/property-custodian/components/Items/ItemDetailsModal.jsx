@@ -1,4 +1,4 @@
-import { X, Info, MoreHorizontal, Pencil } from "lucide-react";
+import { X, Info, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -27,7 +27,7 @@ import { createPortal } from "react-dom";
  * - onSelectVariation: Function to select a variation
  * - onEditItem: Function to edit the whole item (all variants) — opens full item edit form
  * - onEdit: Function to edit a single variant — opens variant edit modal
- * - onDelete: Function to delete an item
+ * - onArchive: Function to archive an item (replaces onDelete)
  */
 const normalizeSizeForKey = (size) => {
   if (!size) return "";
@@ -49,7 +49,7 @@ const ItemDetailsModal = ({
   onSelectVariation,
   onEditItem,
   onEdit,
-  onDelete,
+  onArchive,
 }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -391,14 +391,18 @@ const ItemDetailsModal = ({
                           })()}
 
                           {/* Actions Menu Button */}
-                          <div className="relative flex-shrink-0">
+                          <div className="relative flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                             <button
                               ref={(el) => {
                                 if (el) buttonRefs.current[variationKey] = el;
                               }}
-                              onClick={(e) => handleMenuClick(e, variationKey)}
-                              className="p-0.5 mobile-l:p-1 tablet:p-1.5 rounded hover:bg-gray-100 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleMenuClick(e, variationKey);
+                              }}
+                              className="p-0.5 mobile-l:p-1 tablet:p-1.5 rounded hover:bg-gray-100 transition-colors cursor-pointer"
                               aria-label="More actions"
+                              type="button"
                             >
                               <MoreHorizontal
                                 size={14}
@@ -421,11 +425,12 @@ const ItemDetailsModal = ({
       {openMenuId && createPortal(
         <div
           ref={menuRef}
-          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 z-[100] w-32 overflow-hidden"
+          className="fixed bg-white rounded-lg shadow-lg border border-gray-200 z-[10002] w-32 overflow-hidden"
           style={{
             top: `${menuPosition.top}px`,
             left: `${menuPosition.left}px`,
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={(e) => {
@@ -438,12 +443,15 @@ const ItemDetailsModal = ({
                   return key === openMenuId;
                 }
               );
-              onEdit?.(variation);
+              if (variation && onEdit) {
+                onEdit(variation);
+              }
               setOpenMenuId(null);
             }}
-            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+            className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
+            type="button"
           >
-            <span>Edit</span>
+            Edit
           </button>
           <button
             onClick={(e) => {
@@ -456,12 +464,15 @@ const ItemDetailsModal = ({
                   return key === openMenuId;
                 }
               );
-              onDelete?.(variation);
+              if (variation && onArchive) {
+                onArchive(variation);
+              }
               setOpenMenuId(null);
             }}
-            className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+            className="w-full text-left px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+            type="button"
           >
-            <span>Delete</span>
+            Archive
           </button>
         </div>,
         document.body

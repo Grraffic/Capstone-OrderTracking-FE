@@ -1,18 +1,14 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { PRODUCT_STATUS } from "../../constants/studentProducts";
 
 const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const navigate = useNavigate();
-  const statusInfo = PRODUCT_STATUS[product.status] || PRODUCT_STATUS.in_stock;
   const isOutOfStock = product.status === "out_of_stock";
   const isPreOrder = product.status === "pre_order";
   const orderLimitReached = product._orderLimitReached === true;
   const isClaimed = product._isClaimed === true;
   const slotsFullForNewType = product._slotsFullForNewType === true;
   const notAllowedForStudentType = product._notAllowedForStudentType === true;
-  const claimedCount = product._claimedCount || 0;
-  const maxAllowed = product._maxAllowed || 0;
 
   const handleProductClick = () => {
     // Allow navigation even when disabled - students can still view product details
@@ -62,8 +58,22 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
           }}
         />
 
+        {/* Background Overlay for Disabled Items */}
+        {isDisabled && (
+          <div className="absolute inset-0 bg-[#F3F3F3] opacity-50"></div>
+        )}
+
+        {/* Order Limit Badge - Show when order limit is reached */}
+        {orderLimitReached && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-[#BFBFBF] text-white px-6 py-2 rounded-xl shadow-lg font-bold text-sm drop-shadow-md">
+              Order Limit
+            </div>
+          </div>
+        )}
+
         {/* Pre-Order Button Overlay - Only show when out of stock and not blocked */}
-        {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && (
+        {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && !orderLimitReached && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
             <button
               type="button"
@@ -94,22 +104,21 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
       {/* Product Info */}
       <div className="p-5 flex flex-col flex-grow">
         {/* Product Name - mb-0.5 for tight gap to education level (matches ProductCarousel) */}
-        <h3
-          className={`text-lg font-bold line-clamp-2 leading-tight mb-0.5 ${
-            isDisabled ? "text-gray-500" : "text-[#003363]"
-          }`}
-        >
+        <h3 className="text-lg font-bold line-clamp-2 leading-tight mb-0.5 text-[#003363]">
           {product.name}
         </h3>
 
         {/* Education Level */}
         {product.educationLevel && (
-          <p
-            className={`text-base font-semibold mt-0.5 ${
-              isDisabled ? "text-gray-400" : "text-[#F28C28]"
-            }`}
-          >
+          <p className="text-base font-semibold mt-0.5 text-[#F28C28]">
             ({product.educationLevel})
+          </p>
+        )}
+
+        {/* Order Limit Description - Show when item is disabled */}
+        {isDisabled && (
+          <p className="text-xs italic text-[#F10000] opacity-60 mt-2">
+            You have already reached your order quota for this school year
           </p>
         )}
 

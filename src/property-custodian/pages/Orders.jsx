@@ -6,6 +6,7 @@ import DateRangePicker from "../components/common/DateRangePicker";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
 import OrdersTable from "../components/Orders/OrdersTable";
 import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
+import OrdersSkeleton from "../components/Skeleton/pages/OrdersSkeleton";
 import {
   useOrderQRScanner,
   useOrders,
@@ -393,12 +394,15 @@ const Orders = () => {
 
   return (
     <AdminLayout title="Orders" noPadding={true}>
-      <div className="pt-0 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8">
+      {ordersLoading ? (
+        <OrdersSkeleton />
+      ) : (
+      <div className="pt-0 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8 font-sf-medium">
         {/* Page Header - Title with QR Code and Search */}
         <div className="mb-4 sm:mb-6">
           {/* Desktop Layout: Title left, Controls right */}
           <div className="hidden lg:flex lg:items-center lg:justify-between">
-            <h1 className="text-4xl xl:text-5xl font-extrabold tracking-tight">
+            <h1 className="text-3xl xl:text-4xl 2xl:text-5xl font-sf-semibold font-semibold tracking-tight">
               <span className="text-[#0C2340]">Or</span>
               <span className="text-[#e68b00]">ders</span>
             </h1>
@@ -424,8 +428,11 @@ const Orders = () => {
                 <input
                   type="text"
                   placeholder="Search orders..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchTerm || ""}
+                  onChange={(e) => {
+                    console.log("[Orders] Search input changed:", e.target.value);
+                    setSearchTerm(e.target.value);
+                  }}
                   className="pl-9 xl:pl-10 pr-3 xl:pr-4 py-2 xl:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-64 xl:w-72 shadow-sm text-sm xl:text-base"
                 />
               </div>
@@ -434,7 +441,7 @@ const Orders = () => {
 
           {/* Mobile/Tablet Layout: Stacked */}
           <div className="lg:hidden">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight mb-3 sm:mb-4">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-sf-semibold font-semibold tracking-tight mb-3 sm:mb-4">
               <span className="text-[#0C2340]">Or</span>
               <span className="text-[#e68b00]">ders</span>
             </h1>
@@ -482,7 +489,7 @@ const Orders = () => {
             <span className="relative inline-block pr-3 sm:pr-4 md:pr-5">
               Pre-orders
               <span
-                className={`absolute top-0 -right-0 sm:top-0 sm:-right-1 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
+                className={`absolute top-0 -right-1 sm:top-0 sm:-right-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
                   activeStatusTab === "Pre-orders"
                     ? "text-[#e68b00]"
                     : "text-[#0C2340]"
@@ -506,7 +513,7 @@ const Orders = () => {
             <span className="relative inline-block pr-3 sm:pr-4 md:pr-5">
               Orders
               <span
-                className={`absolute top-0 -right-0 sm:top-0 sm:-right-1 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
+                className={`absolute top-0 -right-0 sm:top-0 sm:-right-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
                   activeStatusTab === "Orders"
                     ? "text-[#e68b00]"
                     : "text-[#0C2340]"
@@ -530,7 +537,7 @@ const Orders = () => {
             <span className="relative inline-block pr-3 sm:pr-4 md:pr-5">
               Claimed
               <span
-                className={`absolute top-0 -right-0 sm:top-0 sm:-right-1 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
+                className={`absolute top-0 -right-1 sm:top-0 sm:-right-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-bold leading-none ${
                   activeStatusTab === "Claimed"
                     ? "text-[#e68b00]"
                     : "text-[#0C2340]"
@@ -546,9 +553,9 @@ const Orders = () => {
         </div>
 
         {/* Date Range Selector and Filter Dropdowns - Below Tabs */}
-        <div className="mb-3 sm:mb-4 md:mb-6 flex flex-col gap-2 sm:gap-3">
+        <div className="mb-3 sm:mb-4 md:mb-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
           {/* Date Range Selector */}
-          <div className="w-full">
+          <div className="flex-1 min-w-0">
             <DateRangePicker
               startDate={startDate}
               endDate={endDate}
@@ -561,7 +568,7 @@ const Orders = () => {
           </div>
 
           {/* Filter Dropdowns */}
-          <div className="w-full">
+          <div className="w-full sm:w-auto sm:min-w-[200px] sm:max-w-[300px]">
             {/* Education Level Dropdown */}
             <select
               value={educationLevelFilter}
@@ -578,20 +585,6 @@ const Orders = () => {
             </select>
           </div>
         </div>
-
-        {/* Loading State - Show loading overlay on top of existing content */}
-        {ordersLoading && (
-          <div className="bg-white rounded-lg shadow-sm p-8 sm:p-12 text-center relative">
-            <div className="flex items-center justify-center py-8 sm:py-12">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-[#0C2340] mx-auto mb-3 sm:mb-4"></div>
-                <p className="text-sm sm:text-base text-gray-600">
-                  Loading orders...
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Error State */}
         {ordersError && !ordersLoading && (
@@ -633,6 +626,7 @@ const Orders = () => {
           </div>
         )}
       </div>
+      )}
 
       {/* QR Code Scanner Modal */}
       <QRCodeScannerModal
@@ -640,6 +634,7 @@ const Orders = () => {
         onClose={closeQRScanner}
         onScan={handleQRCodeScanned}
         processing={qrProcessing}
+        scanError={qrError}
       />
 
       {/* Order Details Modal - shows after QR scan with design: Name, Education Level, Transaction No, Order Date, Item Ordered, Size */}
@@ -792,56 +787,6 @@ const Orders = () => {
         document.body
       )}
 
-      {/* Error Notification */}
-      {qrError && (
-        <div className="fixed bottom-8 right-8 z-50 max-w-md animate-slide-up">
-          <div className="bg-red-50 border-2 border-red-500 rounded-xl shadow-2xl p-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0">
-                <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
-                  <svg
-                    className="w-6 h-6 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </div>
-              </div>
-              <div className="flex-1">
-                <h4 className="text-lg font-bold text-red-800 mb-1">
-                  QR Scan Failed
-                </h4>
-                <p className="text-sm text-red-700">{qrError}</p>
-              </div>
-              <button
-                onClick={closeQRScanner}
-                className="flex-shrink-0 text-red-600 hover:text-red-800"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Processing Overlay */}
       {qrProcessing && (

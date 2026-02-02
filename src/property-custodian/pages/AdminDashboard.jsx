@@ -56,7 +56,7 @@ const AdminDashboard = () => {
           {/* Inventory Health Section */}
           <div className="mb-8">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-[#0C2340]">
+              <h2 className="text-2xl xl:text-3xl 2xl:text-4xl font-sf-semibold font-semibold tracking-tight text-[#0C2340]">
                 Inventory <span className="text-[#e68b00]">Health</span>
               </h2>
             </div>

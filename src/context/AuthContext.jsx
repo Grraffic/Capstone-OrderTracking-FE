@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from "react";
 import { authAPI } from "../services/api";
 
 const AuthContext = createContext();
@@ -15,6 +15,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState(null);
+  
+  // Session timeout: 1 hour in milliseconds
+  const SESSION_TIMEOUT = 60 * 60 * 1000; // 1 hour
+  const timeoutRef = useRef(null);
+  const lastActivityRef = useRef(Date.now());
 
   // User roles: student (students table) and staff roles (staff table)
   const USER_ROLES = {
@@ -239,7 +244,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authAPI.logout();
     } catch (error) {
@@ -253,8 +258,91 @@ export const AuthProvider = ({ children }) => {
       }
       setUser(null);
       setUserRole(null);
+      // Clear session timeout when logging out
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
     }
-  };
+  }, []);
+
+  // Session timeout handler - logs out user after 1 hour of inactivity
+  const resetSessionTimeout = useCallback(() => {
+    // Clear existing timeout
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    
+    // Only set timeout if user is logged in
+    if (user) {
+      lastActivityRef.current = Date.now();
+      
+      // Set new timeout for 1 hour
+      timeoutRef.current = setTimeout(() => {
+        console.log("⏰ Session timeout: 1 hour of inactivity reached. Logging out...");
+        logout().then(() => {
+          // Redirect to login page after logout
+          window.location.href = "/login";
+        });
+      }, SESSION_TIMEOUT);
+    }
+  }, [user, logout]);
+
+  // Track user activity and reset timeout
+  useEffect(() => {
+    if (!user) {
+      // Clear timeout if user is not logged in
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      return;
+    }
+
+    // Initialize timeout when user logs in
+    resetSessionTimeout();
+
+    // Activity events that should reset the timeout
+    const activityEvents = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
+
+    // Handler for user activity - resets timeout on any activity
+    // Throttled to prevent excessive timeout resets (max once per 30 seconds)
+    let lastResetTime = 0;
+    const THROTTLE_INTERVAL = 30000; // 30 seconds
+    
+    const handleActivity = () => {
+      const now = Date.now();
+      // Only reset if at least 30 seconds have passed since last reset
+      // This prevents excessive timeout resets while still being responsive
+      if (now - lastResetTime > THROTTLE_INTERVAL) {
+        lastResetTime = now;
+        resetSessionTimeout();
+      }
+    };
+
+    // Add event listeners for user activity
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, handleActivity, true);
+    });
+
+    // Cleanup: remove event listeners and clear timeout
+    return () => {
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, handleActivity, true);
+      });
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [user, resetSessionTimeout]);
 
   const updateUser = (updatedUserData) => {
     setUser((prevUser) => ({

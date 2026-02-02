@@ -303,25 +303,42 @@ export const useAdminDashboardData = (startDate, endDate) => {
         );
       }).length;
 
-      // Calculate percentage change
+      // Calculate percentage change (capped at 100% maximum for increases only)
       const calculateTrend = (current, previous) => {
-        if (previous === 0) return current > 0 ? 100 : 0;
+        if (previous === 0) {
+          const result = current > 0 ? 100 : 0;
+          console.log(`[Trend] Previous=0, Current=${current}, Result=${result}`);
+          return result;
+        }
         const change = ((current - previous) / previous) * 100;
-        return Math.round(change);
+        const rounded = Math.round(change);
+        // Only cap positive increases at 100%, negative values (decreases) are not capped
+        const result = rounded > 0 ? Math.min(100, rounded) : rounded;
+        console.log(`[Trend] Current=${current}, Previous=${previous}, Change=${change.toFixed(2)}%, Rounded=${rounded}, Final=${result}`);
+        return result;
       };
+
+      const preOrdersTrend = calculateTrend(currentMonthPreOrders, lastMonthPreOrders);
+      const claimedTrend = calculateTrend(currentMonthClaimed, lastMonthClaimed);
+      const ordersTrend = calculateTrend(currentMonthOrders, lastMonthOrders);
 
       const trackingData = {
         preOrders: totalPreOrders,
         claimed: totalClaimed,
         orders: totalOrders,
         trends: {
-          preOrders: calculateTrend(currentMonthPreOrders, lastMonthPreOrders),
-          claimed: calculateTrend(currentMonthClaimed, lastMonthClaimed),
-          orders: calculateTrend(currentMonthOrders, lastMonthOrders),
+          preOrders: preOrdersTrend,
+          claimed: claimedTrend,
+          orders: ordersTrend,
         },
       };
 
       console.log("[Dashboard] Order tracking stats:", trackingData);
+      console.log("[Dashboard] Trend details:", {
+        preOrders: { current: currentMonthPreOrders, last: lastMonthPreOrders, trend: preOrdersTrend },
+        claimed: { current: currentMonthClaimed, last: lastMonthClaimed, trend: claimedTrend },
+        orders: { current: currentMonthOrders, last: lastMonthOrders, trend: ordersTrend },
+      });
       setOrderTracking(trackingData);
     }
   }, [filteredOrders, ordersLoading]);

@@ -7,7 +7,7 @@ import {
   List,
   MoreHorizontal,
   Pencil,
-  Trash2,
+  Archive,
   Eye,
   ChevronDown,
   ChevronLeft,
@@ -710,13 +710,13 @@ const Items = () => {
                             </button>
                             <button
                               onClick={() =>
-                                openDeleteModal(representativeItem)
+                                archiveItem(representativeItem.id)
                               }
-                              className="p-2 rounded-lg hover:bg-red-50 text-[#e68b00] transition-colors"
-                              title="Delete"
-                              aria-label="Delete item"
+                              className="p-2 rounded-lg hover:bg-gray-100 text-[#e68b00] transition-colors"
+                              title="Archive"
+                              aria-label="Archive item"
                             >
-                              <Trash2 size={18} />
+                              <Archive size={18} />
                             </button>
                           </div>
                         </div>
@@ -926,9 +926,13 @@ const Items = () => {
               });
               closeItemDetailsModal();
             }}
-            onDelete={(item) => {
+            onArchive={(variation) => {
               closeItemDetailsModal();
-              openDeleteModal(item);
+              // Archive the variation/item
+              const itemToArchive = variation?.id ? items.find((i) => i.id === variation.id) : variation;
+              if (itemToArchive?.id) {
+                archiveItem(itemToArchive.id);
+              }
             }}
           />
 

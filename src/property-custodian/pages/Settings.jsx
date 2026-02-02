@@ -60,9 +60,10 @@ const Settings = () => {
 
   return (
     <AdminLayout title="Settings">
-      {/* Page Title */}
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold">
+      <div className="font-sf-medium">
+        {/* Page Title */}
+        <div className="mb-8">
+        <h1 className="text-4xl xl:text-5xl 2xl:text-6xl font-sf-semibold font-semibold tracking-tight">
           <span className="text-[#0C2340]">Set</span>
           <span className="text-[#e68b00]">tings</span>
         </h1>
@@ -269,12 +270,13 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Discard Changes Confirmation Modal */}
-      <DiscardChangesModal
-        isOpen={showDiscardModal}
-        onConfirm={handleConfirmDiscard}
-        onCancel={handleCancelDiscard}
-      />
+        {/* Discard Changes Confirmation Modal */}
+        <DiscardChangesModal
+          isOpen={showDiscardModal}
+          onConfirm={handleConfirmDiscard}
+          onCancel={handleCancelDiscard}
+        />
+      </div>
     </AdminLayout>
   );
 };

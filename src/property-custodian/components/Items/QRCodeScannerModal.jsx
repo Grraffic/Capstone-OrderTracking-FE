@@ -24,17 +24,18 @@ import QrScanner from "qr-scanner";
  * - onClose: Function to close modal
  * - onScan: Function called when QR code is scanned (receives scanned data)
  * - processing: Boolean indicating if the scanned data is being processed
+ * - scanError: String error message to display (e.g., when order is already claimed)
  */
 const QRCodeScannerModal = ({
   isOpen,
   onClose,
   onScan,
   processing = false,
+  scanError = null,
 }) => {
   const videoRef = useRef(null);
   const [scanner, setScanner] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState(null);
   const [scannedData, setScannedData] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
@@ -63,7 +64,6 @@ const QRCodeScannerModal = ({
 
     const initScanner = async () => {
       try {
-        setIsInitializing(true);
         setError(null);
         setScannedData(null);
         setOrderDetails(null);
@@ -159,7 +159,6 @@ const QRCodeScannerModal = ({
         console.log("👁️ Scanner is now actively looking for QR codes...");
 
         setIsScanning(true);
-        setIsInitializing(false);
       } catch (err) {
         console.error("❌ Scanner initialization error:", err);
         console.error("❌ Error name:", err.name);
@@ -171,7 +170,6 @@ const QRCodeScannerModal = ({
           err.message || "Failed to access camera. Please check permissions."
         );
         setIsScanning(false);
-        setIsInitializing(false);
       }
     };
 
@@ -285,6 +283,23 @@ const QRCodeScannerModal = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {/* Error Message - Red popup for claimed orders */}
+          {scanError && scanError.toLowerCase().includes("already been claimed") && (
+            <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-xl">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-800 mb-1">
+                    Order Already Claimed
+                  </p>
+                  <p className="text-xs text-red-700">
+                    {scanError}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Video Stream with Overlay */}
           <div className="mb-4 sm:mb-6 rounded-xl overflow-hidden bg-black relative">
             {/* Video Element - Always visible when modal is open */}
@@ -355,88 +370,6 @@ const QRCodeScannerModal = ({
             </div>
           )}
 
-          {/* Order Receipt Details */}
-          {orderDetails && (
-            <div className="mb-4 p-5 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl">
-              <div className="flex items-center gap-3 mb-4">
-                <CheckCircle className="w-7 h-7 text-green-600" />
-                <div>
-                  <p className="text-base font-bold text-green-800">
-                    Order Receipt Scanned!
-                  </p>
-                  <p className="text-xs text-green-700">
-                    Order details retrieved successfully
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3 bg-white rounded-lg p-4">
-                <div className="flex items-center gap-2 text-sm">
-                  <Package className="w-4 h-4 text-gray-600" />
-                  <span className="font-semibold text-gray-700">Order #:</span>
-                  <span className="text-gray-900 font-mono">
-                    {orderDetails.orderNumber}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm">
-                  <User className="w-4 h-4 text-gray-600" />
-                  <span className="font-semibold text-gray-700">Student:</span>
-                  <span className="text-gray-900">
-                    {orderDetails.studentName}
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm">
-                  <Calendar className="w-4 h-4 text-gray-600" />
-                  <span className="font-semibold text-gray-700">Date:</span>
-                  <span className="text-gray-900">
-                    {new Date(orderDetails.orderDate).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {orderDetails.totalAmount && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="w-4 h-4 text-gray-600" />
-                    <span className="font-semibold text-gray-700">Total:</span>
-                    <span className="text-gray-900 font-semibold">
-                      ₱{orderDetails.totalAmount.toFixed(2)}
-                    </span>
-                  </div>
-                )}
-
-                {orderDetails.items && orderDetails.items.length > 0 && (
-                  <div className="pt-2 border-t border-gray-200">
-                    <p className="text-xs font-semibold text-gray-700 mb-2">
-                      Items ({orderDetails.items.length}):
-                    </p>
-                    <ul className="space-y-1">
-                      {orderDetails.items.map((item, index) => (
-                        <li
-                          key={index}
-                          className="text-xs text-gray-600 flex justify-between"
-                        >
-                          <span>
-                            {item.quantity}x {item.name}
-                            {item.size && item.size !== "N/A" && (
-                              <span className="text-gray-500 ml-1">
-                                ({item.size})
-                              </span>
-                            )}
-                          </span>
-                          {item.price && (
-                            <span className="font-medium">
-                              ₱{item.price.toFixed(2)}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Status Indicator */}
           <div className="mt-4 text-center">

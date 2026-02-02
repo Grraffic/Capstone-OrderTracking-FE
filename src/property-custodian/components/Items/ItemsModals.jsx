@@ -1910,6 +1910,62 @@ const ItemsModals = ({
                                       onChange={(e) =>
                                         handleVariantValueChange(0, index, e.target.value)
                                       }
+                                      onBlur={(e) => {
+                                        // Auto-correct common typos and normalize size input
+                                        const inputValue = e.target.value.trim();
+                                        if (!inputValue) return;
+                                        
+                                        // Normalize: remove extra spaces, fix common typos
+                                        let normalized = inputValue
+                                          .replace(/\s+/g, " ") // Multiple spaces to single space
+                                          .replace(/([a-z])\1{2,}/gi, (match) => {
+                                            // Fix repeated letters (e.g., "smalll" -> "small")
+                                            return match[0] + match[0];
+                                          });
+                                        
+                                        // Try to match against suggested sizes (case-insensitive, ignoring parentheses)
+                                        const normalizeForMatch = (str) => 
+                                          str.toLowerCase().replace(/\s*\([^)]*\)\s*/g, "").trim();
+                                        
+                                        const inputNormalized = normalizeForMatch(normalized);
+                                        
+                                        // Check if input is reversed (e.g., "llams" -> "small")
+                                        const reversedInput = inputNormalized.split("").reverse().join("");
+                                        
+                                        // Find best match from suggested sizes (check both normal and reversed)
+                                        let bestMatch = null;
+                                        
+                                        // First, try normal match
+                                        bestMatch = SUGGESTED_SIZES.find(s => {
+                                          const sNormalized = normalizeForMatch(s);
+                                          return sNormalized === inputNormalized || 
+                                                 sNormalized.startsWith(inputNormalized) ||
+                                                 inputNormalized.startsWith(sNormalized);
+                                        });
+                                        
+                                        // If no match found, try reversed input
+                                        if (!bestMatch) {
+                                          bestMatch = SUGGESTED_SIZES.find(s => {
+                                            const sNormalized = normalizeForMatch(s);
+                                            return sNormalized === reversedInput || 
+                                                   sNormalized.startsWith(reversedInput) ||
+                                                   reversedInput.startsWith(sNormalized);
+                                          });
+                                        }
+                                        
+                                        // If we found a match and the input doesn't already match exactly, auto-correct
+                                        if (bestMatch && normalizeForMatch(normalized) !== normalizeForMatch(bestMatch)) {
+                                          // Check if input is close enough (within 2 characters difference)
+                                          const inputLen = inputNormalized.length;
+                                          const matchLen = normalizeForMatch(bestMatch).length;
+                                          if (Math.abs(inputLen - matchLen) <= 2 || inputNormalized.length >= 3) {
+                                            handleVariantValueChange(0, index, bestMatch);
+                                          }
+                                        } else if (normalized !== inputValue) {
+                                          // Apply normalization even if no exact match
+                                          handleVariantValueChange(0, index, normalized);
+                                        }
+                                      }}
                                       onFocus={() =>
                                         setOpenSizeDropdownIndex(index)
                                       }

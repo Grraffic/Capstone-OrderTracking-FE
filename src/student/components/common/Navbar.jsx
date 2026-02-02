@@ -327,8 +327,7 @@ const Navbar = () => {
                       navigate("/student/profile", {
                         state: {
                           activeTab: 'orders',
-                          viewMode: 'detail',
-                          activeCategory: 'orders'
+                          viewMode: 'overview'
                         }
                       });
                     }}
@@ -477,8 +476,7 @@ const Navbar = () => {
                   navigate("/student/profile", { 
                     state: { 
                       activeTab: 'orders',
-                      viewMode: 'detail', 
-                      activeCategory: 'orders' 
+                      viewMode: 'overview'
                     } 
                   });
                   setIsMenuOpen(false);
