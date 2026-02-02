@@ -176,7 +176,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
               <h2 className="text-lg font-semibold text-[#003363]">
                 La Verdad
               </h2>
-              <p className="text-lg text-gray-500">OrderHub</p>
+              <p className="text-lg text-[#E68B00]">OrderHub</p>
             </div>
           )}
         </div>
