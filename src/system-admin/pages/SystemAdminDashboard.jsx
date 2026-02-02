@@ -45,9 +45,9 @@ const SystemAdminDashboard = () => {
   const [selectedRole, setSelectedRole] = useState(null);
   const [isCreateRoleModalOpen, setIsCreateRoleModalOpen] = useState(false);
 
-  const { 
+  const {
     users, 
-    loading, 
+    loading,
     pagination, 
     fetchUsers, 
     createUser, 
@@ -315,14 +315,14 @@ const SystemAdminDashboard = () => {
         {/* Compact Tab Switcher with Icons - Left Aligned */}
         <div className="hidden mb-6">
           <div className="inline-flex bg-gray-100 p-1 rounded-full shadow-sm">
-            <button
+                  <button
               onClick={() => setActiveTab("Users")}
               className={`inline-flex items-center gap-2 px-6 py-2.5 font-semibold text-sm rounded-full transition-all duration-200 ${
                 activeTab === "Users"
                   ? "bg-[#0C2340] text-white shadow-md"
                   : "text-[#0C2340] hover:bg-gray-200"
-              }`}
-            >
+                    }`}
+                  >
               <Users size={18} />
               Users
             </button>
@@ -332,7 +332,7 @@ const SystemAdminDashboard = () => {
             >
               <Shield size={18} />
               Roles & Permissions
-            </button>
+                  </button>
           </div>
         </div>
 
@@ -349,9 +349,9 @@ const SystemAdminDashboard = () => {
                   <div>
                     <p className="text-sm text-gray-600 mb-1">Total Users</p>
                     <p className="text-2xl font-bold text-blue-600">{stats.totalUsers}</p>
-                  </div>
-                </div>
               </div>
+            </div>
+          </div>
 
               {/* Active Users */}
               <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -359,12 +359,12 @@ const SystemAdminDashboard = () => {
                   <div className="bg-green-100 rounded-full p-3">
                     <CheckCircle className="text-green-600" size={24} />
                   </div>
-                  <div>
+            <div>
                     <p className="text-sm text-gray-600 mb-1">Active Users</p>
                     <p className="text-2xl font-bold text-green-600">{stats.activeUsers}</p>
                   </div>
                 </div>
-              </div>
+            </div>
 
               {/* Inactive Users */}
               <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -372,12 +372,12 @@ const SystemAdminDashboard = () => {
                   <div className="bg-red-100 rounded-full p-3">
                     <XCircle className="text-red-600" size={24} />
                   </div>
-                  <div>
+            <div>
                     <p className="text-sm text-gray-600 mb-1">Inactive Users</p>
                     <p className="text-2xl font-bold text-red-600">{stats.inactiveUsers}</p>
                   </div>
-                </div>
-              </div>
+            </div>
+          </div>
 
               {/* Total Roles */}
               <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -385,7 +385,7 @@ const SystemAdminDashboard = () => {
                   <div className="bg-purple-100 rounded-full p-3">
                     <Shield className="text-purple-600" size={24} />
                   </div>
-                  <div>
+          <div>
                     <p className="text-sm text-gray-600 mb-1">Total Roles</p>
                     <p className="text-2xl font-bold text-purple-600">{stats.totalRoles}</p>
                   </div>
@@ -458,10 +458,10 @@ const SystemAdminDashboard = () => {
                         <ChevronRight size={18} />
                       </button>
                     </div>
-                  </div>
+          </div>
                 )}
-              </>
-            )}
+        </>
+      )}
           </>
         
         {/* Hidden Roles & Permissions content */}

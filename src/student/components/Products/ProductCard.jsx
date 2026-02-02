@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 const ProductCard = ({ product, blockedDueToVoid = false }) => {
   const navigate = useNavigate();
   const isOutOfStock = product.status === "out_of_stock";
+  const isLimitedStock = product.status === "limited_stock";
   const isPreOrder = product.status === "pre_order";
   const orderLimitReached = product._orderLimitReached === true;
   const isClaimed = product._isClaimed === true;
@@ -130,11 +131,18 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
         {/* Spacer to push status to bottom */}
         <div className="flex-grow"></div>
 
-        {/* Stock Status - Only show for out of stock items */}
+        {/* Stock Status - Show for out of stock or limited stock items */}
         {isOutOfStock && (
           <div className="mt-3">
             <span className="text-xs text-red-600 font-semibold">
               Out of Stock
+            </span>
+          </div>
+        )}
+        {isLimitedStock && !isOutOfStock && (
+          <div className="mt-3">
+            <span className="text-xs text-red-600 font-semibold">
+              Few Stocks Left
             </span>
           </div>
         )}

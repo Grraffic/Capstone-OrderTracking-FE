@@ -554,10 +554,16 @@ const ProductDetailsPage = () => {
     Number(totalItemLimit) > 0 &&
     isNewItemType &&
     cartSlotCount >= slotsLeftForThisOrder;
+  // Check if limit is not set: null, undefined, empty string, or <= 0
+  // Convert to number first to handle string "2" correctly
   const limitNotSet =
     user &&
     limitsLoaded &&
-    (totalItemLimit == null || totalItemLimit === undefined || Number(totalItemLimit) <= 0);
+    (totalItemLimit == null || 
+     totalItemLimit === undefined || 
+     totalItemLimit === "" || 
+     (totalItemLimit !== null && totalItemLimit !== undefined && isNaN(Number(totalItemLimit))) ||
+     Number(totalItemLimit) <= 0);
   // Use resolved key; if product name contains "jogging pants" also count alreadyOrdered["jogging pants"] to avoid duplication
   const baseAlready = product ? (Number(alreadyOrdered[productResolvedKey]) || 0) : 0;
   const joggingFallback =

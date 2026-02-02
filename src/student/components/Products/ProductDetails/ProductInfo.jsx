@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
  */
 const ProductInfo = ({ product, onClose, isDisabled = false }) => {
   const isOutOfStock = product.status === "out_of_stock";
+  const isLimitedStock = product.status === "limited_stock";
 
   // Parse product name to separate main name and "for Girls/Boys" part
   const parseProductName = (name) => {
@@ -139,6 +140,15 @@ const ProductInfo = ({ product, onClose, isDisabled = false }) => {
         <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3">
           <p className="text-red-700 text-sm font-semibold">
             ⚠️ This item is currently out of stock
+          </p>
+        </div>
+      )}
+
+      {/* Few Stocks Left Warning */}
+      {isLimitedStock && !isOutOfStock && (
+        <div className="bg-red-50 border-2 border-red-300 rounded-lg p-3">
+          <p className="text-red-700 text-sm font-semibold">
+            ⚠️ Few stocks left (20 or less remaining)
           </p>
         </div>
       )}
