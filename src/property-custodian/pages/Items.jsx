@@ -874,7 +874,6 @@ const Items = () => {
                 >
                   Previous
                 </button>
-<<<<<<< HEAD
                 
                 {/* Page Number Input */}
                 <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
@@ -891,36 +890,6 @@ const Items = () => {
                   
                 </form>
 
-=======
-                <input
-                  type="number"
-                  min="1"
-                  max={totalPagesGrouped}
-                  value={currentPage}
-                  onChange={(e) => {
-                    const page = parseInt(e.target.value);
-                    if (page >= 1 && page <= totalPagesGrouped) {
-                      goToPage(page);
-                    }
-                  }}
-                  onBlur={(e) => {
-                    const page = parseInt(e.target.value);
-                    if (!page || page < 1) {
-                      goToPage(1);
-                    } else if (page > totalPagesGrouped) {
-                      goToPage(totalPagesGrouped);
-                    } else {
-                      goToPage(page);
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.target.blur();
-                    }
-                  }}
-                  className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
-                />
->>>>>>> test3
                 <button
                   type="button"
                   onClick={() => goToPage(currentPage + 1)}

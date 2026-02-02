@@ -387,17 +387,10 @@ const OrdersTable = ({
       )}
 
       {/* Pagination Controls */}
-<<<<<<< HEAD
       <div className="bg-white border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         {/* Left: Page Indicator */}
         <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left w-full sm:w-auto">
           Page <span className="font-semibold">{currentPage}</span>
-=======
-      <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
-        {/* Left side - Page info */}
-        <div className="text-sm text-gray-600">
-          Page {currentPage} of {totalPages}
->>>>>>> test3
         </div>
         
         {/* Right side - Navigation buttons */}
