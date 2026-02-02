@@ -127,10 +127,25 @@ const StudentProfile = () => {
       title = "Product added to cart";
       details = description;
     } else if (type === "claimed") {
-      title = "Order Claimed Successfully";
-      details = description;
+      title = "You claimed a product";
+      // Use description if available, otherwise build it from activity data
+      if (description && description.trim()) {
+        details = description;
+      } else {
+        // Build description from available data (similar to order_released)
+        const orderNum = activity.orderNumber || orderId || null;
+        const itemCount = activity.itemCount || (Array.isArray(activity.items) ? activity.items.length : 0) || 1;
+        const itemText = itemCount === 1 ? "item" : "items";
+        const productName = activity.productName || (Array.isArray(activity.items) && activity.items.length > 0 ? activity.items[0].name : null) || "product";
+        
+        if (orderNum) {
+          details = `Your order #${orderNum} with ${itemCount} ${itemText} (${productName}) has been successfully claimed.`;
+        } else {
+          details = `Your order with ${itemCount} ${itemText} (${productName}) has been successfully claimed.`;
+        }
+      }
     } else if (type === "order_released") {
-      title = "Order Claimed Successfully";
+      title = "Claimed Order";
       // Format the description to be more user-friendly with robust fallback handling
       if (description && description.trim()) {
         details = description;
@@ -231,8 +246,24 @@ const StudentProfile = () => {
           {getRelativeTime(activity.timestamp)}
         </p>
         {(type === "claimed" || type === "order_released") && (
-          <button className="mt-3 px-4 py-1.5 border-2 border-[#003363] text-[#003363] rounded-full text-sm font-medium hover:bg-[#003363] hover:text-white transition-colors">
-            View Details
+          <button 
+            onClick={() => {
+              // Navigate to orders tab and show the specific order
+              if (activity.orderId || activity.orderNumber) {
+                navigate('/student/profile', { 
+                  state: { 
+                    activeTab: 'orders',
+                    activeCategory: 'claimed',
+                    viewMode: 'detail',
+                    orderId: activity.orderId,
+                    orderNumber: activity.orderNumber
+                  } 
+                });
+              }
+            }}
+            className="mt-3 px-4 py-1.5 border-2 border-[#003363] text-[#003363] rounded-lg text-sm font-medium hover:bg-[#003363] hover:text-white transition-colors"
+          >
+            check receipt
           </button>
         )}
       </div>

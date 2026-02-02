@@ -146,6 +146,30 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount((prev) => prev + 1);
 
         console.log("✅ Notification added: Order released");
+        
+        // Emit a custom event that ActivityContext can listen to
+        // This allows ActivityContext to create activities from notifications
+        // Since NotificationProvider wraps ActivityProvider, we use a custom event
+        if (newNotification.type === "order" && newNotification.title === "Order Released") {
+          const notificationData = newNotification.data || {};
+          const orderNumber = notificationData.orderNumber || newNotification.message?.match(/order #([A-Z0-9-]+)/i)?.[1];
+          const orderId = notificationData.orderId;
+          
+          if (orderNumber || orderId) {
+            console.log("📝 NotificationContext: Emitting custom event for activity creation:", orderNumber || orderId);
+            // Dispatch a custom event that ActivityContext can listen to
+            window.dispatchEvent(new CustomEvent('order-claimed-from-notification', {
+              detail: {
+                orderNumber: orderNumber,
+                orderId: orderId,
+                items: notificationData.items || [],
+                itemCount: notificationData.itemCount || (notificationData.items?.length || 0),
+                itemNames: notificationData.itemNames,
+                message: newNotification.message
+              }
+            }));
+          }
+        }
 
         // Show toast notification
         toast.success(newNotification.message || "Your order has been released!", {

@@ -7,6 +7,7 @@ import { toast } from "react-hot-toast";
 import { getDefaultMaxForItem, normalizeItemName } from "../../../utils/maxQuantityKeys";
 import { getStudentTypeFromStudentNumber } from "../../../utils/studentNumberFormat";
 import api from "../../../services/api";
+import { useSocket } from "../../../context/SocketContext";
 
 /**
  * EditStudentOrderLimitsModal Component
@@ -90,6 +91,9 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
   const [items, setItems] = useState([]);
   const [itemPermissions, setItemPermissions] = useState({}); // {itemName: {enabled: boolean, quantity: number|null}}
   const [loadingItems, setLoadingItems] = useState(false);
+
+  // Socket.IO for real-time permission updates
+  const { on, off, isConnected } = useSocket();
 
   // Prefill from student when modal opens or student changes
   useEffect(() => {
@@ -209,6 +213,31 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
       setItemPermissions({});
     }
   }, [isOpen]);
+
+  // Listen for Socket.IO events to refresh permissions when they're updated externally
+  // (e.g., when a student places an order and permissions are automatically disabled)
+  useEffect(() => {
+    if (!isConnected || !isOpen || !student?.id) {
+      return;
+    }
+
+    const handlePermissionsUpdated = (data) => {
+      // Verify this event is for the current student
+      if (data.studentId === student.id) {
+        console.log("📡 [EditStudentOrderLimitsModal] Received student:permissions:updated event, refreshing permissions:", data);
+        // Refresh permissions by fetching items again
+        // This will reload permissions from the database and update the checkboxes
+        fetchItems();
+      }
+    };
+
+    on("student:permissions:updated", handlePermissionsUpdated);
+
+    // Cleanup on unmount or when dependencies change
+    return () => {
+      off("student:permissions:updated", handlePermissionsUpdated);
+    };
+  }, [isConnected, isOpen, student?.id, on, off]);
 
   const fetchItems = async () => {
     if (!student?.id) return;

@@ -236,13 +236,30 @@ const ProductDetailsPage = () => {
       setLimitsRefreshTrigger((t) => t + 1);
     };
 
+    // Listen for student:permissions:updated events to refresh max-quantities when admin changes permissions
+    const handlePermissionsUpdated = (data) => {
+      console.log("📡 [ProductDetailsPage] Received student:permissions:updated event via Socket.IO, refreshing max-quantities:", data);
+      // Verify this event is for the current user
+      const currentUserId = user?.uid || user?.id;
+      const eventUserId = data?.userId;
+      if (eventUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId))) {
+        console.log("✅ [ProductDetailsPage] Permissions updated for current user, refreshing max-quantities");
+        // Trigger refresh of max-quantities to reflect permission changes
+        setLimitsRefreshTrigger((t) => t + 1);
+      } else {
+        console.log("⚠️ [ProductDetailsPage] Permissions updated event not for current user, ignoring");
+      }
+    };
+
     on("order:created", handleOrderCreated);
+    on("student:permissions:updated", handlePermissionsUpdated);
 
     // Cleanup on unmount
     return () => {
       off("order:created", handleOrderCreated);
+      off("student:permissions:updated", handlePermissionsUpdated);
     };
-  }, [isConnected, on, off]);
+  }, [isConnected, on, off, user?.uid, user?.id]);
 
   // Load product data
   useEffect(() => {

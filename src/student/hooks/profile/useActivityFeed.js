@@ -57,14 +57,17 @@ export const useActivityFeed = () => {
         console.log(`📊 useActivityFeed: Filtered to ${filtered.length} order activities`);
       } else if (activeTab === 'history') {
         filtered = userActivities.filter(a => a.type === 'claimed' || a.type === 'order_released');
-        console.log(`📊 useActivityFeed: Filtered to ${filtered.length} history activities (claimed/released)`);
+        const claimedCount = filtered.filter(a => a.type === 'claimed').length;
+        const orderReleasedCount = filtered.filter(a => a.type === 'order_released').length;
+        console.log(`📊 useActivityFeed: Filtered to ${filtered.length} history activities (${claimedCount} claimed, ${orderReleasedCount} order_released)`);
         console.log(`📊 useActivityFeed: History activities:`, filtered.map(a => ({ type: a.type, orderNumber: a.orderNumber, description: a.description?.substring(0, 50) })));
       } else {
         // activities tab - show all
         console.log(`📊 useActivityFeed: Showing all ${filtered.length} activities`);
+        const claimedCount = filtered.filter(a => a.type === 'claimed').length;
         const orderReleasedCount = filtered.filter(a => a.type === 'order_released').length;
-        if (orderReleasedCount > 0) {
-          console.log(`📊 useActivityFeed: Found ${orderReleasedCount} order_released activities in all activities`);
+        if (claimedCount > 0 || orderReleasedCount > 0) {
+          console.log(`📊 useActivityFeed: Found ${claimedCount} claimed and ${orderReleasedCount} order_released activities in all activities`);
         }
       }
       
