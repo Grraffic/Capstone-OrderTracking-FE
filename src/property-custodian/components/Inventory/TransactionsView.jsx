@@ -18,6 +18,9 @@ const TransactionsView = ({
   onTransactionTypeFilterChange,
   transactionCounts,
   filteredTransactions,
+  transactionCurrentPage,
+  transactionPagination,
+  onTransactionPageChange,
 }) => {
   return (
     <div className="w-full">
@@ -32,7 +35,12 @@ const TransactionsView = ({
       />
 
       {/* Transactions Table */}
-      <TransactionsTable transactions={filteredTransactions} />
+      <TransactionsTable
+        transactions={filteredTransactions}
+        currentPage={transactionCurrentPage}
+        pagination={transactionPagination}
+        onPageChange={onTransactionPageChange}
+      />
     </div>
   );
 };

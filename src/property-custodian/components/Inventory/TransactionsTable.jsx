@@ -5,8 +5,9 @@ import React from "react";
  * 
  * Displays transaction data in a table format with columns:
  * - DATE & TIME, USER, ACTION, DETAILS, STATUS
+ * Includes pagination controls at the bottom
  */
-const TransactionsTable = ({ transactions }) => {
+const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageChange }) => {
   // Helper function to parse user information
   const parseUserInfo = (transaction) => {
     // First check if transaction has separate user_name and user_role fields
@@ -448,6 +449,62 @@ const TransactionsTable = ({ transactions }) => {
           })}
         </div>
       </div>
+
+      {/* Pagination - Right aligned */}
+      {pagination && pagination.totalPages > 0 && (
+        <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+          {/* Left side - Page info */}
+          <div className="text-sm text-gray-600">
+            Page {currentPage} of {pagination.totalPages}
+          </div>
+          
+          {/* Right side - Navigation buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onPageChange && onPageChange((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
+            >
+              Previous
+            </button>
+            <input
+              type="number"
+              min="1"
+              max={pagination.totalPages}
+              value={currentPage}
+              onChange={(e) => {
+                const page = parseInt(e.target.value);
+                if (page >= 1 && page <= pagination.totalPages) {
+                  onPageChange && onPageChange(page);
+                }
+              }}
+              onBlur={(e) => {
+                const page = parseInt(e.target.value);
+                if (!page || page < 1) {
+                  onPageChange && onPageChange(1);
+                } else if (page > pagination.totalPages) {
+                  onPageChange && onPageChange(pagination.totalPages);
+                } else {
+                  onPageChange && onPageChange(page);
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                }
+              }}
+              className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+            />
+            <button
+              onClick={() => onPageChange && onPageChange((p) => Math.min(pagination.totalPages, p + 1))}
+              disabled={currentPage >= pagination.totalPages}
+              className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

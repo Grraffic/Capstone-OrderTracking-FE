@@ -310,37 +310,59 @@ const ItemsTable = ({
       </div>
 
       {/* Pagination Controls - Always visible */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between">
-        {/* Left: Page Indicator */}
+      <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+        {/* Left side - Page info */}
         <div className="text-sm text-gray-600">
-          Page <span className="font-semibold">{currentPage}</span> of{" "}
-          <span className="font-semibold">{totalPages}</span>
+          Page {currentPage} of {totalPages}
         </div>
-
-        {/* Right: Navigation Buttons */}
+        
+        {/* Right side - Navigation buttons */}
         <div className="flex items-center gap-2">
-          {/* Previous Button */}
           <button
             onClick={onPrevPage}
             disabled={currentPage === 1}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#e68b00] hover:text-white hover:border-[#e68b00] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 font-medium text-sm"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
             title="Previous page"
             aria-label="Previous page"
           >
-            <ChevronLeft size={18} />
-            <span>Previous</span>
+            Previous
           </button>
-
-          {/* Next Button */}
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            value={currentPage}
+            onChange={(e) => {
+              const page = parseInt(e.target.value);
+              if (page >= 1 && page <= totalPages && onGoToPage) {
+                onGoToPage(page);
+              }
+            }}
+            onBlur={(e) => {
+              const page = parseInt(e.target.value);
+              if (!page || page < 1) {
+                if (onGoToPage) onGoToPage(1);
+              } else if (page > totalPages) {
+                if (onGoToPage) onGoToPage(totalPages);
+              } else {
+                if (onGoToPage) onGoToPage(page);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.target.blur();
+              }
+            }}
+            className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+          />
           <button
             onClick={onNextPage}
-            disabled={currentPage === totalPages}
-            className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#e68b00] hover:text-white hover:border-[#e68b00] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 font-medium text-sm"
+            disabled={currentPage >= totalPages}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
             title="Next page"
             aria-label="Next page"
           >
-            <span>Next</span>
-            <ChevronRight size={18} />
+            Next
           </button>
         </div>
       </div>

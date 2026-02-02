@@ -2,10 +2,9 @@ import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Home,
-  GraduationCap,
-  FileCheck,
   Settings,
   LogOut,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -37,8 +36,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
 
   const navItems = [
     { to: "/system-admin", label: "Home", icon: Home },
-    { to: "/system-admin/students", label: "List of Students", icon: GraduationCap },
-    { to: "/system-admin/eligibility", label: "Eligibility Management", icon: FileCheck },
+    { to: "/system-admin/recent-audits", label: "Recent Audits", icon: FileText },
     { to: "/system-admin/settings", label: "System Settings", icon: Settings },
   ];
 
@@ -177,10 +175,7 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
 
       {/* Navigation */}
       <nav className="flex flex-col gap-2 flex-1">
-        {/* Home */}
-        <div>{navItem("/system-admin", "Home", Home, true)}</div>
-
-        {navItems.slice(1).map((item) => (
+        {navItems.map((item) => (
           <div key={item.to}>
             {navItem(item.to, item.label, item.icon, item.to === "/system-admin")}
           </div>

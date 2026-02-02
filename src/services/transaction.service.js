@@ -27,6 +27,7 @@ class TransactionService {
    * @param {string} filters.type - Filter by transaction type
    * @param {string} filters.action - Filter by action
    * @param {string} filters.userId - Filter by user ID
+   * @param {string} filters.userRole - Filter by user role
    * @param {Date} filters.startDate - Start date for date range
    * @param {Date} filters.endDate - End date for date range
    * @param {number} filters.limit - Maximum number of results
@@ -39,6 +40,7 @@ class TransactionService {
         type: filters.type,
         action: filters.action,
         userId: filters.userId,
+        userRole: filters.userRole,
         startDate: filters.startDate?.toISOString(),
         endDate: filters.endDate?.toISOString(),
         limit: filters.limit,
@@ -50,6 +52,7 @@ class TransactionService {
       if (filters.type) queryParams.append("type", filters.type);
       if (filters.action) queryParams.append("action", filters.action);
       if (filters.userId) queryParams.append("userId", filters.userId);
+      if (filters.userRole) queryParams.append("userRole", filters.userRole);
       if (filters.startDate) queryParams.append("startDate", filters.startDate.toISOString());
       if (filters.endDate) queryParams.append("endDate", filters.endDate.toISOString());
       if (filters.limit) queryParams.append("limit", filters.limit.toString());

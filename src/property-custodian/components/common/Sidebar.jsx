@@ -8,6 +8,8 @@ import {
   Settings,
   LogOut,
   Warehouse,
+  GraduationCap,
+  FileCheck,
 } from "lucide-react";
 import { useAuth } from "../../../context/AuthContext";
 
@@ -42,6 +44,8 @@ const Sidebar = ({ isOpen = true, onNavigate }) => {
   const navItems = [
     { to: "/property-custodian", label: "Home", icon: Home },
     { to: "/property-custodian/orders", label: "Orders", icon: ShoppingCart },
+    { to: "/property-custodian/students", label: "List of Students", icon: GraduationCap },
+    { to: "/property-custodian/eligibility", label: "Eligibility Management", icon: FileCheck },
     { to: "/property-custodian/settings", label: "Settings", icon: Settings },
   ];
 

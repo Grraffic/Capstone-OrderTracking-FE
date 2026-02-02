@@ -387,26 +387,31 @@ const OrdersTable = ({
       )}
 
       {/* Pagination Controls */}
+<<<<<<< HEAD
       <div className="bg-white border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         {/* Left: Page Indicator */}
         <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left w-full sm:w-auto">
           Page <span className="font-semibold">{currentPage}</span>
+=======
+      <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+        {/* Left side - Page info */}
+        <div className="text-sm text-gray-600">
+          Page {currentPage} of {totalPages}
+>>>>>>> test3
         </div>
-
-        {/* Right: Navigation Buttons */}
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-end">
-          {/* Previous Button */}
+        
+        {/* Right side - Navigation buttons */}
+        <div className="flex items-center gap-2">
           <button
             onClick={onPrevPage}
             disabled={currentPage === 1}
-            className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white transition-colors flex items-center justify-center gap-1 font-medium text-xs sm:text-sm"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
             title="Previous page"
             aria-label="Previous page"
           >
-            <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" />
-            <span className="hidden sm:inline">Previous</span>
-            <span className="sm:hidden">Prev</span>
+            Previous
           </button>
+<<<<<<< HEAD
 
           {/* Page Number Input */}
           <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
@@ -423,16 +428,44 @@ const OrdersTable = ({
           </form>
 
           {/* Next Button */}
+=======
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            value={currentPage}
+            onChange={(e) => {
+              const page = parseInt(e.target.value);
+              if (page >= 1 && page <= totalPages && onGoToPage) {
+                onGoToPage(page);
+              }
+            }}
+            onBlur={(e) => {
+              const page = parseInt(e.target.value);
+              if (!page || page < 1) {
+                if (onGoToPage) onGoToPage(1);
+              } else if (page > totalPages) {
+                if (onGoToPage) onGoToPage(totalPages);
+              } else {
+                if (onGoToPage) onGoToPage(page);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.target.blur();
+              }
+            }}
+            className="w-16 px-4 py-2 text-sm font-medium text-[#0C2340] bg-white border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-[#0C2340] focus:border-transparent"
+          />
+>>>>>>> test3
           <button
             onClick={onNextPage}
-            disabled={currentPage === totalPages}
-            className="flex-1 sm:flex-initial px-3 sm:px-4 py-2 bg-[#e68b00] text-white rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors flex items-center justify-center gap-1 font-medium text-xs sm:text-sm shadow-sm"
+            disabled={currentPage >= totalPages}
+            className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
             title="Next page"
             aria-label="Next page"
           >
-            <span className="hidden sm:inline">Next</span>
-            <span className="sm:hidden">Next</span>
-            <ChevronRight size={16} className="sm:w-[18px] sm:h-[18px]" />
+            Next
           </button>
         </div>
       </div>

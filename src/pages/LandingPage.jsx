@@ -462,7 +462,7 @@ export default function LandingPage() {
 
         {/* Content under the Background */}
         <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-          <div className="max-w-xl space-y-4 sm:space-y-6">
+          <div className="max-w-xl space-y-4 sm:space-y-6 flex flex-col">
             <p className="text-sm sm:text-base lg:text-lg text-[#003363] leading-relaxed">
               A Web-Based Order Tracking System with QR-integrated Inventory
               Monitoring of school uniforms at La Verdad Christian College Inc.,
