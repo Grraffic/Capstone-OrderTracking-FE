@@ -270,7 +270,9 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
                 type="text"
                 value={formData.firstName}
                 onChange={(e) => {
-                  setFormData({ ...formData, firstName: e.target.value });
+                  // Only allow letters, spaces, hyphens, and apostrophes
+                  const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
+                  setFormData({ ...formData, firstName: value });
                   if (fieldErrors.firstName) {
                     setFieldErrors(prev => ({ ...prev, firstName: false }));
                   }
@@ -292,7 +294,9 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
                 type="text"
                 value={formData.lastName}
                 onChange={(e) => {
-                  setFormData({ ...formData, lastName: e.target.value });
+                  // Only allow letters, spaces, hyphens, and apostrophes
+                  const value = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
+                  setFormData({ ...formData, lastName: value });
                   if (fieldErrors.lastName) {
                     setFieldErrors(prev => ({ ...prev, lastName: false }));
                   }
@@ -348,7 +352,7 @@ const UserModal = ({ isOpen, onClose, user, onSave }) => {
               placeholder="Enter email address"
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] ${
                 fieldErrors.email ? "border-red-500" : "border-gray-300"
-              }`}
+              } ${user ? "bg-gray-50 text-gray-600 cursor-not-allowed" : ""}`}
               required
               disabled={!!user} // Don't allow editing email for existing users
             />

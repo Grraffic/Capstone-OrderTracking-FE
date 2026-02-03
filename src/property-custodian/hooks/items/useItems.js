@@ -5,6 +5,18 @@ import { useSocket } from "../../../context/SocketContext";
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+// Helper to attach auth token from localStorage
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("authToken");
+  const headers = {
+    "Content-Type": "application/json",
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 /**
  * useItems Hook
  *
@@ -600,16 +612,11 @@ export const useItems = (options = {}) => {
           note: updatedItem.note || "",
         };
 
-        const response = await fetch(
-          `${API_BASE_URL}/items/${updatedItem.id}`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(transformedItem),
-          }
-        );
+        const response = await fetch(`${API_BASE_URL}/items/${updatedItem.id}`, {
+          method: "PUT",
+          headers: getAuthHeaders(),
+          body: JSON.stringify(transformedItem),
+        });
 
         if (!response.ok) {
           const errorData = await response.json();

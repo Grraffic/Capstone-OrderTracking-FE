@@ -286,7 +286,18 @@ const SystemAdminDashboard = () => {
       };
       
       await updateUser(userId, { is_active: !wasActive }, refreshParams);
-      toast.success(`User ${!wasActive ? "activated" : "deactivated"} successfully`);
+      const message = `User ${!wasActive ? "activated" : "deactivated"} successfully`;
+      if (!wasActive) {
+        // Green background for activation
+        toast.success(message, {
+          style: {
+            background: "#10b981",
+            color: "#fff",
+          },
+        });
+      } else {
+        toast.success(message);
+      }
     } catch (error) {
       toast.error(error.message || "Failed to update user status");
       // The refresh will restore the original state on error

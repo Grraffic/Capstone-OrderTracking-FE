@@ -14,7 +14,7 @@ const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageCh
     if (transaction.user_name || transaction.user_role) {
       const userName = transaction.user_name || "System";
       const userRole = transaction.user_role || "system";
-      
+
       // Format role for display
       const formattedRole = userRole === "property_custodian" 
         ? "Property Custodian" 
@@ -31,7 +31,15 @@ const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageCh
         : userRole === "system"
         ? "System"
         : userRole || "Unknown";
-      
+
+      // Avoid showing duplicate "System System" when this is a true system action
+      if (
+        (userName || "").trim().toLowerCase() === "system" &&
+        formattedRole === "System"
+      ) {
+        return { name: "System", role: "" };
+      }
+
       return { name: userName, role: formattedRole };
     }
     
@@ -51,6 +59,12 @@ const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageCh
         ? "Student" 
         : roleRaw === "system_admin" 
         ? "System Admin"
+        : roleRaw === "finance_staff"
+        ? "Finance Staff"
+        : roleRaw === "accounting_staff"
+        ? "Accounting Staff"
+        : roleRaw === "department_head"
+        ? "Department Head"
         : roleRaw === "system"
         ? "System"
         : roleRaw;

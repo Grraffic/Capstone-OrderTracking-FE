@@ -75,7 +75,7 @@ const DisableUserModal = ({ isOpen, onClose, onConfirm, userName }) => {
           {/* Yes Button */}
           <button
             onClick={onConfirm}
-            className="flex-1 px-4 py-2 bg-[#e68b00] text-white font-semibold rounded-lg hover:bg-[#d97a1f] transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+            className="flex-1 px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
           >
             Yes
           </button>

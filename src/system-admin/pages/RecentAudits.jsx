@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import transactionService from "../../services/transaction.service";
 import { userAPI } from "../../services/user.service";
 import { format } from "date-fns";
-import { FileText, Search, Clock } from "lucide-react";
+import { FileText, Search, Clock, X } from "lucide-react";
 
 /**
  * Recent Audits Page
@@ -17,6 +18,8 @@ const RecentAudits = () => {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedAudit, setSelectedAudit] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 8,
@@ -30,41 +33,147 @@ const RecentAudits = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch all student audits first (with high limit), then paginate on frontend
-      const filters = {
-        limit: 10000, // Fetch all audits
-        userRole: "student", // Filter for student audits only
+      // Fetch audits for all roles except system_admin
+      // This includes: students, finance staff, accounting staff, department heads, and property custodians
+      // System admin actions are excluded to allow system admins to monitor all user actions
+      const rolesToFetch = [
+        "student", 
+        "finance_staff", 
+        "department_head", 
+        "accounting_staff", 
+        "property_custodian"
+      ];
+      
+      // Fetch transactions for each role and combine them
+      const allResults = await Promise.all(
+        rolesToFetch.map(role => 
+          transactionService.getTransactions({
+            limit: 10000, // Fetch all audits for each role
+            userRole: role,
+          })
+        )
+      );
+
+      // Combine all results into a single array
+      const combinedData = allResults
+        .filter(result => result.success && result.data)
+        .flatMap(result => result.data);
+
+      // Sort by created_at timestamp (most recent first) before processing
+      combinedData.sort((a, b) => {
+        const dateA = new Date(a.created_at);
+        const dateB = new Date(b.created_at);
+        return dateB - dateA; // Descending order (newest first)
+      });
+
+      // Create a result object with the combined data
+      const result = {
+        success: true,
+        data: combinedData,
       };
 
-      const result = await transactionService.getTransactions(filters);
-
       if (result.success && result.data) {
+        // Helper function to fetch user name with multiple fallback methods
+        const fetchUserName = async (tx) => {
+          // Try 1: Use stored user_name if valid
+          if (tx.user_name && tx.user_name !== "System" && tx.user_name.trim() !== "") {
+            return { name: tx.user_name, role: tx.user_role || null };
+          }
+          
+          // Try 2: Fetch by user_id
+          if (tx.user_id) {
+            try {
+              const userResponse = await userAPI.getUserById(tx.user_id);
+              if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                const fetchedName = userResponse.data.data.name;
+                const fetchedRole = userResponse.data.data.role;
+                if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                  return { 
+                    name: fetchedName, 
+                    role: fetchedRole || tx.user_role || null 
+                  };
+                }
+              }
+            } catch (err) {
+              console.warn(`[RecentAudits] Failed to fetch user by ID ${tx.user_id}:`, err);
+            }
+          }
+          
+          // Try 3: Fetch by email from metadata
+          const emailFromMetadata = tx.metadata?.email || tx.metadata?.student_email;
+          if (emailFromMetadata && typeof emailFromMetadata === "string") {
+            try {
+              // getUserById now supports email lookup if userId is an email
+              const userResponse = await userAPI.getUserById(emailFromMetadata);
+              if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                const fetchedName = userResponse.data.data.name;
+                const fetchedRole = userResponse.data.data.role;
+                if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                  console.log(`[RecentAudits] ✅ Found user by email from metadata: ${emailFromMetadata}`);
+                  return { 
+                    name: fetchedName, 
+                    role: fetchedRole || tx.user_role || null 
+                  };
+                }
+              }
+            } catch (err) {
+              console.warn(`[RecentAudits] Failed to fetch user by email ${emailFromMetadata}:`, err);
+            }
+          }
+          
+          // Try 4: If user_id looks like an email, try fetching by it
+          if (tx.user_id && typeof tx.user_id === "string" && tx.user_id.includes("@")) {
+            try {
+              const userResponse = await userAPI.getUserById(tx.user_id);
+              if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                const fetchedName = userResponse.data.data.name;
+                const fetchedRole = userResponse.data.data.role;
+                if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                  console.log(`[RecentAudits] ✅ Found user by email (user_id): ${tx.user_id}`);
+                  return { 
+                    name: fetchedName, 
+                    role: fetchedRole || tx.user_role || null 
+                  };
+                }
+              }
+            } catch (err) {
+              console.warn(`[RecentAudits] Failed to fetch user by email (user_id) ${tx.user_id}:`, err);
+            }
+          }
+          
+          // Fallback: return stored values or System
+          return { 
+            name: tx.user_name || "System", 
+            role: tx.user_role || null 
+          };
+        };
+        
         // Fetch user names and roles for transactions
         const auditsWithUsers = await Promise.all(
           result.data.map(async (tx) => {
-            let userName = tx.user_name || "System";
-            let userRole = tx.user_role || null;
-            
-            // If user_name is "System" or missing, try to fetch the actual user name and role
-            if ((!tx.user_name || tx.user_name === "System") && tx.user_id) {
-              try {
-                const userResponse = await userAPI.getUserById(tx.user_id);
-                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
-                  userName = userResponse.data.data.name || tx.user_name || "System";
-                  // Only update role if it wasn't already set
-                  if (!userRole) {
-                    userRole = userResponse.data.data.role || null;
-                  }
-                }
-              } catch (err) {
-                // If fetch fails, keep the original user_name or "System"
-                console.warn(`Failed to fetch user name for user_id ${tx.user_id}:`, err);
-              }
-            }
+            const userInfo = await fetchUserName(tx);
+            const userName = userInfo.name;
+            const userRole = userInfo.role;
             
             // Format role for display (capitalize first letter of each word)
             const formatRole = (role) => {
               if (!role || role === "system" || role === "unknown") return null;
+              // Special handling for specific roles
+              if (role === "property_custodian") {
+                return "Property Custodian";
+              }
+              if (role === "finance_staff") {
+                return "Finance Staff";
+              }
+              if (role === "accounting_staff") {
+                return "Accounting Staff";
+              }
+              if (role === "department_head") {
+                return "Department Head";
+              }
+              if (role === "system_admin") {
+                return "System Admin";
+              }
               return role
                 .split('_')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -83,6 +192,7 @@ const RecentAudits = () => {
           })
         );
 
+        // Audits are already sorted by created_at, so we can use them directly
         const formattedAudits = auditsWithUsers;
 
         // Apply search filter on frontend if needed
@@ -172,7 +282,7 @@ const RecentAudits = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-[#0C2340]">Recent Audits</h1>
-            <p className="text-gray-600 mt-1">View all student activity and audit logs</p>
+            <p className="text-gray-600 mt-1">View all activity and audit logs from all users (excluding system admin actions)</p>
           </div>
         </div>
 
@@ -236,7 +346,14 @@ const RecentAudits = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {audits.map((audit) => (
-                      <tr key={audit.id} className="hover:bg-gray-50 transition-colors">
+                      <tr 
+                        key={audit.id} 
+                        className="hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setSelectedAudit(audit);
+                          setIsModalOpen(true);
+                        }}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <Clock size={14} className="text-gray-400" />
@@ -335,6 +452,89 @@ const RecentAudits = () => {
           )}
         </div>
       </div>
+
+      {/* Audit Details Modal */}
+      {isModalOpen && selectedAudit && createPortal(
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-[10000] flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setIsModalOpen(false);
+              setSelectedAudit(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto relative z-[10001]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-[#0C2340]">Audit Details</h2>
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedAudit(null);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                <p className="text-sm text-gray-900">{selectedAudit.dateTime}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">User</label>
+                <p className="text-sm text-gray-900">{selectedAudit.user}</p>
+                {selectedAudit.userRole && (
+                  <p className="text-xs text-gray-500 mt-0.5">{selectedAudit.userRole}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Action</label>
+                <p className="text-sm text-gray-900">{selectedAudit.action}</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
+                    selectedAudit.type
+                  )}`}
+                >
+                  {selectedAudit.type}
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Details</label>
+                <p className="text-sm text-gray-900 whitespace-pre-wrap">{selectedAudit.details}</p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-end p-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setSelectedAudit(null);
+                }}
+                className="px-4 py-2 bg-[#0C2340] text-white font-medium rounded-lg hover:bg-[#0a1d33] transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </SystemAdminLayout>
   );
 };

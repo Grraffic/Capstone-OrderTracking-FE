@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { subDays } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
@@ -9,6 +10,7 @@ import { useOrders, useInventoryHealthStats } from "../hooks";
 import { useSocket } from "../../context/SocketContext";
 import inventoryService from "../../services/inventory.service";
 import transactionService from "../../services/transaction.service";
+import { userAPI } from "../../services/user.service";
 
 /**
  * Inventory Page Component
@@ -24,12 +26,17 @@ import transactionService from "../../services/transaction.service";
  */
 const Inventory = () => {
   // Note: AdminLayout handles sidebar state internally
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   const [searchQuery, setSearchQuery] = useState("");
   const [gradeLevel, setGradeLevel] = useState("all");
-  const [activeTab, setActiveTab] = useState("inventory");
+  // Initialize activeTab from URL param if present
+  const [activeTab, setActiveTab] = useState(() => {
+    const tabParam = searchParams.get("tab");
+    return tabParam === "transaction" ? "transaction" : "inventory";
+  });
   const [transactionTypeFilter, setTransactionTypeFilter] = useState("all");
   // Transaction pagination state
   const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
@@ -207,6 +214,17 @@ const Inventory = () => {
 
   // Socket connection for real-time updates
   const { on, off, isConnected } = useSocket();
+
+  // Handle URL search param for tab navigation
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "transaction" && activeTab !== "transaction") {
+      setActiveTab("transaction");
+    } else if (!tabParam && activeTab === "transaction") {
+      // If no tab param and we're on transaction, keep it (don't reset)
+      // This allows the tab to persist when navigating
+    }
+  }, [searchParams, activeTab]);
 
   // State to trigger transaction refresh
   const [transactionRefreshKey, setTransactionRefreshKey] = useState(0);
@@ -854,62 +872,170 @@ const Inventory = () => {
         if (response.success && response.data) {
           console.log("[Inventory] ✅ Received transactions:", response.data.length);
           console.log("[Inventory] 📋 Sample transaction from API:", response.data[0]);
-          // Transform API data to match component format
-          const transformedTransactions = response.data.map((tx, index) => {
-            if (index === 0) {
-              console.log("[Inventory] 🔍 Transforming first transaction:", tx);
+          
+          // Helper function to fetch user name with multiple fallback methods
+          const fetchUserName = async (tx) => {
+            // Try 1: Use stored user_name if valid
+            if (tx.user_name && tx.user_name !== "System" && tx.user_name.trim() !== "") {
+              return { name: tx.user_name, role: tx.user_role || null };
             }
-            // Format date and time
-            const date = new Date(tx.created_at);
-            const formattedDate = date.toLocaleDateString("en-US", {
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            });
-            const formattedTime = date.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            });
-            const dateTime = `${formattedDate} ${formattedTime}`;
-
-            // Format user name and role
-            const user = `${tx.user_name} ${tx.user_role === "property_custodian" ? "Property Custodian" : tx.user_role === "student" ? "Student" : tx.user_role === "system_admin" ? "System Admin" : tx.user_role || ""}`;
-
-            // Map transaction type to display type (for filtering purposes)
-            let displayType = tx.type;
-            if (tx.type === "Inventory") {
-              if (tx.action.startsWith("PURCHASE RECORDED")) {
-                displayType = "Purchases";
-              } else if (tx.action.startsWith("RETURN RECORDED")) {
-                displayType = "Returns";
-              } else if (tx.action.startsWith("ITEM RELEASED")) {
-                displayType = "Releases";
+            
+            // Try 2: Fetch by user_id
+            if (tx.user_id) {
+              try {
+                const userResponse = await userAPI.getUserById(tx.user_id);
+                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                  const fetchedName = userResponse.data.data.name;
+                  const fetchedRole = userResponse.data.data.role;
+                  if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                    return { 
+                      name: fetchedName, 
+                      role: fetchedRole || tx.user_role || null 
+                    };
+                  }
+                }
+              } catch (err) {
+                console.warn(`[Inventory] Failed to fetch user by ID ${tx.user_id}:`, err);
               }
-            } else if (tx.type === "Item") {
-              displayType = "Items";
             }
-
-            // Extract price from metadata if available
-            const price = tx.metadata?.unit_price 
-              ? `P${tx.metadata.unit_price}` 
-              : tx.metadata?.price 
-              ? `P${tx.metadata.price}` 
-              : null;
-
-            return {
-              id: tx.id,
-              type: displayType, // Keep for filtering
-              dateTime: dateTime,
-              user: user,
-              action: tx.action,
-              details: tx.details,
-              price: price,
-              status: displayType, // Use displayType for status (Items, Purchases, Returns, Releases)
-              metadata: tx.metadata || {}, // Pass metadata for dynamic formatting
-              itemName: tx.metadata?.item_name || extractItemNameFromAction(tx.action),
+            
+            // Try 3: Fetch by email from metadata
+            const emailFromMetadata = tx.metadata?.email || tx.metadata?.student_email;
+            if (emailFromMetadata && typeof emailFromMetadata === "string") {
+              try {
+                // getUserById now supports email lookup if userId is an email
+                const userResponse = await userAPI.getUserById(emailFromMetadata);
+                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                  const fetchedName = userResponse.data.data.name;
+                  const fetchedRole = userResponse.data.data.role;
+                  if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                    console.log(`[Inventory] ✅ Found user by email from metadata: ${emailFromMetadata}`);
+                    return { 
+                      name: fetchedName, 
+                      role: fetchedRole || tx.user_role || null 
+                    };
+                  }
+                }
+              } catch (err) {
+                console.warn(`[Inventory] Failed to fetch user by email ${emailFromMetadata}:`, err);
+              }
+            }
+            
+            // Try 4: If user_id looks like an email, try fetching by it
+            if (tx.user_id && typeof tx.user_id === "string" && tx.user_id.includes("@")) {
+              try {
+                const userResponse = await userAPI.getUserById(tx.user_id);
+                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                  const fetchedName = userResponse.data.data.name;
+                  const fetchedRole = userResponse.data.data.role;
+                  if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                    console.log(`[Inventory] ✅ Found user by email (user_id): ${tx.user_id}`);
+                    return { 
+                      name: fetchedName, 
+                      role: fetchedRole || tx.user_role || null 
+                    };
+                  }
+                }
+              } catch (err) {
+                console.warn(`[Inventory] Failed to fetch user by email (user_id) ${tx.user_id}:`, err);
+              }
+            }
+            
+            // Fallback: return stored values or System
+            return { 
+              name: tx.user_name || "System", 
+              role: tx.user_role || null 
             };
-          });
+          };
+          
+          // Fetch user names and roles for transactions
+          const transactionsWithUsers = await Promise.all(
+            response.data.map(async (tx) => {
+              const userInfo = await fetchUserName(tx);
+              const userName = userInfo.name;
+              const userRole = userInfo.role;
+              
+              // Format role for display
+              const formatRole = (role) => {
+                if (!role || role === "system" || role === "unknown") return null;
+                if (role === "property_custodian") {
+                  return "Property Custodian";
+                }
+                if (role === "finance_staff") {
+                  return "Finance Staff";
+                }
+                if (role === "accounting_staff") {
+                  return "Accounting Staff";
+                }
+                if (role === "department_head") {
+                  return "Department Head";
+                }
+                if (role === "system_admin") {
+                  return "System Admin";
+                }
+                if (role === "student") {
+                  return "Student";
+                }
+                return role
+                  .split('_')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                  .join(' ');
+              };
+              
+              // Transform API data to match component format
+              const date = new Date(tx.created_at);
+              const formattedDate = date.toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              });
+              const formattedTime = date.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              });
+              const dateTime = `${formattedDate} ${formattedTime}`;
+
+              // Map transaction type to display type (for filtering purposes)
+              let displayType = tx.type;
+              if (tx.type === "Inventory") {
+                if (tx.action.startsWith("PURCHASE RECORDED")) {
+                  displayType = "Purchases";
+                } else if (tx.action.startsWith("RETURN RECORDED")) {
+                  displayType = "Returns";
+                } else if (tx.action.startsWith("ITEM RELEASED")) {
+                  displayType = "Releases";
+                }
+              } else if (tx.type === "Item") {
+                displayType = "Items";
+              }
+
+              // Extract price from metadata if available
+              const price = tx.metadata?.unit_price 
+                ? `P${tx.metadata.unit_price}` 
+                : tx.metadata?.price 
+                ? `P${tx.metadata.price}` 
+                : null;
+
+              return {
+                id: tx.id,
+                type: displayType, // Keep for filtering
+                dateTime: dateTime,
+                user_name: userName, // Preserve user_name field
+                user_role: userRole, // Preserve user_role field
+                user: `${userName} ${userRole ? formatRole(userRole) : ""}`, // Keep for backward compatibility
+                action: tx.action,
+                details: tx.details,
+                price: price,
+                status: displayType, // Use displayType for status (Items, Purchases, Returns, Releases)
+                metadata: tx.metadata || {}, // Pass metadata for dynamic formatting
+                itemName: tx.metadata?.item_name || extractItemNameFromAction(tx.action),
+              };
+            })
+          );
+          
+          // Use transactionsWithUsers directly (already transformed with user_name and user_role)
+          const transformedTransactions = transactionsWithUsers;
 
           setTransactionData(transformedTransactions);
           console.log("[Inventory] ✅ Transformed transactions:", transformedTransactions.length);

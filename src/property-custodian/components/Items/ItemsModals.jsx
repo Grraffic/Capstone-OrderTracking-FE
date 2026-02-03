@@ -319,8 +319,19 @@ const ItemsModals = ({
       if (!hasValidVariant) return false;
     }
 
-    // For Accessories: check if at least one entry is filled
+    // For Accessories: Entry 1 (index 0) is required with both stock and price
     if (isAccessories) {
+      // Entry 1 must always be selected and filled
+      if (!selectedAccessoryIndices.includes(0)) return false;
+      
+      // Entry 1 must have both stock and price when adding new items
+      if (modalState.mode === "add") {
+        const entry1Stock = Number(accessoryStocks[0]) || 0;
+        const entry1Price = Number(accessoryPrices[0]) || 0;
+        if (entry1Stock <= 0 || entry1Price <= 0) return false;
+      }
+      
+      // Check if at least one entry (including Entry 1) is filled
       const hasValidEntry = selectedAccessoryIndices.some((index) => {
         const stock = Number(accessoryStocks[index]) || 0;
         const price = Number(accessoryPrices[index]) || 0;
@@ -2374,8 +2385,13 @@ const ItemsModals = ({
                                 checked={selectedAccessoryIndices.includes(
                                   index
                                 )}
-                                disabled={index === 0}
+                                disabled={(index === 0 && modalState.mode === "edit") || (index === 0 && modalState.mode === "add")}
                                 onChange={(e) => {
+                                  // Entry 1 cannot be deselected when adding new items
+                                  if (index === 0 && modalState.mode === "add") {
+                                    return; // Prevent unchecking Entry 1 in add mode
+                                  }
+                                  
                                   if (e.target.checked) {
                                     setSelectedAccessoryIndices((prev) => {
                                       const newIndices = [...prev, index];
@@ -2398,7 +2414,8 @@ const ItemsModals = ({
                                       const newIndices = prev.filter(
                                         (i) => i !== index
                                       );
-                                      return newIndices.length > 0
+                                      // Always ensure Entry 1 is selected
+                                      return newIndices.length > 0 && newIndices.includes(0)
                                         ? newIndices
                                         : [0];
                                     });
@@ -2406,8 +2423,11 @@ const ItemsModals = ({
                                 }}
                                 className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                               />
-                              <span className={`text-gray-800 truncate min-w-0 ${index === 0 ? 'opacity-50' : ''}`}>
+                              <span className={`text-gray-800 truncate min-w-0 ${index === 0 && modalState.mode === "edit" ? 'opacity-50' : ''}`}>
                                 Entry {index + 1}
+                                {index === 0 && modalState.mode === "add" && (
+                                  <span className="text-red-500 ml-1">*</span>
+                                )}
                               </span>
                             </div>
                             <input
@@ -2415,7 +2435,7 @@ const ItemsModals = ({
                               min="0"
                               step="1"
                               value={accessoryStocks[index] ?? ""}
-                              disabled={index === 0}
+                              disabled={index === 0 && modalState.mode === "edit"}
                               onChange={(e) => {
                                 const next = [...accessoryStocks];
                                 next[index] = e.target.value;
@@ -2430,7 +2450,7 @@ const ItemsModals = ({
                                 min="0"
                                 step="0.01"
                                 value={accessoryPrices[index] ?? ""}
-                                disabled={index === 0}
+                                disabled={index === 0 && modalState.mode === "edit"}
                                 onChange={(e) => {
                                   const next = [...accessoryPrices];
                                   next[index] = e.target.value;

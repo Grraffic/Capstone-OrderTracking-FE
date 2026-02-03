@@ -152,7 +152,7 @@ const RecentAudits = ({ transactions = [] }) => {
       {transactions.length > 0 && (
         <div className="px-4 sm:px-6 py-4 border-t border-gray-200 flex justify-end">
           <button
-            onClick={() => navigate("/admin/inventory")}
+            onClick={() => navigate("/admin/inventory?tab=transaction")}
             className="text-sm text-[#e68b00] hover:text-[#d97706] font-medium flex items-center gap-1 transition-colors"
           >
             <span>View all activity</span>

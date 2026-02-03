@@ -1,5 +1,6 @@
 import React from "react";
 import { Edit, Trash2 } from "lucide-react";
+import { useAuth } from "../../../context/AuthContext";
 
 /**
  * UserTable Component
@@ -7,6 +8,9 @@ import { Edit, Trash2 } from "lucide-react";
  * Displays users in a table format with all columns from the design
  */
 const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser, onDeleteUser, onToggleActive }) => {
+  const { userRole } = useAuth();
+  // Hide delete button if the logged-in user is a system admin
+  const isSystemAdmin = userRole === "system_admin";
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
@@ -128,14 +132,16 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
                       <Edit size={16} />
                       Edit
                     </button>
-                    <button
-                      onClick={() => onDeleteUser(user.id)}
-                      className="text-red-600 hover:text-red-800 transition-colors font-medium text-sm flex items-center gap-1"
-                      title="Delete user"
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </button>
+                    {!isSystemAdmin && (
+                      <button
+                        onClick={() => onDeleteUser(user.id)}
+                        className="text-red-600 hover:text-red-800 transition-colors font-medium text-sm flex items-center gap-1"
+                        title="Delete user"
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
