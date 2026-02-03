@@ -2385,7 +2385,7 @@ const ItemsModals = ({
                                 checked={selectedAccessoryIndices.includes(
                                   index
                                 )}
-                                disabled={(index === 0 && modalState.mode === "edit") || (index === 0 && modalState.mode === "add")}
+                                disabled={index === 0 && modalState.mode === "edit"}
                                 onChange={(e) => {
                                   // Entry 1 cannot be deselected when adding new items
                                   if (index === 0 && modalState.mode === "add") {

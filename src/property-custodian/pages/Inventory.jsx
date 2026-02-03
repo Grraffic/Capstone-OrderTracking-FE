@@ -1361,9 +1361,10 @@ const Inventory = () => {
 
         {/* Pagination - Only show for inventory tab and when there's more than 1 page */}
         {activeTab === "inventory" && totalPages > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 md:gap-4 px-1 sm:px-2 md:px-4 py-2 sm:py-3 mt-3 sm:mt-4 md:mt-6">
-            <div className="text-[10px] sm:text-xs md:text-sm lg:text-base text-gray-600 font-sf-medium">
-              Page <span className="font-semibold">{currentPage}</span>
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+            {/* Left side - Page info */}
+            <div className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
             </div>
             
             {/* Right side - Navigation buttons */}
@@ -1375,29 +1376,10 @@ const Inventory = () => {
               >
                 Previous
               </button>
-              
-              {/* Page Number Input */}
-              <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
-                <input
-                  type="text"
-                  value={pageInputValue}
-                  onChange={handlePageInputChange}
-                  onBlur={handlePageInputBlur}
-                  className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
-                  aria-label="Page number"
-                  min="1"
-                  max={totalPages}
-                />
-              </form>
-
               <button
                 onClick={handleNextPage}
-                disabled={currentPage === totalPages}
-                className={`px-2.5 sm:px-3 md:px-4 lg:px-5 py-1.5 sm:py-2 text-[10px] sm:text-xs md:text-sm lg:text-base font-medium rounded-lg border transition-colors duration-200 ${
-                  currentPage === totalPages
-                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    : "bg-[#E68B00] text-white border-[#E68B00] hover:bg-[#D67A00]"
-                }`}
+                disabled={currentPage >= totalPages}
+                className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
               >
                 Next
               </button>

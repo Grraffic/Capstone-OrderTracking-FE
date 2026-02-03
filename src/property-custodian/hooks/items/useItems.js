@@ -479,9 +479,7 @@ export const useItems = (options = {}) => {
 
         const response = await fetch(`${API_BASE_URL}/items`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify(transformedItem),
         });
 
@@ -572,7 +570,7 @@ export const useItems = (options = {}) => {
         setLoading(false);
       }
     },
-    [closeModal]
+    [closeModal, fetchItems]
   );
 
   /**
@@ -687,6 +685,7 @@ export const useItems = (options = {}) => {
 
         const response = await fetch(`${API_BASE_URL}/items/${itemId}`, {
           method: "DELETE",
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {
@@ -723,7 +722,7 @@ export const useItems = (options = {}) => {
       try {
         const response = await fetch(`${API_BASE_URL}/items/${itemId}/archive`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
         });
 
         if (!response.ok) {

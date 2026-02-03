@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Edit2, ChevronLeft, ChevronRight } from "lucide-react";
 import EditOrderModal from "./EditOrderModal";
 
@@ -37,45 +37,10 @@ const OrdersTable = ({
   onOpenQRScanner,
 }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set()); // Track expanded orders
-  const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   
   // Modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
-
-  // Sync page input value when currentPage changes
-  useEffect(() => {
-    setPageInputValue(currentPage.toString());
-  }, [currentPage]);
-
-  // Handle page input change
-  const handlePageInputChange = (e) => {
-    const value = e.target.value;
-    // Allow empty string or valid numbers
-    if (value === "" || /^\d+$/.test(value)) {
-      setPageInputValue(value);
-    }
-  };
-
-  // Handle page input submission
-  const handlePageInputSubmit = (e) => {
-    e.preventDefault();
-    const page = parseInt(pageInputValue, 10);
-    if (!isNaN(page) && page >= 1 && page <= totalPages) {
-      onGoToPage(page);
-    } else {
-      // Reset to current page if invalid
-      setPageInputValue(currentPage.toString());
-    }
-  };
-
-  // Handle page input blur (when user clicks away)
-  const handlePageInputBlur = () => {
-    const page = parseInt(pageInputValue, 10);
-    if (isNaN(page) || page < 1 || page > totalPages) {
-      setPageInputValue(currentPage.toString());
-    }
-  };
 
   // Handle edit click
   const handleEditClick = (order) => {
@@ -347,50 +312,32 @@ const OrdersTable = ({
       )}
 
       {/* Pagination Controls */}
-      <div className="bg-white border-t border-gray-200 px-3 sm:px-4 lg:px-6 py-3 sm:py-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-        {/* Left: Page Indicator */}
-        <div className="text-xs sm:text-sm text-gray-600 text-center sm:text-left w-full sm:w-auto">
-          Page <span className="font-semibold">{currentPage}</span>
+      {totalPages > 0 && (
+        <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+          {/* Left side - Page info */}
+          <div className="text-sm text-gray-600">
+            Page {currentPage} of {totalPages}
+          </div>
+          
+          {/* Right side - Navigation buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onPrevPage}
+              disabled={currentPage === 1}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
+            >
+              Previous
+            </button>
+            <button
+              onClick={onNextPage}
+              disabled={currentPage >= totalPages}
+              className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
+            >
+              Next
+            </button>
+          </div>
         </div>
-        
-        {/* Right side - Navigation buttons */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onPrevPage}
-            disabled={currentPage === 1}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
-            title="Previous page"
-            aria-label="Previous page"
-          >
-            Previous
-          </button>
-
-          {/* Page Number Input */}
-          <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
-            <input
-              type="text"
-              value={pageInputValue}
-              onChange={handlePageInputChange}
-              onBlur={handlePageInputBlur}
-              className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
-              aria-label="Page number"
-              min="1"
-              max={totalPages}
-            />
-          </form>
-
-          {/* Next Button */}
-          <button
-            onClick={onNextPage}
-            disabled={currentPage >= totalPages}
-            className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
-            title="Next page"
-            aria-label="Next page"
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      )}
 
       {/* Edit Order Modal */}
       <EditOrderModal 

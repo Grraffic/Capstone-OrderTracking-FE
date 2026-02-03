@@ -459,7 +459,8 @@ const StudentList = () => {
           </h1>
         </div>
 
-        {/* Stats Cards - 5 cards */}
+        {/* Stats Cards - 5 cards - HIDDEN */}
+        {false && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {/* Total Students (filtered by current selection) */}
           <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -516,6 +517,7 @@ const StudentList = () => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Filters */}
         <StudentFilters

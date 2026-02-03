@@ -212,31 +212,26 @@ const EligibilityManagement = () => {
         />
 
         {/* Pagination Info */}
-        {items.length > 0 && (
-          <div className="flex items-center justify-between">
+        {items.length > 0 && totalDisplayPages > 0 && (
+          <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+            {/* Left side - Page info */}
             <div className="text-sm text-gray-600">
-              Showing{" "}
-              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-              {Math.min(currentPage * ITEMS_PER_PAGE, items.length)} of{" "}
-              {items.length} items
+              Page {currentPage} of {totalDisplayPages}
             </div>
 
-            {/* Pagination Controls */}
+            {/* Right side - Navigation buttons */}
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-gray-100 transition-colors"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600">
-                Page {currentPage} of {totalDisplayPages}
-              </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= totalDisplayPages}
-                className="px-3 py-1 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-[#e68b00] border border-[#e68b00] rounded-lg hover:bg-[#d97706] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#e68b00] transition-colors"
               >
                 Next
               </button>

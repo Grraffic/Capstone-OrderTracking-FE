@@ -1,12 +1,11 @@
 import { QrCode, Search, X, CheckCircle } from "lucide-react";
-import { subDays, format } from "date-fns";
+import { format } from "date-fns";
 import { createPortal } from "react-dom";
 import AdminLayout from "../components/layouts/AdminLayout";
 import DateRangePicker from "../components/common/DateRangePicker";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
 import OrdersTable from "../components/Orders/OrdersTable";
 import QRCodeScannerModal from "../components/Items/QRCodeScannerModal";
-import OrdersSkeleton from "../components/Skeleton/pages/OrdersSkeleton";
 import {
   useOrderQRScanner,
   useOrders,
@@ -394,9 +393,6 @@ const Orders = () => {
 
   return (
     <AdminLayout title="Orders" noPadding={true}>
-      {ordersLoading ? (
-        <OrdersSkeleton />
-      ) : (
       <div className="pt-0 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8 font-sf-medium">
         {/* Page Header - Title with QR Code and Search */}
         <div className="mb-4 sm:mb-6">
@@ -466,7 +462,7 @@ const Orders = () => {
                 />
                 <input
                   type="text"
-                  placeholder="Search orders..."
+                  placeholder="Search by name, size, or item..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8 sm:pl-9 pr-2.5 sm:pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-full shadow-sm text-xs sm:text-sm"
@@ -579,7 +575,8 @@ const Orders = () => {
             <select
               value={educationLevelFilter}
               onChange={(e) => setEducationLevelFilter(e.target.value)}
-              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              disabled={false}
+              className="w-full px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0C2340] focus:border-transparent text-xs sm:text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               title="Filter by education level"
               aria-label="Education Level"
             >
@@ -610,8 +607,78 @@ const Orders = () => {
           </div>
         )}
 
-        {/* Orders Table - Always shown */}
-        {!ordersLoading && !ordersError && (
+        {/* Orders Table - Show loading state only in table area */}
+        {ordersLoading ? (
+          <div className="space-y-3 sm:space-y-4">
+            {/* Desktop Header Skeleton */}
+            <div className="hidden lg:block bg-[#0C2340] rounded-xl py-3 sm:py-4 px-4 sm:px-6 shadow-lg">
+              <div className="grid grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-center">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="h-4 w-20 bg-gray-300 rounded animate-pulse" />
+                ))}
+              </div>
+            </div>
+
+            {/* Skeleton Cards */}
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="bg-white border border-gray-200 rounded-xl shadow-sm"
+              >
+                {/* Desktop Layout Skeleton */}
+                <div className="hidden lg:grid lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-6 items-center p-4 sm:p-5 lg:p-6">
+                  <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-28 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-6 w-6 bg-gray-200 rounded animate-pulse ml-auto" />
+                </div>
+
+                {/* Mobile/Tablet Layout Skeleton */}
+                <div className="lg:hidden p-3 sm:p-4 space-y-2.5 sm:space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 space-y-2">
+                      <div className="h-3 w-24 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                    <div className="h-6 w-6 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-40 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 w-16 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="h-3 w-12 bg-gray-200 rounded animate-pulse" />
+                      <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-28 bg-gray-200 rounded animate-pulse" />
+                    <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {/* Pagination Skeleton */}
+            <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex items-center justify-between mt-4">
+              <div className="h-4 w-24 bg-gray-200 rounded animate-pulse" />
+              <div className="flex items-center gap-2">
+                <div className="h-9 w-20 bg-gray-200 rounded-lg animate-pulse" />
+                <div className="h-9 w-20 bg-gray-200 rounded-lg animate-pulse" />
+              </div>
+            </div>
+          </div>
+        ) : ordersError ? null : (
           <>
             {paginatedOrders.length === 0 ? (
               <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -664,7 +731,6 @@ const Orders = () => {
           </div>
         )}
       </div>
-      )}
 
       {/* QR Code Scanner Modal */}
       <QRCodeScannerModal

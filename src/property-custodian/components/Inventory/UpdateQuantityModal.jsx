@@ -71,24 +71,15 @@ const UpdateQuantityModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Variant
                   </label>
-                  <div className="relative">
-                    <select
-                      name="variant"
-                      value={formData.variant}
-                      onChange={onFormChange}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none pr-10"
-                    >
-                      <option value="">Choose Variant</option>
-                      <option value="small">Small</option>
-                      <option value="medium">Medium</option>
-                      <option value="large">Large</option>
-                      <option value="xlarge">XLarge</option>
-                    </select>
-                    <ChevronDown
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
-                      size={20}
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    name="variant"
+                    value={formData.variant}
+                    onChange={onFormChange}
+                    placeholder="Enter Variant
+                    "
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
               </div>
 
@@ -105,9 +96,6 @@ const UpdateQuantityModal = ({
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none pr-10"
                   >
                     <option value="">Select field</option>
-                    <option value="quantity">Quantity</option>
-                    <option value="price">Price</option>
-                    <option value="stock">Stock</option>
                     <option value="return">Return</option>
                   </select>
                   <ChevronDown
