@@ -126,11 +126,11 @@ const Orders = () => {
 
   // Debug: Log API orders
   useEffect(() => {
-    console.log(`[Orders] API returned ${apiOrders.length} orders for tab: ${activeStatusTab}`, {
-      orderType: activeStatusTab === "Pre-orders" ? "pre-order" : activeStatusTab === "Orders" ? "regular" : null,
-      status: activeStatusTab === "Claimed" ? "claimed" : null,
-      orders: apiOrders.map(o => ({ id: o.id, status: o.status, order_type: o.order_type }))
-    });
+    // console.log(`[Orders] API returned ${apiOrders.length} orders for tab: ${activeStatusTab}`, {
+    //   orderType: activeStatusTab === "Pre-orders" ? "pre-order" : activeStatusTab === "Orders" ? "regular" : null,
+    //   status: activeStatusTab === "Claimed" ? "claimed" : null,
+    //   orders: apiOrders.map(o => ({ id: o.id, status: o.status, order_type: o.order_type }))
+    // });
   }, [apiOrders, activeStatusTab]);
 
   // Transform API orders to match the expected format for the table
@@ -250,7 +250,7 @@ const Orders = () => {
     }
 
     // Debug: Log filtered results
-    console.log(`[Orders] Filtered orders: ${filtered.length} out of ${mockOrders.length} (tab: ${activeStatusTab}, date range: ${startDate ? format(startDate, 'MMM d') : 'none'} - ${endDate ? format(endDate, 'MMM d') : 'none'})`);
+    // console.log(`[Orders] Filtered orders: ${filtered.length} out of ${mockOrders.length} (tab: ${activeStatusTab}, date range: ${startDate ? format(startDate, 'MMM d') : 'none'} - ${endDate ? format(endDate, 'MMM d') : 'none'})`);
 
     return filtered;
   }, [mockOrders, startDate, endDate, activeStatusTab]);
@@ -308,7 +308,7 @@ const Orders = () => {
     // Calculate total: pre-orders + regular orders + claimed orders
     const total = allPreOrders + allRegularOrders + allClaimed;
 
-    console.log(`📊 Order Counts: Pre-orders: ${allPreOrders}, Regular: ${allRegularOrders}, Claimed: ${allClaimed}, Total: ${total}`);
+    // console.log(`📊 Order Counts: Pre-orders: ${allPreOrders}, Regular: ${allRegularOrders}, Claimed: ${allClaimed}, Total: ${total}`);
 
     return {
       preOrders: allPreOrders,
@@ -353,7 +353,7 @@ const Orders = () => {
   // Handle Socket.IO real-time order updates
   const handleOrderUpdate = useCallback(
     (data) => {
-      console.log("📡 Real-time order update received:", data);
+      // console.log("📡 Real-time order update received:", data);
       // Refetch all order queries to update counts
       refetchOrders();
       // Note: allPreOrdersForCount, allRegularOrdersForCount, and allClaimedOrdersForCount will auto-refetch
@@ -382,7 +382,7 @@ const Orders = () => {
   // Close scanner on error after 5 seconds
   useEffect(() => {
     if (qrError) {
-      console.log("❌ QR scan error, will close scanner in 5 seconds");
+      // console.log("❌ QR scan error, will close scanner in 5 seconds");
       const timer = setTimeout(() => {
         closeQRScanner();
       }, 5000);
@@ -426,7 +426,7 @@ const Orders = () => {
                   placeholder="Search orders..."
                   value={searchTerm || ""}
                   onChange={(e) => {
-                    console.log("[Orders] Search input changed:", e.target.value);
+                    // console.log("[Orders] Search input changed:", e.target.value);
                     setSearchTerm(e.target.value);
                   }}
                   className="pl-9 xl:pl-10 pr-3 xl:pr-4 py-2 xl:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent w-64 xl:w-72 shadow-sm text-sm xl:text-base"

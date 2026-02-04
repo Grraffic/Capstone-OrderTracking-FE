@@ -39,7 +39,6 @@ const QRCodeScannerModal = ({
   const [error, setError] = useState(null);
   const [scannedData, setScannedData] = useState(null);
   const [orderDetails, setOrderDetails] = useState(null);
-  const [manualTestData, setManualTestData] = useState("");
 
   // Parse QR code data to check if it's an order receipt
   const parseQRData = (data) => {
@@ -68,16 +67,16 @@ const QRCodeScannerModal = ({
         setScannedData(null);
         setOrderDetails(null);
 
-        console.log("🎥 Initializing QR Scanner...");
-        console.log("📍 Location:", window.location.href);
-        console.log("🔒 Protocol:", window.location.protocol);
+        // console.log("🎥 Initializing QR Scanner...");
+        // console.log("📍 Location:", window.location.href);
+        // console.log("🔒 Protocol:", window.location.protocol);
 
         // Check camera permissions
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "environment" },
           });
-          console.log("✅ Camera access granted");
+          // console.log("✅ Camera access granted");
           stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
         } catch (permError) {
           console.error("❌ Camera permission denied:", permError);
@@ -93,30 +92,30 @@ const QRCodeScannerModal = ({
           async (result) => {
             // QR code scanned successfully
             const data = result.data;
-            console.log("📷 QR Scanner detected code!");
-            console.log("📦 Raw QR data:", data);
-            console.log("📏 Data length:", data.length);
+            // console.log("📷 QR Scanner detected code!");
+            // console.log("📦 Raw QR data:", data);
+            // console.log("📏 Data length:", data.length);
             setScannedData(data);
 
             // Check if it's an order receipt QR code
             const orderData = parseQRData(data);
             if (orderData) {
-              console.log("✅ Valid order receipt detected!");
-              console.log("📋 Order Number:", orderData.orderNumber);
-              console.log("👤 Student:", orderData.studentName);
-              console.log("📦 Items:", orderData.items?.length || 0);
+              // console.log("✅ Valid order receipt detected!");
+              // console.log("📋 Order Number:", orderData.orderNumber);
+              // console.log("👤 Student:", orderData.studentName);
+              // console.log("📦 Items:", orderData.items?.length || 0);
               setOrderDetails(orderData);
             } else {
-              console.log("⚠️ Not an order receipt QR code");
-              console.log("🔍 Parsed data:", orderData);
+              // console.log("⚠️ Not an order receipt QR code");
+              // console.log("🔍 Parsed data:", orderData);
             }
 
             // Call onScan callback if provided (this triggers order processing)
             if (onScan) {
-              console.log("🔄 Calling onScan callback...");
+              // console.log("🔄 Calling onScan callback...");
               try {
                 await onScan(data);
-                console.log("✅ onScan callback completed successfully!");
+                // console.log("✅ onScan callback completed successfully!");
               } catch (error) {
                 console.error("❌ onScan callback error:", error);
                 console.error("❌ Error details:", error.message);
@@ -138,7 +137,7 @@ const QRCodeScannerModal = ({
           }
         );
 
-        console.log("🔧 QR Scanner instance created");
+        // console.log("🔧 QR Scanner instance created");
 
         if (!isMounted) {
           qrScannerInstance.destroy();
@@ -147,7 +146,7 @@ const QRCodeScannerModal = ({
 
         setScanner(qrScannerInstance);
 
-        console.log("▶️ Starting QR Scanner...");
+        // console.log("▶️ Starting QR Scanner...");
         await qrScannerInstance.start();
 
         if (!isMounted) {
@@ -155,8 +154,8 @@ const QRCodeScannerModal = ({
           return;
         }
 
-        console.log("✅ QR Scanner started successfully!");
-        console.log("👁️ Scanner is now actively looking for QR codes...");
+        // console.log("✅ QR Scanner started successfully!");
+        // console.log("👁️ Scanner is now actively looking for QR codes...");
 
         setIsScanning(true);
       } catch (err) {
@@ -176,11 +175,11 @@ const QRCodeScannerModal = ({
     initScanner();
 
     return () => {
-      console.log("🧹 Cleaning up QR Scanner...");
+      // console.log("🧹 Cleaning up QR Scanner...");
       isMounted = false;
       if (qrScannerInstance) {
         qrScannerInstance.destroy();
-        console.log("✅ QR Scanner destroyed");
+        // console.log("✅ QR Scanner destroyed");
       }
       setScanner(null);
       setIsScanning(false);
@@ -195,51 +194,9 @@ const QRCodeScannerModal = ({
     }
     setScannedData(null);
     setError(null);
-    setManualTestData("");
     onClose();
   };
 
-  // Manual test function to simulate QR code scan
-  const handleManualTest = async () => {
-    if (!manualTestData.trim()) {
-      alert("Please paste the QR code data first!");
-      return;
-    }
-
-    console.log("🧪 Manual Test - Simulating QR scan with pasted data");
-
-    // Simulate the scanner detecting the QR code
-    const data = manualTestData.trim();
-    console.log("📷 QR Scanner detected code!");
-    console.log("📦 Raw QR data:", data);
-    console.log("📏 Data length:", data.length);
-    setScannedData(data);
-
-    // Check if it's an order receipt QR code
-    const orderData = parseQRData(data);
-    if (orderData) {
-      console.log("✅ Valid order receipt detected!");
-      console.log("📋 Order Number:", orderData.orderNumber);
-      console.log("👤 Student:", orderData.studentName);
-      console.log("📦 Items:", orderData.items?.length || 0);
-      setOrderDetails(orderData);
-    } else {
-      console.log("⚠️ Not an order receipt QR code");
-      console.log("🔍 Parsed data:", orderData);
-    }
-
-    // Call onScan callback if provided (this triggers order processing)
-    if (onScan) {
-      console.log("🔄 Calling onScan callback...");
-      try {
-        await onScan(data);
-        console.log("✅ onScan callback completed successfully!");
-      } catch (error) {
-        console.error("❌ onScan callback error:", error);
-        console.error("❌ Error details:", error.message);
-      }
-    }
-  };
 
   if (!isOpen) return null;
 
@@ -391,36 +348,6 @@ const QRCodeScannerModal = ({
             )}
           </div>
 
-          {/* Manual Test Section */}
-          <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <div className="flex items-start gap-2 mb-3">
-              <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <h4 className="font-semibold text-yellow-900 text-sm">
-                  Manual Test Mode
-                </h4>
-                <p className="text-xs text-yellow-700 mt-1">
-                  If the camera can't detect the QR code, paste the QR data here
-                  to test the processing flow.
-                </p>
-              </div>
-            </div>
-            <textarea
-              value={manualTestData}
-              onChange={(e) => setManualTestData(e.target.value)}
-              placeholder='Paste QR code data here (JSON format: {"type":"order_receipt",...})'
-              className="w-full px-3 py-2 border border-yellow-300 rounded-lg text-sm font-mono resize-none focus:outline-none focus:ring-2 focus:ring-yellow-500"
-              rows={3}
-            />
-            <button
-              onClick={handleManualTest}
-              disabled={!manualTestData.trim() || processing}
-              className="mt-2 w-full px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium text-sm flex items-center justify-center gap-2"
-            >
-              <CheckCircle size={16} />
-              Test with Pasted Data
-            </button>
-          </div>
         </div>
 
         {/* Footer */}

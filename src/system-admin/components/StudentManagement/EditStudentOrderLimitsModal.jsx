@@ -224,7 +224,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
     const handlePermissionsUpdated = (data) => {
       // Verify this event is for the current student
       if (data.studentId === student.id) {
-        console.log("📡 [EditStudentOrderLimitsModal] Received student:permissions:updated event, refreshing permissions:", data);
+        // console.log("📡 [EditStudentOrderLimitsModal] Received student:permissions:updated event, refreshing permissions:", data);
         // Refresh permissions by fetching items again
         // This will reload permissions from the database and update the checkboxes
         fetchItems();

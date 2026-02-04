@@ -218,12 +218,12 @@ export const useEligibility = () => {
         }
         
         const educationLevels = convertUIToDB(update.eligibility);
-        console.log("Converting eligibility:", {
-          itemId: update.itemId,
-          eligibility: update.eligibility,
-          converted: educationLevels,
-          isArray: Array.isArray(educationLevels),
-        });
+        // console.log("Converting eligibility:", {
+        //   itemId: update.itemId,
+        //   eligibility: update.eligibility,
+        //   converted: educationLevels,
+        //   isArray: Array.isArray(educationLevels),
+        // });
         
         return {
           itemId: update.itemId,
@@ -231,15 +231,15 @@ export const useEligibility = () => {
         };
       });
 
-      console.log("Sending bulk update:", JSON.stringify(dbUpdates, null, 2));
-      console.log("dbUpdates details:", {
-        length: dbUpdates.length,
-        firstItem: dbUpdates[0],
-        firstItemItemId: dbUpdates[0]?.itemId,
-        firstItemEducationLevels: dbUpdates[0]?.educationLevels,
-        firstItemEducationLevelsType: typeof dbUpdates[0]?.educationLevels,
-        firstItemEducationLevelsIsArray: Array.isArray(dbUpdates[0]?.educationLevels),
-      });
+      // console.log("Sending bulk update:", JSON.stringify(dbUpdates, null, 2));
+      // console.log("dbUpdates details:", {
+      //   length: dbUpdates.length,
+      //   firstItem: dbUpdates[0],
+      //   firstItemItemId: dbUpdates[0]?.itemId,
+      //   firstItemEducationLevels: dbUpdates[0]?.educationLevels,
+      //   firstItemEducationLevelsType: typeof dbUpdates[0]?.educationLevels,
+      //   firstItemEducationLevelsIsArray: Array.isArray(dbUpdates[0]?.educationLevels),
+      // });
 
       const response = await eligibilityAPI.bulkUpdateEligibility(dbUpdates);
 
@@ -352,7 +352,7 @@ export const useEligibility = () => {
         };
       });
 
-      console.log("Preparing to save changes:", updates);
+      // console.log("Preparing to save changes:", updates);
 
       await bulkUpdateEligibility(updates);
 

@@ -15,13 +15,13 @@ export const useSocketStudentUpdates = (onStudentUpdated) => {
 
   useEffect(() => {
     if (!isConnected) {
-      console.log("⚠️ useSocketStudentUpdates: Socket not connected, skipping event setup");
+      // console.log("⚠️ useSocketStudentUpdates: Socket not connected, skipping event setup");
       return;
     }
 
     // Listen for student created
     const handleStudentCreated = (data) => {
-      console.log("📡 Received student:created event:", data);
+      // console.log("📡 Received student:created event:", data);
       if (onStudentUpdated) {
         onStudentUpdated({ type: "created", data });
       }
@@ -29,7 +29,7 @@ export const useSocketStudentUpdates = (onStudentUpdated) => {
 
     // Listen for student updated
     const handleStudentUpdated = (data) => {
-      console.log("📡 Received student:updated event:", data);
+      // console.log("📡 Received student:updated event:", data);
       if (onStudentUpdated) {
         onStudentUpdated({ type: "updated", data });
       }
@@ -37,7 +37,7 @@ export const useSocketStudentUpdates = (onStudentUpdated) => {
 
     // Listen for student deleted
     const handleStudentDeleted = (data) => {
-      console.log("📡 Received student:deleted event:", data);
+      // console.log("📡 Received student:deleted event:", data);
       if (onStudentUpdated) {
         onStudentUpdated({ type: "deleted", data });
       }
@@ -45,7 +45,7 @@ export const useSocketStudentUpdates = (onStudentUpdated) => {
 
     // Listen for bulk student updates
     const handleBulkUpdated = (data) => {
-      console.log("📡 Received students:bulk-updated event:", data);
+      // console.log("📡 Received students:bulk-updated event:", data);
       if (onStudentUpdated) {
         onStudentUpdated({ type: "bulk-updated", data });
       }

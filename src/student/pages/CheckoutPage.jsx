@@ -109,19 +109,19 @@ const CheckoutPage = () => {
       // Check if any item is out of stock OR if selected size is not available
       // We need to check size-specific availability for uniform items
       // Default to "regular" order type - only mark as pre-order if explicitly out of stock
-      console.log(`[CheckoutPage] 🛒 Starting stock check for ${items.length} item(s) from ${isDirectCheckout ? 'direct checkout' : 'cart'}`);
-      console.log(`[CheckoutPage] 📋 Cart items structure:`, items.map((item, idx) => ({
-        index: idx,
-        id: item.id,
-        size: item.size,
-        quantity: item.quantity,
-        inventoryId: item.inventoryId,
-        productName: item.inventory?.name,
-        educationLevel: item.inventory?.educationLevel,
-        itemType: item.inventory?.item_type || item.inventory?.itemType,
-        inventoryStock: item.inventory?.stock,
-        inventoryStatus: item.inventory?.status,
-      })));
+      // console.log(`[CheckoutPage] 🛒 Starting stock check for ${items.length} item(s) from ${isDirectCheckout ? 'direct checkout' : 'cart'}`);
+      // console.log(`[CheckoutPage] 📋 Cart items structure:`, items.map((item, idx) => ({
+      //   index: idx,
+      //   id: item.id,
+      //   size: item.size,
+      //   quantity: item.quantity,
+      //   inventoryId: item.inventoryId,
+      //   productName: item.inventory?.name,
+      //   educationLevel: item.inventory?.educationLevel,
+      //   itemType: item.inventory?.item_type || item.inventory?.itemType,
+      //   inventoryStock: item.inventory?.stock,
+      //   inventoryStatus: item.inventory?.status,
+      // })));
       
       const sizeAvailabilityChecks = await Promise.all(
         items.map(async (item, itemIndex) => {
@@ -130,9 +130,9 @@ const CheckoutPage = () => {
           // Backend returns education_level (snake_case), but also check camelCase for compatibility
           const productEducationLevel = item.inventory?.education_level || item.inventory?.educationLevel;
           
-          console.log(
-            `[CheckoutPage] 📦 Item ${itemIndex + 1}/${items.length}: ${productName} | Size: "${selectedSize}" | Education: ${productEducationLevel}`
-          );
+          // console.log(
+          //   `[CheckoutPage] 📦 Item ${itemIndex + 1}/${items.length}: ${productName} | Size: "${selectedSize}" | Education: ${productEducationLevel}`
+          // );
 
           // Check if this is a uniform item that requires size selection
           // Backend returns item_type (snake_case), but also check camelCase for compatibility
@@ -197,21 +197,21 @@ const CheckoutPage = () => {
               productEducationLevel || item.inventory?.education_level || item.inventory?.educationLevel || "General"
             );
 
-            console.log(
-              `[CheckoutPage] 🔍 Checking availability for: ${productName} | Size: "${selectedSize}" | Education: ${productEducationLevel}`
-            );
-            console.log(
-              `[CheckoutPage] API response:`,
-              {
-                success: response.data?.success,
-                dataLength: response.data?.data?.length,
-                sizes: response.data?.data?.map((s) => ({
-                  size: s.size,
-                  stock: s.stock,
-                  status: s.status,
-                })),
-              }
-            );
+            // console.log(
+            //   `[CheckoutPage] 🔍 Checking availability for: ${productName} | Size: "${selectedSize}" | Education: ${productEducationLevel}`
+            // );
+            // console.log(
+            //   `[CheckoutPage] API response:`,
+            //   {
+            //     success: response.data?.success,
+            //     dataLength: response.data?.data?.length,
+            //     sizes: response.data?.data?.map((s) => ({
+            //       size: s.size,
+            //       stock: s.stock,
+            //       status: s.status,
+            //     })),
+            //   }
+            // );
 
             if (response.data.success && response.data.data) {
               // Improve size matching: case-insensitive, trim whitespace, remove parentheses
@@ -226,17 +226,17 @@ const CheckoutPage = () => {
 
               const normalizedSelectedSize = normalizeSizeForComparison(selectedSize);
               
-              console.log(
-                `[CheckoutPage] 🔎 Looking for size "${selectedSize}" (normalized: "${normalizedSelectedSize}")`
-              );
-              console.log(
-                `[CheckoutPage] 📋 Available sizes from API (normalized):`,
-                response.data.data.map((s) => ({
-                  original: s.size,
-                  normalized: normalizeSizeForComparison(s.size),
-                  stock: s.stock,
-                }))
-              );
+              // console.log(
+              //   `[CheckoutPage] 🔎 Looking for size "${selectedSize}" (normalized: "${normalizedSelectedSize}")`
+              // );
+              // console.log(
+              //   `[CheckoutPage] 📋 Available sizes from API (normalized):`,
+              //   response.data.data.map((s) => ({
+              //     original: s.size,
+              //     normalized: normalizeSizeForComparison(s.size),
+              //     stock: s.stock,
+              //   }))
+              // );
 
               const sizeData = response.data.data.find((s) => {
                 const normalizedSize = normalizeSizeForComparison(s.size);
@@ -244,12 +244,12 @@ const CheckoutPage = () => {
                 // (e.g., "Small" would incorrectly match "XSmall")
                 const matches = normalizedSize === normalizedSelectedSize;
                 if (matches) {
-                  console.log(
-                    `[CheckoutPage] ✅ MATCH FOUND: "${s.size}" (normalized: "${normalizedSize}") matches "${selectedSize}" (normalized: "${normalizedSelectedSize}")`
-                  );
-                  console.log(
-                    `[CheckoutPage] 📊 Stock details: stock=${s.stock}, status="${s.status}"`
-                  );
+                  // console.log(
+                  //   `[CheckoutPage] ✅ MATCH FOUND: "${s.size}" (normalized: "${normalizedSize}") matches "${selectedSize}" (normalized: "${normalizedSelectedSize}")`
+                  // );
+                  // console.log(
+                  //   `[CheckoutPage] 📊 Stock details: stock=${s.stock}, status="${s.status}"`
+                  // );
                 }
                 return matches;
               });
@@ -257,38 +257,38 @@ const CheckoutPage = () => {
               // Only mark as pre-order if size doesn't exist OR explicitly has stock = 0 or less
               // If size exists and stock > 0, it's available (return false = in stock)
               if (!sizeData) {
-                console.log(
-                  `[CheckoutPage] ❌ Size "${selectedSize}" NOT FOUND in API response for ${productName}`
-                );
-                console.log(
-                  `[CheckoutPage] Available sizes from API:`,
-                  response.data.data.map((s) => `${s.size} (stock: ${s.stock})`)
-                );
+                // console.log(
+                //   `[CheckoutPage] ❌ Size "${selectedSize}" NOT FOUND in API response for ${productName}`
+                // );
+                // console.log(
+                //   `[CheckoutPage] Available sizes from API:`,
+                //   response.data.data.map((s) => `${s.size} (stock: ${s.stock})`)
+                // );
                 
                 // IMPORTANT: If specific size is not found in API response, it means that size doesn't exist
                 // or is not available. We should default to pre-order, NOT check total item stock
                 // because total stock might include other sizes (e.g., Small has stock but Large doesn't)
-                console.log(
-                  `[CheckoutPage] 🚨 DECISION: Size "${selectedSize}" not found → PRE-ORDER (size-specific stock unavailable)`
-                );
+                // console.log(
+                //   `[CheckoutPage] 🚨 DECISION: Size "${selectedSize}" not found → PRE-ORDER (size-specific stock unavailable)`
+                // );
                 return true; // Out of stock - size not found means it's not available
               }
 
               // Size was found - check its stock
               const isOutOfStock = sizeData.stock === 0 || sizeData.stock < 0;
               
-              console.log(
-                `[CheckoutPage] 📦 Size "${selectedSize}" FOUND with stock: ${sizeData.stock}, status: "${sizeData.status}"`
-              );
+              // console.log(
+              //   `[CheckoutPage] 📦 Size "${selectedSize}" FOUND with stock: ${sizeData.stock}, status: "${sizeData.status}"`
+              // );
               
               if (isOutOfStock) {
-                console.log(
-                  `[CheckoutPage] 🚨 DECISION: Size "${selectedSize}" for ${productName} has stock ${sizeData.stock} → PRE-ORDER`
-                );
+                // console.log(
+                //   `[CheckoutPage] 🚨 DECISION: Size "${selectedSize}" for ${productName} has stock ${sizeData.stock} → PRE-ORDER`
+                // );
               } else {
-                console.log(
-                  `[CheckoutPage] ✅ DECISION: Size "${selectedSize}" for ${productName} has stock ${sizeData.stock} → REGULAR ORDER`
-                );
+                // console.log(
+                //   `[CheckoutPage] ✅ DECISION: Size "${selectedSize}" for ${productName} has stock ${sizeData.stock} → REGULAR ORDER`
+                // );
               }
               
               return isOutOfStock;
@@ -330,32 +330,32 @@ const CheckoutPage = () => {
         
         if (isOutOfStock) {
           unavailableItems.push(item); // Out of stock - pre-order
-          console.log(
-            `[CheckoutPage] 📦 Item "${productName}" size "${selectedSize}" → PRE-ORDER (out of stock)`
-          );
+          // console.log(
+          //   `[CheckoutPage] 📦 Item "${productName}" size "${selectedSize}" → PRE-ORDER (out of stock)`
+          // );
         } else {
           availableItems.push(item); // In stock - regular order
-          console.log(
-            `[CheckoutPage] ✅ Item "${productName}" size "${selectedSize}" → REGULAR ORDER (in stock)`
-          );
+          // console.log(
+          //   `[CheckoutPage] ✅ Item "${productName}" size "${selectedSize}" → REGULAR ORDER (in stock)`
+          // );
         }
       });
 
       // Log for debugging
-      console.log(`[CheckoutPage] Item availability split:`, {
-        totalItems: items.length,
-        availableItems: availableItems.length,
-        unavailableItems: unavailableItems.length,
-        sizeAvailabilityChecks,
-        availableItemsDetails: availableItems.map((i) => ({
-          name: i.inventory?.name,
-          size: i.size,
-        })),
-        unavailableItemsDetails: unavailableItems.map((i) => ({
-          name: i.inventory?.name,
-          size: i.size,
-        })),
-      });
+      // console.log(`[CheckoutPage] Item availability split:`, {
+      //   totalItems: items.length,
+      //   availableItems: availableItems.length,
+      //   unavailableItems: unavailableItems.length,
+      //   sizeAvailabilityChecks,
+      //   availableItemsDetails: availableItems.map((i) => ({
+      //     name: i.inventory?.name,
+      //     size: i.size,
+      //   })),
+      //   unavailableItemsDetails: unavailableItems.map((i) => ({
+      //     name: i.inventory?.name,
+      //     size: i.size,
+      //   })),
+      // });
 
       // Prepare orders to create
       const ordersToCreate = [];
@@ -509,9 +509,9 @@ const CheckoutPage = () => {
             items: orderConfig.orderItems,
           });
 
-          console.log(
-            `[CheckoutPage] ✅ ${orderConfig.type} order created successfully: ${orderConfig.data.order_number}`
-          );
+          // console.log(
+          //   `[CheckoutPage] ✅ ${orderConfig.type} order created successfully: ${orderConfig.data.order_number}`
+          // );
         } catch (error) {
           console.error(
             `[CheckoutPage] ❌ Failed to create ${orderConfig.type} order:`,

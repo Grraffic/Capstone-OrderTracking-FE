@@ -175,23 +175,23 @@ const AllProducts = () => {
     }
 
     const handleOrderCreated = (data) => {
-      console.log("📡 [AllProducts] Received order:created event via Socket.IO, refreshing max-quantities:", data);
+      // console.log("📡 [AllProducts] Received order:created event via Socket.IO, refreshing max-quantities:", data);
       // Trigger refresh of max-quantities to update alreadyOrdered counts
       setLimitsRefreshTrigger((t) => t + 1);
     };
 
     // Listen for student:permissions:updated events to refresh max-quantities when admin changes permissions
     const handlePermissionsUpdated = (data) => {
-      console.log("📡 [AllProducts] Received student:permissions:updated event via Socket.IO, refreshing max-quantities:", data);
+      // console.log("📡 [AllProducts] Received student:permissions:updated event via Socket.IO, refreshing max-quantities:", data);
       // Verify this event is for the current user
       const currentUserId = user?.uid || user?.id;
       const eventUserId = data?.userId;
       if (eventUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId))) {
-        console.log("✅ [AllProducts] Permissions updated for current user, refreshing max-quantities");
+        // console.log("✅ [AllProducts] Permissions updated for current user, refreshing max-quantities");
         // Trigger refresh of max-quantities to reflect permission changes
         setLimitsRefreshTrigger((t) => t + 1);
       } else {
-        console.log("⚠️ [AllProducts] Permissions updated event not for current user, ignoring");
+        // console.log("⚠️ [AllProducts] Permissions updated event not for current user, ignoring");
       }
     };
 
@@ -494,40 +494,40 @@ const AllProducts = () => {
       
       // Debug logging specifically for logo patch to track disable logic (after effectiveMax is calculated)
       if (key === "logo patch") {
-        console.log(`[AllProducts Logo Patch] Disable Check:`, {
-          itemName: p.name,
-          key,
-          isOldStudent,
-          keyMissing,
-          maxQuantitiesKey: maxQuantities[key],
-          max, // The max being used (from permissions, default, or maxQuantities)
-          maxForClaimedCheck,
-          alreadyOrdered: alreadyOrd,
-          claimedForItem,
-          totalUsed,
-          isMaxReached,
-          _isMaxReached: isMaxReached,
-          _orderLimitReached: effectiveMax < 1 || isMaxReached,
-          effectiveMax,
-        });
+        // console.log(`[AllProducts Logo Patch] Disable Check:`, {
+        //   itemName: p.name,
+        //   key,
+        //   isOldStudent,
+        //   keyMissing,
+        //   maxQuantitiesKey: maxQuantities[key],
+        //   max, // The max being used (from permissions, default, or maxQuantities)
+        //   maxForClaimedCheck,
+        //   alreadyOrdered: alreadyOrd,
+        //   claimedForItem,
+        //   totalUsed,
+        //   isMaxReached,
+        //   _isMaxReached: isMaxReached,
+        //   _orderLimitReached: effectiveMax < 1 || isMaxReached,
+        //   effectiveMax,
+        // });
       }
       
       // Debug logging for manually granted permissions (old students) and logo patch
       if ((isOldStudent && key) || key === "logo patch" || key === "jogging pants") {
-        console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, AlreadyOrdered: ${alreadyOrd}, Claimed: ${claimedForItem}, TotalUsed: ${totalUsed}, isMaxReached: ${isMaxReached}`, {
-          isOldStudent,
-          keyMissing,
-          maxQuantitiesKey: maxQuantities[key],
-          max,
-          alreadyOrdered: alreadyOrd,
-          inCart,
-          claimedForItem,
-          totalUsed,
-          effectiveMax,
-          _isMaxReached: isMaxReached,
-          _orderLimitReached: effectiveMax < 1 || isMaxReached,
-          maxQuantitiesKeys: Object.keys(maxQuantities),
-        });
+        // console.log(`[AllProducts] Item: ${p.name}, Key: ${key}, Max: ${max}, AlreadyOrdered: ${alreadyOrd}, Claimed: ${claimedForItem}, TotalUsed: ${totalUsed}, isMaxReached: ${isMaxReached}`, {
+        //   isOldStudent,
+        //   keyMissing,
+        //   maxQuantitiesKey: maxQuantities[key],
+        //   max,
+        //   alreadyOrdered: alreadyOrd,
+        //   inCart,
+        //   claimedForItem,
+        //   totalUsed,
+        //   effectiveMax,
+        //   _isMaxReached: isMaxReached,
+        //   _orderLimitReached: effectiveMax < 1 || isMaxReached,
+        //   maxQuantitiesKeys: Object.keys(maxQuantities),
+        // });
       }
       const isNewItemType = key && !cartSlotKeys.has(key);
       const slotsFullForNewType =

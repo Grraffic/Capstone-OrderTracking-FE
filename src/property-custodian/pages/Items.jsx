@@ -934,7 +934,7 @@ const Items = () => {
             selectedItem={selectedItem}
             onClose={closeAdjustmentModal}
             onSubmit={(data) => {
-              console.log("Item adjustment submitted:", data);
+              // console.log("Item adjustment submitted:", data);
               closeAdjustmentModal();
             }}
           />

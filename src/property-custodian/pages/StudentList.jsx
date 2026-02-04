@@ -56,7 +56,7 @@ const StudentList = () => {
   // Handles formats: "S.Y. 2029 - 2030", "S.Y. 2029-2030", "2029-2030", etc.
   const extractYearFromSchoolYear = (schoolYearStr) => {
     if (!schoolYearStr) {
-      console.log(`[extractYearFromSchoolYear] Empty schoolYearStr, returning ""`);
+      // console.log(`[extractYearFromSchoolYear] Empty schoolYearStr, returning ""`);
       return "";
     }
     // Extract the start year from various formats:
@@ -70,10 +70,10 @@ const StudentList = () => {
       // Convert to 2-digit format (e.g., 2029 -> "29", 2026 -> "26")
       // This matches the student_number prefix format (e.g., "29-11223" for school year 2029-2030)
       const twoDigitYear = String(fullYear).slice(-2);
-      console.log(`[extractYearFromSchoolYear] Extracted "${twoDigitYear}" from "${schoolYearStr}" (fullYear: ${fullYear})`);
+      // console.log(`[extractYearFromSchoolYear] Extracted "${twoDigitYear}" from "${schoolYearStr}" (fullYear: ${fullYear})`);
       return twoDigitYear;
     }
-    console.log(`[extractYearFromSchoolYear] No match found for "${schoolYearStr}", returning ""`);
+    // console.log(`[extractYearFromSchoolYear] No match found for "${schoolYearStr}", returning ""`);
     return "";
   };
 
@@ -118,20 +118,20 @@ const StudentList = () => {
       const isFuture = isFutureSchoolYear(schoolYear);
       
       // Debug logging
-      console.log(`[StudentList] Fetching with filters:`, {
-        educationLevel,
-        mappedEducationLevel,
-        mappedEducationLevelType: typeof mappedEducationLevel,
-        mappedEducationLevelLength: mappedEducationLevel?.length,
-        gradeLevel,
-        mappedGradeLevel,
-        schoolYear,
-        schoolYearPrefix,
-        schoolYearPrefixType: typeof schoolYearPrefix,
-        schoolYearPrefixLength: schoolYearPrefix?.length,
-        isFutureSchoolYear: isFuture,
-        willFilterBySchoolYear: schoolYearPrefix !== "" && schoolYearPrefix !== null
-      });
+      // console.log(`[StudentList] Fetching with filters:`, {
+      //   educationLevel,
+      //   mappedEducationLevel,
+      //   mappedEducationLevelType: typeof mappedEducationLevel,
+      //   mappedEducationLevelLength: mappedEducationLevel?.length,
+      //   gradeLevel,
+      //   mappedGradeLevel,
+      //   schoolYear,
+      //   schoolYearPrefix,
+      //   schoolYearPrefixType: typeof schoolYearPrefix,
+      //   schoolYearPrefixLength: schoolYearPrefix?.length,
+      //   isFutureSchoolYear: isFuture,
+      //   willFilterBySchoolYear: schoolYearPrefix !== "" && schoolYearPrefix !== null
+      // });
       
       // IMPORTANT: For future school years, always send the school_year filter
       // This ensures backend filters out students from current/past years
@@ -176,7 +176,7 @@ const StudentList = () => {
         // Don't show toast for bulk updated - the modal already shows success
         break;
       default:
-        console.log(`📡 [StudentList] Unknown student update type: ${type}`);
+        // console.log(`📡 [StudentList] Unknown student update type: ${type}`);
     }
   }, [refreshStudentList]);
 

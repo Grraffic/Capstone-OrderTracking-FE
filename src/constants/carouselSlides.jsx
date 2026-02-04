@@ -36,7 +36,7 @@ const carouselSlides = [
   {
     type: "main",
     content: (
-      <div className="relative w-full h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] xl:h-[60vh]">
+      <div className="relative w-full h-[40vh] sm:h-[45vh] md:h-[50vh] lg:h-[55vh] xl:h-[60vh] bg-[#F3F3F3]">
         <h1 className="absolute left-0 top-1 px-2 py-2 sm:px-3 sm:py-3 md:px-4 md:py-4 tracking-[-4px] sm:tracking-[-6px] md:tracking-[-5px] leading-none text-[42px] sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-SFRegular text-[#00396E] opacity-100 z-[0]">
           La Verdad{" "}
           <span className="text-[#f59301] drop-shadow-lg leading-tight text-[45px] sm:text-6xl md:text-7xl lg:text-[80px] xl:text-[110px] flex font-SFRegular">

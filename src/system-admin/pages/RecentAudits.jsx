@@ -109,7 +109,7 @@ const RecentAudits = () => {
                 const fetchedName = userResponse.data.data.name;
                 const fetchedRole = userResponse.data.data.role;
                 if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
-                  console.log(`[RecentAudits] ✅ Found user by email from metadata: ${emailFromMetadata}`);
+                  // console.log(`[RecentAudits] ✅ Found user by email from metadata: ${emailFromMetadata}`);
                   return { 
                     name: fetchedName, 
                     role: fetchedRole || tx.user_role || null 
@@ -129,7 +129,7 @@ const RecentAudits = () => {
                 const fetchedName = userResponse.data.data.name;
                 const fetchedRole = userResponse.data.data.role;
                 if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
-                  console.log(`[RecentAudits] ✅ Found user by email (user_id): ${tx.user_id}`);
+                  // console.log(`[RecentAudits] ✅ Found user by email (user_id): ${tx.user_id}`);
                   return { 
                     name: fetchedName, 
                     role: fetchedRole || tx.user_role || null 
