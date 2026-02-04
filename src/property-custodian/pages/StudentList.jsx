@@ -37,6 +37,7 @@ const StudentList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [editingPage, setEditingPage] = useState(false);
   const [pageInputValue, setPageInputValue] = useState("");
+  const [paginationInputValue, setPaginationInputValue] = useState("1"); // For right-side pagination input
   
   // Delete student confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -255,6 +256,44 @@ const StudentList = () => {
     } else if (e.key === "Escape") {
       setEditingPage(false);
       setPageInputValue("");
+    }
+  };
+
+  // Sync right-side pagination input value when currentPage changes
+  useEffect(() => {
+    setPaginationInputValue(currentPage.toString());
+  }, [currentPage]);
+
+  // Handle right-side pagination input change
+  const handlePaginationInputChange = (e) => {
+    const value = e.target.value;
+    // Allow empty string or valid numbers
+    if (value === "" || /^\d+$/.test(value)) {
+      setPaginationInputValue(value);
+    }
+  };
+
+  // Handle right-side pagination input submission
+  const handlePaginationInputSubmit = (e) => {
+    e.preventDefault();
+    const page = parseInt(paginationInputValue, 10);
+    if (!isNaN(page) && page >= 1 && page <= pagination.totalPages) {
+      handleGoToPage(page.toString());
+    } else {
+      // Reset to current page if invalid
+      setPaginationInputValue(currentPage.toString());
+    }
+  };
+
+  // Handle right-side pagination input blur
+  const handlePaginationInputBlur = () => {
+    const page = parseInt(paginationInputValue, 10);
+    if (isNaN(page) || page < 1) {
+      handleGoToPage("1");
+    } else if (page > pagination.totalPages) {
+      handleGoToPage(pagination.totalPages.toString());
+    } else {
+      handleGoToPage(page.toString());
     }
   };
 
@@ -595,6 +634,29 @@ const StudentList = () => {
                     <ChevronLeft size={18} />
                     <span>Previous</span>
                   </button>
+
+                  {/* Page Number Input */}
+                  <form 
+                    onSubmit={handlePaginationInputSubmit}
+                    className="flex items-center gap-1"
+                  >
+                    <input
+                      type="text"
+                      min="1"
+                      max={pagination.totalPages}
+                      value={paginationInputValue}
+                      onChange={handlePaginationInputChange}
+                      onBlur={handlePaginationInputBlur}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          e.target.blur();
+                        }
+                      }}
+                      className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                      aria-label="Page number"
+                    />
+                  </form>
 
                   {/* Next Button */}
                   <button

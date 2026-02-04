@@ -1376,6 +1376,27 @@ const Inventory = () => {
               >
                 Previous
               </button>
+              <form 
+                onSubmit={handlePageInputSubmit}
+                className="flex items-center gap-1"
+              >
+                <input
+                  type="text"
+                  min="1"
+                  max={totalPages}
+                  value={pageInputValue}
+                  onChange={handlePageInputChange}
+                  onBlur={handlePageInputBlur}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      e.target.blur();
+                    }
+                  }}
+                  className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                  aria-label="Page number"
+                />
+              </form>
               <button
                 onClick={handleNextPage}
                 disabled={currentPage >= totalPages}

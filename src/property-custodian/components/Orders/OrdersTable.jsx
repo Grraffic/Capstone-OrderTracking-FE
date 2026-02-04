@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Edit2, ChevronLeft, ChevronRight } from "lucide-react";
 import EditOrderModal from "./EditOrderModal";
 
@@ -37,10 +37,16 @@ const OrdersTable = ({
   onOpenQRScanner,
 }) => {
   const [expandedOrders, setExpandedOrders] = useState(new Set()); // Track expanded orders
+  const [pageInputValue, setPageInputValue] = useState(currentPage.toString()); // For page number input
   
   // Modal state
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
+
+  // Sync page input value when currentPage changes
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
 
   // Handle edit click
   const handleEditClick = (order) => {
@@ -328,6 +334,61 @@ const OrdersTable = ({
             >
               Previous
             </button>
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                const page = parseInt(pageInputValue, 10);
+                if (!isNaN(page) && page >= 1 && page <= totalPages && onGoToPage) {
+                  onGoToPage(page);
+                } else {
+                  // Reset to current page if invalid
+                  setPageInputValue(currentPage.toString());
+                }
+              }}
+              className="flex items-center gap-1"
+            >
+              <input
+                type="text"
+                min="1"
+                max={totalPages}
+                value={pageInputValue}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty string or valid numbers
+                  if (value === "" || /^\d+$/.test(value)) {
+                    setPageInputValue(value);
+                  }
+                }}
+                onBlur={() => {
+                  const page = parseInt(pageInputValue, 10);
+                  if (isNaN(page) || page < 1) {
+                    if (onGoToPage) {
+                      onGoToPage(1);
+                    } else {
+                      setPageInputValue(currentPage.toString());
+                    }
+                  } else if (page > totalPages) {
+                    if (onGoToPage) {
+                      onGoToPage(totalPages);
+                    } else {
+                      setPageInputValue(currentPage.toString());
+                    }
+                  } else if (onGoToPage) {
+                    onGoToPage(page);
+                  } else {
+                    setPageInputValue(currentPage.toString());
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.target.blur();
+                  }
+                }}
+                className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                aria-label="Page number"
+              />
+            </form>
             <button
               onClick={onNextPage}
               disabled={currentPage >= totalPages}

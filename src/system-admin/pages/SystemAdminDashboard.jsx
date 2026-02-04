@@ -28,6 +28,7 @@ const SystemAdminDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInputValue, setPageInputValue] = useState("1"); // For page number input
   const [initialLoad, setInitialLoad] = useState(true);
   const hasInitialFetched = useRef(false);
   
@@ -159,6 +160,11 @@ const SystemAdminDashboard = () => {
     fetchRoles();
   };
 
+  // Sync page input value when currentPage changes
+  useEffect(() => {
+    setPageInputValue(currentPage.toString());
+  }, [currentPage]);
+
   // Handle pagination
   const handleNextPage = () => {
     if (currentPage < pagination.totalPages && !loading) {
@@ -169,6 +175,12 @@ const SystemAdminDashboard = () => {
   const handlePrevPage = () => {
     if (currentPage > 1 && !loading) {
       setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleGoToPage = (page) => {
+    if (page >= 1 && page <= pagination.totalPages && !loading) {
+      setCurrentPage(page);
     }
   };
 
@@ -456,6 +468,53 @@ const SystemAdminDashboard = () => {
                         <ChevronLeft size={18} />
                         <span>Previous</span>
                       </button>
+
+                      {/* Page Number Input */}
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          const page = parseInt(pageInputValue, 10);
+                          if (!isNaN(page) && page >= 1 && page <= pagination.totalPages) {
+                            handleGoToPage(page);
+                          } else {
+                            // Reset to current page if invalid
+                            setPageInputValue(currentPage.toString());
+                          }
+                        }}
+                        className="flex items-center gap-1"
+                      >
+                        <input
+                          type="text"
+                          min="1"
+                          max={pagination.totalPages}
+                          value={pageInputValue}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow empty string or valid numbers
+                            if (value === "" || /^\d+$/.test(value)) {
+                              setPageInputValue(value);
+                            }
+                          }}
+                          onBlur={() => {
+                            const page = parseInt(pageInputValue, 10);
+                            if (isNaN(page) || page < 1) {
+                              handleGoToPage(1);
+                            } else if (page > pagination.totalPages) {
+                              handleGoToPage(pagination.totalPages);
+                            } else {
+                              handleGoToPage(page);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              e.target.blur();
+                            }
+                          }}
+                          className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                          aria-label="Page number"
+                        />
+                      </form>
 
                       {/* Next Button */}
                       <button
