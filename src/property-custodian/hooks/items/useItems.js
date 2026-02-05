@@ -663,6 +663,19 @@ export const useItems = (options = {}) => {
           throw new Error(result.message || "Failed to update item");
         }
       } catch (err) {
+        // "TypeError: fetch failed" means the request didn't complete (network/CORS/DNS/SSL/backend down)
+        if (err instanceof TypeError && String(err.message || "").toLowerCase().includes("fetch")) {
+          console.error("Update item network error (fetch failed):", {
+            apiBaseUrl: API_BASE_URL,
+            itemId: updatedItem?.id,
+            error: err,
+          });
+          const msg =
+            "Network error while updating item (request failed). Check your connection and that the API server is reachable.";
+          setError(msg);
+          throw new Error(msg);
+        }
+
         console.error("Update item error:", err);
         setError(err.message);
         throw err; // Re-throw to allow caller to handle

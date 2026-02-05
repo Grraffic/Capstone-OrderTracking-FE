@@ -6,6 +6,19 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api"
  */
 class InventoryService {
   /**
+   * Get authorization header (matches other services)
+   * @returns {object} Headers with Authorization token (if available)
+   */
+  getAuthHeaders() {
+    const token = localStorage.getItem("authToken");
+    const headers = {};
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  }
+
+  /**
    * Get inventory report
    * @param {Object} filters - Filter options (educationLevel, search, etc.)
    * @returns {Promise} Inventory report data
@@ -34,6 +47,7 @@ class InventoryService {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
         },
         credentials: "include",
         cache: "no-store", // Prevent browser caching
@@ -64,6 +78,7 @@ class InventoryService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
         },
         credentials: "include",
         body: JSON.stringify({ quantity, unitPrice }),
@@ -95,6 +110,7 @@ class InventoryService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
         },
         credentials: "include",
         body: JSON.stringify({ quantity, size, unitPrice }),
@@ -133,6 +149,7 @@ class InventoryService {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
+          ...this.getAuthHeaders(),
         },
         credentials: "include",
         body: JSON.stringify(body),
@@ -163,6 +180,7 @@ class InventoryService {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...this.getAuthHeaders(),
           },
           credentials: "include",
         }
