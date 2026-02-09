@@ -158,12 +158,12 @@ export const useAdminDashboardData = (startDate, endDate) => {
           // Get first 3 items for display
           setOutOfStockItems(outOfStockItems.slice(0, 3));
 
-          console.log(
-            `[Dashboard] Found ${outOfStockItems.length} out of stock items/variants (stock = 0)`
-          );
+          // console.log(
+          //   `[Dashboard] Found ${outOfStockItems.length} out of stock items/variants (stock = 0)`
+          // );
         }
       } catch (error) {
-        console.error("Error fetching out of stock items:", error);
+        // console.error("Error fetching out of stock items:", error);
       }
     };
 
@@ -211,19 +211,19 @@ export const useAdminDashboardData = (startDate, endDate) => {
   // Calculate order tracking stats from orders with trend calculation
   useEffect(() => {
     if (!ordersLoading && filteredOrders) {
-      console.log(
-        `[Dashboard] Calculating order stats from ${filteredOrders.length} orders (filtered by date range)`
-      );
+      // console.log(
+      //   `[Dashboard] Calculating order stats from ${filteredOrders.length} orders (filtered by date range)`
+      // );
 
       // Debug: Log sample orders to check structure
       if (filteredOrders.length > 0) {
-        console.log("[Dashboard] Sample order:", {
-          id: filteredOrders[0].id,
-          status: filteredOrders[0].status,
-          order_type: filteredOrders[0].order_type,
-          created_at: filteredOrders[0].created_at,
-          claimed_date: filteredOrders[0].claimed_date,
-        });
+        // console.log("[Dashboard] Sample order:", {
+        //   id: filteredOrders[0].id,
+        //   status: filteredOrders[0].status,
+        //   order_type: filteredOrders[0].order_type,
+        //   created_at: filteredOrders[0].created_at,
+        //   claimed_date: filteredOrders[0].claimed_date,
+        // });
       }
 
       const now = new Date();
@@ -324,14 +324,14 @@ export const useAdminDashboardData = (startDate, endDate) => {
       const calculateTrend = (current, previous) => {
         if (previous === 0) {
           const result = current > 0 ? 100 : 0;
-          console.log(`[Trend] Previous=0, Current=${current}, Result=${result}`);
+          // console.log(`[Trend] Previous=0, Current=${current}, Result=${result}`);
           return result;
         }
         const change = ((current - previous) / previous) * 100;
         const rounded = Math.round(change);
         // Only cap positive increases at 100%, negative values (decreases) are not capped
         const result = rounded > 0 ? Math.min(100, rounded) : rounded;
-        console.log(`[Trend] Current=${current}, Previous=${previous}, Change=${change.toFixed(2)}%, Rounded=${rounded}, Final=${result}`);
+        // console.log(`[Trend] Current=${current}, Previous=${previous}, Change=${change.toFixed(2)}%, Rounded=${rounded}, Final=${result}`);
         return result;
       };
 
@@ -350,12 +350,12 @@ export const useAdminDashboardData = (startDate, endDate) => {
         },
       };
 
-      console.log("[Dashboard] Order tracking stats:", trackingData);
-      console.log("[Dashboard] Trend details:", {
-        preOrders: { current: currentMonthPreOrders, last: lastMonthPreOrders, trend: preOrdersTrend },
-        claimed: { current: currentMonthClaimed, last: lastMonthClaimed, trend: claimedTrend },
-        orders: { current: currentMonthOrders, last: lastMonthOrders, trend: ordersTrend },
-      });
+      // console.log("[Dashboard] Order tracking stats:", trackingData);
+      // console.log("[Dashboard] Trend details:", {
+      //   preOrders: { current: currentMonthPreOrders, last: lastMonthPreOrders, trend: preOrdersTrend },
+      //   claimed: { current: currentMonthClaimed, last: lastMonthClaimed, trend: claimedTrend },
+      //   orders: { current: currentMonthOrders, last: lastMonthOrders, trend: ordersTrend },
+      // });
       setOrderTracking(trackingData);
     }
   }, [filteredOrders, ordersLoading]);
@@ -391,14 +391,14 @@ export const useAdminDashboardData = (startDate, endDate) => {
         23, 59, 59, 999
       );
       
-      console.log("[Dashboard] 📅 Filtering Recent Audits by date range:", {
-        originalStartDate: filterStartDate.toISOString(),
-        originalEndDate: filterEndDate.toISOString(),
-        normalizedStartDate: normalizedStartDate.toISOString(),
-        normalizedEndDate: normalizedEndDate.toISOString(),
-        startDateLocal: normalizedStartDate.toLocaleString(),
-        endDateLocal: normalizedEndDate.toLocaleString(),
-      });
+      // console.log("[Dashboard] 📅 Filtering Recent Audits by date range:", {
+      //   originalStartDate: filterStartDate.toISOString(),
+      //   originalEndDate: filterEndDate.toISOString(),
+      //   normalizedStartDate: normalizedStartDate.toISOString(),
+      //   normalizedEndDate: normalizedEndDate.toISOString(),
+      //   startDateLocal: normalizedStartDate.toLocaleString(),
+      //   endDateLocal: normalizedEndDate.toLocaleString(),
+      // });
       
       const filters = {
         startDate: normalizedStartDate,
@@ -411,7 +411,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
       const response = await transactionService.getTransactions(filters);
 
       if (response.success && response.data && response.data.length > 0) {
-        console.log("[Dashboard] 📥 Received transactions from API:", response.data.length);
+        // console.log("[Dashboard] 📥 Received transactions from API:", response.data.length);
         
         // Additional client-side filtering to ensure dates are within range
         // Use the isDateInRange helper function for consistent date comparison
@@ -422,18 +422,18 @@ export const useAdminDashboardData = (startDate, endDate) => {
           const isInRange = isDateInRange(tx.created_at, normalizedStartDate, normalizedEndDate);
           
           if (!isInRange) {
-            console.log("[Dashboard] ⚠️ Transaction filtered out:", {
-              txDate: tx.created_at,
-              txDateLocal: new Date(tx.created_at).toLocaleString(),
-              startDateLocal: normalizedStartDate.toLocaleString(),
-              endDateLocal: normalizedEndDate.toLocaleString(),
-            });
+            // console.log("[Dashboard] ⚠️ Transaction filtered out:", {
+            //   txDate: tx.created_at,
+            //   txDateLocal: new Date(tx.created_at).toLocaleString(),
+            //   startDateLocal: normalizedStartDate.toLocaleString(),
+            //   endDateLocal: normalizedEndDate.toLocaleString(),
+            // });
           }
           
           return isInRange;
         });
         
-        console.log("[Dashboard] ✅ Filtered transactions count:", filteredTransactions.length);
+        // console.log("[Dashboard] ✅ Filtered transactions count:", filteredTransactions.length);
 
         // Limit to 5 most recent after filtering
         const limitedTransactions = filteredTransactions.slice(0, 5);
@@ -492,7 +492,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
         setRecentAudits([]);
       }
     } catch (error) {
-      console.error("Error fetching recent audits:", error);
+      // console.error("Error fetching recent audits:", error);
       // On error, set empty array (don't show mock data)
       setRecentAudits([]);
     } finally {

@@ -42,29 +42,29 @@ export const SocketProvider = ({ children }) => {
    */
   useEffect(() => {
     if (!user?.uid) {
-      console.log("⚠️ SocketProvider: No authenticated user, skipping connection");
+      // console.log("⚠️ SocketProvider: No authenticated user, skipping connection");
       
       // Disconnect if user logs out
       try {
         if (socketClient.isConnected()) {
-          console.log("🔌 SocketProvider: User logged out, disconnecting socket");
+          // console.log("🔌 SocketProvider: User logged out, disconnecting socket");
           socketClient.disconnect();
           setIsConnected(false);
         }
       } catch (error) {
-        console.error("Error disconnecting socket:", error);
+        // console.error("Error disconnecting socket:", error);
       }
       return;
     }
 
-    console.log("🔌 SocketProvider: User authenticated, establishing connection for user:", user.uid);
+    // console.log("🔌 SocketProvider: User authenticated, establishing connection for user:", user.uid);
 
     // Connect to Socket.IO server with error handling
     let socket;
     try {
       socket = socketClient.connect();
     } catch (error) {
-      console.error("❌ SocketProvider: Failed to initialize socket connection:", error);
+      // console.error("❌ SocketProvider: Failed to initialize socket connection:", error);
       setConnectionError(error.message || "Failed to connect");
       setIsConnected(false);
       return;
@@ -72,18 +72,18 @@ export const SocketProvider = ({ children }) => {
 
     // Set up connection event handlers
     const handleConnect = () => {
-      console.log("✅ SocketProvider: Socket connected successfully");
+      // console.log("✅ SocketProvider: Socket connected successfully");
       setIsConnected(true);
       setConnectionError(null);
     };
 
     const handleDisconnect = (reason) => {
-      console.log("❌ SocketProvider: Socket disconnected:", reason);
+      // console.log("❌ SocketProvider: Socket disconnected:", reason);
       setIsConnected(false);
     };
 
     const handleConnectError = (error) => {
-      console.error("❌ SocketProvider: Connection error:", error.message);
+      // console.error("❌ SocketProvider: Connection error:", error.message);
       setConnectionError(error.message);
       setIsConnected(false);
     };
@@ -97,21 +97,21 @@ export const SocketProvider = ({ children }) => {
       // Set initial connection state
       setIsConnected(socket.connected || false);
     } catch (error) {
-      console.error("❌ SocketProvider: Error setting up socket event listeners:", error);
+      // console.error("❌ SocketProvider: Error setting up socket event listeners:", error);
       setConnectionError(error.message || "Failed to set up socket listeners");
     }
 
     // Cleanup on unmount or user change
     return () => {
       try {
-        console.log("🔌 SocketProvider: Cleaning up socket event listeners");
+        // console.log("🔌 SocketProvider: Cleaning up socket event listeners");
         if (socket) {
           socket.off("connect", handleConnect);
           socket.off("disconnect", handleDisconnect);
           socket.off("connect_error", handleConnectError);
         }
       } catch (error) {
-        console.error("Error cleaning up socket listeners:", error);
+        // console.error("Error cleaning up socket listeners:", error);
       }
     };
   }, [user?.uid]);
@@ -123,7 +123,7 @@ export const SocketProvider = ({ children }) => {
    */
   const on = useCallback((event, callback) => {
     if (!socketClient.socket) {
-      console.warn(`⚠️ SocketProvider: Cannot subscribe to "${event}" - socket not initialized`);
+      // console.warn(`⚠️ SocketProvider: Cannot subscribe to "${event}" - socket not initialized`);
       return;
     }
     socketClient.on(event, callback);
@@ -148,7 +148,7 @@ export const SocketProvider = ({ children }) => {
    */
   const emit = useCallback((event, data) => {
     if (!socketClient.socket) {
-      console.warn(`⚠️ SocketProvider: Cannot emit "${event}" - socket not initialized`);
+      // console.warn(`⚠️ SocketProvider: Cannot emit "${event}" - socket not initialized`);
       return;
     }
     socketClient.emit(event, data);

@@ -158,7 +158,7 @@ export const OrderProvider = ({ children }) => {
         if (user?.email) {
           filters.student_email = user.email;
         } else {
-          console.warn('OrderContext: No email available for order filtering');
+          // console.warn('OrderContext: No email available for order filtering');
         }
       } else {
         dispatch({ type: 'SET_ORDERS', payload: [] });
@@ -206,11 +206,11 @@ export const OrderProvider = ({ children }) => {
 
         dispatch({ type: 'SET_ORDERS', payload: transformedOrders });
       } else {
-        console.error('❌ OrderContext: API returned unsuccessful response:', response.data);
+        // console.error('❌ OrderContext: API returned unsuccessful response:', response.data);
         throw new Error(response.data.message || 'Failed to fetch orders');
       }
     } catch (error) {
-      console.error('OrderContext - Fetch orders error:', error.message);
+      // console.error('OrderContext - Fetch orders error:', error.message);
       dispatch({ type: 'SET_ERROR', payload: error.message });
       // Set empty array on error so UI doesn't break
       dispatch({ type: 'SET_ORDERS', payload: [] });
@@ -354,9 +354,9 @@ export const OrderProvider = ({ children }) => {
         throw new Error(response.data.message || 'Failed to create order');
       }
     } catch (error) {
-      console.error('Create order error:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error message:', error.message);
+      // console.error('Create order error:', error);
+      // console.error('Error response:', error.response?.data);
+      // console.error('Error message:', error.message);
       
       const errorMessage = error.response?.data?.message || error.message || 'Failed to create order';
       dispatch({ type: 'SET_ERROR', payload: errorMessage });

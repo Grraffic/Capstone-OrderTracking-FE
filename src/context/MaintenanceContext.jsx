@@ -49,7 +49,7 @@ export const MaintenanceProvider = ({ children }) => {
         });
       }
     } catch (error) {
-      console.error("Error checking maintenance status:", error);
+      // console.error("Error checking maintenance status:", error);
       // On error, assume maintenance is not active to avoid blocking users
       setMaintenanceStatus({
         isActive: false,

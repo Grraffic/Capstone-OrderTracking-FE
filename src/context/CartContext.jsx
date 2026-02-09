@@ -106,7 +106,7 @@ export const CartProvider = ({ children }) => {
         dispatch({ type: "SET_CART_ITEMS", payload: response.data.data || [] });
       }
     } catch (error) {
-      console.error("Fetch cart items error:", error);
+      // console.error("Fetch cart items error:", error);
       
       // Don't show error for non-students (system admins, staff, etc.)
       // They don't have carts, so this is expected
@@ -163,7 +163,7 @@ export const CartProvider = ({ children }) => {
         toast.success(response.data.message || "Item added to cart");
       }
     } catch (error) {
-      console.error("Add to cart error:", error);
+      // console.error("Add to cart error:", error);
       dispatch({ type: "SET_ERROR", payload: error.message });
       toast.error(
         error.response?.data?.message || "Failed to add item to cart"
@@ -197,7 +197,7 @@ export const CartProvider = ({ children }) => {
         toast.success("Cart updated");
       }
     } catch (error) {
-      console.error("Update cart item error:", error);
+      // console.error("Update cart item error:", error);
       dispatch({ type: "SET_ERROR", payload: error.message });
       toast.error(
         error.response?.data?.message || "Failed to update cart item"
@@ -239,7 +239,7 @@ export const CartProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error("Remove from cart error:", error);
+      // console.error("Remove from cart error:", error);
       dispatch({ type: "SET_ERROR", payload: error.message });
       toast.error(
         error.response?.data?.message || "Failed to remove item from cart"
@@ -271,7 +271,7 @@ export const CartProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error("Clear cart error:", error);
+      // console.error("Clear cart error:", error);
       dispatch({ type: "SET_ERROR", payload: error.message });
       toast.error(error.response?.data?.message || "Failed to clear cart");
     } finally {

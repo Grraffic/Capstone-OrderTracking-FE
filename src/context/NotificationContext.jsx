@@ -59,24 +59,24 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     const currentUserId = user?.uid || user?.id;
     if (!currentUserId || !isConnected) {
-      console.log("⚠️ NotificationContext: No user or socket not connected, skipping event setup");
+      // console.log("⚠️ NotificationContext: No user or socket not connected, skipping event setup");
       return;
     }
 
-    console.log("🔌 NotificationContext: Setting up Socket.IO listeners for user:", currentUserId);
+    // console.log("🔌 NotificationContext: Setting up Socket.IO listeners for user:", currentUserId);
 
     // Listen for inventory restock events
     const handleInventoryRestocked = (data) => {
-      console.log("📡 Received items:restocked event:", data);
-      console.log("🔍 Current user.uid:", user?.uid);
-      console.log("🔍 Current user.id:", user?.id);
-      console.log("🔍 Event userId:", data.userId);
+      // console.log("📡 Received items:restocked event:", data);
+      // console.log("🔍 Current user.uid:", user?.uid);
+      // console.log("🔍 Current user.id:", user?.id);
+      // console.log("🔍 Event userId:", data.userId);
 
       // Only add notification if it's for the current user (support both uid and id)
       const currentUserId = user?.uid || user?.id;
       const eventUserId = data.userId;
       const isMatch = eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId));
-      console.log("🔍 Match?", isMatch);
+      // console.log("🔍 Match?", isMatch);
 
       if (isMatch) {
         const newNotification = data.notification;
@@ -85,7 +85,7 @@ export const NotificationProvider = ({ children }) => {
         setNotifications((prev) => {
           const exists = prev.some((n) => n.id === newNotification.id);
           if (exists) {
-            console.log("⚠️ Notification already exists, skipping duplicate");
+            // console.log("⚠️ Notification already exists, skipping duplicate");
             return prev;
           }
           return [newNotification, ...prev];
@@ -94,7 +94,7 @@ export const NotificationProvider = ({ children }) => {
         // Increment unread count
         setUnreadCount((prev) => prev + 1);
 
-        console.log("✅ Notification added: Item restocked");
+        // console.log("✅ Notification added: Item restocked");
 
         // Show browser notification if permission granted and API is available
         // Note: Notification API is not available in iOS WebKit (Safari/Chrome/Brave)
@@ -105,13 +105,13 @@ export const NotificationProvider = ({ children }) => {
               icon: "/logo.png",
             });
           } catch (error) {
-            console.warn("Failed to show browser notification:", error);
+            // console.warn("Failed to show browser notification:", error);
           }
         }
       } else {
-        console.log("⚠️ Restock notification received but userId doesn't match current user");
-        console.log("⚠️ Expected:", user?.uid || user?.id);
-        console.log("⚠️ Received:", data.userId);
+        // console.log("⚠️ Restock notification received but userId doesn't match current user");
+        // console.log("⚠️ Expected:", user?.uid || user?.id);
+        // console.log("⚠️ Received:", data.userId);
       }
     };
 
@@ -119,16 +119,16 @@ export const NotificationProvider = ({ children }) => {
 
     // Listen for order release notifications
     const handleOrderReleased = (data) => {
-      console.log("📡 Received notification:created event:", data);
-      console.log("🔍 Current user.uid:", user?.uid);
-      console.log("🔍 Current user.id:", user?.id);
-      console.log("🔍 Event userId:", data.userId);
+      // console.log("📡 Received notification:created event:", data);
+      // console.log("🔍 Current user.uid:", user?.uid);
+      // console.log("🔍 Current user.id:", user?.id);
+      // console.log("🔍 Event userId:", data.userId);
       
       // Check if this notification is for the current user (support both uid and id)
       const currentUserId = user?.uid || user?.id;
       const eventUserId = data.userId;
       const isMatch = eventUserId && currentUserId && (eventUserId === currentUserId || String(eventUserId) === String(currentUserId));
-      console.log("🔍 Match?", isMatch);
+      // console.log("🔍 Match?", isMatch);
 
       // Only add notification if it's for the current user
       if (isMatch && data.notification) {
@@ -145,7 +145,7 @@ export const NotificationProvider = ({ children }) => {
         // Increment unread count
         setUnreadCount((prev) => prev + 1);
 
-        console.log("✅ Notification added: Order released");
+        // console.log("✅ Notification added: Order released");
         
         // Emit a custom event that ActivityContext can listen to
         // This allows ActivityContext to create activities from notifications
@@ -156,7 +156,7 @@ export const NotificationProvider = ({ children }) => {
           const orderId = notificationData.orderId;
           
           if (orderNumber || orderId) {
-            console.log("📝 NotificationContext: Emitting custom event for activity creation:", orderNumber || orderId);
+            // console.log("📝 NotificationContext: Emitting custom event for activity creation:", orderNumber || orderId);
             // Dispatch a custom event that ActivityContext can listen to
             window.dispatchEvent(new CustomEvent('order-claimed-from-notification', {
               detail: {
@@ -186,13 +186,13 @@ export const NotificationProvider = ({ children }) => {
               icon: "/logo.png",
             });
           } catch (error) {
-            console.warn("Failed to show browser notification:", error);
+            // console.warn("Failed to show browser notification:", error);
           }
         }
       } else {
-        console.log("⚠️ Order release notification received but userId doesn't match current user");
-        console.log("⚠️ Expected:", user?.uid || user?.id);
-        console.log("⚠️ Received:", data.userId);
+        // console.log("⚠️ Order release notification received but userId doesn't match current user");
+        // console.log("⚠️ Expected:", user?.uid || user?.id);
+        // console.log("⚠️ Received:", data.userId);
       }
     };
 
@@ -204,11 +204,11 @@ export const NotificationProvider = ({ children }) => {
       try {
         if (window.Notification.permission === "default") {
           window.Notification.requestPermission().catch((error) => {
-            console.warn("Failed to request notification permission:", error);
+            // console.warn("Failed to request notification permission:", error);
           });
         }
       } catch (error) {
-        console.warn("Notification API not supported on this device:", error);
+        // console.warn("Notification API not supported on this device:", error);
       }
     }
 
@@ -239,7 +239,7 @@ export const NotificationProvider = ({ children }) => {
         setNotifications(response.data.data);
       }
     } catch (error) {
-      console.error("Error fetching notifications:", error);
+      // console.error("Error fetching notifications:", error);
     } finally {
       setLoading(false);
     }
@@ -263,7 +263,7 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(response.data.count);
       }
     } catch (error) {
-      console.error("Error fetching unread count:", error);
+      // console.error("Error fetching unread count:", error);
     }
   };
 
@@ -289,7 +289,7 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount((prev) => Math.max(0, prev - 1));
       }
     } catch (error) {
-      console.error("Error marking notification as read:", error);
+      // console.error("Error marking notification as read:", error);
     }
   };
 
@@ -318,7 +318,7 @@ export const NotificationProvider = ({ children }) => {
         setUnreadCount(0);
       }
     } catch (error) {
-      console.error("Error marking all as read:", error);
+      // console.error("Error marking all as read:", error);
     }
   };
 
@@ -345,7 +345,7 @@ export const NotificationProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error("Error deleting notification:", error);
+      // console.error("Error deleting notification:", error);
     }
   };
 

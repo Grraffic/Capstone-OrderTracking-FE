@@ -47,7 +47,7 @@ export const AuthProvider = ({ children }) => {
         try {
           urlParams = new URLSearchParams(window.location.search);
         } catch (urlError) {
-          console.error("Error parsing URL parameters:", urlError);
+          // console.error("Error parsing URL parameters:", urlError);
           urlParams = new URLSearchParams();
         }
         
@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
           try {
             localStorage.setItem("authToken", tokenFromUrl);
           } catch (storageError) {
-            console.error("Error storing token in localStorage:", storageError);
+            // console.error("Error storing token in localStorage:", storageError);
             // Continue without storing - might be in private browsing mode
           }
         }
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
         try {
           storedToken = localStorage.getItem("authToken");
         } catch (storageError) {
-          console.error("Error reading from localStorage:", storageError);
+          // console.error("Error reading from localStorage:", storageError);
           storedToken = null;
         }
 
@@ -74,10 +74,10 @@ export const AuthProvider = ({ children }) => {
           try {
             response = await authAPI.getProfile();
           } catch (apiError) {
-            console.error("Error fetching user profile:", apiError);
+            // console.error("Error fetching user profile:", apiError);
             // Check if it's a network error (common on iOS)
             if (!apiError.response) {
-              console.error("Network error - API may be unreachable");
+              // console.error("Network error - API may be unreachable");
               // Set loading to false but don't clear token - might be temporary network issue
               setLoading(false);
               return;
@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
           }
           
           if (!response || !response.data) {
-            console.error("Invalid response from getProfile API");
+            // console.error("Invalid response from getProfile API");
             setLoading(false);
             return;
           }
@@ -103,12 +103,12 @@ export const AuthProvider = ({ children }) => {
           }
 
           // Debug logging to see what we're receiving from the API
-          console.log("🔍 AuthContext - Received profile data from API:", {
-            photoURL: userData.photoURL,
-            photo_url: userData.photo_url,
-            avatar_url: userData.avatar_url,
-            fullUserData: userData,
-          });
+          // console.log("🔍 AuthContext - Received profile data from API:", {
+          //   photoURL: userData.photoURL,
+          //   photo_url: userData.photo_url,
+          //   avatar_url: userData.avatar_url,
+          //   fullUserData: userData,
+          // });
 
           const normalized = {
             id: userData.id,
@@ -141,22 +141,22 @@ export const AuthProvider = ({ children }) => {
             is_active: userData.is_active !== undefined ? userData.is_active : true,
           };
 
-          console.log("✅ AuthContext - Normalized user object:", {
-            photoURL: normalized.photoURL,
-            displayName: normalized.displayName,
-          });
+          // console.log("✅ AuthContext - Normalized user object:", {
+          //   photoURL: normalized.photoURL,
+          //   displayName: normalized.displayName,
+          // });
 
           // If no photo URL exists, try to refresh it (for existing users who logged in before the fix)
           if (!normalized.photoURL) {
-            console.log("No profile picture found, attempting to refresh...");
+            // console.log("No profile picture found, attempting to refresh...");
             try {
               const refreshResponse = await authAPI.refreshProfilePicture();
               if (refreshResponse.data?.photoURL) {
                 normalized.photoURL = refreshResponse.data.photoURL;
-                console.log("Profile picture refreshed:", normalized.photoURL);
+                // console.log("Profile picture refreshed:", normalized.photoURL);
               }
             } catch (refreshError) {
-              console.warn("Failed to refresh profile picture:", refreshError);
+              // console.warn("Failed to refresh profile picture:", refreshError);
               // Continue without photo - will use initials fallback in UI
             }
           }
@@ -168,25 +168,25 @@ export const AuthProvider = ({ children }) => {
           setUserRole(role);
         }
       } catch (error) {
-        console.error("Error checking auth status:", error);
-        console.error("Error details:", {
-          message: error.message,
-          name: error.name,
-          stack: error.stack,
-          response: error.response ? {
-            status: error.response.status,
-            statusText: error.response.statusText,
-            data: error.response.data
-          } : null
-        });
+        // console.error("Error checking auth status:", error);
+        // console.error("Error details:", {
+        //   message: error.message,
+        //   name: error.name,
+        //   stack: error.stack,
+        //   response: error.response ? {
+        //     status: error.response.status,
+        //     statusText: error.response.statusText,
+        //     data: error.response.data
+        //   } : null
+        // });
         
         // Check if error is due to inactive account
         if (error.response?.status === 403 && error.response?.data?.error === "account_inactive") {
-          console.log("🚫 Account is inactive, clearing session...");
+          // console.log("🚫 Account is inactive, clearing session...");
           try {
             localStorage.removeItem("authToken");
           } catch (storageError) {
-            console.error("Error clearing authToken from localStorage:", storageError);
+            // console.error("Error clearing authToken from localStorage:", storageError);
           }
           setUser(null);
           setUserRole(null);
@@ -197,11 +197,11 @@ export const AuthProvider = ({ children }) => {
         
         // If token is invalid or expired, clear it
         if (error.response?.status === 401 || error.response?.status === 403) {
-          console.log("Token is invalid or expired, clearing session...");
+          // console.log("Token is invalid or expired, clearing session...");
           try {
             localStorage.removeItem("authToken");
           } catch (storageError) {
-            console.error("Error clearing authToken from localStorage:", storageError);
+            // console.error("Error clearing authToken from localStorage:", storageError);
           }
         }
         
@@ -231,15 +231,15 @@ export const AuthProvider = ({ children }) => {
       }
       
       const redirectUrl = `${baseUrl}/auth/google`;
-      console.log("Redirecting to Google OAuth:", redirectUrl);
+      // console.log("Redirecting to Google OAuth:", redirectUrl);
       window.location.href = redirectUrl;
     } catch (error) {
-      console.error("Error signing in with Google:", error);
-      console.error("Error details:", {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      });
+      // console.error("Error signing in with Google:", error);
+      // console.error("Error details:", {
+      //   message: error.message,
+      //   name: error.name,
+      //   stack: error.stack
+      // });
       throw error;
     }
   };
@@ -248,13 +248,13 @@ export const AuthProvider = ({ children }) => {
     try {
       await authAPI.logout();
     } catch (error) {
-      console.error("Error calling logout API:", error);
+      // console.error("Error calling logout API:", error);
       // Continue with local logout even if API call fails
     } finally {
       try {
         localStorage.removeItem("authToken");
       } catch (storageError) {
-        console.error("Error clearing authToken from localStorage:", storageError);
+        // console.error("Error clearing authToken from localStorage:", storageError);
       }
       setUser(null);
       setUserRole(null);
@@ -279,7 +279,7 @@ export const AuthProvider = ({ children }) => {
       
       // Set new timeout for 1 hour
       timeoutRef.current = setTimeout(() => {
-        console.log("⏰ Session timeout: 1 hour of inactivity reached. Logging out...");
+        // console.log("⏰ Session timeout: 1 hour of inactivity reached. Logging out...");
         logout().then(() => {
           // Redirect to login page after logout
           window.location.href = "/login";
