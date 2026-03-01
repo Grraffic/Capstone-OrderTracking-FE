@@ -479,14 +479,14 @@ const StudentProfile = () => {
               {/* My Orders View */}
               {activeTab === "orders" && (
                 <div className="py-2 sm:py-3 md:py-4 lg:py-6">
-                  <MyOrders key="orders-tab" sortOrder={filter} />
+                  <MyOrders key="orders-tab" sortOrder={filter} profileData={profileData} />
                 </div>
               )}
 
               {/* History View - Claimed orders (Order History) */}
               {activeTab === "history" && (
                 <div className="py-2 sm:py-3 md:py-4 lg:py-6">
-                  <MyOrders sortOrder={filter} variant="history" />
+                  <MyOrders sortOrder={filter} variant="history" profileData={profileData} />
                 </div>
               )}
             </div>

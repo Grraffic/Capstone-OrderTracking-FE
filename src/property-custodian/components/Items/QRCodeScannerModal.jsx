@@ -240,14 +240,14 @@ const QRCodeScannerModal = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {/* Error Message - Red popup for claimed orders */}
-          {scanError && scanError.toLowerCase().includes("already been claimed") && (
+          {/* Error Message - Red popup for claimed orders or expired QR */}
+          {scanError && (scanError.toLowerCase().includes("already been claimed") || scanError.toLowerCase().includes("expired")) && (
             <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-xl">
               <div className="flex items-start gap-3">
                 <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-0.5" />
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-red-800 mb-1">
-                    Order Already Claimed
+                    {scanError.toLowerCase().includes("expired") ? "QR Code Expired" : "Order Already Claimed"}
                   </p>
                   <p className="text-xs text-red-700">
                     {scanError}

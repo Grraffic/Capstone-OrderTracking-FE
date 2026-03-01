@@ -11,13 +11,14 @@ import { useOrder } from "../../../context/OrderContext";
 import { useAuth } from "../../../context/AuthContext";
 import { useSocket } from "../../../context/SocketContext";
 import QRCode from "react-qr-code";
-import { generateOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
+import { generateOrderReceiptQRData, getRemainingValidityDays, QR_VALID_DAYS } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
 import { orderAPI, itemsAPI, authAPI } from "../../../services/api";
 import { useCart } from "../../../context/CartContext";
 import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../../utils/maxQuantityKeys";
 import { getDisplayPriceForFreeItem } from "../../../utils/freeItemDisplayPrice";
 import ProductCard from "../Products/ProductCard";
+import OrderDetailsModal from "./OrderDetailsModal";
 import { useItems } from "../../../property-custodian/hooks/items/useItems";
 import { categoryFromItemType } from "../../constants/studentProducts";
 
@@ -404,6 +405,17 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     });
   }
 
+  // Remaining validity (from encoded payload; null if no qrIssuedAt or parse error)
+  let remainingDays = null;
+  if (!qrError && qrData) {
+    try {
+      const parsed = JSON.parse(qrData);
+      if (parsed?.qrIssuedAt != null) {
+        remainingDays = getRemainingValidityDays(parsed.qrIssuedAt);
+      }
+    } catch (_) {}
+  }
+
   // Get item names for display
   const itemNames =
     (order.items || []).map((item) => item.name || "Item").join(", ") ||
@@ -489,6 +501,21 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
             )}
           </div>
         </div>
+
+        {/* Validity: X days remaining / Expires today / Expired */}
+        {remainingDays !== null && (
+          <div className={`text-center mb-4 sm:mb-6 text-sm font-medium ${remainingDays < 0 ? "text-red-600" : remainingDays === 0 ? "text-amber-600" : "text-[#003363]"}`}>
+            {remainingDays > 0 && (
+              <span>{remainingDays} day{remainingDays !== 1 ? "s" : ""} remaining</span>
+            )}
+            {remainingDays === 0 && (
+              <span>Valid until end of today</span>
+            )}
+            {remainingDays < 0 && (
+              <span>This QR code has expired. Open this order again to get a new code.</span>
+            )}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -596,7 +623,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
               {minimalQRData.studentId}-{minimalQRData.studentName}
             </span>
             . Any attempt to use this code for other orders, items, or by other
-            individuals will be considered invalid.
+            individuals will be considered invalid. This code is valid for{" "}
+            {QR_VALID_DAYS} days from when it is shown; the remaining validity
+            decreases each day. Once it expires, it cannot be used to claim your
+            order. If you save the image and use it after expiry, the property
+            custodian will see that the code is expired.
           </p>
         </div>
       </div>
@@ -623,7 +654,7 @@ const getOrderDate = (order) => {
   return raw ? new Date(raw).getTime() : 0;
 };
 
-const MyOrders = ({ sortOrder = "newest", variant }) => {
+const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const isHistoryView = variant === "history";
@@ -662,6 +693,9 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
   );
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState(null);
+  const [selectedItemForDetails, setSelectedItemForDetails] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [orderAvailability, setOrderAvailability] = useState({}); // { orderId: boolean }
@@ -1305,18 +1339,15 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
 
   // Handle Show QR
   const handleShowQR = (order) => {
-    console.log("handleShowQR called with order:", order);
-    console.log("Order properties:", {
-      id: order.id,
-      orderNumber: order.orderNumber,
-      order_number: order.order_number,
-      studentName: order.studentName,
-      student_name: order.student_name,
-      items: order.items,
-      quantity: order.quantity,
-    });
     setSelectedOrder(order);
     setShowQRModal(true);
+  };
+
+  // Handle View Details (opens Order Details modal; for history cards)
+  const handleViewDetails = (order, item = null) => {
+    setSelectedOrderForDetails(order);
+    setSelectedItemForDetails(item ?? null);
+    setShowOrderDetailsModal(true);
   };
 
   // Check if pre-order items are available
@@ -1863,7 +1894,7 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
                       <div className="flex items-center gap-1.5 sm:gap-2 w-full min-w-0">
                         <button
                           type="button"
-                          onClick={() => handleShowQR(order)}
+                          onClick={() => handleViewDetails(order, item)}
                           className="flex-1 min-w-0 py-1.5 sm:py-1.5 px-2 border-2 border-[#003363] text-[#003363] rounded-lg font-semibold text-[10px] sm:text-xs text-center hover:bg-[#003363] hover:text-white transition-colors"
                         >
                           View Details
@@ -2195,6 +2226,23 @@ const MyOrders = ({ sortOrder = "newest", variant }) => {
           </>
         )}
       </div>
+
+      {/* Order Details Modal */}
+      {showOrderDetailsModal &&
+        selectedOrderForDetails &&
+        createPortal(
+          <OrderDetailsModal
+            order={selectedOrderForDetails}
+            item={selectedItemForDetails}
+            profileData={profileDataProp}
+            onClose={() => {
+              setShowOrderDetailsModal(false);
+              setSelectedOrderForDetails(null);
+              setSelectedItemForDetails(null);
+            }}
+          />,
+          document.body
+        )}
 
       {/* QR Modal - portaled to body so overlay sits above header and blurs it */}
       {showQRModal &&

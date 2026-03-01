@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { parseOrderReceiptQRData } from "../../../utils/qrCodeGenerator";
+import { parseOrderReceiptQRData, getRemainingValidityDays } from "../../../utils/qrCodeGenerator";
 import api from "../../../services/api";
 
 /**
@@ -142,6 +142,18 @@ export const useOrderQRScanner = () => {
           throw new Error(
             "Invalid QR code format. Please scan a valid order receipt."
           );
+        }
+
+        // If QR has issue date, reject when expired (legacy QRs without qrIssuedAt are allowed)
+        if (orderData.qrIssuedAt != null) {
+          const remaining = getRemainingValidityDays(orderData.qrIssuedAt);
+          if (remaining < 0) {
+            const msg =
+              "This QR code has expired. Please ask the student to open their order again to get a new QR code.";
+            setError(msg);
+            setProcessing(false);
+            throw new Error(msg);
+          }
         }
 
         const orderNumber = orderData.orderNumber;

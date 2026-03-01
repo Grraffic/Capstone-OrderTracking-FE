@@ -1,4 +1,9 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
 import { Link } from "react-router-dom";
 import { ArrowUp } from "lucide-react";
 import { useScrollOnState } from "../hooks/useScrollOnState";
@@ -116,17 +121,17 @@ export default function LandingPage() {
   const [basicEducationIndex, setBasicEducationIndex] = useState(0);
   const [peUniformsIndex, setPeUniformsIndex] = useState(0);
   const [higherEducationIndex, setHigherEducationIndex] = useState(0);
-  
+
   // Detect mobile screen size (375px and 430px) and tablet (768px)
   const [isMobile, setIsMobile] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
-  
+
   // Track which cards are currently visible
   // Desktop: 3 cards (0=Senior High, 1=Basic Education, 2=PE Uniforms, 3=Higher Education)
   // Mobile: 1 card at a time
   // Initialize based on screen size - default to mobile (1 card) to prevent flash of multiple cards
   const getInitialVisibleCards = () => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       const width = window.innerWidth;
       // Mobile M (375px) and Mobile L (430px) - always 1 card
       if (width >= 375 && width <= 430) {
@@ -151,7 +156,7 @@ export default function LandingPage() {
       // Tablet starts at 431px (above Mobile L)
       setIsTablet(width >= 431 && width < 1024);
     };
-    
+
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
     return () => window.removeEventListener("resize", checkScreenSize);
@@ -176,16 +181,16 @@ export default function LandingPage() {
 
     // Senior High rotation - every 4 seconds
     seniorHighInterval = setInterval(() => {
-      setSeniorHighIndex((prev) => 
-        (prev + 1) % featuredItems.seniorHigh.length
+      setSeniorHighIndex(
+        (prev) => (prev + 1) % featuredItems.seniorHigh.length,
       );
     }, 4000);
 
     // Basic Education rotation - every 4 seconds, starts after 1 second
     const basicEducationTimeout = setTimeout(() => {
       basicEducationInterval = setInterval(() => {
-        setBasicEducationIndex((prev) => 
-          (prev + 1) % featuredItems.basicEducation.length
+        setBasicEducationIndex(
+          (prev) => (prev + 1) % featuredItems.basicEducation.length,
         );
       }, 4000);
     }, 1000);
@@ -193,8 +198,8 @@ export default function LandingPage() {
     // PE Uniforms rotation - every 4 seconds, starts after 2 seconds
     const peUniformsTimeout = setTimeout(() => {
       peUniformsInterval = setInterval(() => {
-        setPeUniformsIndex((prev) => 
-          (prev + 1) % featuredItems.peUniforms.length
+        setPeUniformsIndex(
+          (prev) => (prev + 1) % featuredItems.peUniforms.length,
         );
       }, 4000);
     }, 2000);
@@ -202,8 +207,8 @@ export default function LandingPage() {
     // Higher Education rotation - every 4 seconds, starts after 3 seconds
     const higherEducationTimeout = setTimeout(() => {
       higherEducationInterval = setInterval(() => {
-        setHigherEducationIndex((prev) => 
-          (prev + 1) % featuredItems.higherEducation.length
+        setHigherEducationIndex(
+          (prev) => (prev + 1) % featuredItems.higherEducation.length,
         );
       }, 4000);
     }, 3000);
@@ -222,14 +227,14 @@ export default function LandingPage() {
   // Manual navigation functions for desktop/tablet
   const handleNextCards = useCallback(() => {
     if (isMobile) return;
-    
+
     const currentCards = visibleCardsRef.current;
     if (isTablet) {
       // Tablet: rotate through 2 cards
       if (currentCards.length === 2) {
-        const nextCards = currentCards.map(card => (card + 1) % 4);
-        const exiting = currentCards.find(card => !nextCards.includes(card));
-        const entering = nextCards.find(card => !currentCards.includes(card));
+        const nextCards = currentCards.map((card) => (card + 1) % 4);
+        const exiting = currentCards.find((card) => !nextCards.includes(card));
+        const entering = nextCards.find((card) => !currentCards.includes(card));
         if (exiting !== undefined) setExitingCard(exiting);
         if (entering !== undefined) setEnteringCard(entering);
         setTimeout(() => {
@@ -245,7 +250,7 @@ export default function LandingPage() {
       // Desktop: rotate through 4 cards (all visible, but rotate which items are shown)
       if (currentCards.length === 4) {
         // Shift all cards forward by 1 position
-        const nextCards = currentCards.map(card => (card + 1) % 4);
+        const nextCards = currentCards.map((card) => (card + 1) % 4);
         // No cards exit or enter since all 4 are always visible, just the content rotates
         setVisibleCards(nextCards);
         visibleCardsRef.current = nextCards;
@@ -255,14 +260,14 @@ export default function LandingPage() {
 
   const handlePrevCards = useCallback(() => {
     if (isMobile) return;
-    
+
     const currentCards = visibleCardsRef.current;
     if (isTablet) {
       // Tablet: rotate backwards through 2 cards
       if (currentCards.length === 2) {
-        const nextCards = currentCards.map(card => (card - 1 + 4) % 4);
-        const exiting = currentCards.find(card => !nextCards.includes(card));
-        const entering = nextCards.find(card => !currentCards.includes(card));
+        const nextCards = currentCards.map((card) => (card - 1 + 4) % 4);
+        const exiting = currentCards.find((card) => !nextCards.includes(card));
+        const entering = nextCards.find((card) => !currentCards.includes(card));
         if (exiting !== undefined) setExitingCard(exiting);
         if (entering !== undefined) setEnteringCard(entering);
         setTimeout(() => {
@@ -278,7 +283,7 @@ export default function LandingPage() {
       // Desktop: rotate backwards through 4 cards (all visible, but rotate which items are shown)
       if (currentCards.length === 4) {
         // Shift all cards backward by 1 position
-        const nextCards = currentCards.map(card => (card - 1 + 4) % 4);
+        const nextCards = currentCards.map((card) => (card - 1 + 4) % 4);
         // No cards exit or enter since all 4 are always visible, just the content rotates
         setVisibleCards(nextCards);
         visibleCardsRef.current = nextCards;
@@ -292,74 +297,80 @@ export default function LandingPage() {
     if (isMobile) {
       // Mobile: 1 card at a time, continuously cycle through all 4 cards
       const allCards = [0, 1, 2, 3]; // Senior High, Basic Education, PE Uniforms, Higher Education
-      
+
       // Ensure only 1 card is visible on mobile - check ref to avoid dependency issues
       if (visibleCardsRef.current.length > 1) {
         setVisibleCards([0]);
         visibleCardsRef.current = [0];
       }
-      
+
       let currentIndex = visibleCardsRef.current[0] || 0;
-      
+
       // Set initial card if not already set - use ref to avoid dependency issues
       if (visibleCardsRef.current.length !== 1) {
         setVisibleCards([allCards[currentIndex]]);
         visibleCardsRef.current = [allCards[currentIndex]];
         mobileCardIndexRef.current = currentIndex;
       }
-      
+
       const rotateNext = () => {
         const oldIndex = currentIndex;
         currentIndex = (currentIndex + 1) % allCards.length;
         const newCard = allCards[currentIndex];
         const oldCard = allCards[oldIndex];
-        
+
         // Set exiting and entering cards
         setExitingCard(oldCard);
         setEnteringCard(newCard);
-        
+
         setTimeout(() => {
           setVisibleCards([newCard]);
           visibleCardsRef.current = [newCard];
           mobileCardIndexRef.current = currentIndex;
-          
+
           setTimeout(() => {
             setExitingCard(null);
             setEnteringCard(null);
           }, 1000); // Match animation duration
         }, 0);
       };
-      
+
       // Rotate every 4 seconds on mobile
       const mobileInterval = setInterval(rotateNext, 4000);
-      
+
       return () => {
         clearInterval(mobileInterval);
       };
     } else {
       // Double-check we're not on mobile before running tablet/desktop logic
-      const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+      const currentWidth =
+        typeof window !== "undefined" ? window.innerWidth : 0;
       const isActuallyMobile = currentWidth >= 375 && currentWidth <= 430;
-      
+
       if (isActuallyMobile) {
         // If we're actually on mobile, don't run tablet/desktop logic
-        console.log('🔧 Prevented tablet/desktop logic from running on mobile');
+        console.log("🔧 Prevented tablet/desktop logic from running on mobile");
         return;
       }
-      
+
       // Tablet: 2 cards, Desktop: 3 cards rotation
       let timeouts = [];
-      
-      const scheduleTransition = (delay, newCards, oldCards, isTransition = true) => {
+
+      const scheduleTransition = (
+        delay,
+        newCards,
+        oldCards,
+        isTransition = true,
+      ) => {
         const timeout = setTimeout(() => {
           if (isTransition) {
             // Find which card is exiting and which is entering
-            const exiting = oldCards.find(card => !newCards.includes(card));
-            const entering = newCards.find(card => !oldCards.includes(card));
-            
+            const exiting = oldCards.find((card) => !newCards.includes(card));
+            const entering = newCards.find((card) => !oldCards.includes(card));
+
             if (exiting !== undefined) setExitingCard(exiting);
             if (entering !== undefined) setEnteringCard(entering);
-            
+
             // After animation, update cards and clear flags
             // Use longer duration for smoother transition
             setTimeout(() => {
@@ -382,13 +393,18 @@ export default function LandingPage() {
         // Clear any existing timeouts
         timeouts.forEach(clearTimeout);
         timeouts = [];
-        
+
         const currentCards = visibleCardsRef.current;
 
         if (isTablet) {
           // Tablet: Show only 2 cards - rotate through all 4 cards
           // Step 1: After 5 seconds, Senior High out, PE Uniforms in
-          scheduleTransition(5000, [1, 2], currentCards.length === 2 ? currentCards : [0, 1], true);
+          scheduleTransition(
+            5000,
+            [1, 2],
+            currentCards.length === 2 ? currentCards : [0, 1],
+            true,
+          );
 
           // Step 2: After another 5.5 seconds (10.5s total), Basic Education out, Higher Education in
           scheduleTransition(10500, [2, 3], [1, 2], true);
@@ -418,9 +434,12 @@ export default function LandingPage() {
       runCycle();
 
       // Repeat cycle - 16s for desktop, 27s for tablet (to complete full rotation of all 4 cards)
-      const cycleInterval = setInterval(() => {
-        runCycle();
-      }, isTablet ? 27000 : 16000);
+      const cycleInterval = setInterval(
+        () => {
+          runCycle();
+        },
+        isTablet ? 27000 : 16000,
+      );
 
       return () => {
         clearInterval(cycleInterval);
@@ -431,13 +450,15 @@ export default function LandingPage() {
 
   // Add defensive useLayoutEffect to enforce single card on mobile (runs synchronously before paint)
   useLayoutEffect(() => {
-    const currentWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
+    const currentWidth = typeof window !== "undefined" ? window.innerWidth : 0;
     const isActuallyMobile = currentWidth >= 375 && currentWidth <= 430;
-    
+
     if (isMobile || isActuallyMobile) {
       setVisibleCards((prev) => {
         if (prev.length > 1 || visibleCardsRef.current.length > 1) {
-          console.warn('🔧 Mobile detected with multiple cards, forcing to 1 card immediately');
+          console.warn(
+            "🔧 Mobile detected with multiple cards, forcing to 1 card immediately",
+          );
           const singleCard = [prev[0] || visibleCardsRef.current[0] || 0];
           visibleCardsRef.current = singleCard;
           return singleCard;
@@ -485,7 +506,7 @@ export default function LandingPage() {
             />
             <div className="text-center sm:text-left w-full sm:w-auto min-w-0 flex flex-col items-center sm:items-start lg:items-start flex-1">
               <h2 className="text-lg sm:text-xl md:text-xl font-bold text-[#163869] leading-tight">
-                Follow us on our <br className="hidden sm:block" />
+                Follow us on <br className="hidden sm:block" />
                 <span className="text-[#E68B00]">Social Media</span>
               </h2>
               <p className="mt-2 text-base sm:text-lg text-[#235292] font-semibold">
@@ -529,20 +550,24 @@ export default function LandingPage() {
           <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#003363] mb-8 sm:mb-12">
             Now <span className="text-[#E68B00]">Available</span>
           </h2>
-          <div 
+          <div
             className={`relative ${
-              isMobile 
-                ? "overflow-hidden min-h-[400px] !grid !grid-cols-1 mobile-single-card" 
+              isMobile
+                ? "overflow-hidden min-h-[400px] !grid !grid-cols-1 mobile-single-card"
                 : isTablet
-                ? "overflow-hidden min-h-[400px]"
-                : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8"
+                  ? "overflow-hidden min-h-[400px]"
+                  : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8"
             }`}
-            style={isMobile ? { 
-              display: 'grid',
-              gridTemplateColumns: '1fr',
-              gap: 0,
-              maxWidth: '100%'
-            } : {}}
+            style={
+              isMobile
+                ? {
+                    display: "grid",
+                    gridTemplateColumns: "1fr",
+                    gap: 0,
+                    maxWidth: "100%",
+                  }
+                : {}
+            }
           >
             {/* Navigation Buttons - Desktop and Tablet only */}
             {!isMobile && (
@@ -570,35 +595,47 @@ export default function LandingPage() {
               <div
                 key="senior-high"
                 className={`flex flex-col h-full ${
-                  isMobile ? "!w-full !absolute !inset-0" 
-                  : isTablet 
-                    ? `w-[calc(50%-12px)] absolute top-0 ${
-                        visibleCards.indexOf(0) === 0 ? "left-0" : "right-0"
-                      }`
-                  : ""
+                  isMobile
+                    ? "!w-full !absolute !inset-0"
+                    : isTablet
+                      ? `w-[calc(50%-12px)] absolute top-0 ${
+                          visibleCards.indexOf(0) === 0 ? "left-0" : "right-0"
+                        }`
+                      : ""
                 }`}
                 style={{
-                  ...(isMobile ? {
-                    width: '100%',
-                    maxWidth: '100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    zIndex: visibleCards.includes(0) ? 10 : 0
-                  } : {}),
-                  ...(!isMobile && !isTablet && visibleCards.includes(0) ? {
-                    // Use CSS order to control grid position in desktop view
-                    order: visibleCards.indexOf(0) + 1,
-                  } : {}),
-                  animation: exitingCard === 0
-                    ? "fadeOutLeft 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
-                    : enteringCard === 0
-                    ? "slideInFromRight 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
-                    : "",
-                  transition: isTablet && !exitingCard && !enteringCard ? "all 0.3s ease-in-out" : "",
-                  willChange: (exitingCard === 0 || enteringCard === 0) ? "transform, opacity" : "auto",
+                  ...(isMobile
+                    ? {
+                        width: "100%",
+                        maxWidth: "100%",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: visibleCards.includes(0) ? 10 : 0,
+                      }
+                    : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(0)
+                    ? {
+                        // Use CSS order to control grid position in desktop view
+                        order: visibleCards.indexOf(0) + 1,
+                      }
+                    : {}),
+                  animation:
+                    exitingCard === 0
+                      ? "fadeOutLeft 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                      : enteringCard === 0
+                        ? "slideInFromRight 1.2s cubic-bezier(0.4, 0, 0.2, 1)"
+                        : "",
+                  transition:
+                    isTablet && !exitingCard && !enteringCard
+                      ? "all 0.3s ease-in-out"
+                      : "",
+                  willChange:
+                    exitingCard === 0 || enteringCard === 0
+                      ? "transform, opacity"
+                      : "auto",
                 }}
               >
                 <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
@@ -662,44 +699,57 @@ export default function LandingPage() {
               <div
                 key="basic-education"
                 className={`flex flex-col h-full ${
-                  isMobile ? "!w-full !absolute !inset-0" 
-                  : isTablet 
-                    ? `w-[calc(50%-12px)] absolute top-0 ${
-                        visibleCards.indexOf(1) === 0 ? "left-0" : "right-0"
-                      }`
-                  : ""
+                  isMobile
+                    ? "!w-full !absolute !inset-0"
+                    : isTablet
+                      ? `w-[calc(50%-12px)] absolute top-0 ${
+                          visibleCards.indexOf(1) === 0 ? "left-0" : "right-0"
+                        }`
+                      : ""
                 }`}
                 style={{
-                  ...(isMobile ? {
-                    width: '100%',
-                    maxWidth: '100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    zIndex: visibleCards.includes(1) ? 10 : 0
-                  } : {}),
-                  ...(!isMobile && !isTablet && visibleCards.includes(1) ? {
-                    // Use CSS order to control grid position in desktop view
-                    order: visibleCards.indexOf(1) + 1,
-                  } : {}),
-                  animation: exitingCard === 1
-                    ? "fadeOutLeft 1s ease-in-out"
-                    : enteringCard === 1
-                    ? "slideInFromRight 1s ease-in-out"
-                    : "",
+                  ...(isMobile
+                    ? {
+                        width: "100%",
+                        maxWidth: "100%",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: visibleCards.includes(1) ? 10 : 0,
+                      }
+                    : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(1)
+                    ? {
+                        // Use CSS order to control grid position in desktop view
+                        order: visibleCards.indexOf(1) + 1,
+                      }
+                    : {}),
+                  animation:
+                    exitingCard === 1
+                      ? "fadeOutLeft 1s ease-in-out"
+                      : enteringCard === 1
+                        ? "slideInFromRight 1s ease-in-out"
+                        : "",
                 }}
               >
                 <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                    {featuredItems.basicEducation[basicEducationIndex].title} <br />{" "}
+                    {featuredItems.basicEducation[basicEducationIndex].title}{" "}
+                    <br />{" "}
                     <span className="text-[#E68B00]">
-                      {featuredItems.basicEducation[basicEducationIndex].subtitle}
+                      {
+                        featuredItems.basicEducation[basicEducationIndex]
+                          .subtitle
+                      }
                     </span>
                   </h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-2">
-                    {featuredItems.basicEducation[basicEducationIndex].description}
+                    {
+                      featuredItems.basicEducation[basicEducationIndex]
+                        .description
+                    }
                   </p>
                   <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
                     <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
@@ -713,7 +763,10 @@ export default function LandingPage() {
                           display: "block",
                         }}
                       >
-                        {featuredItems.basicEducation[basicEducationIndex].watermark[0]}
+                        {
+                          featuredItems.basicEducation[basicEducationIndex]
+                            .watermark[0]
+                        }
                       </div>
                       <div
                         className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
@@ -726,12 +779,17 @@ export default function LandingPage() {
                           marginTop: "-0.1em",
                         }}
                       >
-                        {featuredItems.basicEducation[basicEducationIndex].watermark[1]}
+                        {
+                          featuredItems.basicEducation[basicEducationIndex]
+                            .watermark[1]
+                        }
                       </div>
                     </div>
                     <img
                       key={basicEducationIndex}
-                      src={featuredItems.basicEducation[basicEducationIndex].image}
+                      src={
+                        featuredItems.basicEducation[basicEducationIndex].image
+                      }
                       alt="Basic Education Uniforms"
                       className="relative z-10 w-full h-full object-contain"
                       style={{ animation: "fadeIn 0.6s ease-in-out" }}
@@ -752,33 +810,39 @@ export default function LandingPage() {
               <div
                 key="pe-uniforms"
                 className={`flex flex-col h-full ${
-                  isMobile ? "!w-full !absolute !inset-0" 
-                  : isTablet 
-                    ? `w-[calc(50%-12px)] absolute top-0 ${
-                        visibleCards.indexOf(2) === 0 ? "left-0" : "right-0"
-                      }`
-                  : ""
+                  isMobile
+                    ? "!w-full !absolute !inset-0"
+                    : isTablet
+                      ? `w-[calc(50%-12px)] absolute top-0 ${
+                          visibleCards.indexOf(2) === 0 ? "left-0" : "right-0"
+                        }`
+                      : ""
                 }`}
                 style={{
-                  ...(isMobile ? {
-                    width: '100%',
-                    maxWidth: '100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    zIndex: visibleCards.includes(2) ? 10 : 0
-                  } : {}),
-                  ...(!isMobile && !isTablet && visibleCards.includes(2) ? {
-                    // Use CSS order to control grid position in desktop view
-                    order: visibleCards.indexOf(2) + 1,
-                  } : {}),
-                  animation: exitingCard === 2
-                    ? "fadeOutLeft 1s ease-in-out"
-                    : enteringCard === 2
-                    ? "slideInFromRight 1s ease-in-out"
-                    : "",
+                  ...(isMobile
+                    ? {
+                        width: "100%",
+                        maxWidth: "100%",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: visibleCards.includes(2) ? 10 : 0,
+                      }
+                    : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(2)
+                    ? {
+                        // Use CSS order to control grid position in desktop view
+                        order: visibleCards.indexOf(2) + 1,
+                      }
+                    : {}),
+                  animation:
+                    exitingCard === 2
+                      ? "fadeOutLeft 1s ease-in-out"
+                      : enteringCard === 2
+                        ? "slideInFromRight 1s ease-in-out"
+                        : "",
                 }}
               >
                 <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
@@ -839,43 +903,54 @@ export default function LandingPage() {
               <div
                 key="higher-education"
                 className={`flex flex-col h-full ${
-                  isMobile ? "!w-full !absolute !inset-0" 
-                  : isTablet 
-                    ? `w-[calc(50%-12px)] absolute top-0 ${
-                        visibleCards.indexOf(3) === 0 ? "left-0" : "right-0"
-                      }`
-                  : ""
+                  isMobile
+                    ? "!w-full !absolute !inset-0"
+                    : isTablet
+                      ? `w-[calc(50%-12px)] absolute top-0 ${
+                          visibleCards.indexOf(3) === 0 ? "left-0" : "right-0"
+                        }`
+                      : ""
                 }`}
                 style={{
-                  ...(isMobile ? {
-                    width: '100%',
-                    maxWidth: '100%',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    zIndex: visibleCards.includes(3) ? 10 : 0
-                  } : {}),
-                  ...(!isMobile && !isTablet && visibleCards.includes(3) ? {
-                    // Use CSS order to control grid position in desktop view
-                    order: visibleCards.indexOf(3) + 1,
-                  } : {}),
-                  animation: exitingCard === 3
-                    ? "fadeOutLeft 1s ease-in-out"
-                    : "",
+                  ...(isMobile
+                    ? {
+                        width: "100%",
+                        maxWidth: "100%",
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: visibleCards.includes(3) ? 10 : 0,
+                      }
+                    : {}),
+                  ...(!isMobile && !isTablet && visibleCards.includes(3)
+                    ? {
+                        // Use CSS order to control grid position in desktop view
+                        order: visibleCards.indexOf(3) + 1,
+                      }
+                    : {}),
+                  animation:
+                    exitingCard === 3 ? "fadeOutLeft 1s ease-in-out" : "",
                   willChange: exitingCard === 3 ? "transform, opacity" : "auto",
                 }}
               >
                 <div className="p-4 sm:p-6 rounded-xl shadow-lg hover:shadow-xl transition flex flex-col flex-1 overflow-hidden bg-white">
                   <h3 className="text-lg sm:text-xl lg:text-2xl font-semibold text-[#003363] mb-1">
-                    {featuredItems.higherEducation[higherEducationIndex].title} <br />{" "}
+                    {featuredItems.higherEducation[higherEducationIndex].title}{" "}
+                    <br />{" "}
                     <span className="text-[#E68B00]">
-                      {featuredItems.higherEducation[higherEducationIndex].subtitle}
+                      {
+                        featuredItems.higherEducation[higherEducationIndex]
+                          .subtitle
+                      }
                     </span>
                   </h3>
                   <p className="text-sm sm:text-base text-gray-600 mb-2">
-                    {featuredItems.higherEducation[higherEducationIndex].description}
+                    {
+                      featuredItems.higherEducation[higherEducationIndex]
+                        .description
+                    }
                   </p>
                   <div className="relative w-full h-40 sm:h-48 lg:h-56 mt-auto overflow-hidden">
                     <div className="absolute -left-2 bottom-0 pointer-events-none select-none z-0">
@@ -889,7 +964,10 @@ export default function LandingPage() {
                           display: "block",
                         }}
                       >
-                        {featuredItems.higherEducation[higherEducationIndex].watermark[0]}
+                        {
+                          featuredItems.higherEducation[higherEducationIndex]
+                            .watermark[0]
+                        }
                       </div>
                       <div
                         className="text-6xl sm:text-7xl md:text-8xl lg:text-[6.5rem] font-bold text-blue-200/30 select-none uppercase"
@@ -902,12 +980,18 @@ export default function LandingPage() {
                           marginTop: "-0.1em",
                         }}
                       >
-                        {featuredItems.higherEducation[higherEducationIndex].watermark[1]}
+                        {
+                          featuredItems.higherEducation[higherEducationIndex]
+                            .watermark[1]
+                        }
                       </div>
                     </div>
                     <img
                       key={higherEducationIndex}
-                      src={featuredItems.higherEducation[higherEducationIndex].image}
+                      src={
+                        featuredItems.higherEducation[higherEducationIndex]
+                          .image
+                      }
                       alt="Higher Education Uniforms"
                       className="relative z-10 w-full h-full object-contain"
                       style={{ animation: "fadeIn 0.6s ease-in-out" }}
@@ -1087,7 +1171,6 @@ export default function LandingPage() {
           <ArrowUp size={24} />
         </button>
       )}
-
     </div>
   );
 }

@@ -5,6 +5,29 @@
  * The QR code contains order information that can be scanned by admins
  */
 
+/** Number of calendar days the QR code is valid from qrIssuedAt */
+export const QR_VALID_DAYS = 7;
+
+/**
+ * Get remaining full calendar days until QR expires (date-only comparison).
+ * @param {string} qrIssuedAt - ISO timestamp when QR was issued
+ * @param {number} [validDays=QR_VALID_DAYS] - Validity period in days
+ * @returns {number} Remaining days (0 = expires today or already expired; negative = expired)
+ */
+export const getRemainingValidityDays = (qrIssuedAt, validDays = QR_VALID_DAYS) => {
+  if (!qrIssuedAt) return null;
+  const issued = new Date(qrIssuedAt);
+  const expiry = new Date(issued);
+  expiry.setDate(expiry.getDate() + validDays);
+  const now = new Date();
+  // Date-only: compare year/month/day
+  const expiryDate = new Date(expiry.getFullYear(), expiry.getMonth(), expiry.getDate());
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const diffMs = expiryDate - today;
+  const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+  return diffDays;
+};
+
 /**
  * Generate QR code data for an order receipt
  * @param {Object} orderData - Order information
@@ -50,6 +73,8 @@ export const generateOrderReceiptQRData = (orderData) => {
     orderDate,
     educationLevel,
     status,
+    qrIssuedAt: new Date().toISOString(),
+    qrValidDays: QR_VALID_DAYS,
   };
 
   // Validate the generated QR data structure

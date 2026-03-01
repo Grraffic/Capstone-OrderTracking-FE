@@ -177,26 +177,17 @@ export const ActivityProvider = ({ children }) => {
             }
           }
           
-          // Create description in the format: "Your order #1234 School Uniform for Higher Education (College) has been completed."
+          // Create description: "Your order #... (ItemName) has been released!"
           let description = "";
           if (orderNumber && orderNumber !== "N/A") {
-            if (educationLevelDisplay) {
-              description = `Your order #${orderNumber} ${itemName} for ${educationLevelDisplay} has been completed.`;
-            } else {
-              description = `Your order #${orderNumber} ${itemName} has been completed.`;
-            }
+            description = `Your order #${orderNumber} (${itemName}) has been released!`;
           } else if (orderId) {
-            if (educationLevelDisplay) {
-              description = `Your order ${itemName} for ${educationLevelDisplay} has been completed.`;
-            } else {
-              description = `Your order ${itemName} has been completed.`;
-            }
+            description = `Your order (${itemName}) has been released!`;
           } else {
-            description = `Your order ${itemName} has been completed.`;
+            description = `Your order (${itemName}) has been released!`;
           }
 
-          // Create "order_released" activity (order was released by property custodian)
-          // Use consistent userId format (same as checkout activities use user.id)
+          // Create single "order_released" activity (one per claimed order)
           const activityUserId = user.id || user.uid;
           const releasedActivity = {
             id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -212,39 +203,10 @@ export const ActivityProvider = ({ children }) => {
             educationLevel: educationLevelDisplay || educationLevel,
           };
 
-          // console.log("✅ ActivityContext: Creating order_released activity:", releasedActivity);
           setActivities((prev) => {
             const updated = [releasedActivity, ...prev];
-            // console.log(`✅ ActivityContext: Activities updated. Total count: ${updated.length}`);
             return updated;
           });
-          // console.log("✅ ActivityContext: Order released activity tracked successfully");
-
-          // Also create a "claimed" activity for consistency with trackOrderClaimed
-          // Use the same description format as order_released
-          // Use consistent userId format (same as checkout activities use user.id)
-          const claimedActivity = {
-            id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_claimed`,
-            userId: activityUserId, // Use same userId as releasedActivity
-            timestamp: new Date().toISOString(),
-            type: "claimed",
-            description: description || (orderNumber && orderNumber !== "N/A" ? `Claimed order #${orderNumber}` : "Claimed order"),
-            orderId: orderId,
-            orderNumber: orderNumber !== "N/A" ? orderNumber : null,
-            items: items,
-            itemCount: itemCount,
-            productName: itemName,
-            educationLevel: educationLevelDisplay || educationLevel,
-          };
-          // console.log("✅ ActivityContext: Creating claimed activity:", claimedActivity);
-          setActivities((prev) => {
-            const updated = [claimedActivity, ...prev];
-            // console.log(`✅ ActivityContext: Activities updated with claimed activity. Total count: ${updated.length}`);
-            // console.log(`✅ ActivityContext: Claimed activities in list: ${updated.filter(a => a.type === 'claimed').length}`);
-            return updated;
-          });
-          // console.log("✅ ActivityContext: Claimed activity tracked successfully");
-          // console.log("✅ ActivityContext: Both order_released and claimed activities created for order:", orderNumber || orderId);
         } catch (error) {
           // console.error("❌ ActivityContext: Error creating order_released activity:", error);
           // console.error("❌ ActivityContext: Event data:", data);
@@ -287,23 +249,11 @@ export const ActivityProvider = ({ children }) => {
             
             let description = "";
             if (orderNumber && orderNumber !== "N/A") {
-              if (educationLevelDisplay) {
-                description = `Your order #${orderNumber} ${itemName} for ${educationLevelDisplay} has been completed.`;
-              } else {
-                description = `Your order #${orderNumber} ${itemName} has been completed.`;
-              }
-            } else if (orderId) {
-              if (educationLevelDisplay) {
-                description = `Your order ${itemName} for ${educationLevelDisplay} has been completed.`;
-              } else {
-                description = `Your order ${itemName} has been completed.`;
-              }
+              description = `Your order #${orderNumber} (${itemName}) has been released!`;
             } else {
-              description = `Your order ${itemName} has been completed.`;
+              description = `Your order (${itemName}) has been released!`;
             }
 
-            // Create activities with fallback
-            // Use consistent userId format (same as checkout activities use user.id)
             const activityUserId = user.id || user.uid;
             const releasedActivity = {
               id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -319,24 +269,8 @@ export const ActivityProvider = ({ children }) => {
               educationLevel: educationLevelDisplay || educationLevel,
             };
 
-            const claimedActivity = {
-              id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_claimed`,
-              userId: activityUserId, // Use same userId as releasedActivity
-              timestamp: new Date().toISOString(),
-              type: "claimed",
-              description: description || (orderNumber && orderNumber !== "N/A" ? `Claimed order #${orderNumber}` : "Claimed order"),
-              orderId: orderId,
-              orderNumber: orderNumber !== "N/A" ? orderNumber : null,
-              items: items,
-              itemCount: itemCount,
-              productName: itemName,
-              educationLevel: educationLevelDisplay || educationLevel,
-            };
-
-            // console.log("✅ ActivityContext: Creating activities via fallback (user ID mismatch but order details present)");
             setActivities((prev) => {
-              const updated = [releasedActivity, claimedActivity, ...prev];
-              // console.log(`✅ ActivityContext: Fallback activities created. Total count: ${updated.length}`);
+              const updated = [releasedActivity, ...prev];
               return updated;
             });
             // console.log("✅ ActivityContext: Fallback activities tracked successfully");
@@ -392,20 +326,17 @@ export const ActivityProvider = ({ children }) => {
       
       try {
         // Create description from notification message or build it
-        let description = message;
-        if (!description || !description.trim()) {
-          const itemCountValue = itemCount || (Array.isArray(items) ? items.length : 0) || 1;
-          const itemNamesValue = itemNames || (Array.isArray(items) && items.length > 0 ? items.map(i => i.name).join(", ") : "items");
-          description = itemCountValue > 1
-            ? `Your order #${orderNumber} with ${itemCountValue} items (${itemNamesValue}) has been completed.`
-            : `Your order #${orderNumber} (${itemNamesValue}) has been completed.`;
-        }
-        
         const itemsArray = Array.isArray(items) ? items : [];
         const firstItem = itemsArray.length > 0 ? itemsArray[0] : null;
         const itemName = firstItem?.name || itemNames || "items";
-        
-        // Create both order_released and claimed activities
+        const itemNamesValue = itemNames || (itemsArray.length > 0 ? itemsArray.map(i => i.name).join(", ") : "items");
+
+        let description = message;
+        if (!description || !description.trim()) {
+          description = `Your order #${orderNumber} (${itemNamesValue}) has been released!`;
+        }
+
+        // Create single order_released activity
         const releasedActivity = {
           id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           userId: user?.id || user?.uid,
@@ -419,23 +350,8 @@ export const ActivityProvider = ({ children }) => {
           productName: itemName,
         };
 
-        const claimedActivity = {
-          id: `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}_claimed`,
-          userId: user?.id || user?.uid,
-          timestamp: new Date().toISOString(),
-          type: "claimed",
-          description: description || `Claimed order #${orderNumber}`,
-          orderId: orderId,
-          orderNumber: orderNumber,
-          items: itemsArray,
-          itemCount: itemCount || itemsArray.length,
-          productName: itemName,
-        };
-
-        // console.log("✅ ActivityContext: Creating activities from notification event");
         setActivities((prev) => {
-          const updated = [releasedActivity, claimedActivity, ...prev];
-          // console.log(`✅ ActivityContext: Activities created from notification. Total count: ${updated.length}`);
+          const updated = [releasedActivity, ...prev];
           return updated;
         });
         // console.log("✅ ActivityContext: Activities created successfully from notification");
@@ -601,20 +517,11 @@ export const ActivityProvider = ({ children }) => {
             }
           }
           
-          let description = "";
-          if (orderNumber) {
-            if (educationLevelDisplay) {
-              description = `Your order #${orderNumber} ${itemName} for ${educationLevelDisplay} has been completed.`;
-            } else {
-              description = `Your order #${orderNumber} ${itemName} has been completed.`;
-            }
-          } else {
-            description = `Your order ${itemName} has been completed.`;
-          }
-          
+          const description = orderNumber
+            ? `Your order #${orderNumber} (${itemName}) has been released!`
+            : `Your order (${itemName}) has been released!`;
+
           const activityUserId = user.id || user.uid;
-          
-          // Create both order_released and claimed activities
           const releasedActivity = {
             id: `activity_sync_${orderId}_${Date.now()}_released`,
             userId: activityUserId,
@@ -628,22 +535,8 @@ export const ActivityProvider = ({ children }) => {
             productName: itemName,
             educationLevel: educationLevelDisplay || educationLevel,
           };
-          
-          const claimedActivity = {
-            id: `activity_sync_${orderId}_${Date.now()}_claimed`,
-            userId: activityUserId,
-            timestamp: order.claimed_date || order.updated_at || order.created_at || new Date().toISOString(),
-            type: "claimed",
-            description: description,
-            orderId: orderId,
-            orderNumber: orderNumber,
-            items: items,
-            itemCount: itemCount,
-            productName: itemName,
-            educationLevel: educationLevelDisplay || educationLevel,
-          };
-          
-          newActivities.push(releasedActivity, claimedActivity);
+
+          newActivities.push(releasedActivity);
           // console.log(`📡 syncActivitiesFromClaimedOrders: Created activities for order ${orderNumber}`);
         }
         
@@ -860,11 +753,22 @@ export const ActivityProvider = ({ children }) => {
       return matches;
     });
     
-    const claimedCount = filtered.filter(a => a.type === 'claimed').length;
-    const orderReleasedCount = filtered.filter(a => a.type === 'order_released').length;
-    // console.log(`📊 getActivities: Returning ${filtered.length} activities for user ${currentUserId} (${claimedCount} claimed, ${orderReleasedCount} order_released)`);
-    
-    return filtered;
+    // Deduplicate: for claimed/order_released, keep only one per orderNumber (prefer order_released)
+    const claimTypes = ["claimed", "order_released"];
+    const onePerOrder = new Map();
+    for (const a of filtered) {
+      if (!claimTypes.includes(a.type) || !a.orderNumber) continue;
+      const existing = onePerOrder.get(a.orderNumber);
+      if (!existing || (existing.type !== "order_released" && a.type === "order_released")) {
+        onePerOrder.set(a.orderNumber, a);
+      }
+    }
+    const keptIds = new Set([...onePerOrder.values()].map((a) => a.id));
+    const deduped = filtered.filter(
+      (a) => !claimTypes.includes(a.type) || !a.orderNumber || keptIds.has(a.id)
+    );
+
+    return deduped;
   };
 
   /**
