@@ -4,6 +4,7 @@ import { subDays } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
 import InventoryView from "../components/Inventory/InventoryView";
+import SearchableSelect from "../components/common/SearchableSelect";
 import TransactionsView from "../components/Inventory/TransactionsView";
 import UpdateQuantityModal from "../components/Inventory/UpdateQuantityModal";
 import { useOrders, useInventoryHealthStats } from "../hooks";
@@ -1494,25 +1495,20 @@ const Inventory = () => {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Item Name</label>
-                  <select
+                  <SearchableSelect
                     value={setReorderPointForm.itemName}
-                    onChange={(e) => {
+                    onChange={(selectedValue) => {
                       setSetReorderPointForm((prev) => ({
                         ...prev,
-                        itemName: e.target.value,
+                        itemName: selectedValue,
                         variant: "",
                       }));
                     }}
+                    options={[...new Set(inventoryData.map((r) => r.item))]}
+                    placeholder="Enter Item Name"
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent"
                     required
-                  >
-                    <option value="">Enter Item Name</option>
-                    {[...new Set(inventoryData.map((r) => r.item))].sort().map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">Variant</label>
