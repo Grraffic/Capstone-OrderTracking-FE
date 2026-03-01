@@ -176,27 +176,23 @@ export const useStudentSettings = () => {
     fetchProfileData();
   }, [fetchProfileData]);
 
-  // Auto-detect student type from student number in real-time
+  // Auto-detect student type from student number in real-time (do not set hasChanges here;
+  // user-initiated changes are tracked in handleFieldChange so both Save/Discard stay disabled when no edits)
   useEffect(() => {
     if (!formData.studentNumber || !formData.studentNumber.trim()) {
-      // Clear student type if student number is cleared
       if (formData.studentType) {
         setFormData((prev) => ({
           ...prev,
           studentType: "",
         }));
-        setHasChanges(true);
       }
       return;
     }
 
     const detectedType = getStudentTypeFromStudentNumber(formData.studentNumber);
     if (detectedType) {
-      // Auto-set student type in real-time
       setFormData((prev) => {
-        // Only update if different to avoid unnecessary re-renders
         if (prev.studentType !== detectedType) {
-          setHasChanges(true);
           return {
             ...prev,
             studentType: detectedType,
@@ -205,12 +201,10 @@ export const useStudentSettings = () => {
         return prev;
       });
     } else if (formData.studentType) {
-      // Clear if student number becomes invalid
       setFormData((prev) => ({
         ...prev,
         studentType: "",
       }));
-      setHasChanges(true);
     }
   }, [formData.studentNumber]);
 

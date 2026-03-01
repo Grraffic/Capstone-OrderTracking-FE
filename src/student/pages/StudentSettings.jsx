@@ -916,13 +916,13 @@ const StudentSettings = () => {
                 <div className="flex flex-col md:flex-row justify-end gap-4 mt-6">
                   <button
                     onClick={() => {
-                      if (formHasInformation) {
+                      if (hasChanges) {
                         setShowDiscardModal(true);
                       }
                     }}
-                    disabled={!formHasInformation || isProfileCompleted}
-                    className={`px-6 py-3 rounded-lg  font-medium transition-colors ${
-                      formHasInformation && !isProfileCompleted
+                    disabled={!hasChanges}
+                    className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                      hasChanges
                         ? "border-2 border-gray-300 text-gray-700 hover:bg-gray-50"
                         : "border-2 border-gray-200 text-gray-400 cursor-not-allowed"
                     }`}
@@ -933,9 +933,9 @@ const StudentSettings = () => {
                   <button
                     id="onboard-save"
                     onClick={handleSaveClick}
-                    disabled={!formHasInformation || saving}
+                    disabled={!hasChanges || saving}
                     className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-                      formHasInformation && !saving
+                      hasChanges && !saving
                         ? "bg-[#E68B00] text-white hover:bg-[#d97d00]"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}

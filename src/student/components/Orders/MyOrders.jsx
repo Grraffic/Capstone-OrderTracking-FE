@@ -13,7 +13,7 @@ import { useSocket } from "../../../context/SocketContext";
 import QRCode from "react-qr-code";
 import { generateOrderReceiptQRData, getRemainingValidityDays, QR_VALID_DAYS } from "../../../utils/qrCodeGenerator";
 import { useSocketOrderUpdates } from "../../hooks/orders/useSocketOrderUpdates";
-import { orderAPI, itemsAPI, authAPI } from "../../../services/api";
+import { orderAPI, itemsAPI, authAPI, API_BASE_URL } from "../../../services/api";
 import { useCart } from "../../../context/CartContext";
 import { resolveItemKeyForMaxQuantity, getDefaultMaxForItem } from "../../../utils/maxQuantityKeys";
 import { getDisplayPriceForFreeItem } from "../../../utils/freeItemDisplayPrice";
@@ -84,7 +84,20 @@ const downloadSVGAsPNG = (svgElement, filename) => {
  */
 const QRCodeModal = ({ order, onClose, profileData }) => {
   const [qrError, setQrError] = React.useState(null);
+  const [qrValidDays, setQrValidDays] = React.useState(QR_VALID_DAYS);
   const { on, off, isConnected } = useSocket();
+
+  // Align with backend VOID_UNCLAIMED_AFTER_DAYS (weekdays only)
+  React.useEffect(() => {
+    let cancelled = false;
+    fetch(`${API_BASE_URL || ""}/config`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!cancelled && typeof d.qrValidDays === "number" && d.qrValidDays > 0) setQrValidDays(d.qrValidDays);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const qrContainerRef = React.useRef(null);
   const pollingIntervalRef = React.useRef(null);
   const hasClosedRef = React.useRef(false);
@@ -371,7 +384,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     };
   }, [isConnected, order, onClose, on, off, normalizeOrderNumber, matchOrderId, matchOrderNumber, extractOrderIdentifiers, startPolling]);
 
-  // Create structured order data for QR generation
+  // Create structured order data for QR generation (validity from order creation, weekdays only)
   const minimalQRData = {
     type: "order_receipt",
     orderNumber: order.orderNumber || order.order_number || order.id || "N/A",
@@ -387,6 +400,8 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     educationLevel:
       order.educationLevel || order.education_level || order.type || "General",
     status: order.status || "pending",
+    qrIssuedAt: order.created_at || new Date().toISOString(),
+    qrValidDays,
   };
 
   let qrData;
@@ -405,13 +420,14 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     });
   }
 
-  // Remaining validity (from encoded payload; null if no qrIssuedAt or parse error)
+  // Remaining validity in weekdays (from payload; aligns with VOID_UNCLAIMED_AFTER_DAYS)
   let remainingDays = null;
   if (!qrError && qrData) {
     try {
       const parsed = JSON.parse(qrData);
       if (parsed?.qrIssuedAt != null) {
-        remainingDays = getRemainingValidityDays(parsed.qrIssuedAt);
+        const validDays = typeof parsed.qrValidDays === "number" ? parsed.qrValidDays : qrValidDays;
+        remainingDays = getRemainingValidityDays(parsed.qrIssuedAt, validDays);
       }
     } catch (_) {}
   }
@@ -623,9 +639,9 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
               {minimalQRData.studentId}-{minimalQRData.studentName}
             </span>
             . Any attempt to use this code for other orders, items, or by other
-            individuals will be considered invalid. This code is valid for{" "}
-            {QR_VALID_DAYS} days from when it is shown; the remaining validity
-            decreases each day. Once it expires, it cannot be used to claim your
+            individuals will be considered invalid            . This code is valid for{" "}
+            {qrValidDays} weekdays (Mon–Fri) from the order date; the remaining
+            count decreases each weekday. Once it expires, it cannot be used to claim your
             order. If you save the image and use it after expiry, the property
             custodian will see that the code is expired.
           </p>
