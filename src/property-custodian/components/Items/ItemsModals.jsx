@@ -97,6 +97,7 @@ const ItemsModals = ({
   const lastInitializedItemIdRef = useRef(null);
   // Keep latest variant state so edit submit always sends what the user sees (avoids stale closure)
   const variantStateRef = useRef({ values: [], stocks: [], prices: [] });
+  const existingVariantCountRef = useRef(0);
 
   const {
     formData,
@@ -479,25 +480,38 @@ const ItemsModals = ({
       const mergedBySize = new Map();
       rawVariations.forEach((v) => {
         const key = normalizedSize(v.size);
+        const stockNum = Number(v.stock) || 0;
+        const begInv = Number(v.beginning_inventory) ?? 0;
+        const purchQty = Math.max(0, stockNum - begInv);
         if (!mergedBySize.has(key)) {
+          // First row for this size: beginning inventory + optional first purchase batch
+          const purchase_batches = purchQty > 0
+            ? [{ qty: purchQty, unit_price: Number(v.price) ?? 0 }]
+            : [];
+          const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
           mergedBySize.set(key, {
             size: v.size,
-            stock: Number(v.stock) || 0,
+            stock: stockNum,
             price: v.price,
-            beginning_inventory: Number(v.beginning_inventory) ?? 0,
-            purchases: Math.max(
-              0,
-              (Number(v.stock) || 0) - (Number(v.beginning_inventory) ?? 0)
-            ),
+            beginning_inventory: begInv,
+            beginning_inventory_unit_price: Number(v.price) ?? 0,
+            purchases,
+            purchase_batches,
           });
         } else {
+          // Second+ row for same size: append to purchase_batches (each entry has own unit price)
           const prev = mergedBySize.get(key);
-          const combinedStock = (Number(prev.stock) || 0) + (Number(v.stock) || 0);
-          const begInv = Number(prev.beginning_inventory) ?? 0;
+          const combinedStock = (Number(prev.stock) || 0) + stockNum;
+          const prevBatches = Array.isArray(prev.purchase_batches) ? prev.purchase_batches : [];
+          const newBatch = { qty: stockNum, unit_price: Number(v.price) ?? prev.price ?? 0 };
+          const purchase_batches = [...prevBatches, newBatch];
+          const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
           mergedBySize.set(key, {
             ...prev,
             stock: combinedStock,
-            purchases: Math.max(0, combinedStock - begInv),
+            purchases,
+            purchase_batches,
+            purchase_unit_price: newBatch.unit_price,
           });
         }
       });
@@ -577,9 +591,11 @@ const ItemsModals = ({
         { length: len },
         (_, i) => refState.prices[i] ?? currentPrices[i] ?? ""
       );
+      const existingCount = existingVariantCountRef.current;
 
       // Only include variants that are checked (selectedVariantIndices); unchecked sizes must not be saved
-      const rawVariations = valuesForSubmit
+      // Build candidate rows (size, stock, price, index) - index distinguishes existing vs new rows
+      const candidates = valuesForSubmit
         .map((sizeVal, index) => {
           if (!selectedVariantIndices.includes(index)) return null;
           const stock = Number(stocksForSubmit[index]) || 0;
@@ -592,50 +608,108 @@ const ItemsModals = ({
           if (!size && (stock > 0 || price > 0)) {
             size = `Size ${index + 1}`;
           }
-          const existing = findExistingBySize(size);
-          const beginning_inventory =
-            existing?.beginning_inventory != null
-              ? Number(existing.beginning_inventory) || 0
-              : stock;
-          const purchases = Math.max(
-            0,
-            (Number(stock) || 0) - (Number(beginning_inventory) || 0)
-          );
-          return size
-            ? { size, stock, price, beginning_inventory, purchases }
-            : null;
+          return size ? { size, stock, price, index } : null;
         })
         .filter(Boolean);
 
-      if (rawVariations.length === 0) {
+      if (candidates.length === 0) {
         handleFormSubmit(e);
         return;
       }
 
+      // Group candidates by normalized size
+      const bySize = new Map();
+      candidates.forEach((c) => {
+        const key = normalizedSize(c.size);
+        if (!bySize.has(key)) bySize.set(key, []);
+        bySize.get(key).push(c);
+      });
+
       const mergedBySize = new Map();
-      rawVariations.forEach((v) => {
-        const key = normalizedSize(v.size);
-        if (!mergedBySize.has(key)) {
-          mergedBySize.set(key, {
-            size: v.size,
-            stock: Number(v.stock) || 0,
-            price: v.price,
-            beginning_inventory: Number(v.beginning_inventory) ?? 0,
-            purchases: Math.max(
-              0,
-              (Number(v.stock) || 0) - (Number(v.beginning_inventory) ?? 0)
-            ),
+
+      bySize.forEach((rows, key) => {
+        const firstSize = rows[0]?.size;
+        const existing = findExistingBySize(firstSize);
+
+        // New size (not in existingNoteData): use current logic - first row = beginning, rest = purchases
+        if (existing == null) {
+          rows.forEach((row, i) => {
+            const stock = Number(row.stock) || 0;
+            const price = Number(row.price) || 0;
+            if (i === 0) {
+              mergedBySize.set(key, {
+                size: row.size,
+                stock,
+                price: row.price,
+                beginning_inventory: stock,
+                beginning_inventory_unit_price: price,
+                purchases: 0,
+                purchase_batches: [],
+              });
+            } else {
+              const prev = mergedBySize.get(key);
+              const prevBatches = Array.isArray(prev?.purchase_batches) ? prev.purchase_batches : [];
+              const newBatch = { qty: stock, unit_price: price };
+              const purchase_batches = [...prevBatches, newBatch];
+              const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
+              mergedBySize.set(key, {
+                ...prev,
+                stock: (Number(prev?.stock) || 0) + stock,
+                purchases,
+                purchase_batches,
+                purchase_unit_price: newBatch.unit_price,
+              });
+            }
           });
-        } else {
-          const prev = mergedBySize.get(key);
-          const combinedStock = (Number(prev.stock) || 0) + (Number(v.stock) || 0);
-          const begInv = Number(prev.beginning_inventory) ?? 0;
-          mergedBySize.set(key, {
-            ...prev,
-            stock: combinedStock,
-            purchases: Math.max(0, combinedStock - begInv),
-          });
+          return;
         }
+
+        // Existing size: separate existing rows (index < existingCount) from new rows (index >= existingCount)
+        const existingRows = rows.filter((r) => r.index < existingCount);
+        const newRows = rows.filter((r) => r.index >= existingCount);
+
+        // If only existing rows (no new purchase entries): preserve variant from note entirely
+        if (newRows.length === 0) {
+          const preserved = {
+            size: existing.size,
+            stock: Number(existing.stock) || 0,
+            price: existing.price,
+            beginning_inventory: Number(existing.beginning_inventory) || 0,
+            beginning_inventory_unit_price:
+              existing.beginning_inventory_unit_price != null && existing.beginning_inventory_unit_price !== ""
+                ? Number(existing.beginning_inventory_unit_price)
+                : Number(existing.price) ?? 0,
+            purchases: Number(existing.purchases) || 0,
+            purchase_batches: Array.isArray(existing.purchase_batches) ? [...existing.purchase_batches] : [],
+          };
+          mergedBySize.set(key, preserved);
+          return;
+        }
+
+        // Has new rows: start from existing variant, append new purchase batches
+        const prevBatches = Array.isArray(existing.purchase_batches) ? [...existing.purchase_batches] : [];
+        const newBatches = newRows.map((row) => ({
+          qty: Number(row.stock) || 0,
+          unit_price: Number(row.price) ?? 0,
+        }));
+        const purchase_batches = [...prevBatches, ...newBatches];
+        const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
+        const begInv = Number(existing.beginning_inventory) || 0;
+        const totalStock = begInv + purchases;
+
+        mergedBySize.set(key, {
+          size: existing.size,
+          stock: totalStock,
+          price: existing.price,
+          beginning_inventory: begInv,
+          beginning_inventory_unit_price:
+            existing.beginning_inventory_unit_price != null && existing.beginning_inventory_unit_price !== ""
+              ? Number(existing.beginning_inventory_unit_price)
+              : Number(existing.price) ?? 0,
+          purchases,
+          purchase_batches,
+          purchase_unit_price: newBatches.length > 0 ? newBatches[newBatches.length - 1].unit_price : existing.purchase_unit_price ?? existing.price,
+        });
       });
 
       const sizeVariations = Array.from(mergedBySize.values());
@@ -912,6 +986,11 @@ const ItemsModals = ({
     }
   }, [variants, variantStocks, variantPrices]);
 
+  // Keep existingVariantCountRef in sync for edit submit handler
+  useEffect(() => {
+    existingVariantCountRef.current = existingVariantCount;
+  }, [existingVariantCount]);
+
   // Initialize variant prices and stocks when editing an item (only once per open per item so user-added rows are not wiped)
   useEffect(() => {
     if (!modalState.isOpen) {
@@ -949,8 +1028,19 @@ const ItemsModals = ({
         const selectedIndices = [];
 
         sizeVariations.forEach((variant, index) => {
-          initialPrices[index] = String(variant.price || selectedItem.price || "");
-          initialStocks[index] = String(variant.stock || "");
+          // Use beginning_inventory values for existing variants (not total stock)
+          initialStocks[index] = String(
+            variant.beginning_inventory !== undefined &&
+              variant.beginning_inventory !== null
+              ? variant.beginning_inventory
+              : variant.stock || ""
+          );
+          initialPrices[index] = String(
+            variant.beginning_inventory_unit_price != null &&
+              variant.beginning_inventory_unit_price !== ""
+              ? variant.beginning_inventory_unit_price
+              : variant.price || selectedItem.price || ""
+          );
           initialValues[index] = variant.size || "";
           selectedIndices.push(index);
         });

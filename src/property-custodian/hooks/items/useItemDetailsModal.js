@@ -226,6 +226,12 @@ export const useItemDetailsModal = (allItems = []) => {
                 storedStock,
                 begInv + purch
               );
+              // Normalize purchase_batches: if missing but purchases > 0, treat as one batch
+              let purchase_batches = Array.isArray(variationData.purchase_batches) ? variationData.purchase_batches : [];
+              if (purchase_batches.length === 0 && purch > 0) {
+                const pu = variationData.purchase_unit_price ?? variationData.price ?? matchingItem.price;
+                purchase_batches = [{ qty: purch, unit_price: Number(pu) || 0 }];
+              }
               allVariations.push({
                 ...matchingItem,
                 // Keep original ID for edit/delete operations
@@ -248,6 +254,14 @@ export const useItemDetailsModal = (allItems = []) => {
                   variationData.beginning_inventory_unit_price !== null
                     ? Number(variationData.beginning_inventory_unit_price)
                     : matchingItem.beginning_inventory_unit_price,
+                // Per-variant purchase unit price (last batch); fallback to price
+                purchase_unit_price:
+                  variationData.purchase_unit_price !== undefined &&
+                  variationData.purchase_unit_price !== null
+                    ? Number(variationData.purchase_unit_price)
+                    : undefined,
+                // Multiple purchase batches, each with own unit price (for FIFO total)
+                purchase_batches,
               });
             });
           } else if (hasCommaSeparatedSizes) {
@@ -283,6 +297,11 @@ export const useItemDetailsModal = (allItems = []) => {
                     ? Math.max(0, storedNum - begInv)
                     : 0;
               const displayStock = Math.max(storedNum, begInv + purch);
+              let purchase_batches = Array.isArray(variationData?.purchase_batches) ? variationData.purchase_batches : [];
+              if (purchase_batches.length === 0 && purch > 0) {
+                const pu = variationData?.purchase_unit_price ?? variationData?.price ?? matchingItem.price;
+                purchase_batches = [{ qty: purch, unit_price: Number(pu) || 0 }];
+              }
               allVariations.push({
                 ...matchingItem,
                 // Keep original ID for edit/delete operations
@@ -300,6 +319,13 @@ export const useItemDetailsModal = (allItems = []) => {
                   variationData?.beginning_inventory_unit_price !== null
                     ? Number(variationData.beginning_inventory_unit_price)
                     : matchingItem.beginning_inventory_unit_price,
+                // Per-variant purchase unit price (last batch)
+                purchase_unit_price:
+                  variationData?.purchase_unit_price !== undefined &&
+                  variationData?.purchase_unit_price !== null
+                    ? Number(variationData.purchase_unit_price)
+                    : undefined,
+                purchase_batches,
               });
             });
           } else {
@@ -382,14 +408,25 @@ export const useItemDetailsModal = (allItems = []) => {
             });
 
             if (existingVariation) {
-              // Same item with duplicate size (e.g. two "Small" in note.sizeVariations) -> merge stock and purchases
+              // Same item with duplicate size (e.g. two "Small" in note.sizeVariations) -> merge stock, purchases, and purchase_batches
               if (existingVariation.id === variation.id) {
                 const begInv = Number(existingVariation.beginning_inventory) || 0;
                 existingVariation.stock = (Number(existingVariation.stock) || 0) + (Number(variation.stock) || 0);
                 existingVariation.purchases = (Number(existingVariation.purchases) || 0) + (Number(variation.purchases) || 0);
-                // Keep display consistent: purchases = stock - beginning_inventory when we merged
-                const combinedStock = Number(existingVariation.stock) || 0;
-                existingVariation.purchases = Math.max(0, combinedStock - begInv);
+                // Merge purchase_batches so per-batch unit prices are preserved for FIFO
+                existingVariation.purchase_batches = [
+                  ...(existingVariation.purchase_batches || []),
+                  ...(variation.purchase_batches || []),
+                ];
+                if (existingVariation.purchase_batches.length > 0) {
+                  existingVariation.purchases = existingVariation.purchase_batches.reduce(
+                    (s, b) => s + (Number(b.qty) || 0),
+                    0
+                  );
+                } else {
+                  const combinedStock = Number(existingVariation.stock) || 0;
+                  existingVariation.purchases = Math.max(0, combinedStock - begInv);
+                }
                 console.log(
                   `[useItemDetailsModal] ✅ Merged duplicate size (same ID): ${variation.name} ${rawSize} -> stock=${existingVariation.stock}, purchases=${existingVariation.purchases}`
                 );
@@ -494,8 +531,8 @@ export const useItemDetailsModal = (allItems = []) => {
 
   /**
    * Calculate total cost summary using FIFO (First In, First Out).
-   * Formula: (beginning_inventory * beginning_unit_price) + (purchases * purchase_price)
-   * If beginning_inventory_unit_price is not available, use current price as fallback for both.
+   * When purchase_batches present: (beginning * beg_price) + Σ(batch.qty * batch.unit_price)
+   * Else: (beginning_inventory * beginning_unit_price) + (purchases * purchase_unit_price)
    */
   const totalCostSummary = useMemo(() => {
     if (!variations.length) return 0;
@@ -504,21 +541,29 @@ export const useItemDetailsModal = (allItems = []) => {
       const purchases = Number(v.purchases) || 0;
       const currentPrice = Number(v.price) || 0;
       
-      // Get beginning_inventory_unit_price with proper fallback
       let beginningUnitPrice = Number(v.beginning_inventory_unit_price);
       if (isNaN(beginningUnitPrice) || beginningUnitPrice === 0) {
         beginningUnitPrice = currentPrice || 0;
       }
-      const purchaseUnitPrice = currentPrice || 0;
       
-      // Ensure all values are valid numbers before calculation
-      if (isNaN(beginningInventory) || isNaN(purchases) || 
-          isNaN(beginningUnitPrice) || isNaN(purchaseUnitPrice)) {
-        return total; // Skip invalid variations
+      let variationCost = 0;
+      const hasBatches = Array.isArray(v.purchase_batches) && v.purchase_batches.length > 0;
+      if (hasBatches) {
+        const batchTotal = v.purchase_batches.reduce(
+          (sum, b) => sum + (Number(b.qty) || 0) * (Number(b.unit_price) || 0),
+          0
+        );
+        variationCost = beginningInventory * beginningUnitPrice + batchTotal;
+      } else {
+        const purchaseUnitPrice =
+          v.purchase_unit_price != null && !isNaN(Number(v.purchase_unit_price))
+            ? Number(v.purchase_unit_price)
+            : currentPrice || 0;
+        if (isNaN(beginningInventory) || isNaN(purchases) || isNaN(beginningUnitPrice) || isNaN(purchaseUnitPrice)) {
+          return total;
+        }
+        variationCost = beginningInventory * beginningUnitPrice + purchases * purchaseUnitPrice;
       }
-      
-      // FIFO calculation: (beginning_inventory * beginning_unit_price) + (purchases * purchase_unit_price)
-      const variationCost = (beginningInventory * beginningUnitPrice) + (purchases * purchaseUnitPrice);
       return total + (isNaN(variationCost) ? 0 : variationCost);
     }, 0);
   }, [variations]);
