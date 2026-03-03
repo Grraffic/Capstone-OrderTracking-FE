@@ -426,11 +426,21 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     try {
       const parsed = JSON.parse(qrData);
       if (parsed?.qrIssuedAt != null) {
-        const validDays = typeof parsed.qrValidDays === "number" ? parsed.qrValidDays : qrValidDays;
+        const validDays =
+          typeof parsed.qrValidDays === "number" ? parsed.qrValidDays : qrValidDays;
         remainingDays = getRemainingValidityDays(parsed.qrIssuedAt, validDays);
       }
     } catch (_) {}
   }
+
+  // UI-only adjustment so students see 7→6→5… instead of 8→7→6…
+  const displayRemainingDays =
+    remainingDays != null && remainingDays > 0 ? remainingDays - 1 : remainingDays;
+
+  // Hide validity info once the order has been claimed/completed
+  const isOrderClaimed =
+    (order.status || "").toLowerCase() === "claimed" ||
+    (order.status || "").toLowerCase() === "completed";
 
   // Get item names for display
   const itemNames =
@@ -519,16 +529,27 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
         </div>
 
         {/* Validity: X days remaining / Expires today / Expired */}
-        {remainingDays !== null && (
-          <div className={`text-center mb-4 sm:mb-6 text-sm font-medium ${remainingDays < 0 ? "text-red-600" : remainingDays === 0 ? "text-amber-600" : "text-[#003363]"}`}>
-            {remainingDays > 0 && (
-              <span>{remainingDays} day{remainingDays !== 1 ? "s" : ""} remaining</span>
+        {!isOrderClaimed && remainingDays !== null && (
+          <div
+            className={`text-center mb-4 sm:mb-6 text-sm font-medium ${
+              remainingDays < 0
+                ? "text-red-600"
+                : remainingDays === 0
+                ? "text-amber-600"
+                : "text-[#003363]"
+            }`}
+          >
+            {displayRemainingDays > 0 && (
+              <span>
+                {displayRemainingDays} day
+                {displayRemainingDays !== 1 ? "s" : ""} remaining
+              </span>
             )}
-            {remainingDays === 0 && (
-              <span>Valid until end of today</span>
-            )}
+            {remainingDays === 0 && <span>Valid until end of today</span>}
             {remainingDays < 0 && (
-              <span>This QR code has expired. Open this order again to get a new code.</span>
+              <span>
+                This QR code has expired. Open this order again to get a new code.
+              </span>
             )}
           </div>
         )}

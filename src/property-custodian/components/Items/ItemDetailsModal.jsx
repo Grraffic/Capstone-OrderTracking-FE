@@ -305,40 +305,18 @@ const ItemDetailsModal = ({
                   </div>
                   {(() => {
                     const beg = Number(displayItem.beginning_inventory) || 0;
-                    const batches = Array.isArray(displayItem.purchase_batches) ? displayItem.purchase_batches : [];
-                    const purch = batches.length > 0
-                      ? batches.reduce((s, b) => s + (Number(b.qty) || 0), 0)
-                      : (Number(displayItem.purchases) || 0);
-                    const fallbackPrice = Number(displayItem.price) || 0;
-                    const begPrice = displayItem.beginning_inventory_unit_price != null && displayItem.beginning_inventory_unit_price !== ""
-                      ? Number(displayItem.beginning_inventory_unit_price)
-                      : fallbackPrice;
+                    const batches = Array.isArray(displayItem.purchase_batches)
+                      ? displayItem.purchase_batches
+                      : [];
+                    const purch =
+                      batches.length > 0
+                        ? batches.reduce((s, b) => s + (Number(b.qty) || 0), 0)
+                        : Number(displayItem.purchases) || 0;
                     const hasBreakdown = beg > 0 || purch > 0;
                     if (!hasBreakdown) return null;
-                    return (
-                      <div className="text-[10px] text-[#0C2340] mobile-m:text-xs mt-0.5 pl-0 tablet:mt-1">
-                        {beg > 0 && (
-                          <>
-                            Beginning: ₱{begPrice.toLocaleString("en-PH", { minimumFractionDigits: 2 })} × {beg}
-                            {purch > 0 ? " | " : null}
-                          </>
-                        )}
-                        {batches.length > 0 ? (
-                          batches.map((b, i) => (
-                            <span key={i}>
-                              {i > 0 ? " | " : ""}
-                              Purchase {i + 1}: ₱{(Number(b.unit_price) || 0).toLocaleString("en-PH", { minimumFractionDigits: 2 })} × {Number(b.qty) || 0}
-                            </span>
-                          ))
-                        ) : purch > 0 ? (
-                          <>
-                            Purchases: ₱{(displayItem.purchase_unit_price != null && displayItem.purchase_unit_price !== ""
-                              ? Number(displayItem.purchase_unit_price)
-                              : fallbackPrice).toLocaleString("en-PH", { minimumFractionDigits: 2 })} × {purch}
-                          </>
-                        ) : null}
-                      </div>
-                    );
+
+                    // Breakdown row (Beginning / Purchase prices) intentionally hidden from UI
+                    return null;
                   })()}
                 </div>
               </div>
