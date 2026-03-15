@@ -5,46 +5,41 @@
  * The QR code contains order information that can be scanned by admins
  */
 
-/** Default number of weekdays (Mon–Fri) the QR/order is valid from order creation. Must match VOID_UNCLAIMED_AFTER_DAYS. */
+/** Default number of weekdays (Mon–Fri) the QR/order is valid from order creation. */
 export const QR_VALID_DAYS = 7;
 
-/**
- * Add N weekdays (Mon–Fri) to a date. Saturday/Sunday are skipped.
- * @param {Date} startDate - Start date (time ignored)
- * @param {number} count - Number of weekdays to add
- * @returns {Date} Resulting date (start of day)
- */
-function addWeekdays(startDate, count) {
-  const d = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-  let added = 0;
-  while (added < count) {
-    d.setDate(d.getDate() + 1);
-    if (d.getDay() >= 1 && d.getDay() <= 5) added++;
-  }
-  return d;
-}
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * Count weekdays (Mon–Fri) between two dates inclusive.
- * @param {Date} from - Start date
- * @param {Date} to - End date
- * @returns {number} Number of weekdays in [from, to]
+ * Count weekdays (Mon–Fri) between two dates, exclusive of the start and inclusive of the end.
+ * Example: from = Monday, to = Monday => 0; from = Monday, to = Tuesday => 1.
+ * @param {Date} from
+ * @param {Date} to
+ * @returns {number}
  */
-function countWeekdaysBetween(from, to) {
-  const fromD = new Date(from.getFullYear(), from.getMonth(), from.getDate());
-  const toD = new Date(to.getFullYear(), to.getMonth(), to.getDate());
-  if (fromD.getTime() > toD.getTime()) return 0;
+const countElapsedWeekdays = (from, to) => {
+  if (to.getTime() <= from.getTime()) return 0;
   let count = 0;
-  const cur = new Date(fromD);
-  while (cur.getTime() <= toD.getTime()) {
-    if (cur.getDay() >= 1 && cur.getDay() <= 5) count++;
+  const cur = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  cur.setDate(cur.getDate() + 1); // start counting the day after "from"
+  while (cur.getTime() <= to.getTime()) {
+    const day = cur.getDay();
+    if (day >= 1 && day <= 5) {
+      count++;
+    }
     cur.setDate(cur.getDate() + 1);
   }
   return count;
-}
+};
 
 /**
- * Get remaining weekdays (Mon–Fri only) until QR/order expires. Aligns with backend VOID_UNCLAIMED_AFTER_DAYS.
+ * Get remaining weekdays (Mon–Fri) until QR/order expires.
+ * - On the order day: returns validDays (e.g. 7)
+ * - Each weekday after that: decreases by 1
+ * - Saturday/Sunday DO NOT decrement the count
+ * - On the last valid weekday: returns 0 (\"Valid until end of today\")
+ * - After the window: returns a negative number (expired)
+ *
  * @param {string} qrIssuedAt - ISO timestamp when order was created / QR validity started
  * @param {number} [validDays=QR_VALID_DAYS] - Validity period in weekdays
  * @returns {number|null} Remaining weekdays (0 = expires today; negative = expired); null if no date
@@ -53,15 +48,21 @@ export const getRemainingValidityDays = (qrIssuedAt, validDays = QR_VALID_DAYS) 
   if (!qrIssuedAt) return null;
   const issued = new Date(qrIssuedAt);
   const issuedStart = new Date(issued.getFullYear(), issued.getMonth(), issued.getDate());
-  const expiry = addWeekdays(issuedStart, validDays);
   const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if (today.getTime() > expiry.getTime()) {
-    const past = countWeekdaysBetween(expiry, today);
-    return past === 0 ? -1 : -past;
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // If somehow today is before the issued date, treat as full window remaining
+  if (todayStart.getTime() <= issuedStart.getTime()) {
+    return validDays;
   }
-  if (today.getTime() === expiry.getTime()) return 0;
-  return countWeekdaysBetween(today, expiry);
+
+  const elapsedWeekdays = countElapsedWeekdays(issuedStart, todayStart);
+  const remaining = validDays - elapsedWeekdays;
+
+  if (remaining > 0) return remaining;
+  if (remaining === 0) return 0;
+  // Expired: return negative number (magnitude = how many weekdays past expiry)
+  return remaining;
 };
 
 /**

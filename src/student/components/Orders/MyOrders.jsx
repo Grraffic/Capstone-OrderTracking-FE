@@ -87,7 +87,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
   const [qrValidDays, setQrValidDays] = React.useState(QR_VALID_DAYS);
   const { on, off, isConnected } = useSocket();
 
-  // Align with backend VOID_UNCLAIMED_AFTER_DAYS (weekdays only)
+  // Validity period in weekdays (Mon–Fri) from config or default
   React.useEffect(() => {
     let cancelled = false;
     fetch(`${API_BASE_URL || ""}/config`)
@@ -385,6 +385,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
   }, [isConnected, order, onClose, on, off, normalizeOrderNumber, matchOrderId, matchOrderNumber, extractOrderIdentifiers, startPolling]);
 
   // Create structured order data for QR generation (validity from order creation, weekdays only)
+  const issuedAt =
+    order._original?.created_at ||
+    order.orderDate ||
+    order.created_at ||
+    new Date().toISOString();
   const minimalQRData = {
     type: "order_receipt",
     orderNumber: order.orderNumber || order.order_number || order.id || "N/A",
@@ -396,11 +401,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
       size: item.size || "N/A",
     })),
     quantity: order.quantity || (order.items || []).length,
-    orderDate: order.orderDate || order.created_at || new Date().toISOString(),
+    orderDate: order.orderDate || issuedAt,
     educationLevel:
       order.educationLevel || order.education_level || order.type || "General",
     status: order.status || "pending",
-    qrIssuedAt: order.created_at || new Date().toISOString(),
+    qrIssuedAt: issuedAt,
     qrValidDays,
   };
 
@@ -420,7 +425,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     });
   }
 
-  // Remaining validity in weekdays (from payload; aligns with VOID_UNCLAIMED_AFTER_DAYS)
+  // Remaining validity in weekdays (Mon–Fri)
   let remainingDays = null;
   if (!qrError && qrData) {
     try {
@@ -432,10 +437,6 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
       }
     } catch (_) {}
   }
-
-  // UI-only adjustment so students see 7→6→5… instead of 8→7→6…
-  const displayRemainingDays =
-    remainingDays != null && remainingDays > 0 ? remainingDays - 1 : remainingDays;
 
   // Hide validity info once the order has been claimed/completed
   const isOrderClaimed =
@@ -510,6 +511,17 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
                   <p className="text-xs sm:text-sm text-gray-600">{qrError}</p>
                 </div>
               </div>
+            ) : remainingDays != null && remainingDays < 0 ? (
+              <div className="text-center p-4 w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] md:w-[256px] md:h-[256px] flex items-center justify-center">
+                <div>
+                  <p className="text-red-500 font-semibold mb-2 text-sm sm:text-base">
+                    QR Code Expired
+                  </p>
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    Please place a new order to get a new QR code.
+                  </p>
+                </div>
+              </div>
             ) : (
               <QRCode
                 value={qrData}
@@ -539,10 +551,10 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
                 : "text-[#003363]"
             }`}
           >
-            {displayRemainingDays > 0 && (
+            {remainingDays > 0 && (
               <span>
-                {displayRemainingDays} day
-                {displayRemainingDays !== 1 ? "s" : ""} remaining
+                {remainingDays} day
+                {remainingDays !== 1 ? "s" : ""} remaining
               </span>
             )}
             {remainingDays === 0 && <span>Valid until end of today</span>}

@@ -18,8 +18,10 @@ import OutOfStockSection from "./OutOfStockSection";
  */
 const InventoryHealth = ({ stats, dateRangePicker }) => {
   const [isDetailSectionVisible, setIsDetailSectionVisible] = useState(false);
-  const [isAtReorderPointSectionVisible, setIsAtReorderPointSectionVisible] = useState(false);
-  const [isOutOfStockSectionVisible, setIsOutOfStockSectionVisible] = useState(false);
+  const [isAtReorderPointSectionVisible, setIsAtReorderPointSectionVisible] =
+    useState(false);
+  const [isOutOfStockSectionVisible, setIsOutOfStockSectionVisible] =
+    useState(false);
 
   const handleCardClick = (cardId) => {
     if (cardId === 1) {
@@ -42,7 +44,7 @@ const InventoryHealth = ({ stats, dateRangePicker }) => {
   const cards = [
     {
       id: 1,
-      title: "Total Item Variant",
+      title: "Total Item",
       value: stats.totalItemVariants || 0,
       icon: ShoppingCart,
       bgColor: "bg-blue-50",
@@ -77,7 +79,9 @@ const InventoryHealth = ({ stats, dateRangePicker }) => {
                 key={card.id}
                 onClick={() => handleCardClick(card.id)}
                 className={`${card.bgColor} rounded-lg p-3 sm:p-4 md:p-5 lg:p-6 shadow-md flex items-center gap-3 sm:gap-4 transition-all duration-200 hover:shadow-lg ${
-                  card.id === 1 || card.id === 2 || card.id === 3 ? "cursor-pointer" : ""
+                  card.id === 1 || card.id === 2 || card.id === 3
+                    ? "cursor-pointer"
+                    : ""
                 }`}
               >
                 {/* Circular Icon */}
@@ -101,13 +105,11 @@ const InventoryHealth = ({ stats, dateRangePicker }) => {
             );
           })}
         </div>
-        
+
         {/* Date Range Picker - positioned on the right side, under the Out of Stock card */}
         {dateRangePicker && (
           <div className="mt-3 sm:mt-4 md:mt-5 flex justify-end">
-            <div className="w-full sm:w-auto md:w-auto">
-              {dateRangePicker}
-            </div>
+            <div className="w-full sm:w-auto md:w-auto">{dateRangePicker}</div>
           </div>
         )}
       </div>
@@ -128,13 +130,10 @@ const InventoryHealth = ({ stats, dateRangePicker }) => {
 
       {/* Out of Stock Section - appears below cards when visible */}
       {isOutOfStockSectionVisible && (
-        <OutOfStockSection
-          totalOutOfStock={stats.outOfStock || 0}
-        />
+        <OutOfStockSection totalOutOfStock={stats.outOfStock || 0} />
       )}
     </>
   );
 };
 
 export default InventoryHealth;
-
