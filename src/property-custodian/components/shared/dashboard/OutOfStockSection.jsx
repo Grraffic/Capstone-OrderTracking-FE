@@ -97,6 +97,7 @@ const OutOfStockSection = ({ totalOutOfStock }) => {
             educationLevel={selectedEducationLevel}
             showFooter={false}
             onVariantChange={refetch}
+            headerVariant="red"
           />
         )}
       </div>

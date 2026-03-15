@@ -33,6 +33,7 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
   const [itemDetailsMap, setItemDetailsMap] = useState({}); // Stores fetched details per item name
   const [saveError, setSaveError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
 
   // Update items when order changes and fetch pricing details
   React.useEffect(() => {
@@ -127,13 +128,9 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
     onOpenQRScanner?.();
   };
 
-  // Handle edit toggle / save
-  const handleEditToggle = async () => {
-    if (!isEditing) {
-      setIsEditing(true);
-      setSaveError(null);
-      return;
-    }
+  // Perform the actual save (called after user confirms)
+  const performSave = async () => {
+    setShowSaveConfirm(false);
     setSaving(true);
     setSaveError(null);
     try {
@@ -158,6 +155,16 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
     } finally {
       setSaving(false);
     }
+  };
+
+  // Handle edit toggle: enter edit mode, or show save confirmation
+  const handleEditToggle = () => {
+    if (!isEditing) {
+      setIsEditing(true);
+      setSaveError(null);
+      return;
+    }
+    setShowSaveConfirm(true);
   };
 
   return createPortal(
@@ -232,6 +239,41 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
             </div>
           </div>
         </div>
+
+        {/* Save confirmation dialog */}
+        {showSaveConfirm && (
+          <div
+            className="absolute inset-0 z-[10002] flex items-center justify-center p-4 bg-black/40 rounded-lg sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-sm w-full p-4 sm:p-6 border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-lg font-bold text-[#0C2340] mb-2">Save changes?</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Are you sure you want to save these order changes? This will update the order and regenerate the student&apos;s QR code.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveConfirm(false)}
+                  className="px-3 py-2 rounded-lg font-medium text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={performSave}
+                  disabled={saving}
+                  className="px-3 py-2 rounded-lg font-medium text-sm bg-[#e68b00] text-white hover:bg-[#d97706] disabled:opacity-60 transition-colors"
+                >
+                  {saving ? "Saving..." : "Save"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Save error */}
         {saveError && (

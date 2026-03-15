@@ -47,7 +47,7 @@ export const useInventoryHealthStats = (startDate, endDate) => {
             return !row.is_archived || row.is_archived === false || row.is_archived === null;
           });
 
-          // Group rows by (name, education_level) - same grouping as OutOfStockSection
+          // Group rows by (name, education_level) for totalItemVariants and outOfStock (same as OutOfStockSection)
           const groupStatuses = new Map();
           rows.forEach((row) => {
             const key = `${row.name || ""}_${row.education_level || ""}`;
@@ -59,18 +59,14 @@ export const useInventoryHealthStats = (startDate, endDate) => {
 
           let totalItemVariants = groupStatuses.size;
           let outOfStock = 0;
-          let atReorderPoint = 0;
-
           groupStatuses.forEach((statuses) => {
-            const hasOutOfStock = statuses.has("Out of Stock");
-            const hasAtReorderPoint = statuses.has("At Reorder Point");
-
-            if (hasOutOfStock) {
-              outOfStock++;
-            } else if (hasAtReorderPoint) {
-              atReorderPoint++;
-            }
+            if (statuses.has("Out of Stock")) outOfStock++;
           });
+
+          // At Reorder Point: count variant rows (not groups) so card matches AtReorderPointTable row count
+          const atReorderPoint = rows.filter(
+            (row) => row.status === "At Reorder Point" || row.status === "Critical"
+          ).length;
 
           setStats({
             totalItemVariants,

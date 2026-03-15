@@ -2,6 +2,18 @@ import React, { useState, useMemo } from "react";
 import { Search, Calendar, Edit, UserPlus } from "lucide-react";
 
 /**
+ * Format grade level for display: remove "1st/2nd/3rd/4th year" or "yr" so only the number remains (e.g. "BSSW 2nd year" -> "BSSW 2").
+ */
+const formatGradeLevelDisplay = (str) => {
+  if (!str || typeof str !== "string") return str;
+  return str
+    .replace(/\s*1st\s*(?:year|yr)?\s*$/i, " 1")
+    .replace(/\s*2nd\s*(?:year|yr)?\s*$/i, " 2")
+    .replace(/\s*3rd\s*(?:year|yr)?\s*$/i, " 3")
+    .replace(/\s*4th\s*(?:year|yr)?\s*$/i, " 4");
+};
+
+/**
  * StudentFilters Component
  * 
  * Provides search, school year selector, education level filter, grade level filter, and Edit Table button
@@ -219,7 +231,7 @@ const StudentFilters = ({
         >
           {gradeLevelOptions.map((level) => (
             <option key={level} value={level}>
-              {level}
+              {formatGradeLevelDisplay(level)}
             </option>
           ))}
         </select>

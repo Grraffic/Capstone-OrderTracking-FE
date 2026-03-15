@@ -90,8 +90,8 @@ const OrderTracking = ({ stats }) => {
                   {card.title}
                 </p>
 
-                {/* Trend */}
-                <div className="flex items-center gap-1 text-xs text-gray-600">
+                {/* Trend - hidden per request */}
+                <div className="hidden">
                   <TrendingUp size={14} />
                   <span>{card.trend}</span>
                 </div>

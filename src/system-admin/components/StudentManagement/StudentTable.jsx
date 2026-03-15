@@ -29,6 +29,18 @@ const AvatarCell = ({ student, getAvatarUrl }) => {
 };
 
 /**
+ * Format grade level for display: remove "1st/2nd/3rd/4th year" or "yr" so only the number remains.
+ */
+const formatGradeLevelDisplay = (str) => {
+  if (!str || typeof str !== "string") return str;
+  return str
+    .replace(/\s*1st\s*(?:year|yr)?\s*$/i, " 1")
+    .replace(/\s*2nd\s*(?:year|yr)?\s*$/i, " 2")
+    .replace(/\s*3rd\s*(?:year|yr)?\s*$/i, " 3")
+    .replace(/\s*4th\s*(?:year|yr)?\s*$/i, " 4");
+};
+
+/**
  * StudentTable Component
  * 
  * Displays students in a table format with specific columns for student management
@@ -158,7 +170,7 @@ const StudentTable = ({
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
-                  {student.course_year_level || "N/A"}
+                  {formatGradeLevelDisplay(student.course_year_level) || "N/A"}
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {student.student_type

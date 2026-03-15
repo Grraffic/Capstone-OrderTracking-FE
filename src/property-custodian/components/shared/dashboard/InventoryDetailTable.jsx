@@ -20,8 +20,9 @@ import { ChevronDown } from "lucide-react";
  * - educationLevel: string - Current filter value for display
  * - showFooter: boolean - Whether to show footer (default: true)
  * - onVariantChange: function - Callback when variant is changed
+ * - headerVariant: "blue" | "red" - Header row background (default: "blue" for Total Item)
  */
-const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true, onVariantChange }) => {
+const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true, onVariantChange, headerVariant = "blue" }) => {
   // Track selected variant for each item (itemName_educationLevel -> selectedVariant)
   const [selectedVariants, setSelectedVariants] = useState({});
 
@@ -130,7 +131,7 @@ const InventoryDetailTable = ({ data, loading, educationLevel, showFooter = true
       {/* Desktop Table */}
       <div className="hidden md:block overflow-x-auto">
         <table className="w-full border-collapse">
-          <thead className="bg-[rgba(46,143,234,0.83)]">
+          <thead className={headerVariant === "red" ? "bg-red-600" : "bg-[rgba(46,143,234,0.83)]"}>
             <tr>
               <th className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 text-left text-xs sm:text-sm font-semibold text-white">
                 Item Name
