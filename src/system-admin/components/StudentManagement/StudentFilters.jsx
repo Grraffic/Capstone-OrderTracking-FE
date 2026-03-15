@@ -236,7 +236,7 @@ const StudentFilters = ({
           </button>
           <button
             onClick={onEditTable}
-            className="flex items-center gap-2 px-4 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#0a1d33] transition-colors font-medium"
+            className="hidden"
             title={selectedCount === 0 ? "Select students first to edit their settings" : `Edit ${selectedCount} selected student(s)`}
           >
             <Edit size={20} />

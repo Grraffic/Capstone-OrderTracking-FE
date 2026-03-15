@@ -80,7 +80,7 @@ const StudentTable = ({
       <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
         <thead>
           <tr className="bg-[#003363] text-white">
-            <th className="px-4 py-3 text-left">
+            <th className="hidden px-4 py-3 text-left">
               <input
                 type="checkbox"
                 checked={selectedStudents.length === students.length && students.length > 0}
@@ -100,7 +100,7 @@ const StudentTable = ({
         <tbody>
           {students.length === 0 ? (
             <tr>
-              <td colSpan="8" className="px-4 py-12">
+              <td colSpan="7" className="px-4 py-12">
                 <div className="flex flex-col items-center justify-center text-center">
                   {isFutureSchoolYear ? (
                     <>
@@ -140,7 +140,7 @@ const StudentTable = ({
                 key={student.id}
                 className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
               >
-                <td className="px-4 py-4">
+                <td className="hidden px-4 py-4">
                   <input
                     type="checkbox"
                     checked={selectedStudents.includes(student.id)}
