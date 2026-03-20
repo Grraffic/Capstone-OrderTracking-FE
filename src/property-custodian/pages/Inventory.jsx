@@ -140,6 +140,74 @@ const Inventory = () => {
   // Handle Update Quantity form submission
   const handleUpdateQuantity = async () => {
     const form = updateQuantityForm;
+    if (form.fieldToEdit === "purchases") {
+      const quantity = Number(form.quantity);
+      if (!quantity || quantity <= 0) {
+        alert("Please enter a valid quantity (greater than 0).");
+        return;
+      }
+      const itemName = (form.itemName || "").trim();
+      if (!itemName) {
+        alert("Please enter the item name for the purchase.");
+        return;
+      }
+      const variant = (form.variant || "").trim().toLowerCase();
+      const sizeForApi = variant ? form.variant : null;
+      const unitPrice = form.unitPrice ? Number(form.unitPrice) : null;
+      if (unitPrice !== null && (Number.isNaN(unitPrice) || unitPrice < 0)) {
+        alert("Please enter a valid unit price.");
+        return;
+      }
+
+      const normalizeSize = (s) =>
+        (s || "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s*\([^)]*\)/g, "")
+          .trim();
+      const match = inventoryData.find((row) => {
+        const nameMatch =
+          (row.item || "").trim().toLowerCase() === itemName.toLowerCase();
+        if (!nameMatch) return false;
+        const rowSize = (row.size || "N/A").trim();
+        if (!variant) return true;
+        return (
+          normalizeSize(rowSize) === normalizeSize(variant) ||
+          rowSize.toLowerCase() === variant
+        );
+      });
+      if (!match || !match.item_id) {
+        alert(
+          "Item not found in current inventory. Please enter an item name from the inventory list and select the correct variant."
+        );
+        return;
+      }
+
+      try {
+        const result = await inventoryService.addStock(
+          match.item_id,
+          quantity,
+          sizeForApi,
+          unitPrice
+        );
+        if (result?.success) {
+          setIsUpdateQuantityModalOpen(false);
+          setUpdateQuantityForm({
+            itemName: "",
+            fieldToEdit: "",
+            quantity: "",
+            variant: "",
+            unitPrice: "",
+          });
+          fetchInventoryData();
+          setTransactionRefreshKey((prev) => prev + 1);
+        }
+      } catch (err) {
+        alert(err.message || "Failed to record purchase.");
+      }
+      return;
+    }
+
     if (form.fieldToEdit === "return") {
       const quantity = Number(form.quantity);
       if (!quantity || quantity <= 0) {

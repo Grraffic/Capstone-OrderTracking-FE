@@ -69,10 +69,11 @@ class InventoryService {
    * Add stock to item (purchases)
    * @param {string} itemId - Item ID
    * @param {number} quantity - Quantity to add
-   * @param {number} unitPrice - Optional unit price
+   * @param {string|null} size - Optional size/variant
+   * @param {number|null} unitPrice - Optional unit price
    * @returns {Promise} Updated item data
    */
-  async addStock(itemId, quantity, unitPrice = null) {
+  async addStock(itemId, quantity, size = null, unitPrice = null) {
     try {
       const response = await fetch(`${API_BASE_URL}/items/${itemId}/add-stock`, {
         method: "POST",
@@ -81,7 +82,7 @@ class InventoryService {
           ...this.getAuthHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({ quantity, unitPrice }),
+        body: JSON.stringify({ quantity, size, unitPrice }),
       });
 
       if (!response.ok) {

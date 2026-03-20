@@ -2150,6 +2150,21 @@ const ItemsModals = ({
                                         // Auto-correct common typos and normalize size input
                                         const inputValue = e.target.value.trim();
                                         if (!inputValue) return;
+
+                                        // Preserve numbered large sizes (e.g., 2XLarge, 3XLarge, 5XLarge)
+                                        // so fuzzy matching does not downgrade them to plain "XLarge".
+                                        const numberedLargeMatch = inputValue.match(
+                                          /^(\d+)\s*x?\s*large(?:\s*\([^)]+\))?$/i
+                                        );
+                                        if (numberedLargeMatch) {
+                                          const sizeNumber = numberedLargeMatch[1];
+                                          handleVariantValueChange(
+                                            0,
+                                            index,
+                                            `${sizeNumber}XLarge`
+                                          );
+                                          return;
+                                        }
                                         
                                         // Helper function to normalize for matching (case-insensitive, ignoring parentheses)
                                         const normalizeForMatch = (str) => 
