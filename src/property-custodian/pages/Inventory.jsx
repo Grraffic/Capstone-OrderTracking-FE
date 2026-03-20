@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { subDays } from "date-fns";
+import { startOfYear } from "date-fns";
 import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
 import InventoryView from "../components/Inventory/InventoryView";
@@ -43,10 +43,10 @@ const Inventory = () => {
   const [transactionCurrentPage, setTransactionCurrentPage] = useState(1);
   const transactionItemsPerPage = 8;
   // Date range state for transactions view only
-  // Default to last 30 days to show more transactions
+  // Default to this year
   const today = new Date();
-  // Set startDate to beginning of day 30 days ago
-  const defaultStartDate = subDays(today, 29);
+  // Set startDate to beginning of this year
+  const defaultStartDate = startOfYear(today);
   defaultStartDate.setHours(0, 0, 0, 0);
   // Set endDate to end of today
   const defaultEndDate = new Date(today);

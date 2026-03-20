@@ -1,5 +1,5 @@
 import { QrCode, Search, X, CheckCircle } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfYear, startOfDay, endOfDay } from "date-fns";
 import { createPortal } from "react-dom";
 import AdminLayout from "../components/layouts/AdminLayout";
 import DateRangePicker from "../components/common/DateRangePicker";
@@ -80,9 +80,10 @@ const Orders = () => {
     setCurrentPage(1);
   }, [activeStatusTab]);
 
-  // Date range state - initialize to null (show all orders by default)
-  const [startDate, setStartDate] = useState(null);
-  const [endDate, setEndDate] = useState(null);
+  // Date range state - default to this year
+  const _today = new Date();
+  const [startDate, setStartDate] = useState(startOfDay(startOfYear(_today)));
+  const [endDate, setEndDate] = useState(endOfDay(_today));
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);

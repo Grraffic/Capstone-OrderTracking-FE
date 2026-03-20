@@ -9,12 +9,12 @@ import {
 import DateRangePicker from "../components/common/DateRangePicker";
 import { useAdminDashboardData } from "../hooks";
 import { DashboardSkeleton } from "../components/Skeleton";
-import { subDays, startOfDay, endOfDay } from "date-fns";
+import { startOfYear, startOfDay, endOfDay } from "date-fns";
 
 const AdminDashboard = () => {
-  // Date range state - default to last 30 days
+  // Date range state - default to this year
   const today = new Date();
-  const defaultStartDate = startOfDay(subDays(today, 29));
+  const defaultStartDate = startOfDay(startOfYear(today));
   const defaultEndDate = endOfDay(today);
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
