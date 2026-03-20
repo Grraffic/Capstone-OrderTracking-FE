@@ -134,7 +134,13 @@ const AddStudentModal = ({ isOpen, onClose, onSave, educationLevels, gradeLevelO
     onSave(studentData);
   };
 
-  // Map course & year level abbreviations to full names for display
+  // Map course & year level abbreviations to full names for display (no "1st/2nd/3rd/4th Year" suffix)
+  const stripOrdinalYearSuffix = (label) =>
+    label.replace(/\s+\d+(?:st|nd|rd|th)\s+Year\b/gi, (m) => {
+      const num = m.match(/\d+/);
+      return num ? ` ${num[0]}` : "";
+    });
+
   const getGradeLevelDisplayName = (value) => {
     const displayMap = {
       "BSIS 1st yr": "BS in Information Systems 1st Year",
@@ -149,14 +155,26 @@ const AddStudentModal = ({ isOpen, onClose, onSave, educationLevels, gradeLevelO
       "BSA 2nd yr": "BS in Accountancy 2nd Year",
       "BSA 3rd yr": "BS in Accountancy 3rd Year",
       "BSA 4th yr": "BS in Accountancy 4th Year",
+      "BSAIS 1st yr": "BS in Accounting Information Systems 1st Year",
+      "BSAIS 2nd yr": "BS in Accounting Information Systems 2nd Year",
+      "BSAIS 3rd yr": "BS in Accounting Information Systems 3rd Year",
+      "BSAIS 4th yr": "BS in Accounting Information Systems 4th Year",
       "BSAIS 1st year": "BS in Accounting Information Systems 1st Year",
       "BSAIS 2nd year": "BS in Accounting Information Systems 2nd Year",
       "BSAIS 3rd year": "BS in Accounting Information Systems 3rd Year",
       "BSAIS 4th year": "BS in Accounting Information Systems 4th Year",
+      "BAB 1st yr": "Bachelor of Arts in Broadcasting 1st Year",
+      "BAB 2nd yr": "Bachelor of Arts in Broadcasting 2nd Year",
+      "BAB 3rd yr": "Bachelor of Arts in Broadcasting 3rd Year",
+      "BAB 4th yr": "Bachelor of Arts in Broadcasting 4th Year",
       "BAB 1st year": "Bachelor of Arts in Broadcasting 1st Year",
       "BAB 2nd year": "Bachelor of Arts in Broadcasting 2nd Year",
       "BAB 3rd year": "Bachelor of Arts in Broadcasting 3rd Year",
       "BAB 4th year": "Bachelor of Arts in Broadcasting 4th Year",
+      "BSSW 1st yr": "BS in Social Work 1st Year",
+      "BSSW 2nd yr": "BS in Social Work 2nd Year",
+      "BSSW 3rd yr": "BS in Social Work 3rd Year",
+      "BSSW 4th yr": "BS in Social Work 4th Year",
       "BSSW 1st year": "BS in Social Work 1st Year",
       "BSSW 2nd year": "BS in Social Work 2nd Year",
       "BSSW 3rd year": "BS in Social Work 3rd Year",
@@ -164,8 +182,23 @@ const AddStudentModal = ({ isOpen, onClose, onSave, educationLevels, gradeLevelO
       "ACT 1st year": "Associate in Computer Technology 1st Year",
       "ACT 2nd year": "Associate in Computer Technology 2nd Year",
     };
-    
-    return displayMap[value] || value;
+
+    const raw =
+      displayMap[value] ||
+      displayMap[String(value).replace(/\byr\b/i, "year")];
+    if (raw) return stripOrdinalYearSuffix(raw);
+
+    // College options that are only abbreviations (no map entry): show course + year number only
+    const abbrevMatch = String(value).match(
+      /^(.+?)\s+(\d+)(?:st|nd|rd|th)?(?:\s*(?:year|yr))?$/i
+    );
+    if (abbrevMatch) {
+      const course = abbrevMatch[1].trim();
+      const yr = abbrevMatch[2];
+      return `${course} ${yr}`;
+    }
+
+    return value;
   };
 
   if (!isOpen) return null;
