@@ -713,6 +713,7 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
 
   // State for fetching all products (same as AllProducts) - declare early to avoid hoisting issues
   const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [userGradeLevel, setUserGradeLevel] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
 
   // Safety check: ensure orders is always an array
@@ -769,6 +770,7 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
         const response = await authAPI.getProfile();
         const userData = response.data;
         setUserEducationLevel(userData.educationLevel || null);
+          setUserGradeLevel(userData.courseYearLevel || userData.course_year_level || null);
       } catch (err) {
         console.error("Error fetching user profile:", err);
         setUserEducationLevel(null);
@@ -830,11 +832,11 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
     if (!fetchAllItems) return;
     if (user && profileLoading) return;
     if (eligibilityLevel) {
-      fetchAllItems(eligibilityLevel, studentType);
+      fetchAllItems(eligibilityLevel, studentType, userGradeLevel);
     } else {
-      fetchAllItems(null, studentType);
+      fetchAllItems(null, studentType, userGradeLevel);
     }
-  }, [user, profileLoading, eligibilityLevel, studentType, fetchAllItems]);
+  }, [user, profileLoading, eligibilityLevel, studentType, userGradeLevel, fetchAllItems]);
 
   // Update state when location state changes (e.g., navigation from checkout or check receipt button)
   useEffect(() => {

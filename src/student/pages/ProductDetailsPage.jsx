@@ -47,6 +47,7 @@ const ProductDetailsPage = () => {
   const [availableSizesData, setAvailableSizesData] = useState([]);
   const [loadingSizes, setLoadingSizes] = useState(false);
   const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [userGradeLevel, setUserGradeLevel] = useState(null);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
   const [claimedItems, setClaimedItems] = useState({});
@@ -84,6 +85,7 @@ const ProductDetailsPage = () => {
           const response = await authAPI.getProfile();
           const userData = response.data;
           setUserEducationLevel(userData.educationLevel || null);
+          setUserGradeLevel(userData.courseYearLevel || userData.course_year_level || null);
         } catch (err) {
           console.error("Error fetching user profile:", err);
         }
@@ -99,11 +101,11 @@ const ProductDetailsPage = () => {
     const eligibilityLevel =
       userEducationLevel === "Vocational" ? "College" : userEducationLevel;
     if (eligibilityLevel) {
-      fetchItems(eligibilityLevel);
+      fetchItems(eligibilityLevel, null, userGradeLevel);
     } else {
-      fetchItems();
+      fetchItems(null, null, userGradeLevel);
     }
-  }, [userEducationLevel, fetchItems]);
+  }, [userEducationLevel, userGradeLevel, fetchItems]);
 
   // Refetch limits when an order was just created (e.g. after checkout) or when tab regains focus.
   // When visible and logged in, always refetch so "already ordered" is up to date (e.g. checkout in another tab).

@@ -37,6 +37,7 @@ const AllProducts = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar toggle
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Desktop sidebar collapse to icons
   const [userEducationLevel, setUserEducationLevel] = useState(null);
+  const [userGradeLevel, setUserGradeLevel] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
   const [maxQuantities, setMaxQuantities] = useState({});
   const [alreadyOrdered, setAlreadyOrdered] = useState({});
@@ -60,9 +61,11 @@ const AllProducts = () => {
         const response = await authAPI.getProfile();
         const userData = response.data;
         setUserEducationLevel(userData.educationLevel || null);
+        setUserGradeLevel(userData.courseYearLevel || userData.course_year_level || null);
       } catch (err) {
         console.error("Error fetching user profile:", err);
         setUserEducationLevel(null);
+        setUserGradeLevel(null);
       } finally {
         setProfileLoading(false);
       }
@@ -221,11 +224,11 @@ const AllProducts = () => {
     if (!fetchItems) return;
     if (user && profileLoading) return;
     if (eligibilityLevel) {
-      fetchItems(eligibilityLevel, studentType);
+      fetchItems(eligibilityLevel, studentType, userGradeLevel);
     } else {
-      fetchItems(null, studentType);
+      fetchItems(null, studentType, userGradeLevel);
     }
-  }, [user, profileLoading, eligibilityLevel, studentType, fetchItems]);
+  }, [user, profileLoading, eligibilityLevel, studentType, userGradeLevel, fetchItems]);
 
   // Debounce search
   const debouncedSearch = useSearchDebounce(searchQuery, 300);

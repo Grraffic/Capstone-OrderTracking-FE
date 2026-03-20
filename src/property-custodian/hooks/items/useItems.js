@@ -103,7 +103,7 @@ export const useItems = (options = {}) => {
    * @param {string} userEducationLevel - Optional user education level for eligibility filtering
    * @param {string} studentType - Optional student type ("old" or "new") for filtering logic
    */
-  const fetchItems = useCallback(async (userEducationLevel = null, studentType = null) => {
+  const fetchItems = useCallback(async (userEducationLevel = null, studentType = null, userGradeLevel = null) => {
     try {
       if (userEducationLevel != null) lastUserEducationLevelRef.current = userEducationLevel;
       if (!hasFetchedOnce) setLoading(true);
@@ -115,6 +115,9 @@ export const useItems = (options = {}) => {
       }
       if (studentType) {
         params.set("studentType", studentType);
+      }
+      if (userGradeLevel) {
+        params.set("userGradeLevel", userGradeLevel);
       }
       if (itemStatusFilter && itemStatusFilter !== "active") {
         params.set("itemStatus", itemStatusFilter);

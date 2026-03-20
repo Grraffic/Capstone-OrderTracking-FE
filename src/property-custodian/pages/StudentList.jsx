@@ -341,7 +341,12 @@ const StudentList = () => {
         school_year: schoolYearPrefix,
       };
       await updateUser(editingStudent.id, updateData, refreshParams);
-      toast.success("Order limits updated successfully");
+      toast.success("Order limits updated successfully", {
+        style: {
+          background: "#16a34a",
+          color: "#fff",
+        },
+      });
       setIsOrderLimitsModalOpen(false);
       setEditingStudent(null);
     } catch (error) {
@@ -360,7 +365,12 @@ const StudentList = () => {
 
       if (editingStudent) {
         await updateUser(editingStudent.id, studentData, refreshParams);
-        toast.success("Student updated successfully");
+        toast.success("Student updated successfully", {
+          style: {
+            background: "#16a34a",
+            color: "#fff",
+          },
+        });
       }
       setIsUserModalOpen(false);
       setEditingStudent(null);

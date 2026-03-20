@@ -39,6 +39,23 @@ const SUGGESTED_SIZES = [
   "N/A",
 ];
 
+const GRADE_LEVEL_OPTIONS = [
+  { value: "Prekindergarten", label: "Prekindergarten" },
+  { value: "Kindergarten", label: "Kindergarten" },
+  { value: "Grade 1", label: "Grade 1" },
+  { value: "Grade 2", label: "Grade 2" },
+  { value: "Grade 3", label: "Grade 3" },
+  { value: "Grade 4", label: "Grade 4" },
+  { value: "Grade 5", label: "Grade 5" },
+  { value: "Grade 6", label: "Grade 6" },
+  { value: "Grade 7", label: "Grade 7" },
+  { value: "Grade 8", label: "Grade 8" },
+  { value: "Grade 9", label: "Grade 9" },
+  { value: "Grade 10", label: "Grade 10" },
+  { value: "Grade 11", label: "Grade 11" },
+  { value: "Grade 12", label: "Grade 12" },
+];
+
 /**
  * ItemsModals Component
  *
@@ -124,7 +141,7 @@ const ItemsModals = ({
       }
     },
     onClose,
-    modalState
+    modalState,
   );
 
   // Fetch curated item name suggestions from backend (admin-approved list)
@@ -175,17 +192,17 @@ const ItemsModals = ({
         }
         return level;
       }),
-    []
+    [],
   );
 
   // Conditional logic for item type
   const isAccessories = useMemo(
     () => formData.itemType === "Accessories",
-    [formData.itemType]
+    [formData.itemType],
   );
   const isUniforms = useMemo(
     () => formData.itemType === "Uniforms",
-    [formData.itemType]
+    [formData.itemType],
   );
 
   // Item name suggestions: merge static defaults + curated admin suggestions
@@ -208,7 +225,7 @@ const ItemsModals = ({
     }
 
     return Array.from(seen.values()).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" })
+      a.localeCompare(b, undefined, { sensitivity: "base" }),
     );
   }, [formData.educationLevel, curatedNameSuggestions]);
 
@@ -306,7 +323,11 @@ const ItemsModals = ({
     // Basic required fields
     if (!formData.itemType) return false;
     if (!formData.educationLevel) return false;
-    if (formData.educationLevel !== "All Education Levels" && !formData.name?.trim()) return false;
+    if (
+      formData.educationLevel !== "All Education Levels" &&
+      !formData.name?.trim()
+    )
+      return false;
 
     // For Uniforms: check if at least one variant is filled
     if (isUniforms) {
@@ -324,14 +345,14 @@ const ItemsModals = ({
     if (isAccessories) {
       // Entry 1 must always be selected and filled
       if (!selectedAccessoryIndices.includes(0)) return false;
-      
+
       // Entry 1 must have both stock and price when adding new items
       if (modalState.mode === "add") {
         const entry1Stock = Number(accessoryStocks[0]) || 0;
         const entry1Price = Number(accessoryPrices[0]) || 0;
         if (entry1Stock <= 0 || entry1Price <= 0) return false;
       }
-      
+
       // Check if at least one entry (including Entry 1) is filled
       const hasValidEntry = selectedAccessoryIndices.some((index) => {
         const stock = Number(accessoryStocks[index]) || 0;
@@ -389,7 +410,7 @@ const ItemsModals = ({
       const accessoryEntries = selectedAccessoryIndices.map((index) => {
         const stock = Number(accessoryStocks[index]) || 0;
         const price = Number(accessoryPrices[index]) || Number(itemPrice) || 0;
-        
+
         // Entry 1 (index 0) is beginning inventory, Entry 2+ are purchases
         if (index === 0) {
           return {
@@ -416,6 +437,7 @@ const ItemsModals = ({
         price: Number(itemPrice) || 0,
         note: JSON.stringify({
           accessoryEntries: accessoryEntries,
+          grade_level: formData.gradeLevel || null,
           _type: "accessoryEntries", // Marker to identify this as accessory entry data
         }),
       };
@@ -436,18 +458,22 @@ const ItemsModals = ({
     // Handle Uniforms add: same logic as edit — all rows with option value or stock/price, merge by size, so ItemDetailsModal displays correctly
     else if (isUniforms && modalState.mode === "add") {
       const normalizedSize = (s) =>
-        (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)\s*/g, "").trim();
+        (s || "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s*\([^)]*\)\s*/g, "")
+          .trim();
       const valuesForSubmit = variants[0]?.values?.length
         ? variants[0].values
         : ["", ""];
       const len = valuesForSubmit.length;
       const stocksForSubmit = Array.from(
         { length: len },
-        (_, i) => variantStocks[i] ?? ""
+        (_, i) => variantStocks[i] ?? "",
       );
       const pricesForSubmit = Array.from(
         { length: len },
-        (_, i) => variantPrices[i] ?? ""
+        (_, i) => variantPrices[i] ?? "",
       );
 
       // Only include variants that are checked (selectedVariantIndices); unchecked sizes like Medium must not be submitted
@@ -485,10 +511,14 @@ const ItemsModals = ({
         const purchQty = Math.max(0, stockNum - begInv);
         if (!mergedBySize.has(key)) {
           // First row for this size: beginning inventory + optional first purchase batch
-          const purchase_batches = purchQty > 0
-            ? [{ qty: purchQty, unit_price: Number(v.price) ?? 0 }]
-            : [];
-          const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
+          const purchase_batches =
+            purchQty > 0
+              ? [{ qty: purchQty, unit_price: Number(v.price) ?? 0 }]
+              : [];
+          const purchases = purchase_batches.reduce(
+            (s, b) => s + (Number(b.qty) || 0),
+            0,
+          );
           mergedBySize.set(key, {
             size: v.size,
             stock: stockNum,
@@ -502,10 +532,18 @@ const ItemsModals = ({
           // Second+ row for same size: append to purchase_batches (each entry has own unit price)
           const prev = mergedBySize.get(key);
           const combinedStock = (Number(prev.stock) || 0) + stockNum;
-          const prevBatches = Array.isArray(prev.purchase_batches) ? prev.purchase_batches : [];
-          const newBatch = { qty: stockNum, unit_price: Number(v.price) ?? prev.price ?? 0 };
+          const prevBatches = Array.isArray(prev.purchase_batches)
+            ? prev.purchase_batches
+            : [];
+          const newBatch = {
+            qty: stockNum,
+            unit_price: Number(v.price) ?? prev.price ?? 0,
+          };
           const purchase_batches = [...prevBatches, newBatch];
-          const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
+          const purchases = purchase_batches.reduce(
+            (s, b) => s + (Number(b.qty) || 0),
+            0,
+          );
           mergedBySize.set(key, {
             ...prev,
             stock: combinedStock,
@@ -520,7 +558,7 @@ const ItemsModals = ({
       const sizeString = sizeVariations.map((v) => v.size).join(", ");
       const totalStock = sizeVariations.reduce(
         (s, v) => s + (Number(v.stock) || 0),
-        0
+        0,
       );
       const firstPrice = sizeVariations[0]?.price ?? formData.price ?? 0;
 
@@ -543,11 +581,7 @@ const ItemsModals = ({
       }
     }
     // Edit mode + Uniforms: same logic as add (all rows, fallback size, merge by size, purchases) so new option values show in ItemDetailsModal
-    else if (
-      isUniforms &&
-      modalState.mode === "edit" &&
-      selectedItem
-    ) {
+    else if (isUniforms && modalState.mode === "edit" && selectedItem) {
       syncEditorToForm();
       // Sync ref from current state so payload always includes latest rows (e.g. XSmall) even if closure was stale
       const currentValues = variants[0]?.values ?? [];
@@ -560,7 +594,11 @@ const ItemsModals = ({
       };
       const refState = variantStateRef.current;
       const normalizedSize = (s) =>
-        (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)\s*/g, "").trim();
+        (s || "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s*\([^)]*\)\s*/g, "")
+          .trim();
       let existingNoteData = null;
       if (selectedItem.note) {
         try {
@@ -576,20 +614,25 @@ const ItemsModals = ({
       const findExistingBySize = (sizeStr) => {
         if (!existingNoteData || !sizeStr) return null;
         const target = normalizedSize(sizeStr);
-        return existingNoteData.find(
-          (v) => normalizedSize(v.size) === target
-        ) || null;
+        return (
+          existingNoteData.find((v) => normalizedSize(v.size) === target) ||
+          null
+        );
       };
 
-      const valuesForSubmit = refState.values?.length ? refState.values : currentValues.length ? currentValues : ["", ""];
+      const valuesForSubmit = refState.values?.length
+        ? refState.values
+        : currentValues.length
+          ? currentValues
+          : ["", ""];
       const len = valuesForSubmit.length;
       const stocksForSubmit = Array.from(
         { length: len },
-        (_, i) => refState.stocks[i] ?? currentStocks[i] ?? ""
+        (_, i) => refState.stocks[i] ?? currentStocks[i] ?? "",
       );
       const pricesForSubmit = Array.from(
         { length: len },
-        (_, i) => refState.prices[i] ?? currentPrices[i] ?? ""
+        (_, i) => refState.prices[i] ?? currentPrices[i] ?? "",
       );
       const existingCount = existingVariantCountRef.current;
 
@@ -648,10 +691,15 @@ const ItemsModals = ({
               });
             } else {
               const prev = mergedBySize.get(key);
-              const prevBatches = Array.isArray(prev?.purchase_batches) ? prev.purchase_batches : [];
+              const prevBatches = Array.isArray(prev?.purchase_batches)
+                ? prev.purchase_batches
+                : [];
               const newBatch = { qty: stock, unit_price: price };
               const purchase_batches = [...prevBatches, newBatch];
-              const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
+              const purchases = purchase_batches.reduce(
+                (s, b) => s + (Number(b.qty) || 0),
+                0,
+              );
               mergedBySize.set(key, {
                 ...prev,
                 stock: (Number(prev?.stock) || 0) + stock,
@@ -676,24 +724,32 @@ const ItemsModals = ({
             price: existing.price,
             beginning_inventory: Number(existing.beginning_inventory) || 0,
             beginning_inventory_unit_price:
-              existing.beginning_inventory_unit_price != null && existing.beginning_inventory_unit_price !== ""
+              existing.beginning_inventory_unit_price != null &&
+              existing.beginning_inventory_unit_price !== ""
                 ? Number(existing.beginning_inventory_unit_price)
-                : Number(existing.price) ?? 0,
+                : (Number(existing.price) ?? 0),
             purchases: Number(existing.purchases) || 0,
-            purchase_batches: Array.isArray(existing.purchase_batches) ? [...existing.purchase_batches] : [],
+            purchase_batches: Array.isArray(existing.purchase_batches)
+              ? [...existing.purchase_batches]
+              : [],
           };
           mergedBySize.set(key, preserved);
           return;
         }
 
         // Has new rows: start from existing variant, append new purchase batches
-        const prevBatches = Array.isArray(existing.purchase_batches) ? [...existing.purchase_batches] : [];
+        const prevBatches = Array.isArray(existing.purchase_batches)
+          ? [...existing.purchase_batches]
+          : [];
         const newBatches = newRows.map((row) => ({
           qty: Number(row.stock) || 0,
           unit_price: Number(row.price) ?? 0,
         }));
         const purchase_batches = [...prevBatches, ...newBatches];
-        const purchases = purchase_batches.reduce((s, b) => s + (Number(b.qty) || 0), 0);
+        const purchases = purchase_batches.reduce(
+          (s, b) => s + (Number(b.qty) || 0),
+          0,
+        );
         const begInv = Number(existing.beginning_inventory) || 0;
         const totalStock = begInv + purchases;
 
@@ -703,12 +759,16 @@ const ItemsModals = ({
           price: existing.price,
           beginning_inventory: begInv,
           beginning_inventory_unit_price:
-            existing.beginning_inventory_unit_price != null && existing.beginning_inventory_unit_price !== ""
+            existing.beginning_inventory_unit_price != null &&
+            existing.beginning_inventory_unit_price !== ""
               ? Number(existing.beginning_inventory_unit_price)
-              : Number(existing.price) ?? 0,
+              : (Number(existing.price) ?? 0),
           purchases,
           purchase_batches,
-          purchase_unit_price: newBatches.length > 0 ? newBatches[newBatches.length - 1].unit_price : existing.purchase_unit_price ?? existing.price,
+          purchase_unit_price:
+            newBatches.length > 0
+              ? newBatches[newBatches.length - 1].unit_price
+              : (existing.purchase_unit_price ?? existing.price),
         });
       });
 
@@ -716,17 +776,21 @@ const ItemsModals = ({
       const sizeString = sizeVariations.map((v) => v.size).join(", ");
       const totalStock = sizeVariations.reduce(
         (s, v) => s + (Number(v.stock) || 0),
-        0
+        0,
       );
       const firstPrice = sizeVariations[0]?.price ?? formData.price ?? 0;
-      
+
       // Validate that selectedItem exists and has an ID before attempting update
       if (!selectedItem || !selectedItem.id) {
-        console.error("Cannot update item: missing item or ID. This may be a new entry that needs to be created first.");
-        alert("Cannot update item: missing item or ID. Please ensure the item exists before adding entries.");
+        console.error(
+          "Cannot update item: missing item or ID. This may be a new entry that needs to be created first.",
+        );
+        alert(
+          "Cannot update item: missing item or ID. Please ensure the item exists before adding entries.",
+        );
         return;
       }
-      
+
       const itemToUpdate = {
         ...formData,
         id: selectedItem.id,
@@ -755,11 +819,15 @@ const ItemsModals = ({
       selectedAccessoryIndices.length > 0
     ) {
       syncEditorToForm();
-      
+
       // Validate that selectedItem exists and has an ID before attempting update
       if (!selectedItem || !selectedItem.id) {
-        console.error("Cannot update item: missing item or ID. This may be a new entry that needs to be created first.");
-        alert("Cannot update item: missing item or ID. Please ensure the item exists before adding entries.");
+        console.error(
+          "Cannot update item: missing item or ID. This may be a new entry that needs to be created first.",
+        );
+        alert(
+          "Cannot update item: missing item or ID. Please ensure the item exists before adding entries.",
+        );
         return;
       }
 
@@ -794,15 +862,16 @@ const ItemsModals = ({
       const accessoryEntries = selectedAccessoryIndices.map((index) => {
         const stock = Number(accessoryStocks[index]) || 0;
         const price = Number(accessoryPrices[index]) || Number(itemPrice) || 0;
-        
+
         // Check if this entry already exists (by index)
         const existingEntry = existingAccessoryEntries?.[index];
-        
+
         if (index === 0) {
           // Entry 1: preserve existing beginning_inventory if it exists, otherwise use stock
-          const beginningInventory = existingEntry?.beginning_inventory != null
-            ? Number(existingEntry.beginning_inventory) || 0
-            : stock;
+          const beginningInventory =
+            existingEntry?.beginning_inventory != null
+              ? Number(existingEntry.beginning_inventory) || 0
+              : stock;
           return {
             stock,
             price,
@@ -813,9 +882,10 @@ const ItemsModals = ({
           // Entry 2+: these are purchases
           // If entry already exists, preserve its beginning_inventory (should be 0)
           // Otherwise, new entries are purchases
-          const beginningInventory = existingEntry?.beginning_inventory != null
-            ? Number(existingEntry.beginning_inventory) || 0
-            : 0;
+          const beginningInventory =
+            existingEntry?.beginning_inventory != null
+              ? Number(existingEntry.beginning_inventory) || 0
+              : 0;
           return {
             stock,
             price,
@@ -826,8 +896,11 @@ const ItemsModals = ({
       });
 
       // Calculate totals for item-level fields
-      const totalBeginningInventory = accessoryEntries[0]?.beginning_inventory || 0;
-      const totalPurchases = accessoryEntries.slice(1).reduce((sum, e) => sum + (Number(e.purchases) || 0), 0);
+      const totalBeginningInventory =
+        accessoryEntries[0]?.beginning_inventory || 0;
+      const totalPurchases = accessoryEntries
+        .slice(1)
+        .reduce((sum, e) => sum + (Number(e.purchases) || 0), 0);
 
       const itemToUpdate = {
         ...formData,
@@ -840,6 +913,7 @@ const ItemsModals = ({
         purchases: totalPurchases,
         note: JSON.stringify({
           accessoryEntries: accessoryEntries,
+          grade_level: formData.gradeLevel || null,
           _type: "accessoryEntries",
         }),
       };
@@ -867,17 +941,18 @@ const ItemsModals = ({
 
     // Map education level values to proper display names for description
     const educationLevelDisplayMap = {
-      "Kindergarten": "Preschool",
-      "Preschool": "Preschool",
-      "Elementary": "Elementary",
+      Kindergarten: "Preschool",
+      Preschool: "Preschool",
+      Elementary: "Elementary",
       "Junior High School": "Junior High School",
       "Senior High School": "Senior High School",
-      "College": "College",
+      College: "College",
       "All Education Levels": "All Education Levels",
     };
 
-    const displayName = educationLevelDisplayMap[educationLevel] || educationLevel;
-    
+    const displayName =
+      educationLevelDisplayMap[educationLevel] || educationLevel;
+
     return `Complete Set<br/>This Uniform is for ${displayName} Only.`;
   }, []);
 
@@ -895,7 +970,7 @@ const ItemsModals = ({
     ) {
       // Only update if editor is empty or contains the default template
       const currentContent = editorRef.current.innerHTML || "";
-      const isDefaultContent = 
+      const isDefaultContent =
         !currentContent.trim() ||
         currentContent.includes("This uniform is for") ||
         currentContent.includes("This Uniform is for") ||
@@ -909,11 +984,17 @@ const ItemsModals = ({
           target: { name: "descriptionText", value: newDescription },
         });
       }
-      
+
       // Update the ref to track the current education level
       lastEducationLevelRef.current = formData.educationLevel;
     }
-  }, [formData.educationLevel, modalState.mode, modalState.isOpen, generateDescriptionText, handleInputChange]);
+  }, [
+    formData.educationLevel,
+    modalState.mode,
+    modalState.isOpen,
+    generateDescriptionText,
+    handleInputChange,
+  ]);
 
   // Reset last education level when modal closes
   useEffect(() => {
@@ -934,16 +1015,23 @@ const ItemsModals = ({
       ) {
         // For add mode, use education level-based description if available
         // For edit mode, use existing descriptionText
-        const initialContent = modalState.mode === "add" && formData.educationLevel
-          ? generateDescriptionText(formData.educationLevel)
-          : formData.descriptionText ||
-            "Complete Set<br/>This Uniform is for Senior High School Only.";
+        const initialContent =
+          modalState.mode === "add" && formData.educationLevel
+            ? generateDescriptionText(formData.educationLevel)
+            : formData.descriptionText ||
+              "Complete Set<br/>This Uniform is for Senior High School Only.";
         editorRef.current.innerHTML = initialContent;
         isEditorInitialized.current = true;
       }
     }, 0);
     return () => clearTimeout(timeoutId);
-  }, [formData.descriptionText, formData.educationLevel, modalState.isOpen, modalState.mode, generateDescriptionText]);
+  }, [
+    formData.descriptionText,
+    formData.educationLevel,
+    modalState.isOpen,
+    modalState.mode,
+    generateDescriptionText,
+  ]);
 
   // Reset initialization flag when modal closes or mode changes
   useEffect(() => {
@@ -1033,13 +1121,13 @@ const ItemsModals = ({
             variant.beginning_inventory !== undefined &&
               variant.beginning_inventory !== null
               ? variant.beginning_inventory
-              : variant.stock || ""
+              : variant.stock || "",
           );
           initialPrices[index] = String(
             variant.beginning_inventory_unit_price != null &&
               variant.beginning_inventory_unit_price !== ""
               ? variant.beginning_inventory_unit_price
-              : variant.price || selectedItem.price || ""
+              : variant.price || selectedItem.price || "",
           );
           initialValues[index] = variant.size || "";
           selectedIndices.push(index);
@@ -1071,33 +1159,40 @@ const ItemsModals = ({
           selectedItem.size !== "N/A" &&
           selectedItem.size.includes(",")
         ) {
-          const sizes = selectedItem.size.split(",").map((s) => s.trim()).filter(Boolean);
+          const sizes = selectedItem.size
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
           if (sizes.length > 0) {
             setExistingVariantCount(sizes.length);
             const maxLength = Math.max(sizes.length, 2);
             const initialValues = [...sizes];
             while (initialValues.length < maxLength) initialValues.push("");
-            const initialPrices = sizes.map(
-              () => String(selectedItem.price || "")
+            const initialPrices = sizes.map(() =>
+              String(selectedItem.price || ""),
             );
             while (initialPrices.length < maxLength) initialPrices.push("");
-            const stockPerSize = sizes.length > 0
-              ? Math.floor((Number(selectedItem.stock) || 0) / sizes.length)
-              : 0;
+            const stockPerSize =
+              sizes.length > 0
+                ? Math.floor((Number(selectedItem.stock) || 0) / sizes.length)
+                : 0;
             const initialStocks = sizes.map(() => String(stockPerSize));
             while (initialStocks.length < maxLength) initialStocks.push("");
             setVariantPrices(initialPrices);
             setVariantStocks(initialStocks);
             setSelectedVariantIndices(sizes.map((_, i) => i));
             setVariants([
-              { name: "", values: initialValues.length > 0 ? initialValues : ["", ""] },
+              {
+                name: "",
+                values: initialValues.length > 0 ? initialValues : ["", ""],
+              },
             ]);
           } else {
             setExistingVariantCount(0);
             setVariantPrices((prev) =>
               prev[0] === "" && selectedItem.price
                 ? [String(selectedItem.price), prev[1] || ""]
-                : prev
+                : prev,
             );
             setSelectedVariantIndices([0]);
           }
@@ -1114,17 +1209,19 @@ const ItemsModals = ({
             const selectedIndices = variants[0].values
               .map((val, idx) => {
                 const normalizedVal =
-                  val || (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
+                  val ||
+                  (idx === 0 ? "Small (S)" : idx === 1 ? "Medium (M)" : "");
                 return sizes.some(
                   (size) =>
-                    normalizedVal.includes(size) || size.includes(normalizedVal)
+                    normalizedVal.includes(size) ||
+                    size.includes(normalizedVal),
                 )
                   ? idx
                   : null;
               })
               .filter((idx) => idx !== null);
             setSelectedVariantIndices(
-              selectedIndices.length > 0 ? selectedIndices : [0]
+              selectedIndices.length > 0 ? selectedIndices : [0],
             );
           } else {
             setSelectedVariantIndices([0]);
@@ -1176,7 +1273,7 @@ const ItemsModals = ({
           setSelectedAccessoryIndices(
             entries.map((_, idx) => idx).length > 0
               ? entries.map((_, idx) => idx)
-              : [0]
+              : [0],
           );
         }
       } catch (error) {
@@ -1237,12 +1334,13 @@ const ItemsModals = ({
   if (!modalState.isOpen) return null;
 
   const isEditMode = modalState.mode === "edit";
-  const isExistingVariant = (index) => isEditMode && index < existingVariantCount;
+  const isExistingVariant = (index) =>
+    isEditMode && index < existingVariantCount;
 
   // Delete Confirmation Modal
   if (modalState.mode === "delete") {
     return createPortal(
-      <div 
+      <div
         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
         onClick={(e) => {
           // Close modal when clicking backdrop
@@ -1251,7 +1349,7 @@ const ItemsModals = ({
           }
         }}
       >
-        <div 
+        <div
           className="bg-white rounded-lg shadow-xl max-w-md w-full p-6"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1294,14 +1392,14 @@ const ItemsModals = ({
           </div>
         </div>
       </div>,
-      document.body
+      document.body,
     );
   }
 
   // View Item Modal
   if (modalState.mode === "view") {
     return createPortal(
-      <div 
+      <div
         className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
         onClick={(e) => {
           // Close modal when clicking backdrop
@@ -1310,7 +1408,7 @@ const ItemsModals = ({
           }
         }}
       >
-        <div 
+        <div
           className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1414,10 +1512,10 @@ const ItemsModals = ({
                       selectedItem?.status === "Above Threshold"
                         ? "bg-green-100 text-green-800"
                         : selectedItem?.status === "At Reorder Point"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : selectedItem?.status === "Critical"
-                        ? "bg-orange-100 text-orange-800"
-                        : "bg-red-100 text-red-800"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : selectedItem?.status === "Critical"
+                            ? "bg-orange-100 text-orange-800"
+                            : "bg-red-100 text-red-800"
                     }`}
                   >
                     {selectedItem?.status}
@@ -1438,7 +1536,7 @@ const ItemsModals = ({
           </div>
         </div>
       </div>,
-      document.body
+      document.body,
     );
   }
 
@@ -1504,7 +1602,7 @@ const ItemsModals = ({
     setVariants((prev) => {
       const next = [...prev];
       const values = next[variantIndex].values.filter(
-        (_, idx) => idx !== valueIndex
+        (_, idx) => idx !== valueIndex,
       );
       next[variantIndex] = { ...next[variantIndex], values };
       return next;
@@ -1593,7 +1691,7 @@ const ItemsModals = ({
 
   // Add/Edit Item Modal - responsive: Mobile M 375, Mobile L 425, Tablet 768, Laptop 1024
   return createPortal(
-    <div 
+    <div
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 mobile-m:p-5 mobile-l:p-6 tablet:p-6 tablet:pt-10 tablet:pb-6 laptop:p-5"
       onClick={(e) => {
         // Close modal when clicking backdrop
@@ -1602,7 +1700,7 @@ const ItemsModals = ({
         }
       }}
     >
-      <div 
+      <div
         className="bg-white rounded-xl mobile-l:rounded-2xl shadow-2xl w-full max-w-[460px] mobile-m:max-w-[calc(100vw-2rem)] mobile-m:w-[calc(100vw-2rem)] mobile-l:max-w-[560px] tablet:max-w-[600px] laptop:max-w-3xl max-h-[90vh] mobile-m:max-h-[85vh] mobile-l:max-h-[82vh] tablet:max-h-[82vh] laptop:max-h-[90vh] overflow-hidden flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1612,7 +1710,10 @@ const ItemsModals = ({
           parseInt(formData.stock || 0) > 0 && (
             <div className="px-4 py-2.5 mobile-m:px-5 mobile-l:px-6 mobile-l:py-3 tablet:px-6 tablet:py-3 bg-blue-50 border-b border-blue-200">
               <div className="flex items-center gap-1.5 mobile-l:gap-2 text-blue-800">
-                <Users size={14} className="mobile-l:w-[18px] mobile-l:h-[18px] shrink-0" />
+                <Users
+                  size={14}
+                  className="mobile-l:w-[18px] mobile-l:h-[18px] shrink-0"
+                />
                 <p className="text-xs font-medium mobile-l:text-sm">
                   {checkingPreOrders ? (
                     "Checking for pre-orders..."
@@ -1720,7 +1821,7 @@ const ItemsModals = ({
               onFocus={() => setFocusedSection("Item Details")}
               onBlur={() => setFocusedSection(null)}
             >
-                {/* Education Level only (e.g. All Education Levels for Logo Patch, ID Lace) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium text-gray-700">
                     Education Level
@@ -1747,47 +1848,75 @@ const ItemsModals = ({
                   )}
                 </div>
 
-                {/* Row: Item Name & Item Type */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
-                  <div className="space-y-1.5 relative" ref={itemNameDropdownRef}>
-                    <label className="text-sm font-medium text-gray-700">
-                      Item Name
-                    </label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                      onFocus={() => !isEditMode && setItemNameDropdownOpen(true)}
-                      placeholder={
-                        formData.educationLevel
-                          ? "e.g. Kinder Dress"
-                          : "Select education level first for suggestions"
-                      }
-                      disabled={isEditMode}
-                      readOnly={isEditMode}
-                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                    />
-                    {(() => {
-                      const filtered = suggestedItemNames.filter((n) =>
-                        (formData.name || "").trim() === ""
-                          ? true
-                          : n
-                              .toLowerCase()
-                              .includes(
-                                (formData.name || "").toLowerCase().trim()
-                              )
-                      );
-                      return (
-                        itemNameDropdownOpen &&
-                        filtered.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                            {loadingNameSuggestions && (
-                              <div className="px-3 py-2 text-xs text-gray-500">
-                                Loading suggestions...
-                              </div>
-                            )}
-                            {filtered.map((n) => (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Grade Level
+                  </label>
+                  <select
+                    name="gradeLevel"
+                    value={formData.gradeLevel || ""}
+                    onChange={handleInputChange}
+                    disabled={isEditMode || !isAccessories}
+                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode || !isAccessories ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                  >
+                    <option value="">
+                      {isAccessories
+                        ? "Select Grade Level"
+                        : "Select Accessories in Item Type"}
+                    </option>
+                    {GRADE_LEVEL_OPTIONS.map((level) => (
+                      <option key={level.value} value={level.value}>
+                        {level.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.gradeLevel && (
+                    <p className="text-red-500 text-xs">{errors.gradeLevel}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Row: Item Name & Item Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
+                <div className="space-y-1.5 relative" ref={itemNameDropdownRef}>
+                  <label className="text-sm font-medium text-gray-700">
+                    Item Name
+                  </label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    onFocus={() => !isEditMode && setItemNameDropdownOpen(true)}
+                    placeholder={
+                      formData.educationLevel
+                        ? "e.g. Kinder Dress"
+                        : "Select education level first for suggestions"
+                    }
+                    disabled={isEditMode}
+                    readOnly={isEditMode}
+                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                  />
+                  {(() => {
+                    const filtered = suggestedItemNames.filter((n) =>
+                      (formData.name || "").trim() === ""
+                        ? true
+                        : n
+                            .toLowerCase()
+                            .includes(
+                              (formData.name || "").toLowerCase().trim(),
+                            ),
+                    );
+                    return (
+                      itemNameDropdownOpen &&
+                      filtered.length > 0 && (
+                        <div className="absolute left-0 right-0 top-full mt-1 z-50 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                          {loadingNameSuggestions && (
+                            <div className="px-3 py-2 text-xs text-gray-500">
+                              Loading suggestions...
+                            </div>
+                          )}
+                          {filtered.map((n) => (
                             <button
                               key={n}
                               type="button"
@@ -1802,259 +1931,252 @@ const ItemsModals = ({
                             >
                               {n}
                             </button>
-                            ))}
-                          </div>
-                        )
-                      );
-                    })()}
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">
-                      Item Type
-                    </label>
-                    <select
-                      name="itemType"
-                      value={formData.itemType}
-                      onChange={handleInputChange}
-                      required
-                      disabled={isEditMode}
-                      className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
-                    >
-                      <option value="">Select Item Type</option>
-                      {ITEM_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.itemType && (
-                      <p className="text-red-500 text-xs">{errors.itemType}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row: Gender */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">
-                      Gender
-                    </label>
-                    <select
-                      name="forGender"
-                      value={formData.forGender || "Unisex"}
-                      onChange={handleInputChange}
-                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="Unisex">For Both (Male & Female)</option>
-                      <option value="Female">For Female</option>
-                      <option value="Male">For Male</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Description / Note */}
-                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">
-                      Description / Note
-                    </label>
-                    <div className="rounded-xl border border-gray-300 bg-white overflow-hidden">
-                      {/* Rich text toolbar (Google Docs–style basic controls) */}
-                      <div className="flex items-center flex-wrap gap-1 px-2 py-1.5 border-b border-gray-200 text-gray-600 relative">
-                        {/* Remove Formatting */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => applyEditorCommand("removeFormat")}
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Remove formatting"
-                        >
-                          <RemoveFormatting size={18} />
-                        </button>
-                        {/* Bold */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => applyEditorCommand("bold")}
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Bold"
-                        >
-                          <Bold size={18} />
-                        </button>
-                        {/* Italic */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => applyEditorCommand("italic")}
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Italic"
-                        >
-                          <Italic size={18} />
-                        </button>
-                        <div className="w-px h-5 bg-gray-300 mx-1" />
-                        {/* Numbered List */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() =>
-                            applyEditorCommand("insertOrderedList")
-                          }
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Numbered list"
-                        >
-                          <ListOrdered size={18} />
-                        </button>
-                        {/* Bulleted List */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() =>
-                            applyEditorCommand("insertUnorderedList")
-                          }
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Bulleted list"
-                        >
-                          <List size={18} />
-                        </button>
-                        <div className="w-px h-5 bg-gray-300 mx-1" />
-                        {/* Align Left */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => applyEditorCommand("justifyLeft")}
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Align left"
-                        >
-                          <AlignLeft size={18} />
-                        </button>
-                        {/* Align Right */}
-                        <button
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => applyEditorCommand("justifyRight")}
-                          className="p-1.5 hover:bg-gray-100 rounded transition"
-                          title="Align right"
-                        >
-                          <AlignRight size={18} />
-                        </button>
-                        <div className="w-px h-5 bg-gray-300 mx-1" />
-                        {/* Text Color */}
-                        <div className="relative" ref={colorPickerRef}>
-                          <button
-                            type="button"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => setShowColorPicker(!showColorPicker)}
-                            className="p-1.5 hover:bg-gray-100 rounded transition flex flex-col items-center"
-                            title="Text color"
-                          >
-                            <Palette size={18} />
-                            <div
-                              className="w-4 h-1 rounded-sm mt-0.5"
-                              style={{ backgroundColor: selectedColor }}
-                            />
-                          </button>
+                          ))}
                         </div>
-                      </div>
-                      {/* Color Picker - Positioned outside overflow containers */}
-                      {showColorPicker && (
-                        <div
-                          className="fixed inset-0 z-[9999]"
-                          onClick={() => setShowColorPicker(false)}
+                      )
+                    );
+                  })()}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Item Type
+                  </label>
+                  <select
+                    name="itemType"
+                    value={formData.itemType}
+                    onChange={handleInputChange}
+                    required
+                    disabled={isEditMode}
+                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${isEditMode ? "bg-gray-50 cursor-not-allowed" : ""}`}
+                  >
+                    <option value="">Select Item Type</option>
+                    {ITEM_TYPES.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.itemType && (
+                    <p className="text-red-500 text-xs">{errors.itemType}</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Row: Gender */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed border-gray-200">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Gender
+                  </label>
+                  <select
+                    name="forGender"
+                    value={formData.forGender || "Unisex"}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="Unisex">For Both (Male & Female)</option>
+                    <option value="Female">For Female</option>
+                    <option value="Male">For Male</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Description / Note */}
+              <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Description / Note
+                  </label>
+                  <div className="rounded-xl border border-gray-300 bg-white overflow-hidden">
+                    {/* Rich text toolbar (Google Docs–style basic controls) */}
+                    <div className="flex items-center flex-wrap gap-1 px-2 py-1.5 border-b border-gray-200 text-gray-600 relative">
+                      {/* Remove Formatting */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyEditorCommand("removeFormat")}
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Remove formatting"
+                      >
+                        <RemoveFormatting size={18} />
+                      </button>
+                      {/* Bold */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyEditorCommand("bold")}
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Bold"
+                      >
+                        <Bold size={18} />
+                      </button>
+                      {/* Italic */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyEditorCommand("italic")}
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Italic"
+                      >
+                        <Italic size={18} />
+                      </button>
+                      <div className="w-px h-5 bg-gray-300 mx-1" />
+                      {/* Numbered List */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyEditorCommand("insertOrderedList")}
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Numbered list"
+                      >
+                        <ListOrdered size={18} />
+                      </button>
+                      {/* Bulleted List */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() =>
+                          applyEditorCommand("insertUnorderedList")
+                        }
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Bulleted list"
+                      >
+                        <List size={18} />
+                      </button>
+                      <div className="w-px h-5 bg-gray-300 mx-1" />
+                      {/* Align Left */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyEditorCommand("justifyLeft")}
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Align left"
+                      >
+                        <AlignLeft size={18} />
+                      </button>
+                      {/* Align Right */}
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => applyEditorCommand("justifyRight")}
+                        className="p-1.5 hover:bg-gray-100 rounded transition"
+                        title="Align right"
+                      >
+                        <AlignRight size={18} />
+                      </button>
+                      <div className="w-px h-5 bg-gray-300 mx-1" />
+                      {/* Text Color */}
+                      <div className="relative" ref={colorPickerRef}>
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => setShowColorPicker(!showColorPicker)}
+                          className="p-1.5 hover:bg-gray-100 rounded transition flex flex-col items-center"
+                          title="Text color"
                         >
+                          <Palette size={18} />
                           <div
-                            className="absolute bg-white border border-gray-200 rounded-lg shadow-2xl p-3"
-                            style={{
-                              top: "50%",
-                              left: "50%",
-                              transform: "translate(-50%, -50%)",
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            onMouseDown={(e) => e.stopPropagation()}
-                          >
-                            <div className="text-sm font-medium text-gray-700 mb-2">
-                              Select Color
-                            </div>
-                            <HexColorPicker
+                            className="w-4 h-1 rounded-sm mt-0.5"
+                            style={{ backgroundColor: selectedColor }}
+                          />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Color Picker - Positioned outside overflow containers */}
+                    {showColorPicker && (
+                      <div
+                        className="fixed inset-0 z-[9999]"
+                        onClick={() => setShowColorPicker(false)}
+                      >
+                        <div
+                          className="absolute bg-white border border-gray-200 rounded-lg shadow-2xl p-3"
+                          style={{
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                          onMouseDown={(e) => e.stopPropagation()}
+                        >
+                          <div className="text-sm font-medium text-gray-700 mb-2">
+                            Select Color
+                          </div>
+                          <HexColorPicker
+                            color={selectedColor}
+                            onChange={setSelectedColor}
+                            className="!w-[200px] !h-[160px]"
+                          />
+                          <div className="mt-3 flex items-center gap-2">
+                            <span className="text-xs text-gray-500">Hex:</span>
+                            <HexColorInput
                               color={selectedColor}
                               onChange={setSelectedColor}
-                              className="!w-[200px] !h-[160px]"
+                              prefixed
+                              className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                             />
-                            <div className="mt-3 flex items-center gap-2">
-                              <span className="text-xs text-gray-500">
-                                Hex:
-                              </span>
-                              <HexColorInput
-                                color={selectedColor}
-                                onChange={setSelectedColor}
-                                prefixed
-                                className="flex-1 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                              />
-                              <div
-                                className="w-7 h-7 rounded border border-gray-300 flex-shrink-0"
-                                style={{ backgroundColor: selectedColor }}
-                              />
-                            </div>
-                            <div className="mt-3 flex justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setShowColorPicker(false)}
-                                className="px-4 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded transition border border-gray-300"
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  applyEditorCommand(
-                                    "foreColor",
-                                    selectedColor
-                                  );
-                                  setShowColorPicker(false);
-                                }}
-                                className="px-4 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded transition"
-                              >
-                                OK
-                              </button>
-                            </div>
+                            <div
+                              className="w-7 h-7 rounded border border-gray-300 flex-shrink-0"
+                              style={{ backgroundColor: selectedColor }}
+                            />
+                          </div>
+                          <div className="mt-3 flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setShowColorPicker(false)}
+                              className="px-4 py-1.5 text-xs text-gray-600 hover:bg-gray-100 rounded transition border border-gray-300"
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applyEditorCommand("foreColor", selectedColor);
+                                setShowColorPicker(false);
+                              }}
+                              className="px-4 py-1.5 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded transition"
+                            >
+                              OK
+                            </button>
                           </div>
                         </div>
-                      )}
-                      <div
-                        ref={editorRef}
-                        className="w-full px-3 py-2.5 text-sm min-h-[96px] outline-none rich-text-editor"
-                        contentEditable
-                        onInput={handleRichTextInput}
-                        suppressContentEditableWarning={true}
-                      />
-                    </div>
+                      </div>
+                    )}
+                    <div
+                      ref={editorRef}
+                      className="w-full px-3 py-2.5 text-sm min-h-[96px] outline-none rich-text-editor"
+                      contentEditable
+                      onInput={handleRichTextInput}
+                      suppressContentEditableWarning={true}
+                    />
                   </div>
                 </div>
-                {/* Variants - Only show for Uniforms */}
-                {isUniforms && (
-                  <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                      Variants
-                    </p>
+              </div>
+              {/* Variants - Only show for Uniforms */}
+              {isUniforms && (
+                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    Variants
+                  </p>
 
-                    {/* Bottom card: Size / Stock / Unit Price + Add another option value */}
-                    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                      <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                        <span className="truncate">Size</span>
-                        <span className="truncate">Stock</span>
-                        <span className="truncate">Unit Price</span>
-                      </div>
-                      <div
-                        className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto"
-                        ref={sizeDropdownRef}
-                      >
-                        {variants[0].values.map((value, index) => {
-                          const existing = isExistingVariant(index);
-                          return (
-                            <div
-                              key={index}
-                              className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
-                            >
+                  {/* Bottom card: Size / Stock / Unit Price + Add another option value */}
+                  <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                    <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                      <span className="truncate">Size</span>
+                      <span className="truncate">Stock</span>
+                      <span className="truncate">Unit Price</span>
+                    </div>
+                    <div
+                      className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto"
+                      ref={sizeDropdownRef}
+                    >
+                      {variants[0].values.map((value, index) => {
+                        const existing = isExistingVariant(index);
+                        return (
+                          <div
+                            key={index}
+                            className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
+                          >
                             <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0">
                               <input
                                 type="checkbox"
@@ -2073,8 +2195,8 @@ const ItemsModals = ({
                                             (idx === 0
                                               ? "Small (S)"
                                               : idx === 1
-                                              ? "Medium (M)"
-                                              : "")
+                                                ? "Medium (M)"
+                                                : "")
                                           );
                                         })
                                         .filter(Boolean)
@@ -2103,7 +2225,7 @@ const ItemsModals = ({
                                   } else {
                                     setSelectedVariantIndices((prev) => {
                                       const newIndices = prev.filter(
-                                        (i) => i !== index
+                                        (i) => i !== index,
                                       );
                                       const updatedSizes = newIndices
                                         .map((idx) => {
@@ -2113,8 +2235,8 @@ const ItemsModals = ({
                                             (idx === 0
                                               ? "Small (S)"
                                               : idx === 1
-                                              ? "Medium (M)"
-                                              : "")
+                                                ? "Medium (M)"
+                                                : "")
                                           );
                                         })
                                         .filter(Boolean)
@@ -2135,7 +2257,11 @@ const ItemsModals = ({
                               {existing ? (
                                 <span className="text-gray-800 truncate min-w-0 flex-1">
                                   {value ||
-                                    (index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : `Size ${index + 1}`)}
+                                    (index === 0
+                                      ? "Small (S)"
+                                      : index === 1
+                                        ? "Medium (M)"
+                                        : `Size ${index + 1}`)}
                                 </span>
                               ) : (
                                 <div className="relative flex-1 min-w-0 flex items-center gap-1.5 mobile-m:gap-2">
@@ -2144,57 +2270,67 @@ const ItemsModals = ({
                                       type="text"
                                       value={value}
                                       onChange={(e) =>
-                                        handleVariantValueChange(0, index, e.target.value)
+                                        handleVariantValueChange(
+                                          0,
+                                          index,
+                                          e.target.value,
+                                        )
                                       }
                                       onBlur={(e) => {
                                         // Auto-correct common typos and normalize size input
-                                        const inputValue = e.target.value.trim();
+                                        const inputValue =
+                                          e.target.value.trim();
                                         if (!inputValue) return;
 
                                         // Preserve numbered large sizes (e.g., 2XLarge, 3XLarge, 5XLarge)
                                         // so fuzzy matching does not downgrade them to plain "XLarge".
-                                        const numberedLargeMatch = inputValue.match(
-                                          /^(\d+)\s*x?\s*large(?:\s*\([^)]+\))?$/i
-                                        );
+                                        const numberedLargeMatch =
+                                          inputValue.match(
+                                            /^(\d+)\s*x?\s*large(?:\s*\([^)]+\))?$/i,
+                                          );
                                         if (numberedLargeMatch) {
-                                          const sizeNumber = numberedLargeMatch[1];
+                                          const sizeNumber =
+                                            numberedLargeMatch[1];
                                           handleVariantValueChange(
                                             0,
                                             index,
-                                            `${sizeNumber}XLarge`
+                                            `${sizeNumber}XLarge`,
                                           );
                                           return;
                                         }
-                                        
+
                                         // Helper function to normalize for matching (case-insensitive, ignoring parentheses)
-                                        const normalizeForMatch = (str) => 
-                                          str.toLowerCase().replace(/\s*\([^)]*\)\s*/g, "").trim();
-                                        
+                                        const normalizeForMatch = (str) =>
+                                          str
+                                            .toLowerCase()
+                                            .replace(/\s*\([^)]*\)\s*/g, "")
+                                            .trim();
+
                                         // Common typo corrections for size names
                                         const typoCorrections = {
                                           // Medium typos (common misspellings)
-                                          "mediuem": "medium",
-                                          "mediium": "medium",
-                                          "meduim": "medium",
-                                          "mediam": "medium",
-                                          "meduium": "medium",
-                                          "medum": "medium",
-                                          "medim": "medium",
+                                          mediuem: "medium",
+                                          mediium: "medium",
+                                          meduim: "medium",
+                                          mediam: "medium",
+                                          meduium: "medium",
+                                          medum: "medium",
+                                          medim: "medium",
                                           // Small typos
-                                          "smal": "small",
-                                          "smll": "small",
-                                          "smaal": "small",
+                                          smal: "small",
+                                          smll: "small",
+                                          smaal: "small",
                                           // Large typos
-                                          "lareg": "large",
-                                          "lrage": "large",
-                                          "larage": "large",
+                                          lareg: "large",
+                                          lrage: "large",
+                                          larage: "large",
                                           // XSmall typos
-                                          "xsmal": "xsmall",
-                                          "xsmll": "xsmall",
+                                          xsmal: "xsmall",
+                                          xsmll: "xsmall",
                                           // XLarge typos
-                                          "xlareg": "xlarge",
-                                          "xlrage": "xlarge",
-                                          "xlarage": "xlarge",
+                                          xlareg: "xlarge",
+                                          xlrage: "xlarge",
+                                          xlarage: "xlarge",
                                           // 2XLarge typos
                                           "2xlareg": "2xlarge",
                                           "2xlrage": "2xlarge",
@@ -2202,127 +2338,208 @@ const ItemsModals = ({
                                           "3xlareg": "3xlarge",
                                           "3xlrage": "3xlarge",
                                         };
-                                        
+
                                         // Helper function to calculate Levenshtein distance (edit distance)
-                                        const levenshteinDistance = (str1, str2) => {
+                                        const levenshteinDistance = (
+                                          str1,
+                                          str2,
+                                        ) => {
                                           const m = str1.length;
                                           const n = str2.length;
-                                          const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-                                          
-                                          for (let i = 0; i <= m; i++) dp[i][0] = i;
-                                          for (let j = 0; j <= n; j++) dp[0][j] = j;
-                                          
+                                          const dp = Array(m + 1)
+                                            .fill(null)
+                                            .map(() => Array(n + 1).fill(0));
+
+                                          for (let i = 0; i <= m; i++)
+                                            dp[i][0] = i;
+                                          for (let j = 0; j <= n; j++)
+                                            dp[0][j] = j;
+
                                           for (let i = 1; i <= m; i++) {
                                             for (let j = 1; j <= n; j++) {
                                               if (str1[i - 1] === str2[j - 1]) {
                                                 dp[i][j] = dp[i - 1][j - 1];
                                               } else {
                                                 dp[i][j] = Math.min(
-                                                  dp[i - 1][j] + 1,     // deletion
-                                                  dp[i][j - 1] + 1,     // insertion
-                                                  dp[i - 1][j - 1] + 1  // substitution
+                                                  dp[i - 1][j] + 1, // deletion
+                                                  dp[i][j - 1] + 1, // insertion
+                                                  dp[i - 1][j - 1] + 1, // substitution
                                                 );
                                               }
                                             }
                                           }
-                                          
+
                                           return dp[m][n];
                                         };
-                                        
+
                                         // First, check for direct typo matches
-                                        
+
                                         // Check if input (without parentheses) matches a typo
-                                        const inputWithoutParens = normalizeForMatch(inputValue);
-                                        if (typoCorrections[inputWithoutParens]) {
+                                        const inputWithoutParens =
+                                          normalizeForMatch(inputValue);
+                                        if (
+                                          typoCorrections[inputWithoutParens]
+                                        ) {
                                           // Find the suggested size that matches the corrected typo
-                                          const correctedTypo = typoCorrections[inputWithoutParens];
-                                          const matchingSize = SUGGESTED_SIZES.find(s => {
-                                            const sNormalized = normalizeForMatch(s);
-                                            return sNormalized === correctedTypo;
-                                          });
+                                          const correctedTypo =
+                                            typoCorrections[inputWithoutParens];
+                                          const matchingSize =
+                                            SUGGESTED_SIZES.find((s) => {
+                                              const sNormalized =
+                                                normalizeForMatch(s);
+                                              return (
+                                                sNormalized === correctedTypo
+                                              );
+                                            });
                                           if (matchingSize) {
-                                            handleVariantValueChange(0, index, matchingSize);
+                                            handleVariantValueChange(
+                                              0,
+                                              index,
+                                              matchingSize,
+                                            );
                                             return;
                                           }
                                         }
-                                        
+
                                         // Normalize: remove extra spaces, fix repeated letters
                                         let normalized = inputValue
                                           .replace(/\s+/g, " ") // Multiple spaces to single space
-                                          .replace(/([a-z])\1{2,}/gi, (match) => {
-                                            // Fix repeated letters (e.g., "smalll" -> "small")
-                                            return match[0] + match[0];
-                                          });
-                                        
-                                        const inputNormalized = normalizeForMatch(normalized);
-                                        
+                                          .replace(
+                                            /([a-z])\1{2,}/gi,
+                                            (match) => {
+                                              // Fix repeated letters (e.g., "smalll" -> "small")
+                                              return match[0] + match[0];
+                                            },
+                                          );
+
+                                        const inputNormalized =
+                                          normalizeForMatch(normalized);
+
                                         // Check if normalized input matches a typo
                                         if (typoCorrections[inputNormalized]) {
-                                          const correctedTypo = typoCorrections[inputNormalized];
-                                          const matchingSize = SUGGESTED_SIZES.find(s => {
-                                            const sNormalized = normalizeForMatch(s);
-                                            return sNormalized === correctedTypo;
-                                          });
+                                          const correctedTypo =
+                                            typoCorrections[inputNormalized];
+                                          const matchingSize =
+                                            SUGGESTED_SIZES.find((s) => {
+                                              const sNormalized =
+                                                normalizeForMatch(s);
+                                              return (
+                                                sNormalized === correctedTypo
+                                              );
+                                            });
                                           if (matchingSize) {
-                                            handleVariantValueChange(0, index, matchingSize);
+                                            handleVariantValueChange(
+                                              0,
+                                              index,
+                                              matchingSize,
+                                            );
                                             return;
                                           }
                                         }
-                                        
+
                                         // Check if input is reversed (e.g., "llams" -> "small")
-                                        const reversedInput = inputNormalized.split("").reverse().join("");
-                                        
+                                        const reversedInput = inputNormalized
+                                          .split("")
+                                          .reverse()
+                                          .join("");
+
                                         // Find best match from suggested sizes (check both normal and reversed)
                                         let bestMatch = null;
-                                        
+
                                         // First, try normal match (exact or prefix/suffix match)
-                                        bestMatch = SUGGESTED_SIZES.find(s => {
-                                          const sNormalized = normalizeForMatch(s);
-                                          return sNormalized === inputNormalized || 
-                                                 sNormalized.startsWith(inputNormalized) ||
-                                                 inputNormalized.startsWith(sNormalized);
-                                        });
-                                        
+                                        bestMatch = SUGGESTED_SIZES.find(
+                                          (s) => {
+                                            const sNormalized =
+                                              normalizeForMatch(s);
+                                            return (
+                                              sNormalized === inputNormalized ||
+                                              sNormalized.startsWith(
+                                                inputNormalized,
+                                              ) ||
+                                              inputNormalized.startsWith(
+                                                sNormalized,
+                                              )
+                                            );
+                                          },
+                                        );
+
                                         // If no match found, try reversed input
                                         if (!bestMatch) {
-                                          bestMatch = SUGGESTED_SIZES.find(s => {
-                                            const sNormalized = normalizeForMatch(s);
-                                            return sNormalized === reversedInput || 
-                                                   sNormalized.startsWith(reversedInput) ||
-                                                   reversedInput.startsWith(sNormalized);
-                                          });
+                                          bestMatch = SUGGESTED_SIZES.find(
+                                            (s) => {
+                                              const sNormalized =
+                                                normalizeForMatch(s);
+                                              return (
+                                                sNormalized === reversedInput ||
+                                                sNormalized.startsWith(
+                                                  reversedInput,
+                                                ) ||
+                                                reversedInput.startsWith(
+                                                  sNormalized,
+                                                )
+                                              );
+                                            },
+                                          );
                                         }
-                                        
+
                                         // If still no match, try fuzzy matching using Levenshtein distance
-                                        if (!bestMatch && inputNormalized.length >= 3) {
+                                        if (
+                                          !bestMatch &&
+                                          inputNormalized.length >= 3
+                                        ) {
                                           let minDistance = Infinity;
                                           let closestMatch = null;
-                                          
-                                          SUGGESTED_SIZES.forEach(s => {
-                                            const sNormalized = normalizeForMatch(s);
-                                            const distance = levenshteinDistance(inputNormalized, sNormalized);
-                                            
+
+                                          SUGGESTED_SIZES.forEach((s) => {
+                                            const sNormalized =
+                                              normalizeForMatch(s);
+                                            const distance =
+                                              levenshteinDistance(
+                                                inputNormalized,
+                                                sNormalized,
+                                              );
+
                                             // If distance is small (1-2 edits) and within reasonable length difference
-                                            if (distance <= 2 && Math.abs(inputNormalized.length - sNormalized.length) <= 2) {
+                                            if (
+                                              distance <= 2 &&
+                                              Math.abs(
+                                                inputNormalized.length -
+                                                  sNormalized.length,
+                                              ) <= 2
+                                            ) {
                                               if (distance < minDistance) {
                                                 minDistance = distance;
                                                 closestMatch = s;
                                               }
                                             }
                                           });
-                                          
+
                                           if (closestMatch) {
                                             bestMatch = closestMatch;
                                           }
                                         }
-                                        
+
                                         // If we found a match and the input doesn't already match exactly, auto-correct
-                                        if (bestMatch && normalizeForMatch(normalized) !== normalizeForMatch(bestMatch)) {
+                                        if (
+                                          bestMatch &&
+                                          normalizeForMatch(normalized) !==
+                                            normalizeForMatch(bestMatch)
+                                        ) {
                                           // Check if input is close enough (within 2 characters difference or fuzzy match found)
-                                          const inputLen = inputNormalized.length;
-                                          const matchLen = normalizeForMatch(bestMatch).length;
-                                          if (Math.abs(inputLen - matchLen) <= 2 || inputNormalized.length >= 3) {
-                                            handleVariantValueChange(0, index, bestMatch);
+                                          const inputLen =
+                                            inputNormalized.length;
+                                          const matchLen =
+                                            normalizeForMatch(bestMatch).length;
+                                          if (
+                                            Math.abs(inputLen - matchLen) <=
+                                              2 ||
+                                            inputNormalized.length >= 3
+                                          ) {
+                                            handleVariantValueChange(
+                                              0,
+                                              index,
+                                              bestMatch,
+                                            );
                                           }
                                         } else {
                                           // If no reasonable match was found, fall back to a generic size label
@@ -2331,15 +2548,28 @@ const ItemsModals = ({
                                             index === 0
                                               ? "Small (S)"
                                               : index === 1
-                                              ? "Medium (M)"
-                                              : `Size ${index + 1}`;
-                                          
+                                                ? "Medium (M)"
+                                                : `Size ${index + 1}`;
+
                                           // Only apply fallback when we truly have no match and input looks invalid
-                                          if (!bestMatch && inputNormalized.length >= 3) {
-                                            handleVariantValueChange(0, index, fallbackSize);
-                                          } else if (normalized !== inputValue) {
+                                          if (
+                                            !bestMatch &&
+                                            inputNormalized.length >= 3
+                                          ) {
+                                            handleVariantValueChange(
+                                              0,
+                                              index,
+                                              fallbackSize,
+                                            );
+                                          } else if (
+                                            normalized !== inputValue
+                                          ) {
                                             // Apply normalization even if no exact match
-                                            handleVariantValueChange(0, index, normalized);
+                                            handleVariantValueChange(
+                                              0,
+                                              index,
+                                              normalized,
+                                            );
                                           }
                                         }
                                       }}
@@ -2347,54 +2577,68 @@ const ItemsModals = ({
                                         setOpenSizeDropdownIndex(index)
                                       }
                                       placeholder={
-                                        index === 0 ? "Small (S)" : index === 1 ? "Medium (M)" : "e.g. Large (L), XSmall (XS)"
+                                        index === 0
+                                          ? "Small (S)"
+                                          : index === 1
+                                            ? "Medium (M)"
+                                            : "e.g. Large (L), XSmall (XS)"
                                       }
                                       className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
-                                    {openSizeDropdownIndex === index && (() => {
-                                      const filtered = SUGGESTED_SIZES.filter(
-                                        (s) =>
-                                          (value || "").trim() === "" ||
-                                          s
-                                            .toLowerCase()
-                                            .includes(
-                                              (value || "").toLowerCase().trim()
-                                            )
-                                      );
-                                      return (
-                                        filtered.length > 0 && (
-                                          <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[200px] max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                                            {filtered.map((s) => (
-                                              <button
-                                                key={s}
-                                                type="button"
-                                                className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none whitespace-nowrap"
-                                                onMouseDown={(e) => {
-                                                  e.preventDefault();
-                                                  handleVariantValueChange(
-                                                    0,
-                                                    index,
-                                                    s
-                                                  );
-                                                  setOpenSizeDropdownIndex(null);
-                                                }}
-                                              >
-                                                {s}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        )
-                                      );
-                                    })()}
+                                    {openSizeDropdownIndex === index &&
+                                      (() => {
+                                        const filtered = SUGGESTED_SIZES.filter(
+                                          (s) =>
+                                            (value || "").trim() === "" ||
+                                            s
+                                              .toLowerCase()
+                                              .includes(
+                                                (value || "")
+                                                  .toLowerCase()
+                                                  .trim(),
+                                              ),
+                                        );
+                                        return (
+                                          filtered.length > 0 && (
+                                            <div className="absolute left-0 top-full mt-1 z-50 w-full min-w-[200px] max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                                              {filtered.map((s) => (
+                                                <button
+                                                  key={s}
+                                                  type="button"
+                                                  className="block w-full text-left px-3 py-2 text-sm hover:bg-blue-50 focus:bg-blue-50 focus:outline-none whitespace-nowrap"
+                                                  onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    handleVariantValueChange(
+                                                      0,
+                                                      index,
+                                                      s,
+                                                    );
+                                                    setOpenSizeDropdownIndex(
+                                                      null,
+                                                    );
+                                                  }}
+                                                >
+                                                  {s}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          )
+                                        );
+                                      })()}
                                   </div>
                                   {variants[0].values.length > 1 && (
                                     <button
                                       type="button"
-                                      onClick={() => handleRemoveVariantValue(0, index)}
+                                      onClick={() =>
+                                        handleRemoveVariantValue(0, index)
+                                      }
                                       className="p-1.5 mobile-m:p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg shrink-0 flex-shrink-0 z-10"
                                       title="Remove this option value"
                                     >
-                                      <Trash2 size={16} className="mobile-m:w-[18px] mobile-m:h-[18px]" />
+                                      <Trash2
+                                        size={16}
+                                        className="mobile-m:w-[18px] mobile-m:h-[18px]"
+                                      />
                                     </button>
                                   )}
                                 </div>
@@ -2444,173 +2688,178 @@ const ItemsModals = ({
                               className={`w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
                             />
                           </div>
-                          );
-                        })}
-                      </div>
-                      <div className="px-4 pb-3">
-                        <button
-                          type="button"
-                          onClick={() => handleAddVariantValue(0)}
-                          className="text-xs font-medium text-orange-500 hover:text-orange-600"
-                        >
-                          + Add another option value
-                        </button>
-                      </div>
+                        );
+                      })}
+                    </div>
+                    <div className="px-4 pb-3">
+                      <button
+                        type="button"
+                        onClick={() => handleAddVariantValue(0)}
+                        className="text-xs font-medium text-orange-500 hover:text-orange-600"
+                      >
+                        + Add another option value
+                      </button>
                     </div>
                   </div>
-                )}
-                {/* Accessories Stock & Price Entries - Only show for Accessories */}
-                {isAccessories && (
-                  <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                        Stock & Price Entries
-                      </p>
-                      <span className="text-xs text-gray-400 italic">
-                        (No sizes required)
-                      </span>
-                    </div>
+                </div>
+              )}
+              {/* Accessories Stock & Price Entries - Only show for Accessories */}
+              {isAccessories && (
+                <div className="space-y-4 pt-2 border-t border-dashed border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                      Stock & Price Entries
+                    </p>
+                    <span className="text-xs text-gray-400 italic">
+                      (No sizes required)
+                    </span>
+                  </div>
 
-                    {/* Stock & Price Entries Card */}
-                    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                      <div className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
-                        <span className="truncate">Entry</span>
-                        <span className="truncate">Stock</span>
-                        <span className="truncate">Unit Price</span>
-                      </div>
-                      <div className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto">
-                        {accessoryStocks.map((_, index) => (
-                          <div
-                            key={index}
-                            className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
-                          >
-                            <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
-                              <input
-                                type="checkbox"
-                                checked={selectedAccessoryIndices.includes(
-                                  index
-                                )}
-                                disabled={index === 0 && modalState.mode === "edit"}
-                                onChange={(e) => {
-                                  // Entry 1 cannot be deselected when adding new items
-                                  if (index === 0 && modalState.mode === "add") {
-                                    return; // Prevent unchecking Entry 1 in add mode
-                                  }
-                                  
-                                  if (e.target.checked) {
-                                    setSelectedAccessoryIndices((prev) => {
-                                      const newIndices = [...prev, index];
-                                      return newIndices;
-                                    });
-                                    // Sync first entry's price to formData.price
-                                    if (
-                                      accessoryPrices[index] &&
-                                      selectedAccessoryIndices.length === 0
-                                    ) {
-                                      handleInputChange({
-                                        target: {
-                                          name: "price",
-                                          value: accessoryPrices[index],
-                                        },
-                                      });
-                                    }
-                                  } else {
-                                    setSelectedAccessoryIndices((prev) => {
-                                      const newIndices = prev.filter(
-                                        (i) => i !== index
-                                      );
-                                      // Always ensure Entry 1 is selected
-                                      return newIndices.length > 0 && newIndices.includes(0)
-                                        ? newIndices
-                                        : [0];
-                                    });
-                                  }
-                                }}
-                                className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
-                              />
-                              <span className={`text-gray-800 truncate min-w-0 ${index === 0 && modalState.mode === "edit" ? 'opacity-50' : ''}`}>
-                                Entry {index + 1}
-                                {index === 0 && modalState.mode === "add" && (
-                                  <span className="text-red-500 ml-1">*</span>
-                                )}
-                              </span>
-                            </div>
+                  {/* Stock & Price Entries Card */}
+                  <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+                    <div className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                      <span className="truncate">Entry</span>
+                      <span className="truncate">Stock</span>
+                      <span className="truncate">Unit Price</span>
+                    </div>
+                    <div className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto">
+                      {accessoryStocks.map((_, index) => (
+                        <div
+                          key={index}
+                          className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
+                        >
+                          <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
                             <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={accessoryStocks[index] ?? ""}
-                              disabled={index === 0 && modalState.mode === "edit"}
+                              type="checkbox"
+                              checked={selectedAccessoryIndices.includes(index)}
+                              disabled={
+                                index === 0 && modalState.mode === "edit"
+                              }
                               onChange={(e) => {
-                                const next = [...accessoryStocks];
-                                next[index] = e.target.value;
-                                setAccessoryStocks(next);
-                              }}
-                              placeholder="0"
-                              className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-                            />
-                            <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={accessoryPrices[index] ?? ""}
-                                disabled={index === 0 && modalState.mode === "edit"}
-                                onChange={(e) => {
-                                  const next = [...accessoryPrices];
-                                  next[index] = e.target.value;
-                                  setAccessoryPrices(next);
-                                  // If this is one of the selected entries and it's the first one, sync its price
+                                // Entry 1 cannot be deselected when adding new items
+                                if (index === 0 && modalState.mode === "add") {
+                                  return; // Prevent unchecking Entry 1 in add mode
+                                }
+
+                                if (e.target.checked) {
+                                  setSelectedAccessoryIndices((prev) => {
+                                    const newIndices = [...prev, index];
+                                    return newIndices;
+                                  });
+                                  // Sync first entry's price to formData.price
                                   if (
-                                    selectedAccessoryIndices.includes(index) &&
-                                    selectedAccessoryIndices[0] === index &&
-                                    e.target.value
+                                    accessoryPrices[index] &&
+                                    selectedAccessoryIndices.length === 0
                                   ) {
                                     handleInputChange({
                                       target: {
                                         name: "price",
-                                        value: e.target.value,
+                                        value: accessoryPrices[index],
                                       },
                                     });
                                   }
-                                }}
-                                placeholder="Php 0.00"
-                                className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-                              />
-                              {accessoryStocks.length > 1 && index !== 0 && (
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleRemoveAccessoryEntry(index)
-                                  }
-                                  className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                                  title="Remove this entry"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                } else {
+                                  setSelectedAccessoryIndices((prev) => {
+                                    const newIndices = prev.filter(
+                                      (i) => i !== index,
+                                    );
+                                    // Always ensure Entry 1 is selected
+                                    return newIndices.length > 0 &&
+                                      newIndices.includes(0)
+                                      ? newIndices
+                                      : [0];
+                                  });
+                                }
+                              }}
+                              className="h-3.5 w-3.5 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                            <span
+                              className={`text-gray-800 truncate min-w-0 ${index === 0 && modalState.mode === "edit" ? "opacity-50" : ""}`}
+                            >
+                              Entry {index + 1}
+                              {index === 0 && modalState.mode === "add" && (
+                                <span className="text-red-500 ml-1">*</span>
                               )}
-                            </div>
+                            </span>
                           </div>
-                        ))}
-                      </div>
-                      <div className="px-4 pb-3">
-                        <button
-                          type="button"
-                          onClick={handleAddAccessoryEntry}
-                          className="text-xs font-medium text-orange-500 hover:text-orange-600"
-                        >
-                          + Add another entry
-                        </button>
-                      </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={accessoryStocks[index] ?? ""}
+                            disabled={index === 0 && modalState.mode === "edit"}
+                            onChange={(e) => {
+                              const next = [...accessoryStocks];
+                              next[index] = e.target.value;
+                              setAccessoryStocks(next);
+                            }}
+                            placeholder="0"
+                            className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                          />
+                          <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={accessoryPrices[index] ?? ""}
+                              disabled={
+                                index === 0 && modalState.mode === "edit"
+                              }
+                              onChange={(e) => {
+                                const next = [...accessoryPrices];
+                                next[index] = e.target.value;
+                                setAccessoryPrices(next);
+                                // If this is one of the selected entries and it's the first one, sync its price
+                                if (
+                                  selectedAccessoryIndices.includes(index) &&
+                                  selectedAccessoryIndices[0] === index &&
+                                  e.target.value
+                                ) {
+                                  handleInputChange({
+                                    target: {
+                                      name: "price",
+                                      value: e.target.value,
+                                    },
+                                  });
+                                }
+                              }}
+                              placeholder="Php 0.00"
+                              className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                            />
+                            {accessoryStocks.length > 1 && index !== 0 && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  handleRemoveAccessoryEntry(index)
+                                }
+                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Remove this entry"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="px-4 pb-3">
+                      <button
+                        type="button"
+                        onClick={handleAddAccessoryEntry}
+                        className="text-xs font-medium text-orange-500 hover:text-orange-600"
+                      >
+                        + Add another entry
+                      </button>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           </div>
         </form>
 
         {/* Footer - responsive padding */}
-            <div className="flex items-center justify-end gap-2 mobile-m:gap-2.5 mobile-l:gap-3 px-4 py-4 mobile-m:px-5 mobile-m:py-4.5 mobile-l:px-6 mobile-l:py-5 tablet:px-6 tablet:py-5 border-t bg-white flex-shrink-0">
+        <div className="flex items-center justify-end gap-2 mobile-m:gap-2.5 mobile-l:gap-3 px-4 py-4 mobile-m:px-5 mobile-m:py-4.5 mobile-l:px-6 mobile-l:py-5 tablet:px-6 tablet:py-5 border-t bg-white flex-shrink-0">
           <button
             type="button"
             onClick={onClose}
@@ -2638,7 +2887,7 @@ const ItemsModals = ({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 };
 

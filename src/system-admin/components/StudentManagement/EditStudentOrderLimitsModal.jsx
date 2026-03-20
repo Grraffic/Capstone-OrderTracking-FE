@@ -486,9 +486,7 @@ const EditStudentOrderLimitsModal = ({ isOpen, onClose, student, onSave }) => {
           itemPermissions
         );
         
-        if (response.data?.success) {
-          toast.success("Student data and item permissions updated successfully");
-        } else {
+        if (!response.data?.success) {
           const errorMsg = response.data?.error || response.data?.message || "Failed to save permissions";
           console.error("Error saving permissions:", errorMsg);
           toast.error(errorMsg);

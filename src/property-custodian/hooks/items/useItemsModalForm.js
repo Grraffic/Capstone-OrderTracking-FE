@@ -47,6 +47,7 @@ export const useItemsModalForm = (
   const [formData, setFormData] = useState({
     name: "",
     educationLevel: "",
+    gradeLevel: "",
     category: "",
     size: "", // Size field (stored in database 'size' column)
     description: "", // Description field (kept for backward compatibility)
@@ -79,6 +80,7 @@ export const useItemsModalForm = (
         setFormData({
           name: selectedItem.name || "",
           educationLevel: selectedItem.educationLevel || "",
+          gradeLevel: selectedItem.gradeLevel || "",
           category: selectedItem.category || "",
           size: selectedItem.size || "",
           description: selectedItem.description || "",
@@ -102,6 +104,7 @@ export const useItemsModalForm = (
         setFormData({
           name: "",
           educationLevel: "",
+          gradeLevel: "",
           category: "",
           size: "",
           description: "",
@@ -148,6 +151,12 @@ export const useItemsModalForm = (
           }
           return newData;
         });
+      } else if (name === "itemType") {
+        setFormData((prev) => ({
+          ...prev,
+          itemType: value,
+          gradeLevel: value === "Accessories" ? prev.gradeLevel : "",
+        }));
       } else {
         // Handle other field changes
         setFormData((prev) => ({
@@ -341,6 +350,9 @@ export const useItemsModalForm = (
     }
     if (!formData.itemType) {
       newErrors.itemType = "Item type is required";
+    }
+    if (formData.itemType === "Accessories" && !(formData.gradeLevel || "").trim()) {
+      newErrors.gradeLevel = "Grade level is required for accessories";
     }
 
     // Conditional validation based on adjustment type
