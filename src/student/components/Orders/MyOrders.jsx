@@ -662,21 +662,38 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
             Disclaimer:
           </p>
           <p className="text-[10px] sm:text-xs text-gray-700 leading-relaxed">
-            This QR code is valid only for claiming{" "}
+            This QR code is valid only until{" "}
             <span className="font-semibold text-[#003363]">
-              Order #{minimalQRData.orderNumber} — {itemNames} (
-              {courseYearLevel})
+              {(() => {
+                try {
+                  const issued = new Date(issuedAt);
+                  let weekdaysLeft = qrValidDays;
+                  const d = new Date(issued);
+                  while (weekdaysLeft > 0) {
+                    d.setDate(d.getDate() + 1);
+                    const day = d.getDay();
+                    if (day >= 1 && day <= 5) weekdaysLeft--;
+                  }
+                  return d.toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  });
+                } catch (_) {
+                  return "N/A";
+                }
+              })()}
+            </span>{" "}
+            for claiming{" "}
+            <span className="font-semibold text-[#003363]">
+              Order #{minimalQRData.orderNumber} — {itemNames} ({courseYearLevel})
             </span>
             , issued to student{" "}
             <span className="font-semibold text-[#003363]">
-              {minimalQRData.studentId}-{minimalQRData.studentName}
+              {minimalQRData.studentId}
             </span>
-            . Any attempt to use this code for other orders, items, or by other
-            individuals will be considered invalid            . This code is valid for{" "}
-            {qrValidDays} weekdays (Mon–Fri) from the order date; the remaining
-            count decreases each weekday. Once it expires, it cannot be used to claim your
-            order. If you save the image and use it after expiry, the property
-            custodian will see that the code is expired.
+            .{" "}
+            Any attempt to use this code for other orders, items, or by other individuals will be considered invalid.
           </p>
         </div>
       </div>
@@ -2070,14 +2087,6 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                                 {getEducationLevel(item, order)}
                               </p>
 
-                              {/* Available for Claiming - Inline (only for Orders tab) */}
-                              {activeCategory === "orders" &&
-                                (order.status === "ready" ||
-                                  order.status === "completed") && (
-                                  <p className="text-xs sm:text-sm text-[#F28C28] font-semibold mt-1 sm:mt-2">
-                                    Available for Claiming
-                                  </p>
-                                )}
                             </div>
 
                             {/* Price: same as MyCart – strikethrough product price above Free (logo patch etc. use display price when 0) */}
@@ -2101,18 +2110,6 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                             </div>
                           </div>
 
-                          {/* Claiming Message - Below item (only for Orders tab) */}
-                          {activeCategory === "orders" &&
-                            (order.status === "ready" ||
-                              order.status === "completed") && (
-                              <div className="ml-0 sm:ml-[60px] md:ml-[84px]">
-                                <p className="text-[10px] sm:text-xs text-[#F28C28]">
-                                  Your order is now available. Please proceed to
-                                  the designated claiming area and present your
-                                  QR code to receive your item.
-                                </p>
-                              </div>
-                            )}
                         </div>
                       ))
                     ) : (
@@ -2166,69 +2163,117 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                     )}
                   </div>
 
-                  {/* Action Button - Order for pre-orders, Show QR for regular orders */}
-                  <div className="flex justify-end mt-3 sm:mt-4">
-                    {activeCategory === "preOrders" ? (
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        <button
-                          onClick={() => setOrderToCancel(order)}
-                          disabled={cancellingOrders[order.id || order._original?.id]}
-                          className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          title="Cancel this pre-order so you can place a new one"
-                        >
-                          {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
-                        </button>
-                        <button
-                          onClick={() => handleConvertPreOrder(order)}
-                          disabled={
-                            !orderAvailability[orderId] ||
-                            convertingOrders[orderId] ||
-                            checkingAvailability[orderId]
-                          }
-                          className={`px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 rounded-full font-semibold text-xs sm:text-sm transition-colors ${
-                            orderAvailability[orderId] &&
-                            !convertingOrders[orderId] &&
-                            !checkingAvailability[orderId]
-                              ? "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
-                              : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
-                          }`}
-                          title={
-                            checkingAvailability[orderId]
-                              ? "Checking availability..."
-                              : orderAvailability[orderId]
-                              ? "Click to convert pre-order to regular order"
-                              : "Item not yet available"
-                          }
-                        >
-                          {convertingOrders[orderId]
-                            ? "Processing..."
-                            : checkingAvailability[orderId]
-                            ? "Checking..."
-                            : orderAvailability[orderId]
-                            ? "Order"
-                            : "Not Available"}
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 sm:gap-3">
-                        {activeCategory === "orders" && (
-                          <button
-                            onClick={() => setOrderToCancel(order)}
-                            disabled={cancellingOrders[order.id || order._original?.id]}
-                            className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                            title="Cancel this order so you can place a new one"
-                          >
-                            {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
-                          </button>
+                  {/* Action row – spacer divs mirror the qty + image columns so the
+                      label and italic message align precisely with the Education Level text */}
+                  <div className="mt-3 sm:mt-4">
+                    {/* Row 1: spacers + label on the left, buttons on the right */}
+                    <div className="flex items-center gap-3 sm:gap-4 md:gap-6">
+                      {/* qty column spacer */}
+                      <div className="flex-shrink-0 w-8 sm:w-10 md:w-12" aria-hidden="true" />
+                      {/* image column spacer */}
+                      <div className="flex-shrink-0 w-16 sm:w-20 md:w-24" aria-hidden="true" />
+                      {/* label + buttons */}
+                      <div className="flex-1 flex items-center justify-between min-w-0">
+                        {/* Left label */}
+                        <div>
+                          {activeCategory === "preOrders" && (
+                            <span className="font-semibold text-xs sm:text-sm" style={{ color: "#007AFF" }}>
+                              Processing
+                            </span>
+                          )}
+                          {activeCategory === "orders" && (
+                            <span className="font-semibold text-xs sm:text-sm" style={{ color: "#E68B00" }}>
+                              Available for Claiming
+                            </span>
+                          )}
+                          {activeCategory !== "preOrders" && activeCategory !== "orders" &&
+                            (order.status === "claimed" || order.status === "completed") && (
+                              <span className="font-semibold text-xs sm:text-sm" style={{ color: "#03C400" }}>
+                                Completed
+                              </span>
+                            )}
+                        </div>
+
+                        {/* Right: action buttons */}
+                        {activeCategory === "preOrders" ? (
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <button
+                              onClick={() => setOrderToCancel(order)}
+                              disabled={cancellingOrders[order.id || order._original?.id]}
+                              className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Cancel this pre-order so you can place a new one"
+                            >
+                              {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
+                            </button>
+                            <button
+                              onClick={() => handleConvertPreOrder(order)}
+                              disabled={
+                                !orderAvailability[orderId] ||
+                                convertingOrders[orderId] ||
+                                checkingAvailability[orderId]
+                              }
+                              className={`px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 rounded-full font-semibold text-xs sm:text-sm transition-colors ${
+                                orderAvailability[orderId] &&
+                                !convertingOrders[orderId] &&
+                                !checkingAvailability[orderId]
+                                  ? "border-[#003363] text-[#003363] hover:bg-[#003363] hover:text-white"
+                                  : "border-gray-300 text-gray-400 cursor-not-allowed opacity-50"
+                              }`}
+                              title={
+                                checkingAvailability[orderId]
+                                  ? "Checking availability..."
+                                  : orderAvailability[orderId]
+                                  ? "Click to convert pre-order to regular order"
+                                  : "Item not yet available"
+                              }
+                            >
+                              {convertingOrders[orderId]
+                                ? "Processing..."
+                                : checkingAvailability[orderId]
+                                ? "Checking..."
+                                : orderAvailability[orderId]
+                                ? "Order"
+                                : "Not Available"}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            {activeCategory === "orders" && (
+                              <button
+                                onClick={() => setOrderToCancel(order)}
+                                disabled={cancellingOrders[order.id || order._original?.id]}
+                                className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Cancel this order so you can place a new one"
+                              >
+                                {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleShowQR(order)}
+                              className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-[#003363] hover:text-white"
+                              title="Show QR code"
+                            >
+                              Show QR
+                            </button>
+                          </div>
                         )}
-                        <button
-                          onClick={() => handleShowQR(order)}
-                          className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-[#003363] hover:text-white"
-                          title="Show QR code"
-                        >
-                          Show QR
-                        </button>
                       </div>
+                    </div>
+
+                    {/* Row 2: italic message – kept on the left side */}
+                    {activeCategory === "orders" && (
+                      <p className="text-xs sm:text-sm italic mt-1.5 sm:mt-2" style={{ color: "#E68B00" }}>
+                        Your order is now available. Please proceed to the designated claiming area
+                        <br />
+                        and present your QR code to receive your item.
+                      </p>
+                    )}
+                    {activeCategory === "preOrders" && (
+                      <p className="text-xs sm:text-sm italic mt-1.5 sm:mt-2" style={{ color: "#007AFF" }}>
+                        Your pre-order is now being processed. Please prepare to present the QR code
+                        <br />
+                        provided to you upon claiming your order.
+                      </p>
                     )}
                   </div>
                 </div>
