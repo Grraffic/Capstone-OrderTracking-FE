@@ -27,6 +27,7 @@ const StudentList = () => {
     return `S.Y. ${currentYear} - ${currentYear + 1}`;
   });
   const [educationLevel, setEducationLevel] = useState("All Education Levels");
+  const [status, setStatus] = useState("All Status");
   const [gradeLevel, setGradeLevel] = useState("Grade Level");
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [isEditTableModalOpen, setIsEditTableModalOpen] = useState(false);
@@ -42,6 +43,7 @@ const StudentList = () => {
   // Delete student confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
+  const [statusToggleTarget, setStatusToggleTarget] = useState(null);
 
   const { 
     users, 
@@ -102,11 +104,12 @@ const StudentList = () => {
       page: currentPage,
       search: search || "",
       role: "student",
+      status,
       education_level: mappedEducationLevel,
       course_year_level: mappedGradeLevel,
       school_year: schoolYearPrefix,
     });
-  }, [currentPage, search, educationLevel, gradeLevel, schoolYear, fetchUsers]);
+  }, [currentPage, search, educationLevel, status, gradeLevel, schoolYear, fetchUsers]);
 
   // Fetch students when filters change (reset to page 1)
   // This handles both initial load and filter changes
@@ -141,6 +144,7 @@ const StudentList = () => {
         page: 1,
         search: search || "",
         role: "student", // Always filter by student role
+        status,
         education_level: mappedEducationLevel,
         course_year_level: mappedGradeLevel,
         school_year: schoolYearPrefix, // Pass 2-digit year prefix (e.g., "28" for 2028-2029)
@@ -151,7 +155,7 @@ const StudentList = () => {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, educationLevel, gradeLevel, schoolYear]);
+  }, [search, educationLevel, status, gradeLevel, schoolYear]);
 
   // Handle real-time student updates via WebSocket
   const handleStudentUpdate = useCallback((event) => {
@@ -194,6 +198,7 @@ const StudentList = () => {
         page: nextPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -210,6 +215,7 @@ const StudentList = () => {
         page: prevPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -231,6 +237,7 @@ const StudentList = () => {
       page: page,
       search: search || "",
       role: "student",
+      status,
       education_level: mapEducationLevelToDB(educationLevel),
       course_year_level: mapGradeLevelToDB(gradeLevel),
       school_year: schoolYearPrefix,
@@ -336,6 +343,7 @@ const StudentList = () => {
         page: currentPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -359,6 +367,7 @@ const StudentList = () => {
       const refreshParams = {
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
       };
@@ -413,6 +422,7 @@ const StudentList = () => {
         page: currentPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -431,6 +441,47 @@ const StudentList = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const executeToggleActive = async (student, nextState) => {
+    try {
+      const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
+      const refreshParams = {
+        page: currentPage,
+        search: search || "",
+        role: "student",
+        status,
+        education_level: mapEducationLevelToDB(educationLevel),
+        course_year_level: mapGradeLevelToDB(gradeLevel),
+        school_year: schoolYearPrefix,
+      };
+      await userAPI.updateStudentStatus(student.id, {
+        is_active: nextState,
+        lookup_email: student?.email || "",
+      });
+      await fetchUsers(refreshParams);
+      toast.success(nextState ? "Student account activated" : "Student account deactivated");
+    } catch (error) {
+      toast.error(error.message || "Failed to update student status");
+    }
+  };
+
+  const handleToggleActive = async (studentId, wasActive) => {
+    const student = users.find((u) => u.id === studentId);
+    if (!student) {
+      toast.error("Student not found");
+      return;
+    }
+
+    const nextState = !wasActive;
+
+    // Require explicit confirmation before deactivation.
+    if (!nextState) {
+      setStatusToggleTarget({ student, nextState: false });
+      return;
+    }
+
+    await executeToggleActive(student, nextState);
+  };
+
   const confirmDeleteStudent = async () => {
     if (!studentToDelete) return;
     
@@ -440,6 +491,7 @@ const StudentList = () => {
         page: currentPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -474,6 +526,7 @@ const StudentList = () => {
           page: currentPage,
           search: search || "",
           role: "student",
+          status,
           education_level: mapEducationLevelToDB(educationLevel),
           course_year_level: mapGradeLevelToDB(gradeLevel),
           school_year: schoolYearPrefix,
@@ -576,6 +629,8 @@ const StudentList = () => {
           onSchoolYearChange={setSchoolYear}
           educationLevel={educationLevel}
           onEducationLevelChange={setEducationLevel}
+          status={status}
+          onStatusChange={setStatus}
           gradeLevel={gradeLevel}
           onGradeLevelChange={setGradeLevel}
           onEditTable={() => setIsEditTableModalOpen(true)}
@@ -597,6 +652,7 @@ const StudentList = () => {
               onSelectAll={handleSelectAll}
               onEditStudent={handleEditStudent}
               onDeleteStudent={handleDeleteStudent}
+              onToggleActive={handleToggleActive}
               schoolYear={schoolYear}
               isFutureSchoolYear={isFutureSchoolYear(schoolYear)}
             />
@@ -806,6 +862,40 @@ const StudentList = () => {
             return getGradeLevelOptions(educationLevel === "All Education Levels" ? "All Education Levels" : educationLevel);
           })()}
         />
+
+        {/* Deactivate Student Confirmation Modal */}
+        {statusToggleTarget && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+            <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+              <div className="p-6">
+                <h3 className="text-lg font-semibold text-[#0C2340]">Deactivate student account?</h3>
+                <p className="mt-2 text-sm text-gray-600">
+                  {statusToggleTarget.student?.name || "This student"} will no longer be able to log in while deactivated.
+                </p>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button
+                    type="button"
+                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    onClick={() => setStatusToggleTarget(null)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                    onClick={async () => {
+                      const target = statusToggleTarget;
+                      setStatusToggleTarget(null);
+                      await executeToggleActive(target.student, target.nextState);
+                    }}
+                  >
+                    Deactivate
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Student Confirmation Modal */}
         <DeleteStudentModal

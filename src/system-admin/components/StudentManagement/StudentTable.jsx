@@ -52,6 +52,7 @@ const StudentTable = ({
   onSelectAll, 
   onEditStudent, 
   onDeleteStudent,
+  onToggleActive,
   schoolYear = "",
   isFutureSchoolYear = false
 }) => {
@@ -87,6 +88,51 @@ const StudentTable = ({
     return { value: null, isOverride: false, isVoided: false };
   };
 
+  const sortedStudents = [...students].sort((a, b) => {
+    const aIsVoided = a.blocked_due_to_void === true || Number(a.total_item_limit) === 0;
+    const bIsVoided = b.blocked_due_to_void === true || Number(b.total_item_limit) === 0;
+
+    const aIsInactive = a.is_active === false || a.status === "inactive";
+    const bIsInactive = b.is_active === false || b.status === "inactive";
+
+    // Voided students always at the very end.
+    if (aIsVoided !== bIsVoided) return aIsVoided ? 1 : -1;
+
+    // Non-voided inactive students go after active students.
+    if (aIsInactive !== bIsInactive) return aIsInactive ? 1 : -1;
+
+    return 0;
+  });
+
+  const ToggleSwitch = ({ isActive, studentId, onToggle }) => {
+    if (typeof onToggle !== "function") {
+      return <span className="text-sm text-gray-700">{isActive ? "Yes" : "No"}</span>;
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => onToggle(studentId, isActive)}
+        className={`relative inline-flex h-5 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:ring-offset-2 px-1 ${
+          isActive ? "bg-green-500" : "bg-gray-300"
+        }`}
+      >
+        <span
+          className={`absolute text-xs font-bold whitespace-nowrap z-10 ${
+            isActive ? "text-white left-2" : "text-gray-700 right-2"
+          }`}
+        >
+          {isActive ? "Yes" : "No"}
+        </span>
+        <span
+          className={`absolute inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${
+            isActive ? "right-0.5" : "left-0.5"
+          }`}
+        />
+      </button>
+    );
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
@@ -102,17 +148,19 @@ const StudentTable = ({
             </th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student ID</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Name</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Education Level</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Grade Level</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Type</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Gender</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Is Active</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Total Item Limit</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Total Items Ordered</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Action</th>
           </tr>
         </thead>
         <tbody>
-          {students.length === 0 ? (
+          {sortedStudents.length === 0 ? (
             <tr>
-              <td colSpan="7" className="px-4 py-12">
+              <td colSpan="10" className="px-4 py-12">
                 <div className="flex flex-col items-center justify-center text-center">
                   {isFutureSchoolYear ? (
                     <>
@@ -147,7 +195,7 @@ const StudentTable = ({
               </td>
             </tr>
           ) : (
-            students.map((student) => (
+            sortedStudents.map((student) => (
               <tr
                 key={student.id}
                 className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
@@ -170,16 +218,20 @@ const StudentTable = ({
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
+                  {student.education_level || "N/A"}
+                </td>
+                <td className="px-4 py-4 text-sm text-gray-900">
                   {formatGradeLevelDisplay(student.course_year_level) || "N/A"}
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
-                  {student.student_type
-                    ? (
-                        <span className="capitalize">
-                          {String(student.student_type).toLowerCase() === "new" ? "New Student" : "Old Student"}
-                        </span>
-                      )
-                    : "N/A"}
+                  {student.gender || "N/A"}
+                </td>
+                <td className="px-4 py-4">
+                  <ToggleSwitch
+                    isActive={student.is_active ?? student.status !== "inactive"}
+                    studentId={student.id}
+                    onToggle={onToggleActive}
+                  />
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {(() => {

@@ -27,6 +27,7 @@ const StudentList = () => {
     return `S.Y. ${currentYear} - ${currentYear + 1}`;
   });
   const [educationLevel, setEducationLevel] = useState("All Education Levels");
+  const [status, setStatus] = useState("All Status");
   const [gradeLevel, setGradeLevel] = useState("Grade Level");
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [isEditTableModalOpen, setIsEditTableModalOpen] = useState(false);
@@ -102,11 +103,12 @@ const StudentList = () => {
       page: currentPage,
       search: search || "",
       role: "student",
+      status,
       education_level: mappedEducationLevel,
       course_year_level: mappedGradeLevel,
       school_year: schoolYearPrefix,
     });
-  }, [currentPage, search, educationLevel, gradeLevel, schoolYear, fetchUsers]);
+  }, [currentPage, search, educationLevel, status, gradeLevel, schoolYear, fetchUsers]);
 
   // Fetch students when filters change (reset to page 1)
   // This handles both initial load and filter changes
@@ -141,6 +143,7 @@ const StudentList = () => {
         page: 1,
         search: search || "",
         role: "student", // Always filter by student role
+        status,
         education_level: mappedEducationLevel,
         course_year_level: mappedGradeLevel,
         school_year: schoolYearPrefix, // Pass 2-digit year prefix (e.g., "28" for 2028-2029)
@@ -151,7 +154,7 @@ const StudentList = () => {
 
     return () => clearTimeout(timeoutId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, educationLevel, gradeLevel, schoolYear]);
+  }, [search, educationLevel, status, gradeLevel, schoolYear]);
 
   // Handle real-time student updates via WebSocket
   const handleStudentUpdate = useCallback((event) => {
@@ -194,6 +197,7 @@ const StudentList = () => {
         page: nextPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -210,6 +214,7 @@ const StudentList = () => {
         page: prevPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -231,6 +236,7 @@ const StudentList = () => {
       page: page,
       search: search || "",
       role: "student",
+      status,
       education_level: mapEducationLevelToDB(educationLevel),
       course_year_level: mapGradeLevelToDB(gradeLevel),
       school_year: schoolYearPrefix,
@@ -336,6 +342,7 @@ const StudentList = () => {
         page: currentPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -359,6 +366,7 @@ const StudentList = () => {
       const refreshParams = {
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
       };
@@ -413,6 +421,7 @@ const StudentList = () => {
         page: currentPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -440,6 +449,7 @@ const StudentList = () => {
         page: currentPage,
         search: search || "",
         role: "student",
+        status,
         education_level: mapEducationLevelToDB(educationLevel),
         course_year_level: mapGradeLevelToDB(gradeLevel),
         school_year: schoolYearPrefix,
@@ -474,6 +484,7 @@ const StudentList = () => {
           page: currentPage,
           search: search || "",
           role: "student",
+          status,
           education_level: mapEducationLevelToDB(educationLevel),
           course_year_level: mapGradeLevelToDB(gradeLevel),
           school_year: schoolYearPrefix,
@@ -576,6 +587,8 @@ const StudentList = () => {
           onSchoolYearChange={setSchoolYear}
           educationLevel={educationLevel}
           onEducationLevelChange={setEducationLevel}
+          status={status}
+          onStatusChange={setStatus}
           gradeLevel={gradeLevel}
           onGradeLevelChange={setGradeLevel}
           onEditTable={() => setIsEditTableModalOpen(true)}

@@ -183,6 +183,18 @@ export const AuthProvider = ({ children }) => {
         // Check if error is due to inactive account
         if (error.response?.status === 403 && error.response?.data?.error === "account_inactive") {
           // console.log("🚫 Account is inactive, clearing session...");
+          let inactiveEmail = "";
+          try {
+            const token = localStorage.getItem("authToken");
+            if (token) {
+              const payload = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+              if (payload?.email && typeof payload.email === "string") {
+                inactiveEmail = payload.email;
+              }
+            }
+          } catch (_) {
+            inactiveEmail = "";
+          }
           try {
             localStorage.removeItem("authToken");
           } catch (storageError) {
@@ -191,7 +203,13 @@ export const AuthProvider = ({ children }) => {
           setUser(null);
           setUserRole(null);
           setLoading(false);
-          // Don't redirect here - let ProtectedRoute handle it
+          // Route to the same inactive overlay used by OAuth callback.
+          const query = inactiveEmail
+            ? `?error=account_inactive&email=${encodeURIComponent(inactiveEmail)}`
+            : "?error=account_inactive";
+          if (!window.location.pathname.includes("/auth/callback")) {
+            window.location.href = `/auth/callback${query}`;
+          }
           return;
         }
         

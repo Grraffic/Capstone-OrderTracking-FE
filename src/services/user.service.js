@@ -72,6 +72,16 @@ const userAPI = {
   },
 
   /**
+   * Update student active/inactive status via dedicated endpoint
+   * @param {string} studentId - Student identifier
+   * @param {{is_active:boolean, lookup_email?:string}} payload
+   * @returns {Promise} API response
+   */
+  updateStudentStatus: (studentId, payload) => {
+    return api.patch(`/system-admin/students/${studentId}/status`, payload);
+  },
+
+  /**
    * Delete a user (soft delete)
    * @param {string} userId - User ID
    * @returns {Promise} API response

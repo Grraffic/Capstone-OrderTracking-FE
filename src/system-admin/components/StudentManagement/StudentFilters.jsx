@@ -25,6 +25,8 @@ const StudentFilters = ({
   onSchoolYearChange,
   educationLevel,
   onEducationLevelChange,
+  status = "All Status",
+  onStatusChange = () => {},
   gradeLevel,
   onGradeLevelChange,
   onEditTable,
@@ -234,6 +236,17 @@ const StudentFilters = ({
               {formatGradeLevelDisplay(level)}
             </option>
           ))}
+        </select>
+
+        {/* Status Filter */}
+        <select
+          value={status}
+          onChange={(e) => onStatusChange(e.target.value)}
+          className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent bg-white"
+        >
+          <option value="All Status">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
         </select>
 
         {/* Add User and Edit Table Buttons - Right side */}
