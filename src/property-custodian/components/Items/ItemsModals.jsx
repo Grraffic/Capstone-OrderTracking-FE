@@ -56,6 +56,15 @@ const GRADE_LEVEL_OPTIONS = [
   { value: "Grade 12", label: "Grade 12" },
 ];
 
+/** Optional reorder point: blank or invalid -> 0 (no threshold). */
+const parseReorderInput = (raw) => {
+  const s = String(raw ?? "").trim();
+  if (s === "") return 0;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+};
+
 /**
  * ItemsModals Component
  *
@@ -101,11 +110,13 @@ const ItemsModals = ({
   ]);
   const [variantPrices, setVariantPrices] = useState(["", ""]);
   const [variantStocks, setVariantStocks] = useState(["", ""]); // Stock per variant
+  const [variantReorderPoints, setVariantReorderPoints] = useState(["", ""]);
   const [selectedVariantIndices, setSelectedVariantIndices] = useState([0]); // Multiple selection
   const [existingVariantCount, setExistingVariantCount] = useState(0); // In edit mode, number of variants loaded from item (these are disabled)
   // State for accessories (no sizes)
   const [accessoryStocks, setAccessoryStocks] = useState([""]);
   const [accessoryPrices, setAccessoryPrices] = useState([""]);
+  const [accessoryReorderPoints, setAccessoryReorderPoints] = useState([""]);
   const [selectedAccessoryIndices, setSelectedAccessoryIndices] = useState([0]);
   const editorRef = useRef(null);
   const isEditorInitialized = useRef(false);
@@ -113,7 +124,12 @@ const ItemsModals = ({
   // Only run edit-form init once per modal open per item so user-added rows (e.g. XSmall) are not wiped when effect re-runs
   const lastInitializedItemIdRef = useRef(null);
   // Keep latest variant state so edit submit always sends what the user sees (avoids stale closure)
-  const variantStateRef = useRef({ values: [], stocks: [], prices: [] });
+  const variantStateRef = useRef({
+    values: [],
+    stocks: [],
+    prices: [],
+    reorderPoints: [],
+  });
   const existingVariantCountRef = useRef(0);
 
   const {
@@ -429,12 +445,19 @@ const ItemsModals = ({
         }
       });
 
+      const effectiveAccessoryReorder = selectedAccessoryIndices.reduce(
+        (max, idx) =>
+          Math.max(max, parseReorderInput(accessoryReorderPoints[idx])),
+        0,
+      );
+
       // Create item without size field
       const itemToAdd = {
         ...formData,
         // Don't include size field for accessories
         stock: totalStock,
         price: Number(itemPrice) || 0,
+        reorderPoint: effectiveAccessoryReorder,
         note: JSON.stringify({
           accessoryEntries: accessoryEntries,
           grade_level: formData.gradeLevel || null,
@@ -475,6 +498,10 @@ const ItemsModals = ({
         { length: len },
         (_, i) => variantPrices[i] ?? "",
       );
+      const reordersForSubmitAdd = Array.from(
+        { length: len },
+        (_, i) => variantReorderPoints[i] ?? "",
+      );
 
       // Only include variants that are checked (selectedVariantIndices); unchecked sizes like Medium must not be submitted
       const rawVariations = valuesForSubmit
@@ -493,7 +520,14 @@ const ItemsModals = ({
           const beginning_inventory = stock;
           const purchases = 0;
           return size
-            ? { size, stock, price, beginning_inventory, purchases }
+            ? {
+                size,
+                stock,
+                price,
+                beginning_inventory,
+                purchases,
+                rowIndex: index,
+              }
             : null;
         })
         .filter(Boolean);
@@ -509,6 +543,10 @@ const ItemsModals = ({
         const stockNum = Number(v.stock) || 0;
         const begInv = Number(v.beginning_inventory) ?? 0;
         const purchQty = Math.max(0, stockNum - begInv);
+        // First contributing row for a normalized size wins for reorder_point
+        const rowReorder = parseReorderInput(
+          reordersForSubmitAdd[v.rowIndex],
+        );
         if (!mergedBySize.has(key)) {
           // First row for this size: beginning inventory + optional first purchase batch
           const purchase_batches =
@@ -527,6 +565,7 @@ const ItemsModals = ({
             beginning_inventory_unit_price: Number(v.price) ?? 0,
             purchases,
             purchase_batches,
+            reorder_point: rowReorder,
           });
         } else {
           // Second+ row for same size: append to purchase_batches (each entry has own unit price)
@@ -587,10 +626,14 @@ const ItemsModals = ({
       const currentValues = variants[0]?.values ?? [];
       const currentStocks = Array.isArray(variantStocks) ? variantStocks : [];
       const currentPrices = Array.isArray(variantPrices) ? variantPrices : [];
+      const currentReorders = Array.isArray(variantReorderPoints)
+        ? variantReorderPoints
+        : [];
       variantStateRef.current = {
         values: [...currentValues],
         stocks: [...currentStocks],
         prices: [...currentPrices],
+        reorderPoints: [...currentReorders],
       };
       const refState = variantStateRef.current;
       const normalizedSize = (s) =>
@@ -633,6 +676,10 @@ const ItemsModals = ({
       const pricesForSubmit = Array.from(
         { length: len },
         (_, i) => refState.prices[i] ?? currentPrices[i] ?? "",
+      );
+      const reordersForSubmit = Array.from(
+        { length: len },
+        (_, i) => refState.reorderPoints[i] ?? currentReorders[i] ?? "",
       );
       const existingCount = existingVariantCountRef.current;
 
@@ -688,6 +735,9 @@ const ItemsModals = ({
                 beginning_inventory_unit_price: price,
                 purchases: 0,
                 purchase_batches: [],
+                reorder_point: parseReorderInput(
+                  reordersForSubmit[row.index],
+                ),
               });
             } else {
               const prev = mergedBySize.get(key);
@@ -732,6 +782,9 @@ const ItemsModals = ({
             purchase_batches: Array.isArray(existing.purchase_batches)
               ? [...existing.purchase_batches]
               : [],
+            reorder_point: parseReorderInput(
+              reordersForSubmit[rows[0].index],
+            ),
           };
           mergedBySize.set(key, preserved);
           return;
@@ -769,6 +822,7 @@ const ItemsModals = ({
             newBatches.length > 0
               ? newBatches[newBatches.length - 1].unit_price
               : (existing.purchase_unit_price ?? existing.price),
+          reorder_point: parseReorderInput(reordersForSubmit[rows[0].index]),
         });
       });
 
@@ -902,6 +956,12 @@ const ItemsModals = ({
         .slice(1)
         .reduce((sum, e) => sum + (Number(e.purchases) || 0), 0);
 
+      const effectiveAccessoryReorder = selectedAccessoryIndices.reduce(
+        (max, idx) =>
+          Math.max(max, parseReorderInput(accessoryReorderPoints[idx])),
+        0,
+      );
+
       const itemToUpdate = {
         ...formData,
         id: selectedItem.id,
@@ -911,6 +971,7 @@ const ItemsModals = ({
         price: Number(itemPrice) || 0,
         beginning_inventory: totalBeginningInventory,
         purchases: totalPurchases,
+        reorderPoint: effectiveAccessoryReorder,
         note: JSON.stringify({
           accessoryEntries: accessoryEntries,
           grade_level: formData.gradeLevel || null,
@@ -1070,9 +1131,12 @@ const ItemsModals = ({
         values: [...variants[0].values],
         stocks: Array.isArray(variantStocks) ? [...variantStocks] : [],
         prices: Array.isArray(variantPrices) ? [...variantPrices] : [],
+        reorderPoints: Array.isArray(variantReorderPoints)
+          ? [...variantReorderPoints]
+          : [],
       };
     }
-  }, [variants, variantStocks, variantPrices]);
+  }, [variants, variantStocks, variantPrices, variantReorderPoints]);
 
   // Keep existingVariantCountRef in sync for edit submit handler
   useEffect(() => {
@@ -1112,6 +1176,7 @@ const ItemsModals = ({
         const maxLength = Math.max(sizeVariations.length, 2);
         const initialPrices = [];
         const initialStocks = [];
+        const initialReorders = [];
         const initialValues = [];
         const selectedIndices = [];
 
@@ -1129,6 +1194,11 @@ const ItemsModals = ({
               ? variant.beginning_inventory_unit_price
               : variant.price || selectedItem.price || "",
           );
+          const rp =
+            variant.reorder_point != null && variant.reorder_point !== ""
+              ? String(variant.reorder_point)
+              : "";
+          initialReorders[index] = rp;
           initialValues[index] = variant.size || "";
           selectedIndices.push(index);
         });
@@ -1137,11 +1207,13 @@ const ItemsModals = ({
         while (initialPrices.length < maxLength) {
           initialPrices.push("");
           initialStocks.push("");
+          initialReorders.push("");
           initialValues.push("");
         }
 
         setVariantPrices(initialPrices);
         setVariantStocks(initialStocks);
+        setVariantReorderPoints(initialReorders);
         setSelectedVariantIndices(selectedIndices);
 
         // Update variants with the size values
@@ -1178,8 +1250,15 @@ const ItemsModals = ({
                 : 0;
             const initialStocks = sizes.map(() => String(stockPerSize));
             while (initialStocks.length < maxLength) initialStocks.push("");
+            const rpItem = Number(
+              selectedItem.reorderPoint ?? selectedItem.reorder_point ?? 0,
+            );
+            const rpStr = rpItem > 0 ? String(rpItem) : "";
+            const initialReorders = sizes.map(() => rpStr);
+            while (initialReorders.length < maxLength) initialReorders.push("");
             setVariantPrices(initialPrices);
             setVariantStocks(initialStocks);
+            setVariantReorderPoints(initialReorders);
             setSelectedVariantIndices(sizes.map((_, i) => i));
             setVariants([
               {
@@ -1194,6 +1273,7 @@ const ItemsModals = ({
                 ? [String(selectedItem.price), prev[1] || ""]
                 : prev,
             );
+            setVariantReorderPoints(["", ""]);
             setSelectedVariantIndices([0]);
           }
         } else {
@@ -1204,6 +1284,7 @@ const ItemsModals = ({
             }
             return prev;
           });
+          setVariantReorderPoints(["", ""]);
           if (selectedItem.size && selectedItem.size !== "N/A") {
             const sizes = selectedItem.size.split(",").map((s) => s.trim());
             const selectedIndices = variants[0].values
@@ -1234,6 +1315,7 @@ const ItemsModals = ({
       // Reset variant prices and stocks for add mode
       setVariantPrices(["", ""]);
       setVariantStocks(["", ""]);
+      setVariantReorderPoints(["", ""]);
       setSelectedVariantIndices([0]);
       setVariants([
         {
@@ -1270,6 +1352,11 @@ const ItemsModals = ({
           const entries = noteData.accessoryEntries;
           setAccessoryStocks(entries.map((e) => String(e.stock || "")));
           setAccessoryPrices(entries.map((e) => String(e.price || "")));
+          const rpNum = Number(
+            selectedItem.reorderPoint ?? selectedItem.reorder_point ?? 0,
+          );
+          const rpStr = rpNum > 0 ? String(rpNum) : "";
+          setAccessoryReorderPoints(entries.map(() => rpStr));
           setSelectedAccessoryIndices(
             entries.map((_, idx) => idx).length > 0
               ? entries.map((_, idx) => idx)
@@ -1281,6 +1368,10 @@ const ItemsModals = ({
         // Fallback: initialize with item's stock and price
         setAccessoryStocks([String(selectedItem.stock || "")]);
         setAccessoryPrices([String(selectedItem.price || "")]);
+        const rpNum = Number(
+          selectedItem.reorderPoint ?? selectedItem.reorder_point ?? 0,
+        );
+        setAccessoryReorderPoints([rpNum > 0 ? String(rpNum) : ""]);
         setSelectedAccessoryIndices([0]);
       }
     } else if (
@@ -1291,6 +1382,7 @@ const ItemsModals = ({
       // Reset accessory entries for add mode
       setAccessoryStocks([""]);
       setAccessoryPrices([""]);
+      setAccessoryReorderPoints([""]);
       setSelectedAccessoryIndices([0]);
     }
   }, [
@@ -1300,6 +1392,8 @@ const ItemsModals = ({
     selectedItem?.note,
     selectedItem?.stock,
     selectedItem?.price,
+    selectedItem?.reorderPoint,
+    selectedItem?.reorder_point,
   ]);
 
   // Reset state when item type changes
@@ -1309,22 +1403,26 @@ const ItemsModals = ({
         // Reset variant-related state when switching to Accessories
         setVariantPrices(["", ""]);
         setVariantStocks(["", ""]);
+        setVariantReorderPoints(["", ""]);
         setSelectedVariantIndices([0]);
         // Initialize accessory state if not already set
         if (accessoryStocks.length === 0) {
           setAccessoryStocks([""]);
           setAccessoryPrices([""]);
+          setAccessoryReorderPoints([""]);
           setSelectedAccessoryIndices([0]);
         }
       } else if (isUniforms) {
         // Reset accessory-related state when switching to Uniforms
         setAccessoryStocks([""]);
         setAccessoryPrices([""]);
+        setAccessoryReorderPoints([""]);
         setSelectedAccessoryIndices([0]);
         // Initialize variant state if not already set
         if (variantPrices.length === 0) {
           setVariantPrices(["", ""]);
           setVariantStocks(["", ""]);
+          setVariantReorderPoints(["", ""]);
           setSelectedVariantIndices([0]);
         }
       }
@@ -1591,6 +1689,12 @@ const ItemsModals = ({
       newStocks.push("");
       return newStocks;
     });
+
+    setVariantReorderPoints((prev) => {
+      const next = [...prev];
+      next.push("");
+      return next;
+    });
   };
 
   const handleRemoveVariantValue = (variantIndex, valueIndex) => {
@@ -1619,6 +1723,10 @@ const ItemsModals = ({
       return newStocks;
     });
 
+    setVariantReorderPoints((prev) =>
+      prev.filter((_, idx) => idx !== valueIndex),
+    );
+
     // Update selected indices if the removed value was selected
     setSelectedVariantIndices((prev) => {
       const newIndices = prev
@@ -1632,6 +1740,7 @@ const ItemsModals = ({
   const handleAddAccessoryEntry = () => {
     setAccessoryStocks((prev) => [...prev, ""]);
     setAccessoryPrices((prev) => [...prev, ""]);
+    setAccessoryReorderPoints((prev) => [...prev, ""]);
     setSelectedAccessoryIndices((prev) => [...prev, prev.length]);
   };
 
@@ -1643,6 +1752,7 @@ const ItemsModals = ({
 
     setAccessoryStocks((prev) => prev.filter((_, idx) => idx !== index));
     setAccessoryPrices((prev) => prev.filter((_, idx) => idx !== index));
+    setAccessoryReorderPoints((prev) => prev.filter((_, idx) => idx !== index));
     setSelectedAccessoryIndices((prev) => {
       const newIndices = prev
         .filter((idx) => idx !== index)
@@ -2159,12 +2269,15 @@ const ItemsModals = ({
                     Variants
                   </p>
 
-                  {/* Bottom card: Size / Stock / Unit Price + Add another option value */}
+                  {/* Bottom card: Size / Stock / Unit Price / Reorder Point + Add another option value */}
                   <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                    <div className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                    <div className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
                       <span className="truncate">Size</span>
                       <span className="truncate">Stock</span>
                       <span className="truncate">Unit Price</span>
+                      <span className="truncate min-w-[4.5rem]">
+                        Reorder Point
+                      </span>
                     </div>
                     <div
                       className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto"
@@ -2175,7 +2288,7 @@ const ItemsModals = ({
                         return (
                           <div
                             key={index}
-                            className="grid grid-cols-[2fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
+                            className="grid grid-cols-[2fr_1fr_1fr_1fr] gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
                           >
                             <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0">
                               <input
@@ -2687,6 +2800,20 @@ const ItemsModals = ({
                               readOnly={existing}
                               className={`w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${existing ? "bg-gray-50 cursor-not-allowed border-gray-200" : "border-gray-300 bg-white"}`}
                             />
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={variantReorderPoints[index] ?? ""}
+                              onChange={(e) => {
+                                const next = [...variantReorderPoints];
+                                next[index] = e.target.value;
+                                setVariantReorderPoints(next);
+                              }}
+                              placeholder="—"
+                              title="Reorder threshold for this size"
+                              className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
                           </div>
                         );
                       })}
@@ -2717,16 +2844,19 @@ const ItemsModals = ({
 
                   {/* Stock & Price Entries Card */}
                   <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-                    <div className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
+                    <div className="grid grid-cols-4 gap-2 mobile-m:gap-3 mobile-l:gap-4 px-2 mobile-m:px-3 mobile-l:px-4 py-2 border-b border-gray-200 text-xs font-medium text-gray-600">
                       <span className="truncate">Entry</span>
                       <span className="truncate">Stock</span>
                       <span className="truncate">Unit Price</span>
+                      <span className="truncate min-w-[4.5rem]">
+                        Reorder Point
+                      </span>
                     </div>
                     <div className="px-2 mobile-m:px-3 mobile-l:px-4 py-3 space-y-2 text-sm overflow-x-auto">
                       {accessoryStocks.map((_, index) => (
                         <div
                           key={index}
-                          className="grid grid-cols-3 gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
+                          className="grid grid-cols-4 gap-2 mobile-m:gap-3 mobile-l:gap-4 items-center min-w-0"
                         >
                           <div className="flex items-center gap-1.5 mobile-m:gap-2 min-w-0 overflow-hidden">
                             <input
@@ -2832,13 +2962,27 @@ const ItemsModals = ({
                                 onClick={() =>
                                   handleRemoveAccessoryEntry(index)
                                 }
-                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors shrink-0"
                                 title="Remove this entry"
                               >
                                 <Trash2 size={16} />
                               </button>
                             )}
                           </div>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={accessoryReorderPoints[index] ?? ""}
+                            onChange={(e) => {
+                              const next = [...accessoryReorderPoints];
+                              next[index] = e.target.value;
+                              setAccessoryReorderPoints(next);
+                            }}
+                            placeholder="—"
+                            title="Max across entries is saved as item reorder point"
+                            className="w-full min-w-0 px-2 mobile-m:px-2.5 mobile-l:px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          />
                         </div>
                       ))}
                     </div>

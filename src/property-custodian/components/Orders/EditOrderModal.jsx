@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Calendar, Package, User, Mail } from "lucide-react";
+import { X, Calendar, Package, User, Mail, Download } from "lucide-react";
+import QRCode from "react-qr-code";
 
 /**
  * EditOrderModal Component
@@ -11,6 +12,7 @@ import { X, Calendar, Package, User, Mail } from "lucide-react";
  * unreleased/available inventory automatically reflects the change (old size returned, new size reserved).
  */
 import { itemsAPI, orderAPI } from "../../../services/api";
+import { getRemainingValidityDays } from "../../../utils/qrCodeGenerator";
 
 const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanner }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -85,6 +87,76 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
   };
 
   if (!isOpen || !order) return null;
+
+  // Parse the stored QR JSON for validity info (only fields needed for the badge)
+  let qrParsed = null;
+  try {
+    if (order.qr_code_data) {
+      qrParsed = JSON.parse(order.qr_code_data);
+    }
+  } catch (_) {
+    qrParsed = null;
+  }
+
+  const remainingDays = qrParsed
+    ? getRemainingValidityDays(qrParsed.qrIssuedAt, qrParsed.qrValidDays)
+    : null;
+
+  const getValidityBadge = () => {
+    if (remainingDays === null) return null;
+    if (remainingDays > 0) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+          Valid — {remainingDays} day{remainingDays !== 1 ? "s" : ""} remaining
+        </span>
+      );
+    }
+    if (remainingDays === 0) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">
+          <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" />
+          Expires today
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />
+        Expired
+      </span>
+    );
+  };
+
+  const handleDownloadQR = () => {
+    try {
+      const svg = document.getElementById(`order-qr-pc-${order.id}`);
+      if (!svg) return;
+      const size = 280;
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      canvas.width = size;
+      canvas.height = size;
+      img.onload = () => {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, size, size);
+        ctx.drawImage(img, 0, 0, size, size);
+        const pngFile = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        link.download = `order-qr-${order.order_number}.png`;
+        link.href = pngFile;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+      const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+      img.src = URL.createObjectURL(blob);
+    } catch (err) {
+      console.error("Failed to download QR code:", err);
+    }
+  };
 
   // Format date
   const formatDate = (dateString) => {
@@ -285,7 +357,7 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
         {/* Modal Content - Scrollable */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-            {/* LEFT COLUMN: Order Details */}
+            {/* LEFT COLUMN: Order Details + Student QR Code */}
             <div>
               <h3 className="text-base sm:text-lg font-bold text-[#0C2340] mb-3 sm:mb-4">Order Details</h3>
               
@@ -363,6 +435,36 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
                   </div>
                 ))}
               </div>
+
+              {/* Student QR Code */}
+              {order.qr_code_data && (
+                <div className="bg-gray-50 rounded-lg sm:rounded-xl p-4 sm:p-6 border border-gray-200 mt-4 sm:mt-6">
+                  <h4 className="font-bold text-[#0C2340] text-sm sm:text-base mb-3 sm:mb-4">Student QR Code</h4>
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 shadow-sm">
+                      <QRCode
+                        id={`order-qr-pc-${order.id}`}
+                        value={order.qr_code_data}
+                        size={160}
+                        level="H"
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                      />
+                    </div>
+                    {getValidityBadge()}
+                    <p className="text-xs text-gray-500 text-center">
+                      Present this QR code when the student claims the order.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleDownloadQR}
+                      className="flex items-center gap-2 px-4 py-2 bg-[#0C2340] text-white rounded-lg hover:bg-[#1e3a8a] transition-colors text-xs font-medium"
+                    >
+                      <Download size={14} />
+                      Download QR
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* RIGHT COLUMN: Student Info */}
@@ -484,6 +586,7 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
                   )}
                 </div>
               </div>
+
             </div>
           </div>
         </div>

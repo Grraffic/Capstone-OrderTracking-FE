@@ -17,13 +17,21 @@ import { getSizeGuideNote } from "../../../utils/sizeMeasurements";
  *
  * Edit-per-variant modal opened from Item Details when user clicks Edit on a variation.
  * Two-column layout: left = "Uniform" + image + Sizes Available; right = Option, Size Choices,
- * Note, Unit Price, On Hand. Footer: Back, Save Variant.
+ * Note, Unit Price, On Hand, Reorder point. Footer: Back, Save Variant.
  *
  * Props:
  * - isOpen, parentItem, variation, variations, onClose, onSave
  */
 const getVariationKey = (v) =>
   v?._variationKey || (v?.id && v?.created_at ? `${v.id}-${v.created_at}` : null) || v?.id;
+
+const parseReorderInput = (raw) => {
+  const s = String(raw ?? "").trim();
+  if (s === "") return 0;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.floor(n);
+};
 
 const ItemVariantEditModal = ({
   isOpen,
@@ -38,6 +46,7 @@ const ItemVariantEditModal = ({
   const [note, setNote] = useState("");
   const [unitPrice, setUnitPrice] = useState("");
   const [onHand, setOnHand] = useState("");
+  const [reorderPoint, setReorderPoint] = useState("");
   const noteEditorRef = useRef(null);
 
   // Sync form state when the active variation or props change.
@@ -69,6 +78,15 @@ const ItemVariantEditModal = ({
     setOnHand(
       currentVariation.stock != null ? String(currentVariation.stock) : ""
     );
+    const rp =
+      currentVariation.reorder_point != null &&
+      currentVariation.reorder_point !== ""
+        ? String(currentVariation.reorder_point)
+        : currentVariation.reorderPoint != null &&
+            currentVariation.reorderPoint !== ""
+          ? String(currentVariation.reorderPoint)
+          : "";
+    setReorderPoint(rp);
     return () => clearTimeout(id);
   }, [currentVariation]);
 
@@ -117,6 +135,25 @@ const ItemVariantEditModal = ({
     e.preventDefault();
     if (!currentVariation || !parentItem) return;
     const source = { ...parentItem, ...currentVariation };
+
+    // Keep structured item.note (sizeVariations / accessoryEntries) so backend can patch
+    // per-variant reorder_point; only send rich-text note for plain-note items.
+    let noteForPayload = note.trim() || "";
+    try {
+      const raw = parentItem?.note;
+      if (typeof raw === "string" && raw.trim().startsWith("{")) {
+        const p = JSON.parse(raw);
+        if (
+          p?._type === "sizeVariations" ||
+          p?._type === "accessoryEntries"
+        ) {
+          noteForPayload = raw;
+        }
+      }
+    } catch {
+      // keep noteForPayload from editor
+    }
+
     const payload = {
       id: currentVariation.id,
       name: parentItem.name ?? currentVariation.name ?? "",
@@ -126,7 +163,7 @@ const ItemVariantEditModal = ({
       itemType: parentItem.itemType ?? parentItem.item_type ?? "",
       image: parentItem.image ?? currentVariation.image ?? "",
       size: sizeChoices.trim() || "N/A",
-      note: note.trim() || "",
+      note: noteForPayload,
       price: Number(unitPrice) || 0,
       stock: Number(onHand) || 0,
       description: source.description ?? "",
@@ -134,8 +171,15 @@ const ItemVariantEditModal = ({
       material: source.material ?? "",
       physicalCount: source.physicalCount ?? source.physical_count ?? 0,
       available: source.available ?? 0,
-      reorderPoint: source.reorderPoint ?? source.reorder_point ?? 0,
+      reorderPoint: parseReorderInput(reorderPoint),
     };
+    if (
+      currentVariation._variantJsonIndex != null &&
+      Number.isFinite(Number(currentVariation._variantJsonIndex)) &&
+      Number(currentVariation._variantJsonIndex) >= 0
+    ) {
+      payload.variantJsonIndex = Number(currentVariation._variantJsonIndex);
+    }
     onSave(payload);
   };
 
@@ -346,8 +390,8 @@ const ItemVariantEditModal = ({
                     />
                   </div>
                 </div>
-                {/* Unit Price (left) and On hand (right) in same row — read-only */}
-                <div className="grid grid-cols-2 gap-4">
+                {/* Unit Price, On hand (read-only), Reorder point (editable) */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-medium text-gray-600">
                       Unit Price
@@ -368,6 +412,21 @@ const ItemVariantEditModal = ({
                       value={onHand}
                       readOnly
                       className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700 cursor-not-allowed"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600">
+                      Reorder point
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={reorderPoint}
+                      onChange={(e) => setReorderPoint(e.target.value)}
+                      placeholder="—"
+                      title="When on-hand stock is at or below this value, item shows as at reorder (if &gt; 0)"
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent"
                     />
                   </div>
                 </div>

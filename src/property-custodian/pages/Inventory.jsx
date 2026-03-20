@@ -7,7 +7,11 @@ import InventoryView from "../components/Inventory/InventoryView";
 import SearchableSelect from "../components/common/SearchableSelect";
 import TransactionsView from "../components/Inventory/TransactionsView";
 import UpdateQuantityModal from "../components/Inventory/UpdateQuantityModal";
-import { useOrders, useInventoryHealthStats } from "../hooks";
+import {
+  useOrders,
+  useInventoryHealthStats,
+  PC_INVENTORY_HEALTH_REFRESH,
+} from "../hooks";
 import { useSocket } from "../../context/SocketContext";
 import inventoryService from "../../services/inventory.service";
 import transactionService from "../../services/transaction.service";
@@ -740,6 +744,7 @@ const Inventory = () => {
       console.log("📡 [Inventory] Received item update via Socket.IO:", data);
       // Refresh inventory data to show updated purchases
       fetchInventoryData();
+      window.dispatchEvent(new CustomEvent(PC_INVENTORY_HEALTH_REFRESH));
       // Refresh transactions if on transaction tab
       if (activeTab === "transaction") {
         refreshTransactions();
@@ -751,6 +756,7 @@ const Inventory = () => {
       console.log("📡 [Inventory] Received item created event:", data);
       // Refresh inventory data to show new item
       fetchInventoryData();
+      window.dispatchEvent(new CustomEvent(PC_INVENTORY_HEALTH_REFRESH));
       // Always refresh transactions (will fetch when user switches to transaction tab)
       // This ensures transactions are ready when user views the tab
       refreshTransactions();

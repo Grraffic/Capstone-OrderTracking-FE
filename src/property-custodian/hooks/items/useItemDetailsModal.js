@@ -232,6 +232,13 @@ export const useItemDetailsModal = (allItems = []) => {
                 const pu = variationData.purchase_unit_price ?? variationData.price ?? matchingItem.price;
                 purchase_batches = [{ qty: purch, unit_price: Number(pu) || 0 }];
               }
+              const variantReorder =
+                variationData.reorder_point != null &&
+                variationData.reorder_point !== ""
+                  ? Number(variationData.reorder_point) || 0
+                  : Number(
+                      matchingItem.reorder_point ?? matchingItem.reorderPoint,
+                    ) || 0;
               allVariations.push({
                 ...matchingItem,
                 // Keep original ID for edit/delete operations
@@ -239,6 +246,7 @@ export const useItemDetailsModal = (allItems = []) => {
                 size: variationData.size || matchingItem.size || "N/A",
                 // Add a unique key for React rendering and selection
                 _variationKey: `${matchingItem.id}-json-${index}`,
+                _variantJsonIndex: index,
                 // Use per-size stock (display = stored or beginning_inventory + purchases)
                 stock: displayStock,
                 price:
@@ -262,6 +270,8 @@ export const useItemDetailsModal = (allItems = []) => {
                     : undefined,
                 // Multiple purchase batches, each with own unit price (for FIFO total)
                 purchase_batches,
+                reorder_point: variantReorder,
+                reorderPoint: variantReorder,
               });
             });
           } else if (hasCommaSeparatedSizes) {
@@ -302,6 +312,22 @@ export const useItemDetailsModal = (allItems = []) => {
                 const pu = variationData?.purchase_unit_price ?? variationData?.price ?? matchingItem.price;
                 purchase_batches = [{ qty: purch, unit_price: Number(pu) || 0 }];
               }
+              let jsonIdxComma = -1;
+              if (variationData && sizeVariationsData?.length) {
+                jsonIdxComma = sizeVariationsData.findIndex((v) => {
+                  const vSize = (v.size || "").trim().toLowerCase();
+                  const currentSize = size.trim().toLowerCase();
+                  return vSize === currentSize;
+                });
+              }
+              const variantReorderComma =
+                variationData &&
+                variationData.reorder_point != null &&
+                variationData.reorder_point !== ""
+                  ? Number(variationData.reorder_point) || 0
+                  : Number(
+                      matchingItem.reorder_point ?? matchingItem.reorderPoint,
+                    ) || 0;
               allVariations.push({
                 ...matchingItem,
                 // Keep original ID for edit/delete operations
@@ -309,6 +335,7 @@ export const useItemDetailsModal = (allItems = []) => {
                 size: size, // Each variation gets its own size
                 // Add a unique key for React rendering and selection
                 _variationKey: `${matchingItem.id}-${index}`,
+                ...(jsonIdxComma >= 0 ? { _variantJsonIndex: jsonIdxComma } : {}),
                 stock: displayStock,
                 price: variationData?.price ?? matchingItem.price,
                 beginning_inventory: begInv,
@@ -326,6 +353,8 @@ export const useItemDetailsModal = (allItems = []) => {
                     ? Number(variationData.purchase_unit_price)
                     : undefined,
                 purchase_batches,
+                reorder_point: variantReorderComma,
+                reorderPoint: variantReorderComma,
               });
             });
           } else {

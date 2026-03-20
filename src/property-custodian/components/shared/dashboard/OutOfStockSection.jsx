@@ -14,7 +14,7 @@ import { useInventoryOutOfStock } from "../../../hooks/dashboard/useInventoryOut
  * - totalOutOfStock: number - Total count for footer display
  */
 const OutOfStockSection = ({ totalOutOfStock }) => {
-  const [selectedEducationLevel, setSelectedEducationLevel] = useState("College");
+  const [selectedEducationLevel, setSelectedEducationLevel] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4; // Maximum 4 items per page
 

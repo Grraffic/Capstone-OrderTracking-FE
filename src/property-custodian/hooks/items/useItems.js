@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSocket } from "../../../context/SocketContext";
+import { PC_INVENTORY_HEALTH_REFRESH } from "../dashboard/useInventoryHealthStats";
 
 // API base URL - adjust based on your environment
 const API_BASE_URL =
@@ -553,6 +554,8 @@ export const useItems = (options = {}) => {
             setItems((prev) => [transformedData, ...prev]);
           }
 
+          window.dispatchEvent(new CustomEvent(PC_INVENTORY_HEALTH_REFRESH));
+
           // Show notification info if students were notified
           if (result.notificationInfo && result.notificationInfo.notified > 0) {
             console.log(
@@ -612,6 +615,14 @@ export const useItems = (options = {}) => {
           reorder_point: Number(updatedItem.reorderPoint) || 0,
           note: updatedItem.note || "",
         };
+        if (
+          updatedItem.variantJsonIndex != null &&
+          Number.isFinite(Number(updatedItem.variantJsonIndex)) &&
+          Number(updatedItem.variantJsonIndex) >= 0
+        ) {
+          transformedItem.variant_json_index =
+            Number(updatedItem.variantJsonIndex);
+        }
 
         const response = await fetch(`${API_BASE_URL}/items/${updatedItem.id}`, {
           method: "PUT",
@@ -661,6 +672,7 @@ export const useItems = (options = {}) => {
           );
           // Refetch items so Item Details and list always show latest note (e.g. new size XSmall)
           await fetchItems();
+          window.dispatchEvent(new CustomEvent(PC_INVENTORY_HEALTH_REFRESH));
           closeModal();
         } else {
           throw new Error(result.message || "Failed to update item");

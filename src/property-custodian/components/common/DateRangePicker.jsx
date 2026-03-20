@@ -91,12 +91,9 @@ const DateRangePicker = ({
 
   // Preset options
   const presetOptions = [
-    "All dates",
     "Last 7 days",
     "Last 30 days",
-    "Last 90 days",
     "This month",
-    "Last month",
     "This year",
     "Custom range",
   ];

@@ -11,7 +11,7 @@ import { itemsAPI } from "../../../services/api";
  * @param {string} educationLevel - Selected education level filter
  * @returns {Object} { data, loading, error, refetch }
  */
-export const useInventoryOutOfStock = (educationLevel = "College") => {
+export const useInventoryOutOfStock = (educationLevel = "all") => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);

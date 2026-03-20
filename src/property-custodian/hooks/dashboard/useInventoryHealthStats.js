@@ -1,5 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import api from "../../../services/api";
+
+/** Dispatched after item save/update or socket item events so health cards refetch. */
+export const PC_INVENTORY_HEALTH_REFRESH = "pc-inventory-health-refresh";
 
 /**
  * useInventoryHealthStats Hook
@@ -23,79 +26,86 @@ export const useInventoryHealthStats = (startDate, endDate) => {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchInventoryStats = async () => {
-      try {
-        setLoading(true);
-        // Single call: inventory report (no education filter) = same source as OutOfStockSection
-        const { data: result } = await api.get("/items/inventory-report");
+  const loadStats = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data: result } = await api.get("/items/inventory-report");
 
-        if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
-          // Filter rows by date range if provided
-          let rows = result.data;
-          if (startDate && endDate) {
-            rows = rows.filter((row) => {
-              if (!row.created_at) return false;
-              const createdDate = new Date(row.created_at);
-              return createdDate >= startDate && createdDate <= endDate;
-            });
-          }
-
-          // Filter out archived items (safeguard - database view should already filter, but ensure frontend also filters)
+      if (result?.success && Array.isArray(result.data) && result.data.length > 0) {
+        let rows = result.data;
+        if (startDate && endDate) {
           rows = rows.filter((row) => {
-            // Exclude archived items: is_archived should be false, null, or undefined
-            return !row.is_archived || row.is_archived === false || row.is_archived === null;
-          });
-
-          // Group rows by (name, education_level) for totalItemVariants and outOfStock (same as OutOfStockSection)
-          const groupStatuses = new Map();
-          rows.forEach((row) => {
-            const key = `${row.name || ""}_${row.education_level || ""}`;
-            if (!groupStatuses.has(key)) {
-              groupStatuses.set(key, new Set());
-            }
-            groupStatuses.get(key).add(row.status);
-          });
-
-          let totalItemVariants = groupStatuses.size;
-          let outOfStock = 0;
-          groupStatuses.forEach((statuses) => {
-            if (statuses.has("Out of Stock")) outOfStock++;
-          });
-
-          // At Reorder Point: count variant rows (not groups) so card matches AtReorderPointTable row count
-          const atReorderPoint = rows.filter(
-            (row) => row.status === "At Reorder Point" || row.status === "Critical"
-          ).length;
-
-          setStats({
-            totalItemVariants,
-            atReorderPoint,
-            outOfStock,
-          });
-
-          console.log(`[InventoryHealth] Stats from report:`, {
-            totalItemVariants,
-            atReorderPoint,
-            outOfStock,
+            if (!row.created_at) return false;
+            const createdDate = new Date(row.created_at);
+            return createdDate >= startDate && createdDate <= endDate;
           });
         }
-      } catch (error) {
-        console.error("Error fetching inventory health stats:", error);
+
+        rows = rows.filter((row) => {
+          return !row.is_archived || row.is_archived === false || row.is_archived === null;
+        });
+
+        const groupStatuses = new Map();
+        rows.forEach((row) => {
+          const key = `${row.name || ""}_${row.education_level || ""}`;
+          if (!groupStatuses.has(key)) {
+            groupStatuses.set(key, new Set());
+          }
+          groupStatuses.get(key).add(row.status);
+        });
+
+        let totalItemVariants = groupStatuses.size;
+        let outOfStock = 0;
+        groupStatuses.forEach((statuses) => {
+          if (statuses.has("Out of Stock")) outOfStock++;
+        });
+
+        const atReorderPoint = rows.filter(
+          (row) => row.status === "At Reorder Point" || row.status === "Critical",
+        ).length;
+
+        setStats({
+          totalItemVariants,
+          atReorderPoint,
+          outOfStock,
+        });
+
+        console.log(`[InventoryHealth] Stats from report:`, {
+          totalItemVariants,
+          atReorderPoint,
+          outOfStock,
+        });
+      } else {
         setStats({
           totalItemVariants: 0,
           atReorderPoint: 0,
           outOfStock: 0,
         });
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchInventoryStats();
+    } catch (error) {
+      console.error("Error fetching inventory health stats:", error);
+      setStats({
+        totalItemVariants: 0,
+        atReorderPoint: 0,
+        outOfStock: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
+  useEffect(() => {
+    const handler = () => {
+      loadStats();
+    };
+    window.addEventListener(PC_INVENTORY_HEALTH_REFRESH, handler);
+    return () => window.removeEventListener(PC_INVENTORY_HEALTH_REFRESH, handler);
+  }, [loadStats]);
 
   return { stats, loading };
 };
-
 
