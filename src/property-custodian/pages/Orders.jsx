@@ -1,7 +1,6 @@
 import { QrCode, Search, X, CheckCircle } from "lucide-react";
 import { format, startOfYear, startOfDay, endOfDay } from "date-fns";
 import { createPortal } from "react-dom";
-import AdminLayout from "../components/layouts/AdminLayout";
 import DateRangePicker from "../components/common/DateRangePicker";
 import OrdersStatsCards from "../components/Orders/OrdersStatsCards";
 import OrdersTable from "../components/Orders/OrdersTable";
@@ -41,8 +40,6 @@ import { useState, useMemo, useEffect, useCallback } from "react";
  * - QR code scanning for quick lookup
  */
 const Orders = () => {
-  // Note: AdminLayout handles sidebar state internally
-
   // Orders filters management
   const {
     educationLevelFilter,
@@ -393,8 +390,8 @@ const Orders = () => {
   }, [qrError, closeQRScanner]);
 
   return (
-    <AdminLayout title="Orders" noPadding={true}>
-      <div className="pt-0 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8 font-sf-medium">
+    <>
+    <div className="pt-0 px-3 sm:px-4 md:px-6 lg:px-8 pb-3 sm:pb-4 md:pb-6 lg:pb-8 font-sf-medium">
         {/* Page Header - Title with QR Code and Search */}
         <div className="mb-4 sm:mb-6">
           {/* Desktop Layout: Title left, Controls right */}
@@ -909,7 +906,7 @@ const Orders = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

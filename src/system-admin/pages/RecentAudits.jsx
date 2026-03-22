@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import transactionService from "../../services/transaction.service";
 import { userAPI } from "../../services/user.service";
 import { format } from "date-fns";
@@ -276,7 +275,7 @@ const RecentAudits = () => {
   };
 
   return (
-    <SystemAdminLayout>
+    <>
       <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center justify-between">
@@ -535,7 +534,7 @@ const RecentAudits = () => {
         </div>,
         document.body
       )}
-    </SystemAdminLayout>
+    </>
   );
 };
 

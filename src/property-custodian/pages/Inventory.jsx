@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { startOfYear } from "date-fns";
-import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
 import InventoryView from "../components/Inventory/InventoryView";
 import SearchableSelect from "../components/common/SearchableSelect";
@@ -30,7 +29,6 @@ import { userAPI } from "../../services/user.service";
  * - Fully responsive design for mobile, tablet, and desktop
  */
 const Inventory = () => {
-  // Note: AdminLayout handles sidebar state internally
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -1252,7 +1250,7 @@ const Inventory = () => {
   };
 
   return (
-    <AdminLayout showTitle={false} noPadding={true}>
+    <>
       {/* Inventory Content - SF Pro Medium font */}
       <div className="p-3 sm:p-4 md:p-5 lg:p-6 xl:p-8 font-sf-medium">
         {/* Page Header - Title with Search */}
@@ -1652,7 +1650,7 @@ const Inventory = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

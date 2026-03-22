@@ -1,5 +1,4 @@
 import React from "react";
-import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import MaintenanceModeCard from "../components/Settings/MaintenanceModeCard";
 import { useMaintenance } from "../hooks/useMaintenance";
 import { Settings } from "lucide-react";
@@ -19,8 +18,7 @@ const SystemSettings = () => {
   } = useMaintenance();
 
   return (
-    <SystemAdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header Section */}
         <div className="flex items-center gap-4 mb-2">
           <div className="w-12 h-12 rounded-full bg-[#0C2340] flex items-center justify-center">
@@ -52,8 +50,7 @@ const SystemSettings = () => {
             </p>
           </div>
         )}
-      </div>
-    </SystemAdminLayout>
+    </div>
   );
 };
 

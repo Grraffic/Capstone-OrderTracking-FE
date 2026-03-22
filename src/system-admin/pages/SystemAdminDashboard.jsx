@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import UserFilters from "../components/UserManagement/UserFilters";
 import UserTable from "../components/UserManagement/UserTable";
 import UserModal from "../components/UserManagement/UserModal";
@@ -325,8 +324,7 @@ const SystemAdminDashboard = () => {
   };
 
   return (
-    <SystemAdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Page Title */}
         <div>
           <h1 className="text-3xl font-bold text-[#0C2340]">
@@ -596,8 +594,7 @@ const SystemAdminDashboard = () => {
           onConfirm={confirmDeleteUser}
           userName={userToDelete?.name || ""}
         />
-      </div>
-    </SystemAdminLayout>
+    </div>
   );
 };
 

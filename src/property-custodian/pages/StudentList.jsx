@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from "react";
-import AdminLayout from "../components/layouts/AdminLayout";
 import StudentTable from "../../system-admin/components/StudentManagement/StudentTable";
 import StudentFilters from "../../system-admin/components/StudentManagement/StudentFilters";
 import EditTableModal from "../../system-admin/components/StudentManagement/EditTableModal";
@@ -11,12 +10,23 @@ import { useUsers } from "../../system-admin/hooks/useUsers";
 import { useSocketStudentUpdates } from "../../system-admin/hooks/useSocketStudentUpdates";
 import { userAPI } from "../../services/user.service";
 import { toast } from "react-hot-toast";
-import { ChevronLeft, ChevronRight, GraduationCap, FileCheck, DollarSign, XCircle, FileX } from "lucide-react";
-import { mapEducationLevelToDB, mapGradeLevelToDB } from "../../system-admin/utils/educationLevelMapper";
+import {
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+  FileCheck,
+  DollarSign,
+  XCircle,
+  FileX,
+} from "lucide-react";
+import {
+  mapEducationLevelToDB,
+  mapGradeLevelToDB,
+} from "../../system-admin/utils/educationLevelMapper";
 
 /**
  * StudentList Page
- * 
+ *
  * Displays a list of all students with filtering and management capabilities
  */
 const StudentList = () => {
@@ -39,19 +49,19 @@ const StudentList = () => {
   const [editingPage, setEditingPage] = useState(false);
   const [pageInputValue, setPageInputValue] = useState("");
   const [paginationInputValue, setPaginationInputValue] = useState("1"); // For right-side pagination input
-  
+
   // Delete student confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
   const [statusToggleTarget, setStatusToggleTarget] = useState(null);
 
-  const { 
-    users, 
-    loading, 
-    pagination, 
-    fetchUsers, 
+  const {
+    users,
+    loading,
+    pagination,
+    fetchUsers,
     createUser,
-    updateUser, 
+    updateUser,
     deleteUser,
   } = useUsers();
 
@@ -99,7 +109,7 @@ const StudentList = () => {
     const mappedEducationLevel = mapEducationLevelToDB(educationLevel);
     const mappedGradeLevel = mapGradeLevelToDB(gradeLevel);
     const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
-    
+
     fetchUsers({
       page: currentPage,
       search: search || "",
@@ -109,7 +119,15 @@ const StudentList = () => {
       course_year_level: mappedGradeLevel,
       school_year: schoolYearPrefix,
     });
-  }, [currentPage, search, educationLevel, status, gradeLevel, schoolYear, fetchUsers]);
+  }, [
+    currentPage,
+    search,
+    educationLevel,
+    status,
+    gradeLevel,
+    schoolYear,
+    fetchUsers,
+  ]);
 
   // Fetch students when filters change (reset to page 1)
   // This handles both initial load and filter changes
@@ -120,7 +138,7 @@ const StudentList = () => {
       const mappedGradeLevel = mapGradeLevelToDB(gradeLevel);
       const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
       const isFuture = isFutureSchoolYear(schoolYear);
-      
+
       // Debug logging
       // console.log(`[StudentList] Fetching with filters:`, {
       //   educationLevel,
@@ -136,7 +154,7 @@ const StudentList = () => {
       //   isFutureSchoolYear: isFuture,
       //   willFilterBySchoolYear: schoolYearPrefix !== "" && schoolYearPrefix !== null
       // });
-      
+
       // IMPORTANT: For future school years, always send the school_year filter
       // This ensures backend filters out students from current/past years
       // Even if somehow students exist with that year prefix, they shouldn't be enrolled yet
@@ -158,32 +176,35 @@ const StudentList = () => {
   }, [search, educationLevel, status, gradeLevel, schoolYear]);
 
   // Handle real-time student updates via WebSocket
-  const handleStudentUpdate = useCallback((event) => {
-    const { type, data } = event;
-    console.log(`📡 [StudentList] Received student update: ${type}`, data);
+  const handleStudentUpdate = useCallback(
+    (event) => {
+      const { type, data } = event;
+      console.log(`📡 [StudentList] Received student update: ${type}`, data);
 
-    // Refresh the student list to reflect changes
-    // This ensures the list stays in sync with the current filters
-    refreshStudentList();
+      // Refresh the student list to reflect changes
+      // This ensures the list stays in sync with the current filters
+      refreshStudentList();
 
-    // Show toast notifications for user feedback
-    switch (type) {
-      case "created":
-        // Don't show toast for created - the modal already shows success
-        break;
-      case "updated":
-        // Don't show toast for updated - the modal already shows success
-        break;
-      case "deleted":
-        // Don't show toast for deleted - the modal already shows success
-        break;
-      case "bulk-updated":
-        // Don't show toast for bulk updated - the modal already shows success
-        break;
-      default:
+      // Show toast notifications for user feedback
+      switch (type) {
+        case "created":
+          // Don't show toast for created - the modal already shows success
+          break;
+        case "updated":
+          // Don't show toast for updated - the modal already shows success
+          break;
+        case "deleted":
+          // Don't show toast for deleted - the modal already shows success
+          break;
+        case "bulk-updated":
+          // Don't show toast for bulk updated - the modal already shows success
+          break;
+        default:
         // console.log(`📡 [StudentList] Unknown student update type: ${type}`);
-    }
-  }, [refreshStudentList]);
+      }
+    },
+    [refreshStudentList],
+  );
 
   // Connect to WebSocket for real-time updates
   useSocketStudentUpdates(handleStudentUpdate);
@@ -226,7 +247,9 @@ const StudentList = () => {
   const handleGoToPage = (pageNumber) => {
     const page = parseInt(pageNumber);
     if (isNaN(page) || page < 1 || page > pagination.totalPages) {
-      toast.error(`Please enter a page number between 1 and ${pagination.totalPages}`);
+      toast.error(
+        `Please enter a page number between 1 and ${pagination.totalPages}`,
+      );
       setEditingPage(false);
       return;
     }
@@ -308,7 +331,7 @@ const StudentList = () => {
     setSelectedStudents((prev) =>
       prev.includes(studentId)
         ? prev.filter((id) => id !== studentId)
-        : [...prev, studentId]
+        : [...prev, studentId],
     );
   };
 
@@ -391,7 +414,11 @@ const StudentList = () => {
   // Calculate education level from course year level (same logic as EditStudentOrderLimitsModal)
   const getEducationLevel = (courseYearLevel) => {
     if (!courseYearLevel) return null;
-    if (courseYearLevel === "Prekindergarten" || courseYearLevel === "Kindergarten" || courseYearLevel === "Kinder") {
+    if (
+      courseYearLevel === "Prekindergarten" ||
+      courseYearLevel === "Kindergarten" ||
+      courseYearLevel === "Kinder"
+    ) {
       return "Kindergarten";
     }
     if (courseYearLevel.match(/^Grade [1-6]$/)) {
@@ -403,7 +430,11 @@ const StudentList = () => {
     if (courseYearLevel.match(/^Grade (11|12)$/)) {
       return "Senior High School";
     }
-    if (courseYearLevel.match(/^(BSIS|BSA|BSAIS|BSSW|BAB|ACT) (1st|2nd|3rd|4th) (Year|yr)$/i)) {
+    if (
+      courseYearLevel.match(
+        /^(BSIS|BSA|BSAIS|BSSW|BAB|ACT) (1st|2nd|3rd|4th) (Year|yr)$/i,
+      )
+    ) {
       return "College";
     }
     return null;
@@ -412,7 +443,9 @@ const StudentList = () => {
   const handleAddStudent = async (studentData) => {
     try {
       // Calculate education_level from course_year_level
-      const calculatedEducationLevel = getEducationLevel(studentData.course_year_level);
+      const calculatedEducationLevel = getEducationLevel(
+        studentData.course_year_level,
+      );
       if (calculatedEducationLevel) {
         studentData.education_level = calculatedEducationLevel;
       }
@@ -437,7 +470,10 @@ const StudentList = () => {
 
   const handleDeleteStudent = (studentId) => {
     const student = users.find((u) => u.id === studentId);
-    setStudentToDelete({ id: studentId, name: student?.name || "this student" });
+    setStudentToDelete({
+      id: studentId,
+      name: student?.name || "this student",
+    });
     setIsDeleteModalOpen(true);
   };
 
@@ -458,7 +494,9 @@ const StudentList = () => {
         lookup_email: student?.email || "",
       });
       await fetchUsers(refreshParams);
-      toast.success(nextState ? "Student account activated" : "Student account deactivated");
+      toast.success(
+        nextState ? "Student account activated" : "Student account deactivated",
+      );
     } catch (error) {
       toast.error(error.message || "Failed to update student status");
     }
@@ -484,7 +522,7 @@ const StudentList = () => {
 
   const confirmDeleteStudent = async () => {
     if (!studentToDelete) return;
-    
+
     try {
       const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
       const refreshParams = {
@@ -499,7 +537,9 @@ const StudentList = () => {
       await deleteUser(studentToDelete.id, refreshParams);
       toast.success("Student deleted successfully");
       // Remove from selected if it was selected
-      setSelectedStudents((prev) => prev.filter((id) => id !== studentToDelete.id));
+      setSelectedStudents((prev) =>
+        prev.filter((id) => id !== studentToDelete.id),
+      );
       setIsDeleteModalOpen(false);
       setStudentToDelete(null);
     } catch (error) {
@@ -515,9 +555,14 @@ const StudentList = () => {
 
     try {
       // Call bulk update API
-      const response = await userAPI.bulkUpdateUsers(selectedStudents, updateData);
+      const response = await userAPI.bulkUpdateUsers(
+        selectedStudents,
+        updateData,
+      );
       if (response.data && response.data.success) {
-        toast.success(`Updated ${selectedStudents.length} student(s) successfully`);
+        toast.success(
+          `Updated ${selectedStudents.length} student(s) successfully`,
+        );
         setIsEditTableModalOpen(false);
         setSelectedStudents([]);
         // Refresh the list
@@ -536,7 +581,11 @@ const StudentList = () => {
       }
     } catch (error) {
       console.error("Error bulk updating students:", error);
-      toast.error(error.response?.data?.message || error.message || "Failed to update students");
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update students",
+      );
     }
   };
 
@@ -544,25 +593,32 @@ const StudentList = () => {
   // If it's a future school year, show 0 for all stats since no enrollments exist yet
   const isFuture = isFutureSchoolYear(schoolYear);
   const stats = {
-    totalStudents: isFuture ? 0 : (pagination.total || 0),
-    currentlyEnrolled: isFuture ? 0 : (pagination.total || 0),
-    eligibleForEnrollment: isFuture ? 0 : users.filter((u) => u.enrollment_status === "eligible_for_enrollment").length,
-    notEligible: isFuture ? 0 : users.filter((u) => u.enrollment_status === "not_eligible").length,
-    droppedOfficially: isFuture ? 0 : users.filter((u) => u.enrollment_status === "dropped_officially").length,
+    totalStudents: isFuture ? 0 : pagination.total || 0,
+    currentlyEnrolled: isFuture ? 0 : pagination.total || 0,
+    eligibleForEnrollment: isFuture
+      ? 0
+      : users.filter((u) => u.enrollment_status === "eligible_for_enrollment")
+          .length,
+    notEligible: isFuture
+      ? 0
+      : users.filter((u) => u.enrollment_status === "not_eligible").length,
+    droppedOfficially: isFuture
+      ? 0
+      : users.filter((u) => u.enrollment_status === "dropped_officially")
+          .length,
   };
 
   return (
-    <AdminLayout title="List of Students">
-      <div className="space-y-6">
-        {/* Page Title */}
-        <div>
-          <h1 className="text-3xl font-bold text-[#0C2340]">
-            List of <span className="text-[#e68b00]">Students</span>
-          </h1>
-        </div>
+    <div className="space-y-6">
+      {/* Page Title */}
+      <div>
+        <h1 className="text-3xl font-bold text-[#0C2340]">
+          List of <span className="text-[#e68b00]">Students</span>
+        </h1>
+      </div>
 
-        {/* Stats Cards - 5 cards - HIDDEN */}
-        {false && (
+      {/* Stats Cards - 5 cards - HIDDEN */}
+      {false && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           {/* Total Students (filtered by current selection) */}
           <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
@@ -570,7 +626,9 @@ const StudentList = () => {
               <div className="bg-blue-100 rounded-full p-3 mb-3">
                 <GraduationCap className="text-blue-600" size={24} />
               </div>
-              <p className="text-2xl font-bold text-blue-600 mb-1">{stats.totalStudents}</p>
+              <p className="text-2xl font-bold text-blue-600 mb-1">
+                {stats.totalStudents}
+              </p>
               <p className="text-sm text-gray-600">Total Students</p>
             </div>
           </div>
@@ -581,7 +639,9 @@ const StudentList = () => {
               <div className="bg-green-100 rounded-full p-3 mb-3">
                 <FileCheck className="text-green-600" size={24} />
               </div>
-              <p className="text-2xl font-bold text-green-600 mb-1">{stats.currentlyEnrolled}</p>
+              <p className="text-2xl font-bold text-green-600 mb-1">
+                {stats.currentlyEnrolled}
+              </p>
               <p className="text-sm text-gray-600">Currently Enrolled</p>
             </div>
           </div>
@@ -592,7 +652,9 @@ const StudentList = () => {
               <div className="bg-yellow-100 rounded-full p-3 mb-3">
                 <GraduationCap className="text-yellow-600" size={24} />
               </div>
-              <p className="text-2xl font-bold text-yellow-600 mb-1">{stats.eligibleForEnrollment}</p>
+              <p className="text-2xl font-bold text-yellow-600 mb-1">
+                {stats.eligibleForEnrollment}
+              </p>
               <p className="text-sm text-gray-600">Eligible for Enrollment</p>
             </div>
           </div>
@@ -603,8 +665,12 @@ const StudentList = () => {
               <div className="bg-orange-100 rounded-full p-3 mb-3">
                 <XCircle className="text-orange-600" size={24} />
               </div>
-              <p className="text-2xl font-bold text-orange-600 mb-1">{stats.notEligible}</p>
-              <p className="text-sm text-gray-600">Not Eligible for Enrollment</p>
+              <p className="text-2xl font-bold text-orange-600 mb-1">
+                {stats.notEligible}
+              </p>
+              <p className="text-sm text-gray-600">
+                Not Eligible for Enrollment
+              </p>
             </div>
           </div>
 
@@ -614,301 +680,326 @@ const StudentList = () => {
               <div className="bg-red-100 rounded-full p-3 mb-3">
                 <FileX className="text-red-600" size={24} />
               </div>
-              <p className="text-2xl font-bold text-red-600 mb-1">{stats.droppedOfficially}</p>
+              <p className="text-2xl font-bold text-red-600 mb-1">
+                {stats.droppedOfficially}
+              </p>
               <p className="text-sm text-gray-600">Dropped Officially</p>
             </div>
           </div>
         </div>
-        )}
+      )}
 
-        {/* Filters */}
-        <StudentFilters
-          search={search}
-          onSearchChange={setSearch}
-          schoolYear={schoolYear}
-          onSchoolYearChange={setSchoolYear}
-          educationLevel={educationLevel}
-          onEducationLevelChange={setEducationLevel}
-          status={status}
-          onStatusChange={setStatus}
-          gradeLevel={gradeLevel}
-          onGradeLevelChange={setGradeLevel}
-          onEditTable={() => setIsEditTableModalOpen(true)}
-          onAddUser={() => setIsAddStudentModalOpen(true)}
-          selectedCount={selectedStudents.length}
-        />
+      {/* Filters */}
+      <StudentFilters
+        search={search}
+        onSearchChange={setSearch}
+        schoolYear={schoolYear}
+        onSchoolYearChange={setSchoolYear}
+        educationLevel={educationLevel}
+        onEducationLevelChange={setEducationLevel}
+        status={status}
+        onStatusChange={setStatus}
+        gradeLevel={gradeLevel}
+        onGradeLevelChange={setGradeLevel}
+        onEditTable={() => setIsEditTableModalOpen(true)}
+        onAddUser={() => setIsAddStudentModalOpen(true)}
+        selectedCount={selectedStudents.length}
+      />
 
-        {/* Student Table */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="text-gray-500">Loading students...</div>
-          </div>
-        ) : (
-          <>
-            <StudentTable
-              students={isFutureSchoolYear(schoolYear) ? [] : users}
-              selectedStudents={selectedStudents}
-              onSelectStudent={handleSelectStudent}
-              onSelectAll={handleSelectAll}
-              onEditStudent={handleEditStudent}
-              onDeleteStudent={handleDeleteStudent}
-              onToggleActive={handleToggleActive}
-              schoolYear={schoolYear}
-              isFutureSchoolYear={isFutureSchoolYear(schoolYear)}
-            />
-            
-            {/* Pagination Controls */}
-            {pagination.totalPages > 0 && (
-              <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between rounded-b-lg shadow-sm">
-                {/* Left: Page Indicator with Editable Page Number */}
-                <div className="text-sm text-gray-600 flex items-center gap-1">
-                  Page{" "}
-                  {editingPage ? (
-                    <input
-                      type="number"
-                      min="1"
-                      max={pagination.totalPages}
-                      value={pageInputValue}
-                      onChange={(e) => setPageInputValue(e.target.value)}
-                      onBlur={handlePageInputBlur}
-                      onKeyDown={handlePageInputKeyDown}
-                      autoFocus
-                      className="w-12 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm text-center font-semibold"
-                    />
-                  ) : (
-                    <span
-                      className="font-semibold cursor-pointer hover:text-[#0C2340] hover:underline"
-                      onClick={handlePageClick}
-                      title="Click to edit page number"
-                    >
-                      {currentPage}
-                    </span>
-                  )}{" "}
-                  of <span className="font-semibold">{pagination.totalPages}</span>
-                </div>
+      {/* Student Table */}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="text-gray-500">Loading students...</div>
+        </div>
+      ) : (
+        <>
+          <StudentTable
+            students={isFutureSchoolYear(schoolYear) ? [] : users}
+            selectedStudents={selectedStudents}
+            onSelectStudent={handleSelectStudent}
+            onSelectAll={handleSelectAll}
+            onEditStudent={handleEditStudent}
+            onDeleteStudent={handleDeleteStudent}
+            onToggleActive={handleToggleActive}
+            schoolYear={schoolYear}
+            isFutureSchoolYear={isFutureSchoolYear(schoolYear)}
+          />
 
-                {/* Right: Navigation Buttons */}
-                <div className="flex items-center gap-2">
-                  {/* Previous Button */}
-                  <button
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 font-medium text-sm"
-                    title="Previous page"
-                    aria-label="Previous page"
+          {/* Pagination Controls */}
+          {pagination.totalPages > 0 && (
+            <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between rounded-b-lg shadow-sm">
+              {/* Left: Page Indicator with Editable Page Number */}
+              <div className="text-sm text-gray-600 flex items-center gap-1">
+                Page{" "}
+                {editingPage ? (
+                  <input
+                    type="number"
+                    min="1"
+                    max={pagination.totalPages}
+                    value={pageInputValue}
+                    onChange={(e) => setPageInputValue(e.target.value)}
+                    onBlur={handlePageInputBlur}
+                    onKeyDown={handlePageInputKeyDown}
+                    autoFocus
+                    className="w-12 px-2 py-1 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] text-sm text-center font-semibold"
+                  />
+                ) : (
+                  <span
+                    className="font-semibold cursor-pointer hover:text-[#0C2340] hover:underline"
+                    onClick={handlePageClick}
+                    title="Click to edit page number"
                   >
-                    <ChevronLeft size={18} />
-                    <span>Previous</span>
-                  </button>
-
-                  {/* Page Number Input */}
-                  <form 
-                    onSubmit={handlePaginationInputSubmit}
-                    className="flex items-center gap-1"
-                  >
-                    <input
-                      type="text"
-                      min="1"
-                      max={pagination.totalPages}
-                      value={paginationInputValue}
-                      onChange={handlePaginationInputChange}
-                      onBlur={handlePaginationInputBlur}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          e.target.blur();
-                        }
-                      }}
-                      className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
-                      aria-label="Page number"
-                    />
-                  </form>
-
-                  {/* Next Button */}
-                  <button
-                    onClick={handleNextPage}
-                    disabled={currentPage >= pagination.totalPages}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 font-medium text-sm"
-                    title="Next page"
-                    aria-label="Next page"
-                  >
-                    <span>Next</span>
-                    <ChevronRight size={18} />
-                  </button>
-                </div>
+                    {currentPage}
+                  </span>
+                )}{" "}
+                of{" "}
+                <span className="font-semibold">{pagination.totalPages}</span>
               </div>
-            )}
-          </>
-        )}
 
-        {/* Edit Table Modal (bulk) */}
-        <EditTableModal
-          isOpen={isEditTableModalOpen}
-          onClose={() => setIsEditTableModalOpen(false)}
-          selectedCount={selectedStudents.length}
-          selectedStudents={users.filter((user) => selectedStudents.includes(user.id))}
-          onSave={handleBulkUpdate}
-        />
+              {/* Right: Navigation Buttons */}
+              <div className="flex items-center gap-2">
+                {/* Previous Button */}
+                <button
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 font-medium text-sm"
+                  title="Previous page"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={18} />
+                  <span>Previous</span>
+                </button>
 
-        {/* Edit Order Limits Modal (single student, row pencil) */}
-        <EditStudentOrderLimitsModal
-          isOpen={isOrderLimitsModalOpen}
-          onClose={() => {
-            setIsOrderLimitsModalOpen(false);
-            setEditingStudent(null);
-          }}
-          student={editingStudent}
-          onSave={handleSaveOrderLimits}
-        />
-
-        {/* User Modal (for editing user details; not opened from row pencil) */}
-        <UserModal
-          isOpen={isUserModalOpen}
-          onClose={() => {
-            setIsUserModalOpen(false);
-            setEditingStudent(null);
-          }}
-          user={editingStudent}
-          onSave={handleSaveStudent}
-        />
-
-        {/* Add Student Modal */}
-        <AddStudentModal
-          isOpen={isAddStudentModalOpen}
-          onClose={() => setIsAddStudentModalOpen(false)}
-          onSave={handleAddStudent}
-          educationLevels={[
-            "Preschool",
-            "Elementary",
-            "Junior Highschool",
-            "Senior Highschool",
-            "College",
-          ]}
-          gradeLevelOptions={(() => {
-            // Get grade level options based on current education level
-            const getGradeLevelOptions = (eduLevel) => {
-              const gradeLevelMap = {
-                "All Education Levels": [
-                  "Grade Level",
-                  "Prekindergarten",
-                  "Kindergarten",
-                  "Grade 1",
-                  "Grade 2",
-                  "Grade 3",
-                  "Grade 4",
-                  "Grade 5",
-                  "Grade 6",
-                  "Grade 7",
-                  "Grade 8",
-                  "Grade 9",
-                  "Grade 10",
-                  "Grade 11",
-                  "Grade 12",
-                  "BSA 1st yr",
-                  "BSA 2nd yr",
-                  "BSA 3rd yr",
-                  "BSA 4th yr",
-                  "BSAIS 1st year",
-                  "BSAIS 2nd year",
-                  "BSAIS 3rd year",
-                  "BSAIS 4th year",
-                  "BAB 1st year",
-                  "BAB 2nd year",
-                  "BAB 3rd year",
-                  "BAB 4th year",
-                  "BSSW 1st year",
-                  "BSSW 2nd year",
-                  "BSSW 3rd year",
-                  "BSSW 4th year",
-                  "BSIS 1st year",
-                  "BSIS 2nd year",
-                  "BSIS 3rd year",
-                  "BSIS 4th year",
-                  "ACT 1st year",
-                  "ACT 2nd year",
-                ],
-                "Preschool": ["Grade Level", "Prekindergarten", "Kindergarten"],
-                "Elementary": ["Grade Level", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"],
-                "Junior Highschool": ["Grade Level", "Grade 7", "Grade 8", "Grade 9", "Grade 10"],
-                "Senior Highschool": ["Grade Level", "Grade 11", "Grade 12"],
-                "College": [
-                  "Grade Level",
-                  "BSA 1st yr",
-                  "BSA 2nd yr",
-                  "BSA 3rd yr",
-                  "BSA 4th yr",
-                  "BSAIS 1st yr",
-                  "BSAIS 2nd yr",
-                  "BSAIS 3rd yr",
-                  "BSAIS 4th yr",
-                  "BAB 1st yr",
-                  "BAB 2nd yr",
-                  "BAB 3rd yr",
-                  "BAB 4th yr",
-                  "BSSW 1st yr",
-                  "BSSW 2nd yr",
-                  "BSSW 3rd yr",
-                  "BSSW 4th yr",
-                  "BSIS 1st yr",
-                  "BSIS 2nd yr",
-                  "BSIS 3rd yr",
-                  "BSIS 4th yr",
-                  "ACT 1st yr",
-                  "ACT 2nd yr",
-                ],
-              };
-              return gradeLevelMap[eduLevel] || ["Grade Level"];
-            };
-            return getGradeLevelOptions(educationLevel === "All Education Levels" ? "All Education Levels" : educationLevel);
-          })()}
-        />
-
-        {/* Deactivate Student Confirmation Modal */}
-        {statusToggleTarget && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
-              <div className="p-6">
-                <h3 className="text-lg font-semibold text-[#0C2340]">Deactivate student account?</h3>
-                <p className="mt-2 text-sm text-gray-600">
-                  {statusToggleTarget.student?.name || "This student"} will no longer be able to log in while deactivated.
-                </p>
-                <div className="mt-6 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                    onClick={() => setStatusToggleTarget(null)}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
-                    onClick={async () => {
-                      const target = statusToggleTarget;
-                      setStatusToggleTarget(null);
-                      await executeToggleActive(target.student, target.nextState);
+                {/* Page Number Input */}
+                <form
+                  onSubmit={handlePaginationInputSubmit}
+                  className="flex items-center gap-1"
+                >
+                  <input
+                    type="text"
+                    min="1"
+                    max={pagination.totalPages}
+                    value={paginationInputValue}
+                    onChange={handlePaginationInputChange}
+                    onBlur={handlePaginationInputBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        e.target.blur();
+                      }
                     }}
-                  >
-                    Deactivate
-                  </button>
-                </div>
+                    className="w-12 sm:w-14 px-2 py-1.5 sm:py-2 text-xs sm:text-sm text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#e68b00] focus:border-transparent"
+                    aria-label="Page number"
+                  />
+                </form>
+
+                {/* Next Button */}
+                <button
+                  onClick={handleNextPage}
+                  disabled={currentPage >= pagination.totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-[#0C2340] hover:text-white hover:border-[#0C2340] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:text-gray-700 disabled:hover:border-gray-300 transition-colors flex items-center gap-1 font-medium text-sm"
+                  title="Next page"
+                  aria-label="Next page"
+                >
+                  <span>Next</span>
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Edit Table Modal (bulk) */}
+      <EditTableModal
+        isOpen={isEditTableModalOpen}
+        onClose={() => setIsEditTableModalOpen(false)}
+        selectedCount={selectedStudents.length}
+        selectedStudents={users.filter((user) =>
+          selectedStudents.includes(user.id),
+        )}
+        onSave={handleBulkUpdate}
+      />
+
+      {/* Edit Order Limits Modal (single student, row pencil) */}
+      <EditStudentOrderLimitsModal
+        isOpen={isOrderLimitsModalOpen}
+        onClose={() => {
+          setIsOrderLimitsModalOpen(false);
+          setEditingStudent(null);
+        }}
+        student={editingStudent}
+        onSave={handleSaveOrderLimits}
+      />
+
+      {/* User Modal (for editing user details; not opened from row pencil) */}
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={() => {
+          setIsUserModalOpen(false);
+          setEditingStudent(null);
+        }}
+        user={editingStudent}
+        onSave={handleSaveStudent}
+      />
+
+      {/* Add Student Modal */}
+      <AddStudentModal
+        isOpen={isAddStudentModalOpen}
+        onClose={() => setIsAddStudentModalOpen(false)}
+        onSave={handleAddStudent}
+        educationLevels={[
+          "Preschool",
+          "Elementary",
+          "Junior Highschool",
+          "Senior Highschool",
+          "College",
+        ]}
+        gradeLevelOptions={(() => {
+          // Get grade level options based on current education level
+          const getGradeLevelOptions = (eduLevel) => {
+            const gradeLevelMap = {
+              "All Education Levels": [
+                "Grade Level",
+                "Prekindergarten",
+                "Kindergarten",
+                "Grade 1",
+                "Grade 2",
+                "Grade 3",
+                "Grade 4",
+                "Grade 5",
+                "Grade 6",
+                "Grade 7",
+                "Grade 8",
+                "Grade 9",
+                "Grade 10",
+                "Grade 11",
+                "Grade 12",
+                "BSA 1st yr",
+                "BSA 2nd yr",
+                "BSA 3rd yr",
+                "BSA 4th yr",
+                "BSAIS 1st year",
+                "BSAIS 2nd year",
+                "BSAIS 3rd year",
+                "BSAIS 4th year",
+                "BAB 1st year",
+                "BAB 2nd year",
+                "BAB 3rd year",
+                "BAB 4th year",
+                "BSSW 1st year",
+                "BSSW 2nd year",
+                "BSSW 3rd year",
+                "BSSW 4th year",
+                "BSIS 1st year",
+                "BSIS 2nd year",
+                "BSIS 3rd year",
+                "BSIS 4th year",
+                "ACT 1st year",
+                "ACT 2nd year",
+              ],
+              Preschool: ["Grade Level", "Prekindergarten", "Kindergarten"],
+              Elementary: [
+                "Grade Level",
+                "Grade 1",
+                "Grade 2",
+                "Grade 3",
+                "Grade 4",
+                "Grade 5",
+                "Grade 6",
+              ],
+              "Junior Highschool": [
+                "Grade Level",
+                "Grade 7",
+                "Grade 8",
+                "Grade 9",
+                "Grade 10",
+              ],
+              "Senior Highschool": ["Grade Level", "Grade 11", "Grade 12"],
+              College: [
+                "Grade Level",
+                "BSA 1st yr",
+                "BSA 2nd yr",
+                "BSA 3rd yr",
+                "BSA 4th yr",
+                "BSAIS 1st yr",
+                "BSAIS 2nd yr",
+                "BSAIS 3rd yr",
+                "BSAIS 4th yr",
+                "BAB 1st yr",
+                "BAB 2nd yr",
+                "BAB 3rd yr",
+                "BAB 4th yr",
+                "BSSW 1st yr",
+                "BSSW 2nd yr",
+                "BSSW 3rd yr",
+                "BSSW 4th yr",
+                "BSIS 1st yr",
+                "BSIS 2nd yr",
+                "BSIS 3rd yr",
+                "BSIS 4th yr",
+                "ACT 1st yr",
+                "ACT 2nd yr",
+              ],
+            };
+            return gradeLevelMap[eduLevel] || ["Grade Level"];
+          };
+          return getGradeLevelOptions(
+            educationLevel === "All Education Levels"
+              ? "All Education Levels"
+              : educationLevel,
+          );
+        })()}
+      />
+
+      {/* Deactivate Student Confirmation Modal */}
+      {statusToggleTarget && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-lg bg-white shadow-xl">
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-[#0C2340]">
+                Deactivate student account?
+              </h3>
+              <p className="mt-2 text-sm text-gray-600">
+                {statusToggleTarget.student?.name || "This student"} will no
+                longer be able to log in while deactivated.
+              </p>
+              <div className="mt-6 flex justify-end gap-3">
+                <button
+                  type="button"
+                  className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setStatusToggleTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+                  onClick={async () => {
+                    const target = statusToggleTarget;
+                    setStatusToggleTarget(null);
+                    await executeToggleActive(target.student, target.nextState);
+                  }}
+                >
+                  Deactivate
+                </button>
               </div>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Delete Student Confirmation Modal */}
-        <DeleteStudentModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => {
-            setIsDeleteModalOpen(false);
-            setStudentToDelete(null);
-          }}
-          onConfirm={confirmDeleteStudent}
-          studentName={studentToDelete?.name || ""}
-        />
-      </div>
-    </AdminLayout>
+      {/* Delete Student Confirmation Modal */}
+      <DeleteStudentModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setStudentToDelete(null);
+        }}
+        onConfirm={confirmDeleteStudent}
+        studentName={studentToDelete?.name || ""}
+      />
+    </div>
   );
 };
 

@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
-import { useAdminSidebar } from "../common/useAdminSidebar";
 import { useOrders } from "../orders/useOrders";
 import { useInventoryHealthStats } from "./useInventoryHealthStats";
 
@@ -14,7 +13,6 @@ const API_BASE_URL =
  * - Inventory Alerts (out of stock items)
  * - Order Tracking (pre-orders, claimed, orders counts)
  * - Recent Audits (transactions from inventory)
- * - Sidebar toggle state (uses useAdminSidebar hook for auto-collapse on mobile)
  * - Active tab selection
  * - Loading state for skeleton display
  * 
@@ -22,8 +20,6 @@ const API_BASE_URL =
  * @param {Date} endDate - End date for filtering data
  */
 export const useAdminDashboardData = (startDate, endDate) => {
-  // Use the shared sidebar hook which includes auto-collapse on mobile
-  const { sidebarOpen, toggleSidebar } = useAdminSidebar();
   const [activeTab, setActiveTab] = useState("Year");
   const [loading, setLoading] = useState(true);
 
@@ -521,8 +517,6 @@ export const useAdminDashboardData = (startDate, endDate) => {
   }, []);
 
   return {
-    sidebarOpen,
-    toggleSidebar,
     activeTab,
     handleTabChange,
     inventoryHealth,

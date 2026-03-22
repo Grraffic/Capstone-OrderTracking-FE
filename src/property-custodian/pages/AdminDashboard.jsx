@@ -1,5 +1,4 @@
 import { useState } from "react";
-import AdminLayout from "../components/layouts/AdminLayout";
 import {
   InventoryHealth,
   OrderTracking,
@@ -40,14 +39,7 @@ const AdminDashboard = () => {
   };
 
   return (
-    <AdminLayout
-      title={
-        <h1 className="text-4xl font-bold">
-          <span className="text-[#0C2340]">Dash</span>
-          <span className="text-[#e68b00]">board</span>
-        </h1>
-      }
-    >
+    <>
       {/* Show skeleton while loading */}
       {loading ? (
         <DashboardSkeleton />
@@ -92,7 +84,7 @@ const AdminDashboard = () => {
           </div>
         </>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

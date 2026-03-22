@@ -11,12 +11,23 @@ import { useUsers } from "../hooks/useUsers";
 import { useSocketStudentUpdates } from "../hooks/useSocketStudentUpdates";
 import { userAPI } from "../../services/user.service";
 import { toast } from "react-hot-toast";
-import { ChevronLeft, ChevronRight, GraduationCap, FileCheck, DollarSign, XCircle, FileX } from "lucide-react";
-import { mapEducationLevelToDB, mapGradeLevelToDB } from "../utils/educationLevelMapper";
+import {
+  ChevronLeft,
+  ChevronRight,
+  GraduationCap,
+  FileCheck,
+  DollarSign,
+  XCircle,
+  FileX,
+} from "lucide-react";
+import {
+  mapEducationLevelToDB,
+  mapGradeLevelToDB,
+} from "../utils/educationLevelMapper";
 
 /**
  * StudentList Page
- * 
+ *
  * Displays a list of all students with filtering and management capabilities
  */
 const StudentList = () => {
@@ -39,18 +50,18 @@ const StudentList = () => {
   const [editingPage, setEditingPage] = useState(false);
   const [pageInputValue, setPageInputValue] = useState("");
   const [paginationInputValue, setPaginationInputValue] = useState("1"); // For right-side pagination input
-  
+
   // Delete student confirmation modal state
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState(null);
 
-  const { 
-    users, 
-    loading, 
-    pagination, 
-    fetchUsers, 
+  const {
+    users,
+    loading,
+    pagination,
+    fetchUsers,
     createUser,
-    updateUser, 
+    updateUser,
     deleteUser,
   } = useUsers();
 
@@ -98,7 +109,7 @@ const StudentList = () => {
     const mappedEducationLevel = mapEducationLevelToDB(educationLevel);
     const mappedGradeLevel = mapGradeLevelToDB(gradeLevel);
     const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
-    
+
     fetchUsers({
       page: currentPage,
       search: search || "",
@@ -108,7 +119,15 @@ const StudentList = () => {
       course_year_level: mappedGradeLevel,
       school_year: schoolYearPrefix,
     });
-  }, [currentPage, search, educationLevel, status, gradeLevel, schoolYear, fetchUsers]);
+  }, [
+    currentPage,
+    search,
+    educationLevel,
+    status,
+    gradeLevel,
+    schoolYear,
+    fetchUsers,
+  ]);
 
   // Fetch students when filters change (reset to page 1)
   // This handles both initial load and filter changes
@@ -119,7 +138,7 @@ const StudentList = () => {
       const mappedGradeLevel = mapGradeLevelToDB(gradeLevel);
       const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
       const isFuture = isFutureSchoolYear(schoolYear);
-      
+
       // Debug logging
       // console.log(`[StudentList] Fetching with filters:`, {
       //   educationLevel,
@@ -135,7 +154,7 @@ const StudentList = () => {
       //   isFutureSchoolYear: isFuture,
       //   willFilterBySchoolYear: schoolYearPrefix !== "" && schoolYearPrefix !== null
       // });
-      
+
       // IMPORTANT: For future school years, always send the school_year filter
       // This ensures backend filters out students from current/past years
       // Even if somehow students exist with that year prefix, they shouldn't be enrolled yet
@@ -157,32 +176,35 @@ const StudentList = () => {
   }, [search, educationLevel, status, gradeLevel, schoolYear]);
 
   // Handle real-time student updates via WebSocket
-  const handleStudentUpdate = useCallback((event) => {
-    const { type, data } = event;
-    // console.log(`📡 [StudentList] Received student update: ${type}`, data);
+  const handleStudentUpdate = useCallback(
+    (event) => {
+      const { type, data } = event;
+      // console.log(`📡 [StudentList] Received student update: ${type}`, data);
 
-    // Refresh the student list to reflect changes
-    // This ensures the list stays in sync with the current filters
-    refreshStudentList();
+      // Refresh the student list to reflect changes
+      // This ensures the list stays in sync with the current filters
+      refreshStudentList();
 
-    // Show toast notifications for user feedback
-    switch (type) {
-      case "created":
-        // Don't show toast for created - the modal already shows success
-        break;
-      case "updated":
-        // Don't show toast for updated - the modal already shows success
-        break;
-      case "deleted":
-        // Don't show toast for deleted - the modal already shows success
-        break;
-      case "bulk-updated":
-        // Don't show toast for bulk updated - the modal already shows success
-        break;
-      default:
+      // Show toast notifications for user feedback
+      switch (type) {
+        case "created":
+          // Don't show toast for created - the modal already shows success
+          break;
+        case "updated":
+          // Don't show toast for updated - the modal already shows success
+          break;
+        case "deleted":
+          // Don't show toast for deleted - the modal already shows success
+          break;
+        case "bulk-updated":
+          // Don't show toast for bulk updated - the modal already shows success
+          break;
+        default:
         // console.log(`📡 [StudentList] Unknown student update type: ${type}`);
-    }
-  }, [refreshStudentList]);
+      }
+    },
+    [refreshStudentList],
+  );
 
   // Connect to WebSocket for real-time updates
   useSocketStudentUpdates(handleStudentUpdate);
@@ -225,7 +247,9 @@ const StudentList = () => {
   const handleGoToPage = (pageNumber) => {
     const page = parseInt(pageNumber);
     if (isNaN(page) || page < 1 || page > pagination.totalPages) {
-      toast.error(`Please enter a page number between 1 and ${pagination.totalPages}`);
+      toast.error(
+        `Please enter a page number between 1 and ${pagination.totalPages}`,
+      );
       setEditingPage(false);
       return;
     }
@@ -307,7 +331,7 @@ const StudentList = () => {
     setSelectedStudents((prev) =>
       prev.includes(studentId)
         ? prev.filter((id) => id !== studentId)
-        : [...prev, studentId]
+        : [...prev, studentId],
     );
   };
 
@@ -390,7 +414,11 @@ const StudentList = () => {
   // Calculate education level from course year level (same logic as EditStudentOrderLimitsModal)
   const getEducationLevel = (courseYearLevel) => {
     if (!courseYearLevel) return null;
-    if (courseYearLevel === "Prekindergarten" || courseYearLevel === "Kindergarten" || courseYearLevel === "Kinder") {
+    if (
+      courseYearLevel === "Prekindergarten" ||
+      courseYearLevel === "Kindergarten" ||
+      courseYearLevel === "Kinder"
+    ) {
       return "Kindergarten";
     }
     if (courseYearLevel.match(/^Grade [1-6]$/)) {
@@ -402,7 +430,11 @@ const StudentList = () => {
     if (courseYearLevel.match(/^Grade (11|12)$/)) {
       return "Senior High School";
     }
-    if (courseYearLevel.match(/^(BSIS|BSA|BSAIS|BSSW|BAB|ACT) (1st|2nd|3rd|4th) (Year|yr)$/i)) {
+    if (
+      courseYearLevel.match(
+        /^(BSIS|BSA|BSAIS|BSSW|BAB|ACT) (1st|2nd|3rd|4th) (Year|yr)$/i,
+      )
+    ) {
       return "College";
     }
     return null;
@@ -411,7 +443,9 @@ const StudentList = () => {
   const handleAddStudent = async (studentData) => {
     try {
       // Calculate education_level from course_year_level
-      const calculatedEducationLevel = getEducationLevel(studentData.course_year_level);
+      const calculatedEducationLevel = getEducationLevel(
+        studentData.course_year_level,
+      );
       if (calculatedEducationLevel) {
         studentData.education_level = calculatedEducationLevel;
       }
@@ -436,13 +470,16 @@ const StudentList = () => {
 
   const handleDeleteStudent = (studentId) => {
     const student = users.find((u) => u.id === studentId);
-    setStudentToDelete({ id: studentId, name: student?.name || "this student" });
+    setStudentToDelete({
+      id: studentId,
+      name: student?.name || "this student",
+    });
     setIsDeleteModalOpen(true);
   };
 
   const confirmDeleteStudent = async () => {
     if (!studentToDelete) return;
-    
+
     try {
       const schoolYearPrefix = extractYearFromSchoolYear(schoolYear);
       const refreshParams = {
@@ -457,7 +494,9 @@ const StudentList = () => {
       await deleteUser(studentToDelete.id, refreshParams);
       toast.success("Student deleted successfully");
       // Remove from selected if it was selected
-      setSelectedStudents((prev) => prev.filter((id) => id !== studentToDelete.id));
+      setSelectedStudents((prev) =>
+        prev.filter((id) => id !== studentToDelete.id),
+      );
       setIsDeleteModalOpen(false);
       setStudentToDelete(null);
     } catch (error) {
@@ -473,9 +512,14 @@ const StudentList = () => {
 
     try {
       // Call bulk update API
-      const response = await userAPI.bulkUpdateUsers(selectedStudents, updateData);
+      const response = await userAPI.bulkUpdateUsers(
+        selectedStudents,
+        updateData,
+      );
       if (response.data && response.data.success) {
-        toast.success(`Updated ${selectedStudents.length} student(s) successfully`);
+        toast.success(
+          `Updated ${selectedStudents.length} student(s) successfully`,
+        );
         setIsEditTableModalOpen(false);
         setSelectedStudents([]);
         // Refresh the list
@@ -494,7 +538,11 @@ const StudentList = () => {
       }
     } catch (error) {
       console.error("Error bulk updating students:", error);
-      toast.error(error.response?.data?.message || error.message || "Failed to update students");
+      toast.error(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update students",
+      );
     }
   };
 
@@ -502,11 +550,19 @@ const StudentList = () => {
   // If it's a future school year, show 0 for all stats since no enrollments exist yet
   const isFuture = isFutureSchoolYear(schoolYear);
   const stats = {
-    totalStudents: isFuture ? 0 : (pagination.total || 0),
-    currentlyEnrolled: isFuture ? 0 : (pagination.total || 0),
-    eligibleForEnrollment: isFuture ? 0 : users.filter((u) => u.enrollment_status === "eligible_for_enrollment").length,
-    notEligible: isFuture ? 0 : users.filter((u) => u.enrollment_status === "not_eligible").length,
-    droppedOfficially: isFuture ? 0 : users.filter((u) => u.enrollment_status === "dropped_officially").length,
+    totalStudents: isFuture ? 0 : pagination.total || 0,
+    currentlyEnrolled: isFuture ? 0 : pagination.total || 0,
+    eligibleForEnrollment: isFuture
+      ? 0
+      : users.filter((u) => u.enrollment_status === "eligible_for_enrollment")
+          .length,
+    notEligible: isFuture
+      ? 0
+      : users.filter((u) => u.enrollment_status === "not_eligible").length,
+    droppedOfficially: isFuture
+      ? 0
+      : users.filter((u) => u.enrollment_status === "dropped_officially")
+          .length,
   };
 
   return (
@@ -521,62 +577,74 @@ const StudentList = () => {
 
         {/* Stats Cards - 5 cards - HIDDEN */}
         {false && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-          {/* Total Students (filtered by current selection) */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-blue-100 rounded-full p-3 mb-3">
-                <GraduationCap className="text-blue-600" size={24} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+            {/* Total Students (filtered by current selection) */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-blue-100 rounded-full p-3 mb-3">
+                  <GraduationCap className="text-blue-600" size={24} />
+                </div>
+                <p className="text-2xl font-bold text-blue-600 mb-1">
+                  {stats.totalStudents}
+                </p>
+                <p className="text-sm text-gray-600">Total Students</p>
               </div>
-              <p className="text-2xl font-bold text-blue-600 mb-1">{stats.totalStudents}</p>
-              <p className="text-sm text-gray-600">Total Students</p>
             </div>
-          </div>
 
-          {/* Currently Enrolled */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-green-100 rounded-full p-3 mb-3">
-                <FileCheck className="text-green-600" size={24} />
+            {/* Currently Enrolled */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-green-100 rounded-full p-3 mb-3">
+                  <FileCheck className="text-green-600" size={24} />
+                </div>
+                <p className="text-2xl font-bold text-green-600 mb-1">
+                  {stats.currentlyEnrolled}
+                </p>
+                <p className="text-sm text-gray-600">Currently Enrolled</p>
               </div>
-              <p className="text-2xl font-bold text-green-600 mb-1">{stats.currentlyEnrolled}</p>
-              <p className="text-sm text-gray-600">Currently Enrolled</p>
             </div>
-          </div>
 
-          {/* Eligible for Enrollment */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-yellow-100 rounded-full p-3 mb-3">
-                <GraduationCap className="text-yellow-600" size={24} />
+            {/* Eligible for Enrollment */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-yellow-100 rounded-full p-3 mb-3">
+                  <GraduationCap className="text-yellow-600" size={24} />
+                </div>
+                <p className="text-2xl font-bold text-yellow-600 mb-1">
+                  {stats.eligibleForEnrollment}
+                </p>
+                <p className="text-sm text-gray-600">Eligible for Enrollment</p>
               </div>
-              <p className="text-2xl font-bold text-yellow-600 mb-1">{stats.eligibleForEnrollment}</p>
-              <p className="text-sm text-gray-600">Eligible for Enrollment</p>
             </div>
-          </div>
 
-          {/* Not Eligible for Enrollment */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-orange-100 rounded-full p-3 mb-3">
-                <XCircle className="text-orange-600" size={24} />
+            {/* Not Eligible for Enrollment */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-orange-100 rounded-full p-3 mb-3">
+                  <XCircle className="text-orange-600" size={24} />
+                </div>
+                <p className="text-2xl font-bold text-orange-600 mb-1">
+                  {stats.notEligible}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Not Eligible for Enrollment
+                </p>
               </div>
-              <p className="text-2xl font-bold text-orange-600 mb-1">{stats.notEligible}</p>
-              <p className="text-sm text-gray-600">Not Eligible for Enrollment</p>
             </div>
-          </div>
 
-          {/* Dropped Officially */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-            <div className="flex flex-col items-center text-center">
-              <div className="bg-red-100 rounded-full p-3 mb-3">
-                <FileX className="text-red-600" size={24} />
+            {/* Dropped Officially */}
+            <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+              <div className="flex flex-col items-center text-center">
+                <div className="bg-red-100 rounded-full p-3 mb-3">
+                  <FileX className="text-red-600" size={24} />
+                </div>
+                <p className="text-2xl font-bold text-red-600 mb-1">
+                  {stats.droppedOfficially}
+                </p>
+                <p className="text-sm text-gray-600">Dropped Officially</p>
               </div>
-              <p className="text-2xl font-bold text-red-600 mb-1">{stats.droppedOfficially}</p>
-              <p className="text-sm text-gray-600">Dropped Officially</p>
             </div>
           </div>
-        </div>
         )}
 
         {/* Filters */}
@@ -613,7 +681,7 @@ const StudentList = () => {
               schoolYear={schoolYear}
               isFutureSchoolYear={isFutureSchoolYear(schoolYear)}
             />
-            
+
             {/* Pagination Controls */}
             {pagination.totalPages > 0 && (
               <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between rounded-b-lg shadow-sm">
@@ -641,7 +709,8 @@ const StudentList = () => {
                       {currentPage}
                     </span>
                   )}{" "}
-                  of <span className="font-semibold">{pagination.totalPages}</span>
+                  of{" "}
+                  <span className="font-semibold">{pagination.totalPages}</span>
                 </div>
 
                 {/* Right: Navigation Buttons */}
@@ -659,7 +728,7 @@ const StudentList = () => {
                   </button>
 
                   {/* Page Number Input */}
-                  <form 
+                  <form
                     onSubmit={handlePaginationInputSubmit}
                     className="flex items-center gap-1"
                   >
@@ -671,7 +740,7 @@ const StudentList = () => {
                       onChange={handlePaginationInputChange}
                       onBlur={handlePaginationInputBlur}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
+                        if (e.key === "Enter") {
                           e.preventDefault();
                           e.target.blur();
                         }
@@ -703,7 +772,9 @@ const StudentList = () => {
           isOpen={isEditTableModalOpen}
           onClose={() => setIsEditTableModalOpen(false)}
           selectedCount={selectedStudents.length}
-          selectedStudents={users.filter((user) => selectedStudents.includes(user.id))}
+          selectedStudents={users.filter((user) =>
+            selectedStudents.includes(user.id),
+          )}
           onSave={handleBulkUpdate}
         />
 
@@ -784,11 +855,25 @@ const StudentList = () => {
                   "ACT 1st year",
                   "ACT 2nd year",
                 ],
-                "Preschool": ["Grade Level", "Prekindergarten", "Kindergarten"],
-                "Elementary": ["Grade Level", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"],
-                "Junior Highschool": ["Grade Level", "Grade 7", "Grade 8", "Grade 9", "Grade 10"],
+                Preschool: ["Grade Level", "Prekindergarten", "Kindergarten"],
+                Elementary: [
+                  "Grade Level",
+                  "Grade 1",
+                  "Grade 2",
+                  "Grade 3",
+                  "Grade 4",
+                  "Grade 5",
+                  "Grade 6",
+                ],
+                "Junior Highschool": [
+                  "Grade Level",
+                  "Grade 7",
+                  "Grade 8",
+                  "Grade 9",
+                  "Grade 10",
+                ],
                 "Senior Highschool": ["Grade Level", "Grade 11", "Grade 12"],
-                "College": [
+                College: [
                   "Grade Level",
                   "BSA 1st yr",
                   "BSA 2nd yr",
@@ -816,7 +901,11 @@ const StudentList = () => {
               };
               return gradeLevelMap[eduLevel] || ["Grade Level"];
             };
-            return getGradeLevelOptions(educationLevel === "All Education Levels" ? "All Education Levels" : educationLevel);
+            return getGradeLevelOptions(
+              educationLevel === "All Education Levels"
+                ? "All Education Levels"
+                : educationLevel,
+            );
           })()}
         />
 

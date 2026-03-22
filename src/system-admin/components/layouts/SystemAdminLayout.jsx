@@ -16,12 +16,12 @@ import { useSystemAdminSidebar } from "../../hooks/common/useSystemAdminSidebar"
  * - noPadding: boolean (optional, default: false) - Whether to remove default padding
  */
 const SystemAdminLayout = ({ children, noPadding = false }) => {
-  const { sidebarOpen, toggleSidebar } = useSystemAdminSidebar();
+  const { sidebarOpen, toggleSidebar, closeSidebar } = useSystemAdminSidebar();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Fixed Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onNavigate={toggleSidebar} />
+      {/* Fixed Sidebar — mobile route change uses closeSidebar */}
+      <Sidebar isOpen={sidebarOpen} onNavigate={closeSidebar} />
 
       {/* Fixed Header */}
       <SystemAdminHeader onMenuToggle={toggleSidebar} sidebarOpen={sidebarOpen} />

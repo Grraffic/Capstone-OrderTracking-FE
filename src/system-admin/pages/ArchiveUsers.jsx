@@ -1,5 +1,4 @@
 import React from "react";
-import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import { Archive } from "lucide-react";
 
 /**
@@ -10,8 +9,7 @@ import { Archive } from "lucide-react";
  */
 const ArchiveUsers = () => {
   return (
-    <SystemAdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-[#0C2340]">
             Archive <span className="text-[#e68b00]">Users</span>
@@ -30,8 +28,7 @@ const ArchiveUsers = () => {
             with filters and a table for deactivated employees and students.
           </p>
         </div>
-      </div>
-    </SystemAdminLayout>
+    </div>
   );
 };
 

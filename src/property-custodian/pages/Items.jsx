@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-import AdminLayout from "../components/layouts/AdminLayout";
 import { InventoryHealth } from "../components/shared";
 import { ItemsStatsCards } from "../components/shared/stats";
 import ItemsModals from "../components/Items/ItemsModals";
@@ -76,7 +75,7 @@ const Items = () => {
   const [pageInputValue, setPageInputValue] = useState(""); // For page number input
   const menuRef = useRef(null);
   const filterButtonRef = useRef(null);
-  // Note: AdminLayout handles sidebar state internally
+  // Sidebar state lives in AdminOutletLayout (routes) — persists across navigation
 
   // Close menu when clicking outside
   useEffect(() => {
@@ -312,8 +311,7 @@ const Items = () => {
   }, [educationLevelFilter]);
 
   return (
-    <AdminLayout title="Items" noPadding={true}>
-      <div className="p-3 sm:p-4 md:p-6 lg:p-8 font-sf-medium">
+    <div className="p-3 sm:p-4 md:p-6 lg:p-8 font-sf-medium">
       {isInitialLoading ? (
         <ItemsSkeleton viewMode={viewMode} />
       ) : (
@@ -1003,8 +1001,7 @@ const Items = () => {
           />
         </>
       )}
-      </div>
-    </AdminLayout>
+    </div>
   );
 };
 

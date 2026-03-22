@@ -11,10 +11,10 @@ import { useState, useCallback, useEffect, useRef } from "react";
  * - When open, shows full sidebar with labels (w-64) on all screen sizes
  * - When closed, shows icons only (w-20)
  *
- * @returns {Object} Object containing sidebarOpen state and toggleSidebar function
+ * @returns {Object} sidebarOpen, toggleSidebar, closeSidebar (idempotent close for mobile nav/backdrop)
  *
  * Usage:
- * const { sidebarOpen, toggleSidebar } = useAdminSidebar();
+ * const { sidebarOpen, toggleSidebar, closeSidebar } = useAdminSidebar();
  */
 export const useAdminSidebar = () => {
   const MOBILE_BREAKPOINT = 1024; // px (matches Tailwind's lg breakpoint)
@@ -60,8 +60,14 @@ export const useAdminSidebar = () => {
     setSidebarOpen((prev) => !prev);
   }, []);
 
+  /** Idempotent close (e.g. mobile nav + backdrop) — avoids toggle edge cases */
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
   return {
     sidebarOpen,
     toggleSidebar,
+    closeSidebar,
   };
 };

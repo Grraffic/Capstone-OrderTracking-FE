@@ -18,12 +18,12 @@ import { useAdminSidebar } from "../../hooks";
  * - noPadding: boolean (optional, default: false) - Whether to remove default padding
  */
 const AdminLayout = ({ children, noPadding = false }) => {
-  const { sidebarOpen, toggleSidebar } = useAdminSidebar();
+  const { sidebarOpen, toggleSidebar, closeSidebar } = useAdminSidebar();
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Fixed Sidebar */}
-      <Sidebar isOpen={sidebarOpen} onNavigate={toggleSidebar} />
+      {/* Fixed Sidebar — mobile route change uses closeSidebar, not toggle */}
+      <Sidebar isOpen={sidebarOpen} onNavigate={closeSidebar} />
 
       {/* Fixed Header */}
       <AdminHeader onMenuToggle={toggleSidebar} sidebarOpen={sidebarOpen} />

@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Camera, Save, X } from "lucide-react";
-import AdminLayout from "../components/layouts/AdminLayout";
 import { useAdminProfile } from "../hooks/settings/useAdminProfile";
 import DiscardChangesModal from "../components/Settings/DiscardChangesModal";
 import { SettingsSkeleton } from "../components/Skeleton";
@@ -18,7 +17,6 @@ import { SettingsSkeleton } from "../components/Skeleton";
  * - No password change section (OAuth authentication)
  */
 const Settings = () => {
-  // Note: AdminLayout handles sidebar state internally
   const {
     profile,
     formData,
@@ -51,16 +49,11 @@ const Settings = () => {
   };
 
   if (isLoading) {
-    return (
-      <AdminLayout title="Settings">
-        <SettingsSkeleton />
-      </AdminLayout>
-    );
+    return <SettingsSkeleton />;
   }
 
   return (
-    <AdminLayout title="Settings">
-      <div className="font-sf-medium">
+    <div className="font-sf-medium">
         {/* Page Title */}
         <div className="mb-8">
         <h1 className="text-4xl xl:text-5xl 2xl:text-6xl font-sf-semibold font-semibold tracking-tight">
@@ -276,8 +269,7 @@ const Settings = () => {
           onConfirm={handleConfirmDiscard}
           onCancel={handleCancelDiscard}
         />
-      </div>
-    </AdminLayout>
+    </div>
   );
 };
 

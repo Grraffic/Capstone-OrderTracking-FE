@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import SystemAdminLayout from "../components/layouts/SystemAdminLayout";
 import { useItemApproval } from "../hooks/useItemApproval";
 import {
   CheckCircle2,
@@ -176,8 +175,7 @@ const ItemApproval = () => {
     pendingItems.every((item) => selectedItems.has(item.id));
 
   return (
-    <SystemAdminLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-[#0C2340] rounded-full flex items-center justify-center">
@@ -464,8 +462,7 @@ const ItemApproval = () => {
             )}
           </div>
         )}
-      </div>
-    </SystemAdminLayout>
+    </div>
   );
 };
 

@@ -1,6 +1,8 @@
 import { lazy, Suspense } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
+import AdminOutletLayout from "../property-custodian/components/layouts/AdminOutletLayout";
+import SystemAdminOutletLayout from "../system-admin/components/layouts/SystemAdminOutletLayout";
 import MaintenanceBlock from "../components/auth/MaintenanceBlock";
 import StudentOnboardingGuard from "../components/auth/StudentOnboardingGuard";
 import LandingPage from "../pages/LandingPage";
@@ -45,6 +47,14 @@ const RouteFallback = () => (
   </div>
 );
 
+const PROPERTY_CUSTODIAN_ROLES = [
+  "property_custodian",
+  "admin",
+  "finance_staff",
+  "accounting_staff",
+  "department_head",
+];
+
 const AppRoutes = () => {
   return (
     <Suspense fallback={<RouteFallback />}>
@@ -54,147 +64,93 @@ const AppRoutes = () => {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/callback" element={<AuthCallback />} />
 
-      {/* Property Custodian Routes - Protected to property_custodian role and related staff roles (with backward compatibility for admin) */}
+      {/* Property custodian: one persistent layout + nested routes (sidebar state survives navigation) */}
       <Route
         path="/property-custodian"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <AdminDashboard />
+          <ProtectedRoute requiredRoles={PROPERTY_CUSTODIAN_ROLES}>
+            <AdminOutletLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/property-custodian/items"
-        element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Items />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property-custodian/inventory"
-        element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Inventory />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property-custodian/orders"
-        element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Orders />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property-custodian/settings"
-        element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Settings />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property-custodian/students"
-        element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <StudentList />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/property-custodian/eligibility"
-        element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <EligibilityManagement />
-          </ProtectedRoute>
-        }
-      />
-      
-      {/* Legacy admin routes - redirect to property-custodian for backward compatibility */}
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route
+          path="items"
+          handle={{ noPadding: true }}
+          element={<Items />}
+        />
+        <Route
+          path="inventory"
+          handle={{ noPadding: true }}
+          element={<Inventory />}
+        />
+        <Route
+          path="orders"
+          handle={{ noPadding: true }}
+          element={<Orders />}
+        />
+        <Route path="settings" element={<Settings />} />
+        <Route path="students" element={<StudentList />} />
+        <Route path="eligibility" element={<EligibilityManagement />} />
+      </Route>
+
+      {/* Legacy /admin → /property-custodian (same auth) */}
       <Route
         path="/admin"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <AdminDashboard />
+          <ProtectedRoute requiredRoles={PROPERTY_CUSTODIAN_ROLES}>
+            <Navigate to="/property-custodian" replace />
           </ProtectedRoute>
         }
       />
       <Route
         path="/admin/items"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Items />
+          <ProtectedRoute requiredRoles={PROPERTY_CUSTODIAN_ROLES}>
+            <Navigate to="/property-custodian/items" replace />
           </ProtectedRoute>
         }
       />
       <Route
         path="/admin/inventory"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Inventory />
+          <ProtectedRoute requiredRoles={PROPERTY_CUSTODIAN_ROLES}>
+            <Navigate to="/property-custodian/inventory" replace />
           </ProtectedRoute>
         }
       />
       <Route
         path="/admin/orders"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Orders />
+          <ProtectedRoute requiredRoles={PROPERTY_CUSTODIAN_ROLES}>
+            <Navigate to="/property-custodian/orders" replace />
           </ProtectedRoute>
         }
       />
       <Route
         path="/admin/settings"
         element={
-          <ProtectedRoute requiredRoles={["property_custodian", "admin", "finance_staff", "accounting_staff", "department_head"]}>
-            <Settings />
+          <ProtectedRoute requiredRoles={PROPERTY_CUSTODIAN_ROLES}>
+            <Navigate to="/property-custodian/settings" replace />
           </ProtectedRoute>
         }
       />
 
-      {/* System Admin Routes - Protected to system_admin role */}
+      {/* System admin: one persistent layout + nested routes */}
       <Route
         path="/system-admin"
         element={
           <ProtectedRoute requiredRoles={["system_admin"]}>
-            <SystemAdminDashboard />
+            <SystemAdminOutletLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/system-admin/archive-users"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <ArchiveUsers />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/system-admin/item-approval"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <ItemApproval />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/system-admin/recent-audits"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <RecentAudits />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/system-admin/settings"
-        element={
-          <ProtectedRoute requiredRoles={["system_admin"]}>
-            <SystemSettings />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route index element={<SystemAdminDashboard />} />
+        <Route path="archive-users" element={<ArchiveUsers />} />
+        <Route path="item-approval" element={<ItemApproval />} />
+        <Route path="recent-audits" element={<RecentAudits />} />
+        <Route path="settings" element={<SystemSettings />} />
+      </Route>
 
       {/* Student Routes - Protected to student role and blocked during maintenance */}
       <Route

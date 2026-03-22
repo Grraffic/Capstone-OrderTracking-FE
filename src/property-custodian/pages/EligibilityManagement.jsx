@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from "react";
-import AdminLayout from "../components/layouts/AdminLayout";
 import EligibilityTable from "../../system-admin/components/EligibilityManagement/EligibilityTable";
 import { useEligibility } from "../../system-admin/hooks/useEligibility";
 import { FileCheck, Search, Edit2, X, Save } from "lucide-react";
@@ -135,8 +134,7 @@ const EligibilityManagement = () => {
   };
 
   return (
-    <AdminLayout title="Eligibility Management">
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Page Header */}
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-[#0C2340] rounded-full flex items-center justify-center">
@@ -264,7 +262,6 @@ const EligibilityManagement = () => {
           </div>
         )}
       </div>
-    </AdminLayout>
   );
 };
 

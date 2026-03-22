@@ -15,7 +15,7 @@ const formatGradeLevelDisplay = (str) => {
 
 /**
  * StudentFilters Component
- * 
+ *
  * Provides search, school year selector, education level filter, grade level filter, and Edit Table button
  */
 const StudentFilters = ({
@@ -85,12 +85,8 @@ const StudentFilters = ({
         "ACT 1st year",
         "ACT 2nd year",
       ],
-      "Preschool": [
-        "Grade Level",
-        "Prekindergarten",
-        "Kindergarten",
-      ],
-      "Elementary": [
+      Preschool: ["Grade Level", "Prekindergarten", "Kindergarten"],
+      Elementary: [
         "Grade Level",
         "Grade 1",
         "Grade 2",
@@ -106,12 +102,8 @@ const StudentFilters = ({
         "Grade 9",
         "Grade 10",
       ],
-      "Senior Highschool": [
-        "Grade Level",
-        "Grade 11",
-        "Grade 12",
-      ],
-      "College": [
+      "Senior Highschool": ["Grade Level", "Grade 11", "Grade 12"],
+      College: [
         "Grade Level",
         "BSA 1st yr",
         "BSA 2nd yr",
@@ -155,7 +147,10 @@ const StudentFilters = ({
     return years.reverse();
   };
 
-  const quickSelectSchoolYearOptions = useMemo(() => generateQuickSelectSchoolYears(), []);
+  const quickSelectSchoolYearOptions = useMemo(
+    () => generateQuickSelectSchoolYears(),
+    [],
+  );
 
   // Reset grade level when education level changes
   const handleEducationLevelChange = (value) => {
@@ -168,7 +163,10 @@ const StudentFilters = ({
       {/* School Year Selector - Top Row, Right Aligned */}
       <div className="flex items-center gap-2 justify-end">
         <div className="relative w-56">
-          <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <Calendar
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={20}
+          />
           <input
             type="text"
             value={schoolYear}
@@ -188,7 +186,9 @@ const StudentFilters = ({
             value=""
             className="pl-4 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#0C2340] focus:border-transparent bg-white appearance-none text-gray-600"
           >
-            <option value="" disabled>Quick Select</option>
+            <option value="" disabled>
+              Quick Select
+            </option>
             {quickSelectSchoolYearOptions.map((year) => (
               <option key={year} value={year}>
                 {year}
@@ -202,7 +202,10 @@ const StudentFilters = ({
       <div className="flex flex-col sm:flex-row gap-4 items-center">
         {/* Search Bar */}
         <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <Search
+            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+            size={20}
+          />
           <input
             type="text"
             placeholder="Search"
@@ -262,7 +265,11 @@ const StudentFilters = ({
           <button
             onClick={onEditTable}
             className="hidden"
-            title={selectedCount === 0 ? "Select students first to edit their settings" : `Edit ${selectedCount} selected student(s)`}
+            title={
+              selectedCount === 0
+                ? "Select students first to edit their settings"
+                : `Edit ${selectedCount} selected student(s)`
+            }
           >
             <Edit size={20} />
             <span className="hidden sm:inline">Edit Table</span>

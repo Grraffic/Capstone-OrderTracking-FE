@@ -7,7 +7,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
  * Auto-closes sidebar when switching to mobile viewport (same as property custodian).
  * User can still manually open/close sidebar on mobile via toggle button.
  *
- * @returns {Object} - { sidebarOpen, toggleSidebar }
+ * @returns {Object} - { sidebarOpen, toggleSidebar, closeSidebar }
  */
 export const useSystemAdminSidebar = () => {
   const MOBILE_BREAKPOINT = 1024; // px (matches Tailwind's lg breakpoint)
@@ -54,9 +54,14 @@ export const useSystemAdminSidebar = () => {
     setSidebarOpen((prev) => !prev);
   }, []);
 
+  const closeSidebar = useCallback(() => {
+    setSidebarOpen(false);
+  }, []);
+
   return {
     sidebarOpen,
     toggleSidebar,
+    closeSidebar,
   };
 };
 

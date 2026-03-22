@@ -42,19 +42,19 @@ const formatGradeLevelDisplay = (str) => {
 
 /**
  * StudentTable Component
- * 
+ *
  * Displays students in a table format with specific columns for student management
  */
-const StudentTable = ({ 
-  students, 
-  selectedStudents, 
-  onSelectStudent, 
-  onSelectAll, 
-  onEditStudent, 
+const StudentTable = ({
+  students,
+  selectedStudents,
+  onSelectStudent,
+  onSelectAll,
+  onEditStudent,
   onDeleteStudent,
   onToggleActive,
   schoolYear = "",
-  isFutureSchoolYear = false
+  isFutureSchoolYear = false,
 }) => {
   // Format student ID from student_number (e.g., "22-000029MLR" -> "22 - 000029MLR")
   const formatStudentId = (studentNumber) => {
@@ -79,8 +79,15 @@ const StudentTable = ({
     if (student.blocked_due_to_void === true) {
       return { value: 0, isOverride: false, isVoided: true };
     }
-    if (student.total_item_limit != null && Number(student.total_item_limit) > 0) {
-      return { value: Number(student.total_item_limit), isOverride: true, isVoided: false };
+    if (
+      student.total_item_limit != null &&
+      Number(student.total_item_limit) > 0
+    ) {
+      return {
+        value: Number(student.total_item_limit),
+        isOverride: true,
+        isVoided: false,
+      };
     }
     const st = (student.student_type || "").toLowerCase();
     if (st === "new") return { value: 8, isOverride: false, isVoided: false };
@@ -89,8 +96,10 @@ const StudentTable = ({
   };
 
   const sortedStudents = [...students].sort((a, b) => {
-    const aIsVoided = a.blocked_due_to_void === true || Number(a.total_item_limit) === 0;
-    const bIsVoided = b.blocked_due_to_void === true || Number(b.total_item_limit) === 0;
+    const aIsVoided =
+      a.blocked_due_to_void === true || Number(a.total_item_limit) === 0;
+    const bIsVoided =
+      b.blocked_due_to_void === true || Number(b.total_item_limit) === 0;
 
     const aIsInactive = a.is_active === false || a.status === "inactive";
     const bIsInactive = b.is_active === false || b.status === "inactive";
@@ -106,7 +115,9 @@ const StudentTable = ({
 
   const ToggleSwitch = ({ isActive, studentId, onToggle }) => {
     if (typeof onToggle !== "function") {
-      return <span className="text-sm text-gray-700">{isActive ? "Yes" : "No"}</span>;
+      return (
+        <span className="text-sm text-gray-700">{isActive ? "Yes" : "No"}</span>
+      );
     }
 
     return (
@@ -141,20 +152,41 @@ const StudentTable = ({
             <th className="hidden px-4 py-3 text-left">
               <input
                 type="checkbox"
-                checked={selectedStudents.length === students.length && students.length > 0}
+                checked={
+                  selectedStudents.length === students.length &&
+                  students.length > 0
+                }
                 onChange={onSelectAll}
                 className="rounded border-gray-300 text-white focus:ring-white"
               />
             </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student ID</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Student Name</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Education Level</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Grade Level</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Gender</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Is Active</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Total Item Limit</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Total Items Ordered</th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Action</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Student ID
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Student Name
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Education Level
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Grade Level
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Gender
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Is Active
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Total Item Limit
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Total Items Ordered
+            </th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white">
+              Action
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -172,7 +204,13 @@ const StudentTable = ({
                       </h3>
                       <p className="text-sm text-gray-500 max-w-md">
                         {schoolYear ? (
-                          <>Students will appear once enrollment for <span className="font-medium text-gray-700">{schoolYear}</span> begins.</>
+                          <>
+                            Students will appear once enrollment for{" "}
+                            <span className="font-medium text-gray-700">
+                              {schoolYear}
+                            </span>{" "}
+                            begins.
+                          </>
                         ) : (
                           "Students will appear once enrollment for this school year begins."
                         )}
@@ -214,7 +252,10 @@ const StudentTable = ({
                 <td className="px-4 py-4 text-sm text-gray-900">
                   <div className="flex items-center gap-2">
                     <AvatarCell student={student} getAvatarUrl={getAvatarUrl} />
-                    <span>{splitDisplayName(student.name || "").displayName || "N/A"}</span>
+                    <span>
+                      {splitDisplayName(student.name || "").displayName ||
+                        "N/A"}
+                    </span>
                   </div>
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
@@ -228,14 +269,20 @@ const StudentTable = ({
                 </td>
                 <td className="px-4 py-4">
                   <ToggleSwitch
-                    isActive={student.is_active ?? student.status !== "inactive"}
+                    isActive={
+                      student.is_active ?? student.status !== "inactive"
+                    }
                     studentId={student.id}
                     onToggle={onToggleActive}
                   />
                 </td>
                 <td className="px-4 py-4 text-sm text-gray-900">
                   {(() => {
-                    const { value: max, isOverride, isVoided } = getEffectiveMaxItemsPerOrder(student);
+                    const {
+                      value: max,
+                      isOverride,
+                      isVoided,
+                    } = getEffectiveMaxItemsPerOrder(student);
                     if (max == null) {
                       return (
                         <span className="inline-flex items-center gap-2">
