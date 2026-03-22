@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Calendar, Package, User, Mail, Download } from "lucide-react";
+import { X, Calendar, Package, User, Mail, Download, Pencil } from "lucide-react";
 import QRCode from "react-qr-code";
 
 /**
@@ -291,13 +291,22 @@ const EditOrderModal = ({ isOpen, onClose, order, onOrderUpdated, onOpenQRScanne
               <button
                 onClick={handleEditToggle}
                 disabled={saving}
-                className={`px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
+                className={`inline-flex items-center justify-center gap-1.5 px-2 sm:px-3 lg:px-4 py-1.5 sm:py-2 rounded-lg font-medium text-xs sm:text-sm transition-colors whitespace-nowrap ${
                   isEditing
                     ? "bg-[#e68b00] text-white hover:bg-[#d97706] disabled:opacity-60"
                     : "border border-gray-300 text-gray-700 hover:bg-gray-50"
                 }`}
               >
-                {saving ? "Saving..." : isEditing ? "Save" : "Edit"}
+                {saving ? (
+                  "Saving..."
+                ) : isEditing ? (
+                  "Save"
+                ) : (
+                  <>
+                    <Pencil className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" aria-hidden />
+                    <span>Edit Order</span>
+                  </>
+                )}
               </button>
 
               {/* Close Button */}
