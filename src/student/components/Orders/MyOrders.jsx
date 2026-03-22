@@ -1008,36 +1008,6 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
   // Connect to Socket.IO for real-time updates
   useSocketOrderUpdates(handleOrderUpdate);
 
-  // Diagnostic: Log claimed orders whenever orders change
-  useEffect(() => {
-    if (orders.length > 0) {
-      const claimedOrders = orders.filter(
-        (order) =>
-          order.order_type !== "pre-order" &&
-          (order.status === "completed" || order.status === "claimed")
-      );
-      
-      console.log(`🔍 MyOrders Diagnostic: Total orders: ${orders.length}, Claimed orders: ${claimedOrders.length}`);
-      
-      if (claimedOrders.length > 0) {
-        console.log(`✅ MyOrders Diagnostic: Claimed orders available:`, claimedOrders.map(o => ({
-          id: o.id,
-          orderNumber: o.orderNumber,
-          status: o.status,
-          claimedDate: o.claimedDate,
-          items: o.items?.map(i => `${i.quantity}x ${i.name}`).join(", ") || "N/A"
-        })));
-      } else {
-        console.log(`⚠️ MyOrders Diagnostic: No claimed orders found in current orders array`);
-        console.log(`⚠️ MyOrders Diagnostic: All order statuses:`, orders.map(o => ({
-          orderNumber: o.orderNumber,
-          status: o.status,
-          order_type: o.order_type
-        })));
-      }
-    }
-  }, [orders]);
-
   // Transform all items to products (same logic as AllProducts)
   const transformedProducts = useMemo(() => {
     // Group items by name and education level
@@ -1222,7 +1192,7 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
 
   // Filter orders based on active category, then sort by date (oldest/newest/all)
   const filteredOrders = React.useMemo(() => {
-    console.log(`🔍 MyOrders: Filtering orders for category "${activeCategory}". Total orders: ${orders.length}`);
+    // console.log(`🔍 MyOrders: Filtering orders for category "${activeCategory}". Total orders: ${orders.length}`);
     let list;
     switch (activeCategory) {
       case "preOrders":
@@ -1244,29 +1214,6 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
             order.order_type !== "pre-order" &&
             (order.status === "completed" || order.status === "claimed")
         );
-        // Log filtering results for debugging
-        if (list.length > 0) {
-          console.log(`✅ MyOrders: Filtered ${list.length} claimed/completed orders for display`);
-          console.log(`✅ MyOrders: Claimed order details:`, list.map(o => ({
-            id: o.id,
-            orderNumber: o.orderNumber,
-            status: o.status,
-            items: o.items?.map(i => i.name).join(", ")
-          })));
-        } else {
-          console.log(`⚠️ MyOrders: No claimed orders found. Total orders: ${orders.length}`);
-          const allStatuses = orders.reduce((acc, o) => {
-            acc[o.status] = (acc[o.status] || 0) + 1;
-            return acc;
-          }, {});
-          console.log(`⚠️ MyOrders: Order status breakdown:`, allStatuses);
-          console.log(`⚠️ MyOrders: Sample orders:`, orders.slice(0, 3).map(o => ({
-            id: o.id,
-            orderNumber: o.orderNumber,
-            status: o.status,
-            order_type: o.order_type
-          })));
-        }
         break;
       default:
         list = [...orders];

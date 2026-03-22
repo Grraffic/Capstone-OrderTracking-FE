@@ -23,9 +23,9 @@ const userAPI = {
     // Always send education_level (even if empty string) so backend knows whether to filter
     if (params.education_level !== undefined) {
       queryParams.append("education_level", params.education_level);
-      console.log(
-        `[user.service] Sending education_level: "${params.education_level}" (type: ${typeof params.education_level}, length: ${params.education_level?.length})`,
-      );
+      // console.log(
+      //   `[user.service] Sending education_level: "${params.education_level}" (type: ${typeof params.education_level}, length: ${params.education_level?.length})`,
+      // );
     }
     // Always send course_year_level (even if empty string) so backend knows whether to filter
     if (params.course_year_level !== undefined) {
@@ -41,7 +41,7 @@ const userAPI = {
     }
 
     const url = `/users?${queryParams.toString()}`;
-    console.log(`[user.service] Request URL: ${url}`);
+    // console.log(`[user.service] Request URL: ${url}`);
     return api.get(url);
   },
 

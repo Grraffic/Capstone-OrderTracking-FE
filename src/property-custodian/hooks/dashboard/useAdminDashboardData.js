@@ -454,6 +454,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
           const userName = tx.user_name || "System";
           const userRole = tx.user_role || "system";
 
+          const meta = tx.metadata || {};
           // Map transaction type to display type (for status column)
           let displayType = tx.type;
           if (tx.type === "Inventory") {
@@ -466,8 +467,20 @@ export const useAdminDashboardData = (startDate, endDate) => {
             } else {
               displayType = "Items";
             }
+          } else if (
+            tx.type === "Order" &&
+            /^ORDER CLAIMED/i.test((tx.action || "").trim())
+          ) {
+            displayType = "Releases";
           } else if (tx.type === "Item") {
-            displayType = "Items";
+            if (
+              (meta.order_id || meta.order_number) &&
+              /^ITEM CREATED/i.test((tx.action || "").trim())
+            ) {
+              displayType = "Order";
+            } else {
+              displayType = "Items";
+            }
           }
 
           return {

@@ -330,7 +330,7 @@ const Inventory = () => {
         educationLevel:
           gradeLevelToEducationLevel[gradeLevel] ??
           (gradeLevel !== "all" ? gradeLevel : null),
-        search: searchQuery || null,
+        search: searchQuery.trim() ? searchQuery.trim() : null,
       };
 
       const response = await inventoryService.getInventoryReport(filters);
@@ -1070,6 +1070,7 @@ const Inventory = () => {
               const dateTime = `${formattedDate} ${formattedTime}`;
 
               // Map transaction type to display type (for filtering purposes)
+              const meta = tx.metadata || {};
               let displayType = tx.type;
               if (tx.type === "Inventory") {
                 if (tx.action.startsWith("PURCHASE RECORDED")) {
@@ -1079,8 +1080,22 @@ const Inventory = () => {
                 } else if (tx.action.startsWith("ITEM RELEASED")) {
                   displayType = "Releases";
                 }
+              } else if (
+                tx.type === "Order" &&
+                /^ORDER CLAIMED/i.test((tx.action || "").trim())
+              ) {
+                // Student claimed order — same category as ITEM RELEASED (releases)
+                displayType = "Releases";
               } else if (tx.type === "Item") {
-                displayType = "Items";
+                // Transitional DB rows: order placed was logged as Item + ITEM CREATED
+                if (
+                  (meta.order_id || meta.order_number) &&
+                  /^ITEM CREATED/i.test((tx.action || "").trim())
+                ) {
+                  displayType = "Order";
+                } else {
+                  displayType = "Items";
+                }
               }
 
               // Extract price from metadata if available
@@ -1101,7 +1116,7 @@ const Inventory = () => {
                 details: tx.details,
                 price: price,
                 status: displayType, // Use displayType for status (Items, Purchases, Returns, Releases)
-                metadata: tx.metadata || {}, // Pass metadata for dynamic formatting
+                metadata: meta, // Pass metadata for dynamic formatting
                 itemName: tx.metadata?.item_name || extractItemNameFromAction(tx.action),
               };
             })
@@ -1152,21 +1167,56 @@ const Inventory = () => {
     fetchTransactions();
   }, [startDate, endDate, activeTab, transactionRefreshKey]);
 
-  // Filter transactions by type
-  const filteredTransactions = transactionData.filter((transaction) => {
-    if (transactionTypeFilter === "all") return true;
-    // Map filter values to transaction types
-    const typeMap = {
-      purchases: "Purchases",
-      returns: "Returns",
-      releases: "Releases",
-      items: "Items",
-    };
-    const filterType = typeMap[transactionTypeFilter] || transactionTypeFilter;
-    return (
-      transaction.type.toLowerCase() === filterType.toLowerCase()
-    );
-  });
+  // Text search across transaction fields (shared search bar; inventory tab uses API search)
+  const transactionsInSearchScope = useMemo(() => {
+    const raw = searchQuery.trim().toLowerCase();
+    if (!raw) return transactionData;
+    const tokens = raw.split(/\s+/).filter(Boolean);
+    return transactionData.filter((transaction) => {
+      const hay = [
+        transaction.action,
+        transaction.details,
+        transaction.user_name,
+        transaction.user_role,
+        transaction.user,
+        transaction.status,
+        transaction.type,
+        transaction.dateTime,
+        transaction.price != null ? String(transaction.price) : "",
+        transaction.itemName,
+        typeof transaction.metadata === "object" && transaction.metadata
+          ? JSON.stringify(transaction.metadata)
+          : "",
+      ]
+        .filter((x) => x != null && String(x).trim() !== "")
+        .join(" ")
+        .toLowerCase();
+      if (tokens.length === 0) return true;
+      // Whole phrase first (e.g. "order created"), else every word must appear
+      if (hay.includes(raw)) return true;
+      return tokens.every((t) => hay.includes(t));
+    });
+  }, [transactionData, searchQuery]);
+
+  // Filter transactions by type (after search)
+  const filteredTransactions = useMemo(() => {
+    return transactionsInSearchScope.filter((transaction) => {
+      if (transactionTypeFilter === "all") return true;
+      const typeMap = {
+        purchases: "Purchases",
+        returns: "Returns",
+        releases: "Releases",
+        items: "Items",
+      };
+      const filterType = typeMap[transactionTypeFilter] || transactionTypeFilter;
+      if (transactionTypeFilter === "items") {
+        return transaction.type === "Items";
+      }
+      return (
+        transaction.type.toLowerCase() === filterType.toLowerCase()
+      );
+    });
+  }, [transactionsInSearchScope, transactionTypeFilter]);
 
   // Paginate filtered transactions (8 items per page)
   const transactionTotalPages = Math.ceil(filteredTransactions.length / transactionItemsPerPage);
@@ -1174,10 +1224,10 @@ const Inventory = () => {
   const transactionEndIndex = transactionStartIndex + transactionItemsPerPage;
   const paginatedTransactions = filteredTransactions.slice(transactionStartIndex, transactionEndIndex);
 
-  // Reset transaction page to 1 when filter changes
+  // Reset transaction page to 1 when filter or search changes
   useEffect(() => {
     setTransactionCurrentPage(1);
-  }, [transactionTypeFilter, startDate, endDate]);
+  }, [transactionTypeFilter, startDate, endDate, searchQuery]);
   
   // Log filtered transactions for debugging
   useEffect(() => {
@@ -1194,14 +1244,20 @@ const Inventory = () => {
     }
   }, [transactionData, filteredTransactions, transactionTypeFilter, transactionsLoading, activeTab]);
 
-  // Count transactions by type
-  const transactionCounts = {
-    all: transactionData.length,
-    purchases: transactionData.filter((t) => t.type === "Purchases").length,
-    returns: transactionData.filter((t) => t.type === "Returns").length,
-    releases: transactionData.filter((t) => t.type === "Releases").length,
-    items: transactionData.filter((t) => t.type === "Items").length,
-  };
+  // Counts respect the search query so tab badges match the filtered set
+  const transactionCounts = useMemo(
+    () => ({
+      all: transactionsInSearchScope.length,
+      purchases: transactionsInSearchScope.filter((t) => t.type === "Purchases")
+        .length,
+      returns: transactionsInSearchScope.filter((t) => t.type === "Returns")
+        .length,
+      releases: transactionsInSearchScope.filter((t) => t.type === "Releases")
+        .length,
+      items: transactionsInSearchScope.filter((t) => t.type === "Items").length,
+    }),
+    [transactionsInSearchScope],
+  );
 
   const handlePreviousPage = () => {
     if (currentPage > 1) {
@@ -1291,7 +1347,11 @@ const Inventory = () => {
               <div className="relative">
                 <input
                   type="text"
-                  placeholder="Search items"
+                  placeholder={
+                    activeTab === "transaction"
+                      ? "Search transactions"
+                      : "Search items or transactions"
+                  }
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 xl:pl-10 pr-3 xl:pr-4 py-2 xl:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent w-64 xl:w-72 shadow-sm text-sm xl:text-base"
@@ -1350,7 +1410,11 @@ const Inventory = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Search items"
+                placeholder={
+                  activeTab === "transaction"
+                    ? "Search transactions"
+                    : "Search items or transactions"
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 sm:pl-9 md:pl-10 pr-2.5 sm:pr-3 md:pr-4 py-1.5 sm:py-2 md:py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent shadow-sm transition-all duration-200 ease-in-out text-xs sm:text-sm md:text-base"

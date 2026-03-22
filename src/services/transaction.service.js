@@ -36,17 +36,17 @@ class TransactionService {
    */
   async getTransactions(filters = {}) {
     try {
-      console.log("[TransactionService] 🚀 getTransactions called with filters:", {
-        type: filters.type,
-        action: filters.action,
-        userId: filters.userId,
-        userRole: filters.userRole,
-        startDate: filters.startDate?.toISOString(),
-        endDate: filters.endDate?.toISOString(),
-        limit: filters.limit,
-        offset: filters.offset,
-      });
-      
+      // console.log("[TransactionService] 🚀 getTransactions called with filters:", {
+      //   type: filters.type,
+      //   action: filters.action,
+      //   userId: filters.userId,
+      //   userRole: filters.userRole,
+      //   startDate: filters.startDate?.toISOString(),
+      //   endDate: filters.endDate?.toISOString(),
+      //   limit: filters.limit,
+      //   offset: filters.offset,
+      // });
+
       const queryParams = new URLSearchParams();
       
       if (filters.type) queryParams.append("type", filters.type);
@@ -59,21 +59,21 @@ class TransactionService {
       if (filters.offset) queryParams.append("offset", filters.offset.toString());
 
       const url = `${API_BASE_URL}/transactions${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
-      console.log("[TransactionService] 📡 Making API call to:", url);
-      
+      // console.log("[TransactionService] 📡 Making API call to:", url);
+
       const headers = this.getAuthHeaders();
-      console.log("[TransactionService] 🔐 Auth headers:", {
-        hasAuth: !!headers.Authorization,
-        authPrefix: headers.Authorization?.substring(0, 20) + "...",
-      });
-      
+      // console.log("[TransactionService] 🔐 Auth headers:", {
+      //   hasAuth: !!headers.Authorization,
+      //   authPrefix: headers.Authorization?.substring(0, 20) + "...",
+      // });
+
       const response = await fetch(url, {
         method: "GET",
         headers: headers,
         credentials: "include",
       });
 
-      console.log("[TransactionService] 📥 Response status:", response.status, response.statusText);
+      // console.log("[TransactionService] 📥 Response status:", response.status, response.statusText);
 
       if (!response.ok) {
         const error = await response.json();
@@ -86,15 +86,15 @@ class TransactionService {
       }
 
       const data = await response.json();
-      console.log("[TransactionService] ✅ API response data:", {
-        success: data.success,
-        dataLength: data.data?.length || 0,
-        sample: data.data?.[0] ? {
-          id: data.data[0].id,
-          type: data.data[0].type,
-          action: data.data[0].action,
-        } : null,
-      });
+      // console.log("[TransactionService] ✅ API response data:", {
+      //   success: data.success,
+      //   dataLength: data.data?.length || 0,
+      //   sample: data.data?.[0] ? {
+      //     id: data.data[0].id,
+      //     type: data.data[0].type,
+      //     action: data.data[0].action,
+      //   } : null,
+      // });
 
       return data;
     } catch (error) {

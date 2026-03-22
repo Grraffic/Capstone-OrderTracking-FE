@@ -34,19 +34,19 @@ class SocketClient {
   connect() {
     // Prevent multiple connections
     if (this.socket?.connected) {
-      console.log("🔌 Socket already connected (ID:", this.socket.id + ")");
+      // console.log("🔌 Socket already connected (ID:", this.socket.id + ")");
       return this.socket;
     }
 
     // If socket exists but is disconnected, try to reconnect
     if (this.socket && !this.socket.connected) {
-      console.log("🔌 Socket exists but disconnected, attempting to reconnect...");
+      // console.log("🔌 Socket exists but disconnected, attempting to reconnect...");
       this.socket.connect();
       return this.socket;
     }
 
     this.connectionCount++;
-    console.log(`🔌 Connecting to Socket.IO server... (Attempt #${this.connectionCount})`, SOCKET_URL);
+    // console.log(`🔌 Connecting to Socket.IO server... (Attempt #${this.connectionCount})`, SOCKET_URL);
 
     this.socket = io(SOCKET_URL, {
       transports: ["websocket", "polling"],
@@ -56,11 +56,11 @@ class SocketClient {
     });
 
     this.socket.on("connect", () => {
-      console.log("✅ Socket.IO connected:", this.socket.id);
+      // console.log("✅ Socket.IO connected:", this.socket.id);
     });
 
     this.socket.on("disconnect", (reason) => {
-      console.log("❌ Socket.IO disconnected:", reason);
+      // console.log("❌ Socket.IO disconnected:", reason);
     });
 
     this.socket.on("connect_error", (error) => {
@@ -76,11 +76,11 @@ class SocketClient {
    */
   disconnect() {
     if (this.socket) {
-      console.log("🔌 Disconnecting Socket.IO...");
+      // console.log("🔌 Disconnecting Socket.IO...");
       this.socket.disconnect();
       this.socket = null;
       this.listeners.clear();
-      console.log("✅ Socket.IO disconnected and cleaned up");
+      // console.log("✅ Socket.IO disconnected and cleaned up");
     }
   }
 
@@ -102,7 +102,7 @@ class SocketClient {
     this.listeners.get(event).push(callback);
 
     this.socket.on(event, callback);
-    console.log(`👂 Listening to event: ${event}`);
+    // console.log(`👂 Listening to event: ${event}`);
   }
 
   /**
@@ -129,7 +129,7 @@ class SocketClient {
       this.listeners.delete(event);
     }
 
-    console.log(`🔇 Stopped listening to event: ${event}`);
+    // console.log(`🔇 Stopped listening to event: ${event}`);
   }
 
   /**
@@ -144,7 +144,7 @@ class SocketClient {
     }
 
     this.socket.emit(event, data);
-    console.log(`📤 Emitted event: ${event}`, data);
+    // console.log(`📤 Emitted event: ${event}`, data);
   }
 
   /**

@@ -18,6 +18,8 @@ const RecentAudits = ({ transactions = [] }) => {
     switch (status) {
       case "Items":
         return "text-blue-600 hover:text-blue-700";
+      case "Order":
+        return "text-gray-600 hover:text-gray-700";
       case "Purchases":
         return "text-green-600 hover:text-green-700";
       case "Returns":

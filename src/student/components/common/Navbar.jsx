@@ -272,9 +272,6 @@ const Navbar = () => {
                       console.error("Image error:", e);
                       e.target.style.display = 'none';
                     }}
-                    onLoad={() => {
-                      console.log("✅ Profile image loaded successfully:", userPhoto);
-                    }}
                   />
                 ) : (
                   <div className="w-10 h-10 bg-[#003363] rounded-full flex items-center justify-center text-white font-semibold text-sm">
@@ -390,9 +387,6 @@ const Navbar = () => {
                     onError={(e) => {
                       console.error("❌ Failed to load profile image (mobile):", userPhoto);
                       e.target.style.display = 'none';
-                    }}
-                    onLoad={() => {
-                      console.log("✅ Profile image loaded successfully (mobile):", userPhoto);
                     }}
                   />
                 ) : (

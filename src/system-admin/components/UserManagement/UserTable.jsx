@@ -7,7 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
  * 
  * Displays users in a table format with all columns from the design
  */
-const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser, onDeleteUser, onToggleActive }) => {
+const UserTable = ({ users, onEditUser, onDeleteUser, onToggleActive }) => {
   const { userRole } = useAuth();
   // Hide delete button if the logged-in user is a system admin
   const isSystemAdmin = userRole === "system_admin";
@@ -70,15 +70,7 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
       <table className="w-full border-separate border-spacing-y-2">
         <thead>
           <tr className="bg-[#003363]">
-            <th className="px-4 py-3 text-left rounded-tl-lg">
-              <input
-                type="checkbox"
-                checked={selectedUsers.length === users.length && users.length > 0}
-                onChange={onSelectAll}
-                className="rounded border-gray-300 text-white focus:ring-white"
-              />
-            </th>
-            <th className="px-4 py-3 text-left text-sm font-semibold text-white">Name</th>
+            <th className="px-4 py-3 text-left text-sm font-semibold text-white rounded-tl-lg">Name</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Username</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">Email</th>
             <th className="px-4 py-3 text-left text-sm font-semibold text-white">User Role</th>
@@ -90,7 +82,7 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
         <tbody>
           {users.length === 0 ? (
             <tr>
-              <td colSpan="8" className="px-4 py-8 text-center text-gray-500 bg-white border border-gray-200 rounded-lg">
+              <td colSpan="7" className="px-4 py-8 text-center text-gray-500 bg-white border border-gray-200 rounded-lg">
                 No users found
               </td>
             </tr>
@@ -100,15 +92,7 @@ const UserTable = ({ users, selectedUsers, onSelectUser, onSelectAll, onEditUser
                 key={user.id}
                 className="bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
               >
-                <td className="px-4 py-4 rounded-l-lg">
-                  <input
-                    type="checkbox"
-                    checked={selectedUsers.includes(user.id)}
-                    onChange={() => onSelectUser(user.id)}
-                    className="rounded border-gray-300 text-[#0C2340] focus:ring-[#0C2340]"
-                  />
-                </td>
-                <td className="px-4 py-4 text-sm text-[#003363]">{user.name || "N/A"}</td>
+                <td className="px-4 py-4 text-sm text-[#003363] rounded-l-lg">{user.name || "N/A"}</td>
                 <td className="px-4 py-4 text-sm text-[#003363]">{getUsername(user.email)}</td>
                 <td className="px-4 py-4 text-sm text-[#003363] max-w-[300px] break-words leading-tight line-clamp-2">{user.email || "N/A"}</td>
                 <td className="px-4 py-4 text-sm text-[#003363]">{getRoleDisplay(user.role)}</td>

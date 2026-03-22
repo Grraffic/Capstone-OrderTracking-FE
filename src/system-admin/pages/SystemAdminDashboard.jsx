@@ -23,7 +23,6 @@ const SystemAdminDashboard = () => {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
   const [statusFilter, setStatusFilter] = useState("All Status");
-  const [selectedUsers, setSelectedUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -180,22 +179,6 @@ const SystemAdminDashboard = () => {
   const handleGoToPage = (page) => {
     if (page >= 1 && page <= pagination.totalPages && !loading) {
       setCurrentPage(page);
-    }
-  };
-
-  const handleSelectUser = (userId) => {
-    setSelectedUsers((prev) =>
-      prev.includes(userId)
-        ? prev.filter((id) => id !== userId)
-        : [...prev, userId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    if (selectedUsers.length === users.length) {
-      setSelectedUsers([]);
-    } else {
-      setSelectedUsers(users.map((user) => user.id));
     }
   };
 
@@ -435,9 +418,6 @@ const SystemAdminDashboard = () => {
                 <div className={loading ? "opacity-50 pointer-events-none" : ""}>
                   <UserTable
                     users={users}
-                    selectedUsers={selectedUsers}
-                    onSelectUser={handleSelectUser}
-                    onSelectAll={handleSelectAll}
                     onEditUser={handleEditUser}
                     onDeleteUser={handleDeleteUser}
                     onToggleActive={handleToggleActive}

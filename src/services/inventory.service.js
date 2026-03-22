@@ -29,8 +29,10 @@ class InventoryService {
       if (filters.educationLevel) {
         queryParams.append("educationLevel", filters.educationLevel);
       }
-      if (filters.search) {
-        queryParams.append("search", filters.search);
+      const searchTrimmed =
+        filters.search != null ? String(filters.search).trim() : "";
+      if (searchTrimmed) {
+        queryParams.append("search", searchTrimmed);
       }
 
       const url = `${API_BASE_URL}/items/inventory-report${

@@ -87,24 +87,28 @@ const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageCh
       return metadata.item_name;
     }
     // Fallback to parsing action string
-    const itemMatch = action.match(/(?:ITEM CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)\s+(.+)$/i);
+    const itemMatch = action.match(
+      /(?:ITEM CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)\s+(.+)$/i,
+    );
     return itemMatch ? itemMatch[1].trim() : "";
   };
 
   // Helper function to extract action prefix
   const extractActionPrefix = (action) => {
-    // Extract action prefix: "ITEM CREATED", "PURCHASE RECORDED", etc.
-    const prefixMatch = action.match(/^(ITEM CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)/i);
+    const prefixMatch = action.match(
+      /^(ITEM CREATED|ORDER CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)/i,
+    );
     return prefixMatch ? prefixMatch[1] : action;
   };
 
   // Helper function to get status color based on transaction type
   const getStatusColor = (status) => {
     const statusMap = {
-      "Items": "text-blue-600",
-      "Purchases": "text-green-600",
-      "Returns": "text-red-600",
-      "Releases": "text-green-600",
+      Items: "text-blue-600",
+      Order: "text-gray-600",
+      Purchases: "text-green-600",
+      Returns: "text-red-600",
+      Releases: "text-green-600",
     };
     return statusMap[status] || "text-gray-600";
   };
@@ -112,10 +116,11 @@ const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageCh
   // Helper function to get indicator color (left border/icon color)
   const getIndicatorColor = (status) => {
     const colorMap = {
-      "Items": "bg-blue-500",
-      "Purchases": "bg-green-500",
-      "Returns": "bg-red-500",
-      "Releases": "bg-green-500",
+      Items: "bg-blue-500",
+      Order: "bg-gray-500",
+      Purchases: "bg-green-500",
+      Returns: "bg-red-500",
+      Releases: "bg-green-500",
     };
     return colorMap[status] || "bg-gray-500";
   };
@@ -125,7 +130,11 @@ const TransactionsTable = ({ transactions, currentPage = 1, pagination, onPageCh
     const { action, metadata, details } = transaction;
     const meta = metadata || {};
 
-    // ITEM CREATED
+    if (action.startsWith("ORDER CREATED")) {
+      return <span>{details}</span>;
+    }
+
+    // ITEM CREATED (inventory catalog)
     if (action.startsWith("ITEM CREATED")) {
       const beginningInv = meta.beginning_inventory || 0;
       const price = meta.price || meta.unit_price || 0;
