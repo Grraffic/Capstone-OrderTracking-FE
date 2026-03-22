@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMaintenance } from "../context/MaintenanceContext";
 import MaintenanceOverlay from "../components/common/MaintenanceOverlay";
 import InactiveUserOverlay from "../components/common/InactiveUserOverlay";
@@ -19,38 +19,48 @@ function parseJwt(token) {
 
 const AuthCallback = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { isActive, message, loading: maintenanceLoading } = useMaintenance();
   const [processing, setProcessing] = useState(true);
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    const error = params.get("error");
-    const email = params.get("email");
+  const error = searchParams.get("error");
+  const email = searchParams.get("email");
+  const token = searchParams.get("token");
 
-    if (error) {
+  useEffect(() => {
+    const params = searchParams;
+    const tokenParam = params.get("token");
+    const errorParam = params.get("error");
+    const emailParam = params.get("email");
+
+    if (errorParam) {
       // Handle account_inactive error - show overlay instead of redirecting
-      if (error === "account_inactive") {
+      if (errorParam === "account_inactive") {
+        try {
+          localStorage.removeItem("authToken");
+        } catch (_) {
+          /* ignore */
+        }
         setProcessing(false);
         // Don't navigate, show inactive user overlay instead
         return;
       }
       
-      // Show a friendly error and redirect to login for other errors
-      const message =
-        error === "domain_not_allowed"
-          ? `Your email ${
-              typeof email === "object"
-                ? email.email || email.value || JSON.stringify(email)
-                : email || ""
-            } is not allowed.\nStudents must use @student.laverdad.edu.ph and admins must use @laverdad.edu.ph (or the approved admin email on file).`
-          : "Authentication error";
-      // Use alert for now; app can replace with modal/toast
-      window.alert(message);
-      navigate("/login", { replace: true });
+      // Send user back to login with query params — LoginPage shows an inline banner
+      // (avoids window.alert popping on every repeated OAuth attempt).
+      {
+        const next = new URLSearchParams();
+        next.set("error", errorParam);
+        const rawEmail =
+          typeof emailParam === "object" && emailParam !== null
+            ? emailParam.email || emailParam.value || ""
+            : emailParam || "";
+        if (rawEmail) next.set("email", String(rawEmail));
+        navigate(`/login?${next.toString()}`, { replace: true });
+      }
       return;
     }
-    if (!token) {
+    if (!tokenParam) {
       // Nothing to do
       navigate("/login", { replace: true });
       return;
@@ -63,8 +73,8 @@ const AuthCallback = () => {
 
     // Store token and redirect based on role in JWT
     try {
-      localStorage.setItem("authToken", token);
-      const payload = parseJwt(token);
+      localStorage.setItem("authToken", tokenParam);
+      const payload = parseJwt(tokenParam);
       const role = payload?.role;
 
       // Block students if maintenance is active
@@ -101,13 +111,7 @@ const AuthCallback = () => {
       navigate("/login", { replace: true });
       setProcessing(false);
     }
-  }, [navigate, isActive, maintenanceLoading]);
-
-  // Get params for rendering overlays
-  const params = new URLSearchParams(window.location.search);
-  const error = params.get("error");
-  const email = params.get("email");
-  const token = params.get("token");
+  }, [navigate, isActive, maintenanceLoading, searchParams]);
 
   // Show inactive user overlay if account is inactive
   if (error === "account_inactive") {

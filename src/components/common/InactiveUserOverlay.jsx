@@ -106,8 +106,15 @@ const InactiveUserOverlay = ({ userName, email }) => {
             >
               <span>Return to Home</span>
             </Link>
+            <Link
+              to="/login"
+              replace
+              className="inline-flex items-center justify-center gap-2 text-sm font-medium text-[#0C2340] hover:text-[#e68b00] py-2 transition-colors"
+            >
+              Back to sign in
+            </Link>
             <p className="text-xs text-gray-500">
-              You can return to the home page, but you won't be able to access your account until it's reactivated.
+              If your account is still deactivated, signing in again will show this message until an administrator reactivates your account.
             </p>
           </div>
         </div>

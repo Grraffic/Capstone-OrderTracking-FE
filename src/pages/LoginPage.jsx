@@ -1,6 +1,7 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useMemo } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
+import { AlertCircle, X } from "lucide-react";
 import { useLogin } from "../hooks/useLogin";
 import { useLoginRedirect } from "../hooks/useLoginRedirect";
 import { useAuth } from "../context/AuthContext";
@@ -8,10 +9,29 @@ import { useMaintenance } from "../context/MaintenanceContext";
 import MaintenanceOverlay from "../components/common/MaintenanceOverlay";
 
 export default function LoginPage() {
-  // Extract business logic into hooks
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { loading, error, handleGoogleLogin } = useLogin();
   const { isActive, message, loading: maintenanceLoading } = useMaintenance();
+
+  const urlAuthError = searchParams.get("error");
+  const urlAuthEmail = searchParams.get("email");
+
+  const oauthErrorBannerText = useMemo(() => {
+    if (!urlAuthError) return null;
+    if (urlAuthError === "domain_not_allowed") {
+      const em = urlAuthEmail || "";
+      return `Your email ${em} is not allowed. Students must use @student.laverdad.edu.ph and admins must use @laverdad.edu.ph (or the approved admin email on file).`;
+    }
+    return "Authentication error. Please try again or contact support if this continues.";
+  }, [urlAuthError, urlAuthEmail]);
+
+  const dismissOauthErrorBanner = () => {
+    const next = new URLSearchParams(searchParams);
+    next.delete("error");
+    next.delete("email");
+    setSearchParams(next, { replace: true });
+  };
 
   // Handle redirect after login
   useLoginRedirect(user);
@@ -31,12 +51,8 @@ export default function LoginPage() {
   // Show maintenance overlay if maintenance is active
   // This blocks all login attempts during maintenance
   if (isActive) {
-    console.log("🚫 Maintenance mode is active, blocking login", { isActive, message, maintenanceLoading });
     return <MaintenanceOverlay message={message} />;
   }
-  
-  // Debug logging
-  console.log("🔓 Login page - Maintenance status:", { isActive, message, maintenanceLoading });
 
   return (
     <div className="bg-[#fefefe] min-h-screen w-full overflow-hidden flex items-center justify-center px-2">
@@ -94,8 +110,33 @@ export default function LoginPage() {
             <span className="transform rotate-180 mr-2">→</span>
             Back
           </Link>
+
+          {oauthErrorBannerText && (
+            <div
+              role="alert"
+              className="mx-3 sm:mx-6 md:mx-8 mt-14 sm:mt-16 md:mt-16 mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-left text-sm text-red-900 sm:text-[0.95rem]"
+            >
+              <div className="flex gap-2">
+                <AlertCircle className="h-5 w-5 flex-shrink-0 text-red-600 mt-0.5" aria-hidden />
+                <p className="flex-1 leading-snug pr-1">{oauthErrorBannerText}</p>
+                <button
+                  type="button"
+                  onClick={dismissOauthErrorBanner}
+                  className="flex-shrink-0 rounded p-1 text-red-700 hover:bg-red-100"
+                  aria-label="Dismiss message"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Welcome Text */}
-          <div className="flex-1 flex flex-col justify-center items-center mt-2 mb-2 sm:mt-5 sm:mb-2 md:mt-8 md:mb-2">
+          <div
+            className={`flex-1 flex flex-col justify-center items-center mt-2 mb-2 sm:mt-5 sm:mb-2 md:mt-8 md:mb-2 ${
+              oauthErrorBannerText ? "mt-1 sm:mt-2" : ""
+            }`}
+          >
             <h2
               className="
       text-[1.45rem] sm:text-[1.65rem] md:text-[2rem] lg:text-[2.7rem]

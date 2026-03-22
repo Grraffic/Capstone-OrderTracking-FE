@@ -50,7 +50,22 @@ export const AuthProvider = ({ children }) => {
           // console.error("Error parsing URL parameters:", urlError);
           urlParams = new URLSearchParams();
         }
-        
+
+        // Deactivated account: OAuth redirects here with ?error=account_inactive.
+        // Clear any stale session and skip getProfile so every login attempt shows the same screen
+        // without briefly treating the user as logged in.
+        if (urlParams.get("error") === "account_inactive") {
+          try {
+            localStorage.removeItem("authToken");
+          } catch (_) {
+            /* ignore */
+          }
+          setUser(null);
+          setUserRole(null);
+          setLoading(false);
+          return;
+        }
+
         const tokenFromUrl = urlParams.get("token");
         if (tokenFromUrl) {
           try {
