@@ -55,6 +55,9 @@ const Inventory = () => {
   defaultEndDate.setHours(23, 59, 59, 999);
   const [startDate, setStartDate] = useState(defaultStartDate);
   const [endDate, setEndDate] = useState(defaultEndDate);
+  // Inventory page always works within a selected date window (default: this year),
+  // so date-aware cost formulas should be active whenever both bounds exist.
+  const isInventoryDateFilterApplied = Boolean(startDate && endDate);
 
   // Inventory data state
   const [inventoryData, setInventoryData] = useState([]);
@@ -633,6 +636,12 @@ const Inventory = () => {
             available: available, // Calculated: Ending Inventory - Unreleased
             endingInventory: endingInventory, // Calculated: Beginning Inventory + Purchases - Released + Returns
             unitPrice: item.unit_price || 0,
+            purchaseUnitPrice:
+              item.purchase_unit_price != null
+                ? Number(item.purchase_unit_price)
+                : item.unit_price != null
+                ? Number(item.unit_price)
+                : 0,
             unitPriceBeginning: item.unit_price_beginning ?? item.unit_price ?? 0,
             price: item.price != null ? Number(item.price) : undefined,
             totalAmount: item.total_amount || 0,
@@ -1473,6 +1482,7 @@ const Inventory = () => {
             onSetReorderPointClick={() => setIsSetReorderPointModalOpen(true)}
             inventoryData={paginatedInventoryData}
             allInventoryData={inventoryData}
+            isDateFilterActive={isInventoryDateFilterApplied}
             loading={loading}
           />
         )}

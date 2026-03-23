@@ -10,7 +10,7 @@ import React from "react";
  * - While beginning inventory has stock: show beginning-inventory unit price (e.g. 110).
  * - When beginning inventory runs out (0): show purchase unit price. Total Amount remains FIFO (beg×begPrice + purch×purchPrice).
  */
-const InventoryTable = ({ inventoryData, allInventoryData }) => {
+const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = false }) => {
   /**
    * Display unit price for the row using FIFO (First In, First Out).
    * - If beginning inventory is exhausted (released >= beginningInventory): show purchase unit price.
@@ -33,10 +33,22 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
   };
 
   /**
-   * Total inventory cost per item (FIFO): use backend total_amount when available.
-   * Fallback uses proper FIFO calculation: (beginningInventory * beginningUnitPrice) + (purchases * purchasePrice)
+   * Total Amount column value.
+   * - When date filter is active: restocking spend = purchases * purchase unit price.
+   * - Otherwise: preserve legacy FIFO/back-end total_amount behavior.
    */
-  const getTotalCostPerItem = (item) => {
+  const getTotalAmountPerItem = (item) => {
+    if (isDateFilterActive) {
+      const purchases = Number(item.purchases) || 0;
+      const purchaseUnitPrice =
+        item.purchaseUnitPrice != null
+          ? Number(item.purchaseUnitPrice)
+          : item.unitPrice != null
+          ? Number(item.unitPrice)
+          : 0;
+      return purchases * purchaseUnitPrice;
+    }
+
     if (item.totalAmount != null && Number.isFinite(Number(item.totalAmount)) && Number(item.totalAmount) > 0)
       return Number(item.totalAmount);
     
@@ -50,6 +62,20 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
     return (beginningInventory * unitPriceBeginning) + (purchases * unitPrice);
   };
 
+  /**
+   * Total Inventory Cost column value.
+   * - When date filter is active: ending stock value = ending inventory * displayed unit price.
+   * - Otherwise: keep legacy valuation behavior.
+   */
+  const getTotalInventoryCostPerItem = (item) => {
+    if (isDateFilterActive) {
+      const endingInventory = Number(item.endingInventory) || 0;
+      const displayUnitPrice = Number(getDisplayUnitPrice(item)) || 0;
+      return endingInventory * displayUnitPrice;
+    }
+    return getTotalAmountPerItem(item);
+  };
+
   // Use current filtered inventory dataset so footer matches selected date range/search filters.
   const dataForTotalCost = inventoryData;
 
@@ -61,7 +87,7 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
     if (!dataForTotalCost || dataForTotalCost.length === 0) return 0;
     
     return dataForTotalCost.reduce((total, item) => {
-      const itemCost = getTotalCostPerItem(item);
+      const itemCost = getTotalInventoryCostPerItem(item);
       return total + (typeof itemCost === 'number' ? itemCost : parseFloat(itemCost) || 0);
     }, 0);
   };
@@ -164,10 +190,10 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
                   P {getDisplayUnitPrice(row)}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-[#0060BA] whitespace-nowrap">
-                  P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  P {getTotalAmountPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm font-sf-medium font-medium text-[#0060BA] whitespace-nowrap">
-                  P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  P {getTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
             ))}
@@ -266,7 +292,7 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
             <div className="mt-3 pt-3 border-t border-gray-200">
               <span className="text-xs text-gray-600">Total Amount</span>
               <p className="text-base font-sf-medium font-medium text-[#0060BA] mt-0.5">
-                P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                P {getTotalAmountPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
             </div>
           </div>
@@ -378,10 +404,10 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
                       P {getDisplayUnitPrice(row)}
                     </td>
                     <td className="px-3 py-3 text-xs text-[#0060BA] whitespace-nowrap">
-                      P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      P {getTotalAmountPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="px-3 py-3 text-xs font-sf-medium font-medium text-[#0060BA] whitespace-nowrap">
-                      P {getTotalCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      P {getTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}

@@ -26,6 +26,7 @@ const InventoryView = ({
   onSetReorderPointClick,
   inventoryData,
   allInventoryData,
+  isDateFilterActive = false,
   loading = false,
 }) => {
   // Only show skeleton on initial load when there's no data
@@ -67,7 +68,11 @@ const InventoryView = ({
             </div>
           </div>
         ) : (
-          <InventoryTable inventoryData={inventoryData} allInventoryData={allInventoryData} />
+          <InventoryTable
+            inventoryData={inventoryData}
+            allInventoryData={allInventoryData}
+            isDateFilterActive={isDateFilterActive}
+          />
         )}
       </div>
     </div>
