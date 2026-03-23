@@ -283,12 +283,75 @@ const Inventory = () => {
   };
 
   // Handle form field changes
+  const normalizeInventorySize = (size) =>
+    (size || "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s*\([^)]*\)/g, "")
+      .trim();
+
+  const findInventoryRowByItemAndVariant = useCallback(
+    (itemName, variant) => {
+      const trimmedName = (itemName || "").trim().toLowerCase();
+      if (!trimmedName) return null;
+      const trimmedVariant = (variant || "").trim();
+      const normalizedVariant = normalizeInventorySize(trimmedVariant);
+
+      return (
+        inventoryData.find((row) => {
+          const nameMatch =
+            (row.item || "").trim().toLowerCase() === trimmedName;
+          if (!nameMatch) return false;
+          if (!trimmedVariant) return true;
+          const rowSize = (row.size || "N/A").trim();
+          return (
+            normalizeInventorySize(rowSize) === normalizedVariant ||
+            rowSize.toLowerCase() === trimmedVariant.toLowerCase()
+          );
+        }) || null
+      );
+    },
+    [inventoryData]
+  );
+
+  const resolveReturnUnitPrice = useCallback(
+    (itemName, variant) => {
+      const row = findInventoryRowByItemAndVariant(itemName, variant);
+      if (!row) return "";
+      const resolvedPrice =
+        row.purchaseUnitPrice != null
+          ? Number(row.purchaseUnitPrice)
+          : row.unitPrice != null
+          ? Number(row.unitPrice)
+          : row.price != null
+          ? Number(row.price)
+          : 0;
+      return Number.isFinite(resolvedPrice) ? String(resolvedPrice) : "";
+    },
+    [findInventoryRowByItemAndVariant]
+  );
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setUpdateQuantityForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+      const nextForm = {
+        ...prev,
+        [name]: value,
+      };
+
+      const nextFieldToEdit =
+        name === "fieldToEdit" ? value : nextForm.fieldToEdit;
+
+      if (nextFieldToEdit === "return") {
+        const autoPrice = resolveReturnUnitPrice(
+          nextForm.itemName,
+          nextForm.variant
+        );
+        nextForm.unitPrice = autoPrice;
+      }
+
+      return nextForm;
+    });
   };
 
   // Socket connection for real-time updates

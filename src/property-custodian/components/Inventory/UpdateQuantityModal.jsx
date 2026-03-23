@@ -18,6 +18,7 @@ const UpdateQuantityModal = ({
   onSubmit,
 }) => {
   if (!isOpen) return null;
+  const isReturnMode = formData.fieldToEdit === "return";
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
@@ -131,9 +132,23 @@ const UpdateQuantityModal = ({
                     name="unitPrice"
                     value={formData.unitPrice}
                     onChange={onFormChange}
-                    placeholder="Enter Unit Price"
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    readOnly={isReturnMode}
+                    placeholder={
+                      isReturnMode
+                        ? "Auto-filled from current item price"
+                        : "Enter Unit Price"
+                    }
+                    className={`w-full px-3 py-2.5 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      isReturnMode
+                        ? "bg-gray-100 text-gray-600 cursor-not-allowed"
+                        : "bg-white"
+                    }`}
                   />
+                  {isReturnMode && (
+                    <p className="text-xs text-gray-500">
+                      Auto-filled based on selected item and variant.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
