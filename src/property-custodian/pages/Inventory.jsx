@@ -333,7 +333,7 @@ const Inventory = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setUpdateQuantityForm((prev) => ({
+    setUpdateQuantityForm((prev) => {
       const nextForm = {
         ...prev,
         [name]: value,
