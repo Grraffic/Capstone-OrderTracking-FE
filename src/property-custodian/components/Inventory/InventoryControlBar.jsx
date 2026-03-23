@@ -64,7 +64,7 @@ const InventoryControlBar = ({
                 backgroundSize: "1rem",
               }}
             >
-              <option value="all">Grade Level Category</option>
+              <option value="all">All Education Levels</option>
               <option value="kinder">Kindergarten</option>
               <option value="elementary">Elementary</option>
               <option value="junior">Junior High School</option>
