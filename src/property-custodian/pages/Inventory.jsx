@@ -129,6 +129,11 @@ const Inventory = () => {
     variant: "",
     reorderPoint: "",
   });
+  const getSelectedReorderPointRow = useCallback(
+    (itemName, variant) =>
+      inventoryData.find((r) => r.item === itemName && r.size === variant) || null,
+    [inventoryData]
+  );
   const [setReorderPointSaving, setSetReorderPointSaving] = useState(false);
   const [setReorderPointError, setSetReorderPointError] = useState(null);
   const [updateQuantityForm, setUpdateQuantityForm] = useState({
@@ -632,6 +637,15 @@ const Inventory = () => {
             price: item.price != null ? Number(item.price) : undefined,
             totalAmount: item.total_amount || 0,
             status: item.status,
+            // Preserve backend reorder point so Set Reorder Point modal can prefill current value.
+            reorderPoint:
+              item.reorder_point != null && item.reorder_point !== ""
+                ? Number(item.reorder_point)
+                : 0,
+            reorder_point:
+              item.reorder_point != null && item.reorder_point !== ""
+                ? Number(item.reorder_point)
+                : 0,
           };
 
           // Verify purchases were preserved during transformation
@@ -1602,8 +1616,9 @@ const Inventory = () => {
                 setSetReorderPointError(null);
                 setSetReorderPointSaving(true);
                 try {
-                  const row = inventoryData.find(
-                    (r) => r.item === setReorderPointForm.itemName && r.size === setReorderPointForm.variant
+                  const row = getSelectedReorderPointRow(
+                    setReorderPointForm.itemName,
+                    setReorderPointForm.variant
                   );
                   const itemId = row ? row.item_id || row.id : null;
                   if (!itemId) {
@@ -1640,6 +1655,7 @@ const Inventory = () => {
                         ...prev,
                         itemName: selectedValue,
                         variant: "",
+                        reorderPoint: "",
                       }));
                     }}
                     options={[...new Set(inventoryData.map((r) => r.item))]}
@@ -1652,9 +1668,24 @@ const Inventory = () => {
                   <label className="text-sm font-medium text-gray-700">Variant</label>
                   <select
                     value={setReorderPointForm.variant}
-                    onChange={(e) =>
-                      setSetReorderPointForm((prev) => ({ ...prev, variant: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      const selectedVariant = e.target.value;
+                      const selectedRow = getSelectedReorderPointRow(
+                        setReorderPointForm.itemName,
+                        selectedVariant
+                      );
+                      const currentReorderPoint =
+                        selectedRow?.reorderPoint ?? selectedRow?.reorder_point ?? "";
+                      setSetReorderPointForm((prev) => ({
+                        ...prev,
+                        variant: selectedVariant,
+                        reorderPoint:
+                          currentReorderPoint === "" ||
+                          currentReorderPoint == null
+                            ? ""
+                            : String(currentReorderPoint),
+                      }));
+                    }}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#E68B00] focus:border-transparent"
                     required
                     disabled={!setReorderPointForm.itemName}
