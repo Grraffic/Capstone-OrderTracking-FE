@@ -395,11 +395,33 @@ const Inventory = () => {
 
       if (response.success) {
         // Transform API data to match component format
-        // Sort by created_at DESC to show newest first (already sorted in backend, but ensure here too)
+        // Sort by stock priority: non-critical/high stock first, critical (<=20 / out-of-stock) last.
         const sortedData = [...response.data].sort((a, b) => {
+          const stockA =
+            Number.isFinite(Number(a.available)) && a.available != null
+              ? Number(a.available)
+              : Number(a.ending_inventory) || 0;
+          const stockB =
+            Number.isFinite(Number(b.available)) && b.available != null
+              ? Number(b.available)
+              : Number(b.ending_inventory) || 0;
+
+          const isCriticalA =
+            String(a.status || "").toLowerCase() === "out of stock" ||
+            stockA <= 20;
+          const isCriticalB =
+            String(b.status || "").toLowerCase() === "out of stock" ||
+            stockB <= 20;
+
+          // Non-critical rows first, critical rows last.
+          if (isCriticalA !== isCriticalB) return isCriticalA ? 1 : -1;
+
+          // Within each group, show highest stock first.
+          if (stockA !== stockB) return stockB - stockA;
+
           const dateA = new Date(a.created_at || 0);
           const dateB = new Date(b.created_at || 0);
-          return dateB - dateA; // Descending order (newest first)
+          return dateB - dateA; // Descending order (newest first) fallback
         });
 
         // Calculate order counts per item with date range filtering

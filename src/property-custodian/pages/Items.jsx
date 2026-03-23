@@ -412,7 +412,11 @@ const Items = () => {
               <h2 className="text-xl sm:text-2xl font-sf-semibold font-semibold text-[#0C2340]">
                 List of{" "}
                 <span className="text-[#e68b00] underline decoration-[#e68b00]/40">
-                  Items
+                  {appliedFilters.itemStatus === "archived"
+                    ? "Archives"
+                    : appliedFilters.itemStatus === "deleted"
+                    ? "Deleted Items"
+                    : "Items"}
                 </span>
               </h2>
 

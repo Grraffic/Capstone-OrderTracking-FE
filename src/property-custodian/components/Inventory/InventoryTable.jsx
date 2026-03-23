@@ -11,6 +11,18 @@ import React from "react";
  * - When beginning inventory runs out (0): show purchase unit price. Total Amount remains FIFO (beg×begPrice + purch×purchPrice).
  */
 const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = false }) => {
+  const getRowBackgroundClass = (row, index) => {
+    const effectiveStock =
+      Number.isFinite(Number(row.available)) && row.available != null
+        ? Number(row.available)
+        : Number(row.endingInventory) || 0;
+    const isCriticalStock =
+      String(row.status || "").toLowerCase() === "out of stock" ||
+      effectiveStock <= 20;
+    // Red-tinted highlight for critical stock rows (<=20, includes out-of-stock).
+    if (isCriticalStock) return "bg-[rgba(241,0,0,0.12)]";
+    return index % 2 === 0 ? "bg-[#FFF8F0]" : "bg-white";
+  };
   /**
    * Display unit price for the row using FIFO (First In, First Out).
    * - If beginning inventory is exhausted (released >= beginningInventory): show purchase unit price.
@@ -148,9 +160,10 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
             {inventoryData.map((row, index) => (
               <tr
                 key={row.id || `${row.item}-${row.size}-${row.no}`}
-                className={`${
-                  index % 2 === 0 ? "bg-[#FFF8F0]" : "bg-white"
-                } hover:bg-gray-50 transition-all duration-200 ease-in-out`}
+                className={`${getRowBackgroundClass(
+                  row,
+                  index
+                )} hover:bg-gray-50 transition-all duration-200 ease-in-out`}
               >
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-[#003363] whitespace-nowrap">
                   {row.no}
@@ -220,9 +233,10 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
         {inventoryData.map((row, index) => (
           <div
             key={row.id || `${row.item}-${row.size}-${row.no}`}
-            className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm ${
-              index % 2 === 0 ? "bg-[#FFF8F0]" : "bg-white"
-            }`}
+            className={`${getRowBackgroundClass(
+              row,
+              index
+            )} border border-gray-200 rounded-lg p-4 shadow-sm`}
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
               <div className="flex items-center gap-2">
@@ -362,9 +376,10 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
                 {inventoryData.map((row, index) => (
                   <tr
                     key={row.id || `${row.item}-${row.size}-${row.no}`}
-                    className={`${
-                      index % 2 === 0 ? "bg-[#FFF8F0]" : "bg-white"
-                    } hover:bg-gray-50 transition-all duration-200 ease-in-out`}
+                    className={`${getRowBackgroundClass(
+                      row,
+                      index
+                    )} hover:bg-gray-50 transition-all duration-200 ease-in-out`}
                   >
                     <td className="sticky left-0 z-10 px-3 py-3 text-xs text-[#003363] bg-inherit">
                       {row.no}
