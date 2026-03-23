@@ -34,6 +34,18 @@ class InventoryService {
       if (searchTrimmed) {
         queryParams.append("search", searchTrimmed);
       }
+      if (filters.startDate) {
+        const parsedStart = new Date(filters.startDate);
+        if (!Number.isNaN(parsedStart.getTime())) {
+          queryParams.append("startDate", parsedStart.toISOString());
+        }
+      }
+      if (filters.endDate) {
+        const parsedEnd = new Date(filters.endDate);
+        if (!Number.isNaN(parsedEnd.getTime())) {
+          queryParams.append("endDate", parsedEnd.toISOString());
+        }
+      }
 
       const url = `${API_BASE_URL}/items/inventory-report${
         queryParams.toString() ? `?${queryParams.toString()}` : ""

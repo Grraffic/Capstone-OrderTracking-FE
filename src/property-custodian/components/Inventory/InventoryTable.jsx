@@ -50,8 +50,8 @@ const InventoryTable = ({ inventoryData, allInventoryData }) => {
     return (beginningInventory * unitPriceBeginning) + (purchases * unitPrice);
   };
 
-  // Use all inventory (all pages) for total cost so it's easy to view in one place
-  const dataForTotalCost = allInventoryData && allInventoryData.length > 0 ? allInventoryData : inventoryData;
+  // Use current filtered inventory dataset so footer matches selected date range/search filters.
+  const dataForTotalCost = inventoryData;
 
   /**
    * Calculate total inventory cost (sum of all items across all pages)

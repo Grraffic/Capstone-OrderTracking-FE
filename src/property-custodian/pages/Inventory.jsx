@@ -331,6 +331,8 @@ const Inventory = () => {
           gradeLevelToEducationLevel[gradeLevel] ??
           (gradeLevel !== "all" ? gradeLevel : null),
         search: searchQuery.trim() ? searchQuery.trim() : null,
+        startDate: startDate || null,
+        endDate: endDate || null,
       };
 
       const response = await inventoryService.getInventoryReport(filters);
