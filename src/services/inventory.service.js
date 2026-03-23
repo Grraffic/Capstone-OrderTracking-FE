@@ -119,7 +119,14 @@ class InventoryService {
    * @param {number} [unitPrice] - Optional unit price for transaction metadata
    * @returns {Promise} Result with success and message
    */
-  async recordReturn(itemId, quantity, size = null, unitPrice = null) {
+  async recordReturn(
+    itemId,
+    quantity,
+    size = null,
+    unitPrice = null,
+    remarks = null,
+    legacyReturn = false
+  ) {
     try {
       const response = await fetch(`${API_BASE_URL}/items/${itemId}/record-return`, {
         method: "POST",
@@ -128,7 +135,7 @@ class InventoryService {
           ...this.getAuthHeaders(),
         },
         credentials: "include",
-        body: JSON.stringify({ quantity, size, unitPrice }),
+        body: JSON.stringify({ quantity, size, unitPrice, remarks, legacyReturn }),
       });
 
       if (!response.ok) {
@@ -139,6 +146,39 @@ class InventoryService {
       return await response.json();
     } catch (error) {
       console.error("Record return error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Strict release-history precheck for return validation.
+   * @param {string} itemId - Item ID
+   * @param {string|null} size - Optional variant/size
+   * @returns {Promise<{success:boolean,hasRecordedRelease:boolean,releasedQty:number}>}
+   */
+  async checkReturnReleaseHistory(itemId, size = null) {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/items/${itemId}/return-release-check`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...this.getAuthHeaders(),
+          },
+          credentials: "include",
+          body: JSON.stringify({ size }),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to check release history");
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Check return release history error:", error);
       throw error;
     }
   }

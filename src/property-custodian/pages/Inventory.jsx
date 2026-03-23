@@ -145,9 +145,25 @@ const Inventory = () => {
     quantity: "",
     variant: "",
     unitPrice: "",
+    remarks: "",
+    noReleaseAcknowledged: false,
+  });
+  const [returnReleaseCheck, setReturnReleaseCheck] = useState({
+    loading: false,
+    hasRecordedRelease: true,
+    releasedQty: 0,
+    itemId: null,
+    variant: "",
   });
 
   // Handle Update Quantity form submission
+  const normalizeInventorySize = (size) =>
+    (size || "")
+      .toLowerCase()
+      .trim()
+      .replace(/\s*\([^)]*\)/g, "")
+      .trim();
+
   const handleUpdateQuantity = async () => {
     const form = updateQuantityForm;
     if (form.fieldToEdit === "purchases") {
@@ -208,6 +224,15 @@ const Inventory = () => {
             quantity: "",
             variant: "",
             unitPrice: "",
+            remarks: "",
+            noReleaseAcknowledged: false,
+          });
+          setReturnReleaseCheck({
+            loading: false,
+            hasRecordedRelease: true,
+            releasedQty: 0,
+            itemId: null,
+            variant: "",
           });
           fetchInventoryData();
           setTransactionRefreshKey((prev) => prev + 1);
@@ -232,6 +257,7 @@ const Inventory = () => {
       const variant = (form.variant || "").trim().toLowerCase();
       const sizeForApi = variant ? form.variant : null;
       const unitPrice = form.unitPrice ? Number(form.unitPrice) : null;
+      const remarks = (form.remarks || "").trim();
 
       const normalizeSize = (s) => (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)/g, "").trim();
       const match = inventoryData.find((row) => {
@@ -246,12 +272,46 @@ const Inventory = () => {
         return;
       }
 
+      const precheckMatchesSelection =
+        returnReleaseCheck.itemId &&
+        String(returnReleaseCheck.itemId) === String(match.item_id) &&
+        normalizeInventorySize(returnReleaseCheck.variant || "") ===
+          normalizeInventorySize(form.variant || "") &&
+        !returnReleaseCheck.loading;
+
+      const strictCheckResult = precheckMatchesSelection
+        ? {
+            hasRecordedRelease: returnReleaseCheck.hasRecordedRelease,
+            releasedQty: returnReleaseCheck.releasedQty,
+          }
+        : await runStrictReleaseCheck(match.item_id, form.variant || null);
+
+      const hasRecordedRelease = Boolean(strictCheckResult.hasRecordedRelease);
+
+      if (!hasRecordedRelease && !remarks) {
+        alert("Remarks is required when no recorded releases exist for this item.");
+        return;
+      }
+
+      if (!hasRecordedRelease && !form.noReleaseAcknowledged) {
+        const shouldProceed = window.confirm(
+          "Warning: No recorded releases for this item. Proceed with return?"
+        );
+        if (!shouldProceed) return;
+        setUpdateQuantityForm((prev) => ({
+          ...prev,
+          noReleaseAcknowledged: true,
+        }));
+      }
+
       try {
         const result = await inventoryService.recordReturn(
           match.item_id,
           quantity,
           sizeForApi,
-          unitPrice
+          unitPrice,
+          remarks || null,
+          !hasRecordedRelease
         );
         if (result?.success) {
           setIsUpdateQuantityModalOpen(false);
@@ -261,6 +321,15 @@ const Inventory = () => {
             quantity: "",
             variant: "",
             unitPrice: "",
+            remarks: "",
+            noReleaseAcknowledged: false,
+          });
+          setReturnReleaseCheck({
+            loading: false,
+            hasRecordedRelease: true,
+            releasedQty: 0,
+            itemId: null,
+            variant: "",
           });
           fetchInventoryData();
           setTransactionRefreshKey((prev) => prev + 1);
@@ -279,17 +348,19 @@ const Inventory = () => {
       quantity: "",
       variant: "",
       unitPrice: "",
+      remarks: "",
+      noReleaseAcknowledged: false,
+    });
+    setReturnReleaseCheck({
+      loading: false,
+      hasRecordedRelease: true,
+      releasedQty: 0,
+      itemId: null,
+      variant: "",
     });
   };
 
   // Handle form field changes
-  const normalizeInventorySize = (size) =>
-    (size || "")
-      .toLowerCase()
-      .trim()
-      .replace(/\s*\([^)]*\)/g, "")
-      .trim();
-
   const findInventoryRowByItemAndVariant = useCallback(
     (itemName, variant) => {
       const trimmedName = (itemName || "").trim().toLowerCase();
@@ -331,6 +402,88 @@ const Inventory = () => {
     [findInventoryRowByItemAndVariant]
   );
 
+  const runStrictReleaseCheck = useCallback(async (itemId, variant) => {
+    try {
+      const response = await inventoryService.checkReturnReleaseHistory(
+        itemId,
+        variant || null
+      );
+      return {
+        hasRecordedRelease: Boolean(response?.hasRecordedRelease),
+        releasedQty: Number(response?.releasedQty) || 0,
+      };
+    } catch (error) {
+      console.error("Strict release check failed:", error);
+      // Fail-open to avoid blocking workflow during transient API errors.
+      return { hasRecordedRelease: true, releasedQty: 0 };
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadReturnReleaseCheck = async () => {
+      if (!isUpdateQuantityModalOpen || updateQuantityForm.fieldToEdit !== "return") {
+        setReturnReleaseCheck({
+          loading: false,
+          hasRecordedRelease: true,
+          releasedQty: 0,
+          itemId: null,
+          variant: "",
+        });
+        return;
+      }
+
+      const selectedRow = findInventoryRowByItemAndVariant(
+        updateQuantityForm.itemName,
+        updateQuantityForm.variant
+      );
+      if (!selectedRow?.item_id) {
+        setReturnReleaseCheck({
+          loading: false,
+          hasRecordedRelease: true,
+          releasedQty: 0,
+          itemId: null,
+          variant: updateQuantityForm.variant || "",
+        });
+        return;
+      }
+
+      setReturnReleaseCheck((prev) => ({
+        ...prev,
+        loading: true,
+        itemId: selectedRow.item_id,
+        variant: updateQuantityForm.variant || "",
+      }));
+
+      const result = await runStrictReleaseCheck(
+        selectedRow.item_id,
+        updateQuantityForm.variant || null
+      );
+      if (cancelled) return;
+
+      setReturnReleaseCheck({
+        loading: false,
+        hasRecordedRelease: result.hasRecordedRelease,
+        releasedQty: result.releasedQty,
+        itemId: selectedRow.item_id,
+        variant: updateQuantityForm.variant || "",
+      });
+    };
+
+    loadReturnReleaseCheck();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    isUpdateQuantityModalOpen,
+    updateQuantityForm.fieldToEdit,
+    updateQuantityForm.itemName,
+    updateQuantityForm.variant,
+    findInventoryRowByItemAndVariant,
+    runStrictReleaseCheck,
+  ]);
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setUpdateQuantityForm((prev) => {
@@ -348,11 +501,75 @@ const Inventory = () => {
           nextForm.variant
         );
         nextForm.unitPrice = autoPrice;
+        if (name === "itemName" || name === "variant" || name === "fieldToEdit") {
+          nextForm.noReleaseAcknowledged = false;
+        }
+      } else if (name === "fieldToEdit") {
+        nextForm.remarks = "";
+        nextForm.noReleaseAcknowledged = false;
       }
 
       return nextForm;
     });
   };
+
+  const updateQuantityItemOptions = useMemo(
+    () => [...new Set((inventoryData || []).map((row) => row.item).filter(Boolean))].sort(),
+    [inventoryData]
+  );
+
+  const updateQuantityVariantOptions = useMemo(() => {
+    const selectedItem = (updateQuantityForm.itemName || "").trim();
+    if (!selectedItem) return [];
+    return [
+      ...new Set(
+        (inventoryData || [])
+          .filter((row) => (row.item || "").trim() === selectedItem)
+          .map((row) => row.size)
+          .filter(Boolean)
+      ),
+    ].sort();
+  }, [inventoryData, updateQuantityForm.itemName]);
+
+  const handleUpdateQuantityItemChange = useCallback(
+    (selectedValue) => {
+      setUpdateQuantityForm((prev) => {
+        const nextForm = {
+          ...prev,
+          itemName: selectedValue || "",
+          variant: "",
+          remarks: "",
+          noReleaseAcknowledged: false,
+        };
+        if (nextForm.fieldToEdit === "return") {
+          nextForm.unitPrice = resolveReturnUnitPrice(nextForm.itemName, "");
+        }
+        return nextForm;
+      });
+    },
+    [resolveReturnUnitPrice]
+  );
+
+  const handleUpdateQuantityVariantChange = useCallback(
+    (selectedVariant) => {
+      setUpdateQuantityForm((prev) => {
+        const nextForm = {
+          ...prev,
+          variant: selectedVariant || "",
+          remarks: prev.fieldToEdit === "return" ? prev.remarks : "",
+          noReleaseAcknowledged: false,
+        };
+        if (nextForm.fieldToEdit === "return") {
+          nextForm.unitPrice = resolveReturnUnitPrice(
+            nextForm.itemName,
+            nextForm.variant
+          );
+        }
+        return nextForm;
+      });
+    },
+    [resolveReturnUnitPrice]
+  );
 
   // Socket connection for real-time updates
   const { on, off, isConnected } = useSocket();
@@ -1661,6 +1878,12 @@ const Inventory = () => {
       <UpdateQuantityModal
         isOpen={isUpdateQuantityModalOpen}
         formData={updateQuantityForm}
+        itemOptions={updateQuantityItemOptions}
+        variantOptions={updateQuantityVariantOptions}
+        hasRecordedRelease={returnReleaseCheck.hasRecordedRelease}
+        releaseCheckLoading={returnReleaseCheck.loading}
+        onItemNameChange={handleUpdateQuantityItemChange}
+        onVariantChange={handleUpdateQuantityVariantChange}
         onFormChange={handleFormChange}
         onClose={() => {
           setIsUpdateQuantityModalOpen(false);
@@ -1670,6 +1893,15 @@ const Inventory = () => {
             quantity: "",
             variant: "",
             unitPrice: "",
+            remarks: "",
+            noReleaseAcknowledged: false,
+          });
+          setReturnReleaseCheck({
+            loading: false,
+            hasRecordedRelease: true,
+            releasedQty: 0,
+            itemId: null,
+            variant: "",
           });
         }}
         onSubmit={handleUpdateQuantity}

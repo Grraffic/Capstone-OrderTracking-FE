@@ -1,5 +1,6 @@
 import React from "react";
 import { X, ChevronDown } from "lucide-react";
+import SearchableSelect from "../common/SearchableSelect";
 
 /**
  * UpdateQuantityModal Component
@@ -13,6 +14,12 @@ import { X, ChevronDown } from "lucide-react";
 const UpdateQuantityModal = ({
   isOpen,
   formData,
+  itemOptions = [],
+  variantOptions = [],
+  hasRecordedRelease = true,
+  releaseCheckLoading = false,
+  onItemNameChange,
+  onVariantChange,
   onFormChange,
   onClose,
   onSubmit,
@@ -59,12 +66,18 @@ const UpdateQuantityModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Item Name
                   </label>
-                  <input
-                    type="text"
-                    name="itemName"
+                  <SearchableSelect
                     value={formData.itemName}
-                    onChange={onFormChange}
-                    placeholder="Enter Item Name"
+                    onChange={(value) => {
+                      if (typeof onItemNameChange === "function") {
+                        onItemNameChange(value);
+                      } else {
+                        onFormChange({ target: { name: "itemName", value } });
+                      }
+                    }}
+                    options={itemOptions}
+                    placeholder="Select Item Name"
+                    required
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -72,15 +85,27 @@ const UpdateQuantityModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Variant
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="variant"
                     value={formData.variant}
-                    onChange={onFormChange}
-                    placeholder="Enter Variant
-                    "
+                    onChange={(e) => {
+                      if (typeof onVariantChange === "function") {
+                        onVariantChange(e.target.value);
+                      } else {
+                        onFormChange(e);
+                      }
+                    }}
                     className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                    disabled={!formData.itemName}
+                    required
+                  >
+                    <option value="">Choose Variant</option>
+                    {variantOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
@@ -151,6 +176,40 @@ const UpdateQuantityModal = ({
                   )}
                 </div>
               </div>
+
+              {isReturnMode && !releaseCheckLoading && !hasRecordedRelease && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2.5">
+                  <p className="text-xs sm:text-sm text-amber-800">
+                    Warning: No recorded releases for this item. Add a legacy
+                    return remark before saving.
+                  </p>
+                </div>
+              )}
+
+              {isReturnMode && releaseCheckLoading && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+                  <p className="text-xs sm:text-sm text-blue-700">
+                    Checking release history...
+                  </p>
+                </div>
+              )}
+
+              {isReturnMode && !releaseCheckLoading && !hasRecordedRelease && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-gray-700">
+                    Remarks <span className="text-red-600">*</span>
+                  </label>
+                  <textarea
+                    name="remarks"
+                    value={formData.remarks || ""}
+                    onChange={onFormChange}
+                    placeholder="Enter reason (e.g., Legacy Return)"
+                    rows={3}
+                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    required
+                  />
+                </div>
+              )}
             </div>
           </div>
         </form>
