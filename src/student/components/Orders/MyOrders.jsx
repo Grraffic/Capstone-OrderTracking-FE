@@ -540,32 +540,6 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
           </div>
         </div>
 
-        {/* Validity: X days remaining / Expires today / Expired */}
-        {!isOrderClaimed && remainingDays !== null && (
-          <div
-            className={`text-center mb-4 sm:mb-6 text-sm font-medium ${
-              remainingDays < 0
-                ? "text-red-600"
-                : remainingDays === 0
-                ? "text-amber-600"
-                : "text-[#003363]"
-            }`}
-          >
-            {remainingDays > 0 && (
-              <span>
-                {remainingDays} day
-                {remainingDays !== 1 ? "s" : ""} remaining
-              </span>
-            )}
-            {remainingDays === 0 && <span>Valid until end of today</span>}
-            {remainingDays < 0 && (
-              <span>
-                This QR code has expired. Open this order again to get a new code.
-              </span>
-            )}
-          </div>
-        )}
-
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
           <button
@@ -656,14 +630,35 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
           </button>
         </div>
 
+        {/* Expiry text: bottom-right, under action buttons */}
+        {!isOrderClaimed && remainingDays !== null && (
+          <div className="mb-4 sm:mb-6 flex justify-end">
+            {remainingDays >= 0 ? (
+              <span
+                className="text-sm font-medium italic"
+                style={{ color: "rgba(241, 0, 0, 0.6)" }}
+              >
+                Expires in ({remainingDays}) days
+              </span>
+            ) : (
+              <span className="text-sm font-medium text-red-600">
+                Expired
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Disclaimer */}
         <div className="bg-red-50 border-l-4 border-red-500 p-3 sm:p-4 rounded">
           <p className="text-red-600 font-bold text-xs sm:text-sm mb-2">
             Disclaimer:
           </p>
-          <p className="text-[10px] sm:text-xs text-gray-700 leading-relaxed">
+          <p
+            className="text-[10px] sm:text-xs leading-relaxed"
+            style={{ color: "rgba(241, 0, 0, 0.6)" }}
+          >
             This QR code is valid only until{" "}
-            <span className="font-semibold text-[#003363]">
+            <span className="font-semibold" style={{ color: "rgba(241, 0, 0, 0.6)" }}>
               {(() => {
                 try {
                   const issued = new Date(issuedAt);
@@ -685,11 +680,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
               })()}
             </span>{" "}
             for claiming{" "}
-            <span className="font-semibold text-[#003363]">
+            <span className="font-semibold" style={{ color: "#007AFF" }}>
               Order #{minimalQRData.orderNumber} — {itemNames} ({courseYearLevel})
             </span>
-            , issued to student{" "}
-            <span className="font-semibold text-[#003363]">
+            , <span className="font-semibold" style={{ color: "#007AFF" }}>issued to student</span>{" "}
+            <span className="font-semibold" style={{ color: "#007AFF" }}>
               {minimalQRData.studentId}
             </span>
             .{" "}
