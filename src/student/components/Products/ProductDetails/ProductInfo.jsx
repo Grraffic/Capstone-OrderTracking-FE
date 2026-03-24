@@ -7,9 +7,19 @@ import { ArrowLeft } from "lucide-react";
  * Displays product information in simplified format
  * Matching reference design
  */
-const ProductInfo = ({ product, onClose, isDisabled = false }) => {
+const ProductInfo = ({
+  product,
+  onClose,
+  isDisabled = false,
+  showPreOrderNote = false,
+}) => {
   const isOutOfStock = product.status === "out_of_stock";
   const isLimitedStock = product.status === "limited_stock";
+  const isPreOrderState =
+    showPreOrderNote ||
+    product.status === "pre_order" ||
+    product.status === "out_of_stock" ||
+    product.status === "Out of Stock";
 
   // Parse product name to separate main name and "for Girls/Boys" part
   const parseProductName = (name) => {
@@ -103,6 +113,12 @@ const ProductInfo = ({ product, onClose, isDisabled = false }) => {
               __html: product.description_text || product.descriptionText,
             }}
           />
+          {isPreOrderState && (
+            <p className="text-sm italic opacity-60 text-[#F10000]">
+              Please note that this item is not currently in stock and can only
+              be claimed once it becomes available.
+            </p>
+          )}
         </div>
       )}
 

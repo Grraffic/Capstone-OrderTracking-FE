@@ -25,6 +25,12 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
   };
 
   const isAlreadyOrdered = orderLimitReached && !notAllowedForStudentType && !isOutOfStock && !slotsFullForNewType && !isClaimed;
+  const showPreOrderOverlay =
+    isOutOfStock &&
+    !blockedDueToVoid &&
+    !slotsFullForNewType &&
+    !notAllowedForStudentType;
+  const showOutOfStockBadge = isOutOfStock && !showPreOrderOverlay;
   // FORCE DISABLE: When blocked due to void, slot limit, claimed max reached, or not allowed for student type, card is ALWAYS disabled
   // isClaimed takes priority - if item has reached claimed max, it MUST be disabled
   // notAllowedForStudentType: item not enabled by admin for old students
@@ -77,9 +83,17 @@ const ProductCard = ({ product, blockedDueToVoid = false }) => {
         )}
 
 
-        {/* Pre-Order Button Overlay - Show when out of stock and not blocked (even if order limit reached) */}
-        {/* Old students without permission cannot place pre-orders */}
-        {isOutOfStock && !blockedDueToVoid && !slotsFullForNewType && !notAllowedForStudentType && (
+        {/* Out of Stock fallback badge (when pre-order button is not available) */}
+        {showOutOfStockBadge && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="bg-[#BFBFBF] text-white px-6 py-2 rounded-xl shadow-lg font-bold text-sm drop-shadow-md">
+              Out of Stock
+            </div>
+          </div>
+        )}
+
+        {/* Pre-Order Button Overlay - Show when out of stock and pre-order is allowed */}
+        {showPreOrderOverlay && (
           <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-20">
             <button
               type="button"

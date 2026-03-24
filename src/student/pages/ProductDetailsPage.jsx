@@ -855,6 +855,20 @@ const ProductDetailsPage = () => {
       notAllowedForStudentType || // Old students without permission cannot order (including pre-orders)
       genderMismatch)) ||
     (isOutOfStock && notAllowedForStudentType); // Disable pre-orders for old students without permission
+  // Mirror ProductCard overlay states on details image
+  const orderLimitReached = effectiveMax < 1 || isMaxReached;
+  const showOrderLimitBadge = orderLimitReached && !isOutOfStock;
+  const showPreOrderOverlay =
+    isOutOfStock &&
+    !blockedDueToVoid &&
+    !slotsFullForNewType &&
+    !notAllowedForStudentType;
+  const showOutOfStockBadge = isOutOfStock && !showPreOrderOverlay;
+  const isCurrentSelectionPreOrder = requiresSizeSelection
+    ? selectedSize
+      ? !selectedSizeData || (Number(selectedSizeData.stock) || 0) <= 0
+      : isOutOfStock
+    : isOutOfStock;
 
   const handleSizeSelect = (size) => {
     setSelectedSize(size);
@@ -1113,6 +1127,29 @@ const ProductDetailsPage = () => {
                     isDisabled={isDisabled}
                   />
                 </div>
+
+                {/* Centered overlays mirrored from ProductCard precedence */}
+                {showOrderLimitBadge && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="bg-[#BFBFBF] text-white px-6 py-2 rounded-xl shadow-lg font-bold text-sm drop-shadow-md">
+                      Order Limit
+                    </div>
+                  </div>
+                )}
+                {!showOrderLimitBadge && showPreOrderOverlay && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="px-6 py-3 bg-[#F28C28] text-white font-bold rounded-xl shadow-lg">
+                      Pre-Order
+                    </div>
+                  </div>
+                )}
+                {!showOrderLimitBadge && !showPreOrderOverlay && showOutOfStockBadge && (
+                  <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
+                    <div className="bg-[#BFBFBF] text-white px-6 py-2 rounded-xl shadow-lg font-bold text-sm drop-shadow-md">
+                      Out of Stock
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Product Information Card */}
@@ -1142,7 +1179,12 @@ const ProductDetailsPage = () => {
                   </div>
 
                   {/* Product Info (includes Education Level Badge, Back Button, FREE Label, Title, Description) */}
-                  <ProductInfo product={product} onClose={handleBackClick} isDisabled={isDisabled} />
+                  <ProductInfo
+                    product={product}
+                    onClose={handleBackClick}
+                    isDisabled={isDisabled}
+                    showPreOrderNote={isCurrentSelectionPreOrder}
+                  />
                   
                   {/* Gender Mismatch Message */}
                   {genderMismatch && (

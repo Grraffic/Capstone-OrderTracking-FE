@@ -1973,6 +1973,20 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                 const orderKey = order.id || order.order_number || `order-${orderIndex}`;
                 const orderNumber = order.orderNumber || order.order_number;
                 const orderElementId = orderNumber ? `order-${orderNumber}` : null;
+                const rawOrder = order._original || order;
+                const unsuccessfulClaimAttempts = Number(
+                  rawOrder.unsuccessful_claim_attempts ??
+                    rawOrder.unsuccessfulClaimAttempts ??
+                    rawOrder.claim_attempts ??
+                    rawOrder.claimAttempts ??
+                    0
+                ) || 0;
+                const remainingAttemptCount = Math.max(
+                  0,
+                  3 - unsuccessfulClaimAttempts
+                );
+                const showUnsuccessfulClaimNotice =
+                  activeCategory === "orders" && unsuccessfulClaimAttempts >= 2;
                 
                 return (
                 <div 
@@ -2204,11 +2218,34 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
 
                     {/* Row 2: italic message – kept on the left side */}
                     {activeCategory === "orders" && (
-                      <p className="text-xs sm:text-sm italic mt-1.5 sm:mt-2" style={{ color: "#E68B00" }}>
-                        Your order is now available. Please proceed to the designated claiming area
-                        <br />
-                        and present your QR code to receive your item.
-                      </p>
+                      <div className="mt-1.5 sm:mt-2">
+                        <p className="text-xs sm:text-sm italic" style={{ color: "#E68B00" }}>
+                          Your order is now available. Please proceed to the designated claiming area
+                          <br />
+                          and present your QR code to receive your item.
+                        </p>
+                        {showUnsuccessfulClaimNotice && (
+                          <div className="mt-1.5 sm:mt-2">
+                            <p
+                              className="text-xs sm:text-sm italic opacity-60"
+                              style={{ color: "#F10000" }}
+                            >
+                              Notice: This order has already gone through ({unsuccessfulClaimAttempts}) unsuccessful claim attempts.
+                              <br />
+                              Kindly process your order immediately to prevent this product from being voided.
+                            </p>
+                            <div className="flex justify-end mt-1">
+                              <p
+                                className="text-xs sm:text-sm italic opacity-60 text-right"
+                                style={{ color: "#F10000" }}
+                              >
+                                {remainingAttemptCount} attempt
+                                {remainingAttemptCount === 1 ? "" : "s"} left
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                     {activeCategory === "preOrders" && (
                       <p className="text-xs sm:text-sm italic mt-1.5 sm:mt-2" style={{ color: "#007AFF" }}>

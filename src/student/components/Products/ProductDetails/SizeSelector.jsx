@@ -71,7 +71,7 @@ const SizeSelector = ({
       <div className={disabled ? "opacity-60 pointer-events-none select-none" : ""}>
         {/* Size Choices Label */}
         <div>
-          <h3 className="text-sm sm:text-base font-bold text-[#F28C28] mb-2 sm:mb-3">
+          <h3 className="text-sm sm:text-base font-bold text-[#003363] mb-2 sm:mb-3">
             Size Choices:
           </h3>
 
@@ -96,7 +96,7 @@ const SizeSelector = ({
                     }`}
                   >
                     <p className={`text-[10px] sm:text-xs font-medium transition-colors ${
-                      isSelected ? "text-[#e68b00]" : "text-[#e68b00] group-hover:text-white"
+                      isSelected ? "text-[#003363]" : "text-[#003363] group-hover:text-white"
                     }`}>
                       {formatSizeDisplay(size)}
                     </p>
