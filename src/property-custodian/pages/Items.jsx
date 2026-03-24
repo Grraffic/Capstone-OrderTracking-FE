@@ -234,6 +234,7 @@ const Items = () => {
     loadingVariations,
     totalCostSummary,
     totalStock,
+    calculateVariationCostSummary,
     openModal: openItemDetailsModal,
     closeModal: closeItemDetailsModal,
     selectVariation,
@@ -957,6 +958,7 @@ const Items = () => {
             loadingVariations={loadingVariations}
             totalCostSummary={totalCostSummary}
             totalStock={totalStock}
+            calculateVariationCostSummary={calculateVariationCostSummary}
             unreleasedCounts={unreleasedCounts}
             onClose={closeItemDetailsModal}
             onSelectVariation={selectVariation}

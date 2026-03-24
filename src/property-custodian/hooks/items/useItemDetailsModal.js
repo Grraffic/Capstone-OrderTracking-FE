@@ -559,23 +559,70 @@ export const useItemDetailsModal = (allItems = []) => {
   }, []);
 
   /**
+   * Calculate valuation-based cost summary for a single variation.
+   * Matches inventory report valuation logic:
+   * - beginning layer: beginning_inventory * beginning_inventory_unit_price
+   * - purchase layers: purchase_batches sum(qty * unit_price), fallback to purchases * purchase price
+   */
+  const calculateVariationCostSummary = useCallback((variation) => {
+    if (!variation) return 0;
+
+    const beginningInventory = Number(variation.beginning_inventory) || 0;
+    const beginningUnitPrice =
+      variation.beginning_inventory_unit_price != null &&
+      !isNaN(Number(variation.beginning_inventory_unit_price))
+        ? Number(variation.beginning_inventory_unit_price)
+        : variation.price != null && !isNaN(Number(variation.price))
+          ? Number(variation.price)
+          : 0;
+
+    const batches = Array.isArray(variation.purchase_batches)
+      ? variation.purchase_batches
+      : [];
+    const hasPurchaseBatches = batches.length > 0;
+
+    let purchases = 0;
+    let purchaseValuation = 0;
+
+    if (hasPurchaseBatches) {
+      purchases = batches.reduce((sum, b) => sum + (Number(b?.qty) || 0), 0);
+      purchaseValuation = batches.reduce(
+        (sum, b) => sum + (Number(b?.qty) || 0) * (Number(b?.unit_price) || 0),
+        0
+      );
+    } else {
+      purchases = Number(variation.purchases) || 0;
+      const purchaseUnitPrice =
+        variation.purchase_unit_price != null &&
+        !isNaN(Number(variation.purchase_unit_price))
+          ? Number(variation.purchase_unit_price)
+          : variation.price != null && !isNaN(Number(variation.price))
+            ? Number(variation.price)
+            : 0;
+      purchaseValuation = purchases * purchaseUnitPrice;
+    }
+
+    const valuationBasis =
+      beginningInventory * beginningUnitPrice + purchaseValuation;
+    const endingInventory = beginningInventory + purchases;
+
+    if (endingInventory <= 0) return 0;
+    const weightedUnitPrice = valuationBasis / endingInventory;
+    const totalAmount = endingInventory * weightedUnitPrice;
+    return isNaN(totalAmount) ? 0 : totalAmount;
+  }, []);
+
+  /**
    * Calculate total cost summary using WAC valuation.
-   * Formula per variation: ending/current stock x unit price.
+   * Formula per variation uses beginning + purchase layers.
    */
   const totalCostSummary = useMemo(() => {
     if (!variations.length) return 0;
-    return variations.reduce((total, v) => {
-      const stock = Number(v.stock) || 0;
-      const unitPrice =
-        v.price != null && !isNaN(Number(v.price))
-          ? Number(v.price)
-          : v.purchase_unit_price != null && !isNaN(Number(v.purchase_unit_price))
-          ? Number(v.purchase_unit_price)
-          : 0;
-      const variationCost = stock * unitPrice;
-      return total + (isNaN(variationCost) ? 0 : variationCost);
-    }, 0);
-  }, [variations]);
+    return variations.reduce(
+      (total, v) => total + calculateVariationCostSummary(v),
+      0
+    );
+  }, [variations, calculateVariationCostSummary]);
 
   /**
    * Calculate total stock across all variations
@@ -593,6 +640,7 @@ export const useItemDetailsModal = (allItems = []) => {
     loadingVariations,
     totalCostSummary,
     totalStock,
+    calculateVariationCostSummary,
     openModal,
     closeModal,
     selectVariation,

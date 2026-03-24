@@ -42,6 +42,7 @@ const ItemDetailsModal = ({
   selectedVariation,
   loadingVariations,
   totalCostSummary = 0,
+  calculateVariationCostSummary,
   // eslint-disable-next-line no-unused-vars
   totalStock = 0, // Available but not currently used in UI
   unreleasedCounts = {},
@@ -279,15 +280,10 @@ const ItemDetailsModal = ({
                     <span className="text-[10px] font-bold text-[#003363] mobile-m:text-xs tablet:text-sm">
                       ₱
                       {(() => {
-                        const stock = Number(displayItem.stock) || 0;
-                        const unitPrice =
-                          displayItem.price != null && displayItem.price !== ""
-                            ? Number(displayItem.price)
-                            : displayItem.purchase_unit_price != null &&
-                              displayItem.purchase_unit_price !== ""
-                            ? Number(displayItem.purchase_unit_price)
+                        const costSummary =
+                          typeof calculateVariationCostSummary === "function"
+                            ? calculateVariationCostSummary(displayItem)
                             : 0;
-                        const costSummary = stock * unitPrice;
                         return costSummary.toLocaleString("en-PH", { minimumFractionDigits: 2 });
                       })()}
                     </span>
