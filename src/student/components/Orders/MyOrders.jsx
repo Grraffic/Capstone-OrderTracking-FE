@@ -5,6 +5,7 @@ import {
   ShoppingCart,
   CheckCircle,
   ChevronRight,
+  Info,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useOrder } from "../../../context/OrderContext";
@@ -1301,6 +1302,33 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
   };
 
   const titleParts = getCategoryTitle();
+  const getCategoryTooltip = () => {
+    switch (activeCategory) {
+      case "preOrders":
+        return {
+          title: "Pre-Orders",
+          message:
+            "Your pre-order is now on process. Check your notification for more updates.",
+          background: "#9FCDFF",
+        };
+      case "orders":
+        return {
+          title: "Orders",
+          message:
+            "Your orders are now ready for claiming. Please have your QR code prepared for verification during the claiming process.",
+          background: "#F3BC62",
+        };
+      case "claimed":
+      default:
+        return {
+          title: "Claimed Orders",
+          message:
+            "Your orders are now complete. Digital receipts are now available in your order history.",
+          background: "#9AE799",
+        };
+    }
+  };
+  const categoryTooltip = getCategoryTooltip();
 
   // Helper function to determine education level based on grade or type
   const getEducationLevel = (item, order) => {
@@ -1848,6 +1876,26 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
             <span className="text-[#003363]">{titleParts.first} </span>
             <span className="text-[#F28C28]">{titleParts.second}</span>
           </h1>
+          <div className="relative group flex-shrink-0">
+            <button
+              type="button"
+              className="p-0 text-[#003363] hover:opacity-80 transition-opacity"
+              aria-label={`${categoryTooltip.title} information`}
+            >
+              <Info className="w-4 h-4 sm:w-5 sm:h-5" />
+            </button>
+            <div
+              className="absolute right-0 top-full mt-2 z-20 w-64 sm:w-72 md:w-80 rounded-2xl p-4 shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible group-focus-within:opacity-100 group-focus-within:visible transition-all"
+              style={{ backgroundColor: categoryTooltip.background }}
+            >
+              <p className="text-[#003363] font-bold text-lg leading-tight">
+                {categoryTooltip.title}
+              </p>
+              <p className="text-[#003363] mt-2 text-sm sm:text-base leading-snug">
+                {categoryTooltip.message}
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Orders List (or Order History card grid) */}
