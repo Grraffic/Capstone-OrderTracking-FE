@@ -8,7 +8,6 @@ import TransactionsView from "../components/Inventory/TransactionsView";
 import UpdateQuantityModal from "../components/Inventory/UpdateQuantityModal";
 import {
   useOrders,
-  useInventoryHealthStats,
   PC_INVENTORY_HEALTH_REFRESH,
 } from "../hooks";
 import { useSocket } from "../../context/SocketContext";
@@ -118,9 +117,22 @@ const Inventory = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedInventoryData = inventoryData.slice(startIndex, endIndex);
-
-  // Fetch inventory health stats (consistent across all pages)
-  const { stats: inventoryHealthStats } = useInventoryHealthStats();
+  const inventoryHealthStats = useMemo(
+    () => ({
+      totalItemVariants: inventoryData.length,
+      atReorderPoint: inventoryData.filter(
+        (item) =>
+          item.status === "At Reorder Point" ||
+          item.status === "Critical" ||
+          item.endingInventory <= 0 ||
+          item.available <= 0
+      ).length,
+      outOfStock: inventoryData.filter(
+        (item) => item.endingInventory <= 0 || item.available <= 0
+      ).length,
+    }),
+    [inventoryData]
+  );
 
   // Update Quantity Modal state
   const [isUpdateQuantityModalOpen, setIsUpdateQuantityModalOpen] =
@@ -603,10 +615,10 @@ const Inventory = () => {
   const fetchInventoryData = useCallback(async () => {
     try {
       setLoading(true);
-      console.log("[Inventory] 🔄 Fetching inventory data...");
-      console.log(
-        `[Inventory] 📦 Orders available: ${allOrders?.length || 0} orders`
-      );
+      // console.log("[Inventory] 🔄 Fetching inventory data...");
+      // console.log(
+      //   `[Inventory] 📦 Orders available: ${allOrders?.length || 0} orders`
+      // );
 
       const filters = {
         educationLevel:
@@ -620,18 +632,18 @@ const Inventory = () => {
       const response = await inventoryService.getInventoryReport(filters);
 
       // Enhanced logging: Log raw response data with all purchases values
-      console.log("[Inventory] 📥 Received inventory report response:", {
-        success: response.success,
-        dataLength: response.data?.length || 0,
-        sampleItem: response.data?.[0]
-          ? {
-              name: response.data[0].name,
-              purchases: response.data[0].purchases,
-              beginning_inventory: response.data[0].beginning_inventory,
-              stock: response.data[0].stock,
-            }
-          : null,
-      });
+      // console.log("[Inventory] 📥 Received inventory report response:", {
+      //   success: response.success,
+      //   dataLength: response.data?.length || 0,
+      //   sampleItem: response.data?.[0]
+      //     ? {
+      //         name: response.data[0].name,
+      //         purchases: response.data[0].purchases,
+      //         beginning_inventory: response.data[0].beginning_inventory,
+      //         stock: response.data[0].stock,
+      //       }
+      //     : null,
+      // });
 
       // Log all items with purchases > 0 from raw response
       if (response.data && response.data.length > 0) {
@@ -639,31 +651,31 @@ const Inventory = () => {
           (item) => (item.purchases || 0) > 0
         );
         if (rawItemsWithPurchases.length > 0) {
-          console.log(
-            `[Inventory] 📊 Raw response: ${rawItemsWithPurchases.length} items with purchases > 0:`,
-            rawItemsWithPurchases.map((item) => ({
-              id: item.id,
-              name: item.name,
-              size: item.size,
-              purchases: item.purchases,
-              beginning_inventory: item.beginning_inventory,
-              stock: item.stock,
-            }))
-          );
+          // console.log(
+          //   `[Inventory] 📊 Raw response: ${rawItemsWithPurchases.length} items with purchases > 0:`,
+          //   rawItemsWithPurchases.map((item) => ({
+          //     id: item.id,
+          //     name: item.name,
+          //     size: item.size,
+          //     purchases: item.purchases,
+          //     beginning_inventory: item.beginning_inventory,
+          //     stock: item.stock,
+          //   }))
+          // );
         } else {
-          console.log(
-            `[Inventory] ⚠️ WARNING: Raw response has ${response.data.length} items but NONE have purchases > 0!`
-          );
+          // console.log(
+          //   `[Inventory] ⚠️ WARNING: Raw response has ${response.data.length} items but NONE have purchases > 0!`
+          // );
           // Log first few items to debug
-          console.log(
-            `[Inventory] 🔍 First 3 items from raw response:`,
-            response.data.slice(0, 3).map((item) => ({
-              name: item.name,
-              size: item.size,
-              purchases: item.purchases,
-              beginning_inventory: item.beginning_inventory,
-            }))
-          );
+          // console.log(
+          //   `[Inventory] 🔍 First 3 items from raw response:`,
+          //   response.data.slice(0, 3).map((item) => ({
+          //     name: item.name,
+          //     size: item.size,
+          //     purchases: item.purchases,
+          //     beginning_inventory: item.beginning_inventory,
+          //   }))
+          // );
         }
       }
 
@@ -701,20 +713,20 @@ const Inventory = () => {
         // Calculate order counts per item with date range filtering
         const calculateItemOrderCounts = (itemName, itemSize) => {
           if (!allOrders || allOrders.length === 0) {
-            console.log(
-              `[Inventory] ⚠️ No orders available for counting (item: ${itemName}, size: ${itemSize})`
-            );
+            // console.log(
+            //   `[Inventory] ⚠️ No orders available for counting (item: ${itemName}, size: ${itemSize})`
+            // );
             return { unreleased: 0, released: 0 };
           }
 
-          console.log(
-            `[Inventory] 🔍 Calculating order counts for "${itemName}" (${itemSize}) - Checking ${allOrders.length} orders`
-          );
-          console.log(
-            `[Inventory] 📅 Date range filter: ${
-              startDate ? startDate.toISOString().split("T")[0] : "none"
-            } to ${endDate ? endDate.toISOString().split("T")[0] : "none"}`
-          );
+          // console.log(
+          //   `[Inventory] 🔍 Calculating order counts for "${itemName}" (${itemSize}) - Checking ${allOrders.length} orders`
+          // );
+          // console.log(
+          //   `[Inventory] 📅 Date range filter: ${
+          //     startDate ? startDate.toISOString().split("T")[0] : "none"
+          //   } to ${endDate ? endDate.toISOString().split("T")[0] : "none"}`
+          // );
 
           let unreleasedCount = 0;
           let releasedCount = 0;
@@ -833,16 +845,16 @@ const Inventory = () => {
             }
           });
 
-          if (matchLog.length > 0 || unreleasedCount > 0 || releasedCount > 0) {
-            console.log(
-              `[Inventory] ✅ Found matches for "${itemName}" (${itemSize}):`,
-              {
-                unreleased: unreleasedCount,
-                released: releasedCount,
-                matches: matchLog,
-              }
-            );
-          }
+          // if (matchLog.length > 0 || unreleasedCount > 0 || releasedCount > 0) {
+          //   console.log(
+          //     `[Inventory] ✅ Found matches for "${itemName}" (${itemSize}):`,
+          //     {
+          //       unreleased: unreleasedCount,
+          //       released: releasedCount,
+          //       matches: matchLog,
+          //     }
+          //   );
+          // }
 
           return { unreleased: unreleasedCount, released: releasedCount };
         };
@@ -852,77 +864,82 @@ const Inventory = () => {
           const originalPurchases = item.purchases || 0;
 
           // Log ALL items with purchases > 0 to verify they're being preserved
-          if (originalPurchases > 0) {
-            console.log(
-              `[Inventory] ✅ Item with purchases > 0 (before transformation):`,
-              {
-                id: item.id,
-                name: item.name,
-                size: item.size,
-                beginning_inventory: item.beginning_inventory,
-                purchases: originalPurchases,
-                stock: item.stock,
-              }
-            );
-          }
+          // if (originalPurchases > 0) {
+          //   console.log(
+          //     `[Inventory] ✅ Item with purchases > 0 (before transformation):`,
+          //     {
+          //       id: item.id,
+          //       name: item.name,
+          //       size: item.size,
+          //       beginning_inventory: item.beginning_inventory,
+          //       purchases: originalPurchases,
+          //       stock: item.stock,
+          //     }
+          //   );
+          // }
 
           // Also log items matching Jersey or Dress for debugging
-          if (
-            item.name?.toLowerCase().includes("jersey") ||
-            item.name?.toLowerCase().includes("junior dress") ||
-            item.name?.toLowerCase().includes("dress")
-          ) {
-            console.log(
-              `[Inventory] 🔍 Transforming item ${index + 1} (Jersey/Dress):`,
-              {
-                id: item.id,
-                name: item.name,
-                size: item.size,
-                beginning_inventory: item.beginning_inventory,
-                purchases: originalPurchases,
-                stock: item.stock,
-              }
-            );
-          }
+          // if (
+          //   item.name?.toLowerCase().includes("jersey") ||
+          //   item.name?.toLowerCase().includes("junior dress") ||
+          //   item.name?.toLowerCase().includes("dress")
+          // ) {
+          //   console.log(
+          //     `[Inventory] 🔍 Transforming item ${index + 1} (Jersey/Dress):`,
+          //     {
+          //       id: item.id,
+          //       name: item.name,
+          //       size: item.size,
+          //       beginning_inventory: item.beginning_inventory,
+          //       purchases: originalPurchases,
+          //       stock: item.stock,
+          //     }
+          //   );
+          // }
 
           // Calculate order counts for this item
           const orderCounts = calculateItemOrderCounts(item.name, item.size);
 
           // Log order counts for debugging (only for first few items or items with orders)
-          if (
-            index < 3 ||
-            orderCounts.unreleased > 0 ||
-            orderCounts.released > 0
-          ) {
-            console.log(
-              `[Inventory] 📦 Order counts for "${item.name}" (${item.size}):`,
-              {
-                unreleased: orderCounts.unreleased,
-                released: orderCounts.released,
-                totalOrders: allOrders?.length || 0,
-              }
-            );
-          }
+          // if (
+          //   index < 3 ||
+          //   orderCounts.unreleased > 0 ||
+          //   orderCounts.released > 0
+          // ) {
+          //   console.log(
+          //     `[Inventory] 📦 Order counts for "${item.name}" (${item.size}):`,
+          //     {
+          //       unreleased: orderCounts.unreleased,
+          //       released: orderCounts.released,
+          //       totalOrders: allOrders?.length || 0,
+          //     }
+          //   );
+          // }
 
           // Calculate ending inventory: Beginning Inventory + Purchases - Released + Returns
+          // Clamp at 0 so negative stock is treated as out-of-stock in display/state.
           const beginningInventory = item.beginning_inventory || 0;
-          const endingInventory =
+          const rawEndingInventory =
             beginningInventory +
             originalPurchases -
             orderCounts.released +
             (item.returns || 0);
+          const endingInventory = Math.max(rawEndingInventory, 0);
 
           // Calculate available: Ending Inventory - Unreleased
           const available = Math.max(
             endingInventory - orderCounts.unreleased,
             0
           );
+          const rowStatus =
+            rawEndingInventory <= 0 ? "Out of Stock" : item.status;
 
           const transformedItem = {
             no: index + 1,
             id: item.id || item.item_id || `${item.name}-${item.size}-${index}`, // Use unique id from backend
             item_id: item.item_id || item.id, // Actual item id for API (set reorder point, etc.)
             item: item.name,
+            educationLevel: item.education_level || "",
             size: item.size,
             beginningInventory: beginningInventory,
             unreleased: orderCounts.unreleased, // Number of orders (pending/processing) containing this item
@@ -941,7 +958,7 @@ const Inventory = () => {
             unitPriceBeginning: item.unit_price_beginning ?? item.unit_price ?? 0,
             price: item.price != null ? Number(item.price) : undefined,
             totalAmount: item.total_amount != null ? Number(item.total_amount) : 0,
-            status: item.status,
+            status: rowStatus,
             // Preserve backend reorder point so Set Reorder Point modal can prefill current value.
             reorderPoint:
               item.reorder_point != null && item.reorder_point !== ""
@@ -975,19 +992,19 @@ const Inventory = () => {
           (item) => item.purchases > 0
         );
         if (itemsWithPurchases.length > 0) {
-          console.log(
-            `[Inventory] ✅ Final transformed data - ${itemsWithPurchases.length} items with purchases > 0:`,
-            itemsWithPurchases.map((item) => ({
-              name: item.item,
-              size: item.size,
-              purchases: item.purchases,
-              beginningInventory: item.beginningInventory,
-            }))
-          );
+          // console.log(
+          //   `[Inventory] ✅ Final transformed data - ${itemsWithPurchases.length} items with purchases > 0:`,
+          //   itemsWithPurchases.map((item) => ({
+          //     name: item.item,
+          //     size: item.size,
+          //     purchases: item.purchases,
+          //     beginningInventory: item.beginningInventory,
+          //   }))
+          // );
         } else {
-          console.log(
-            `[Inventory] ⚠️ WARNING: No items with purchases > 0 in transformed data!`
-          );
+          // console.log(
+          //   `[Inventory] ⚠️ WARNING: No items with purchases > 0 in transformed data!`
+          // );
           // Additional debugging: Check if raw data had purchases
           const rawItemsWithPurchases =
             response.data?.filter((item) => (item.purchases || 0) > 0) || [];
@@ -1008,9 +1025,9 @@ const Inventory = () => {
             `[Inventory] ❌ Purchases count mismatch: Raw=${rawPurchasesCount}, Transformed=${transformedPurchasesCount}`
           );
         } else if (rawPurchasesCount > 0) {
-          console.log(
-            `[Inventory] ✅ Purchases count verified: ${rawPurchasesCount} items with purchases preserved through transformation`
-          );
+          // console.log(
+          //   `[Inventory] ✅ Purchases count verified: ${rawPurchasesCount} items with purchases preserved through transformation`
+          // );
         }
 
         setInventoryData(transformedData);
@@ -1026,8 +1043,9 @@ const Inventory = () => {
           ).length,
           critical: response.data.filter((item) => item.status === "Critical")
             .length,
-          outOfStock: response.data.filter(
-            (item) => item.status === "Out of Stock"
+          // Keep this aligned with table-computed stock state.
+          outOfStock: transformedData.filter(
+            (item) => item.endingInventory <= 0 || item.available <= 0
           ).length,
           unreleasedOrders: 0, // Will be calculated from orders
           releasedOrders: 0, // Will be calculated from orders
@@ -1157,21 +1175,21 @@ const Inventory = () => {
   // Calculate unreleased and released order counts
   useEffect(() => {
     if (allOrders && allOrders.length > 0) {
-      console.log(
-        `[Inventory] 📦 Loaded ${allOrders.length} orders for counting`
-      );
+      // console.log(
+      //   `[Inventory] 📦 Loaded ${allOrders.length} orders for counting`
+      // );
 
       // Log sample orders to see their structure
       if (allOrders.length > 0) {
-        console.log("[Inventory] 📋 Sample order structure:", {
-          firstOrder: {
-            id: allOrders[0].id,
-            status: allOrders[0].status,
-            items: allOrders[0].items,
-            itemsType: typeof allOrders[0].items,
-            itemsIsArray: Array.isArray(allOrders[0].items),
-          },
-        });
+        // console.log("[Inventory] 📋 Sample order structure:", {
+        //   firstOrder: {
+        //     id: allOrders[0].id,
+        //     status: allOrders[0].status,
+        //     items: allOrders[0].items,
+        //     itemsType: typeof allOrders[0].items,
+        //     itemsIsArray: Array.isArray(allOrders[0].items),
+        //   },
+        // });
       }
 
       // Unreleased orders = pending or processing status
@@ -1187,9 +1205,9 @@ const Inventory = () => {
         return status === "claimed" || status === "completed";
       }).length;
 
-      console.log(
-        `[Inventory] 📊 Total order counts - Unreleased: ${unreleasedCount}, Released: ${releasedCount}`
-      );
+      // console.log(
+      //   `[Inventory] 📊 Total order counts - Unreleased: ${unreleasedCount}, Released: ${releasedCount}`
+      // );
 
       // Update stats with order counts
       setStats((prevStats) => ({
@@ -1198,7 +1216,7 @@ const Inventory = () => {
         releasedOrders: releasedCount,
       }));
     } else {
-      console.log("[Inventory] ⚠️ No orders loaded yet");
+      // console.log("[Inventory] ⚠️ No orders loaded yet");
       // Reset to 0 if no orders
       setStats((prevStats) => ({
         ...prevStats,
@@ -1222,22 +1240,22 @@ const Inventory = () => {
 
   // Fetch transactions from API
   useEffect(() => {
-    console.log("[Inventory] 🔄 Transaction fetch useEffect triggered", {
-      activeTab,
-      transactionRefreshKey,
-      startDate: startDate?.toISOString(),
-      endDate: endDate?.toISOString(),
-    });
+    // console.log("[Inventory] 🔄 Transaction fetch useEffect triggered", {
+    //   activeTab,
+    //   transactionRefreshKey,
+    //   startDate: startDate?.toISOString(),
+    //   endDate: endDate?.toISOString(),
+    // });
     
     // Early return if not on transaction tab
     if (activeTab !== "transaction") {
-      console.log("[Inventory] ⏸️ Not on transaction tab, skipping fetch. Current tab:", activeTab);
+      // console.log("[Inventory] ⏸️ Not on transaction tab, skipping fetch. Current tab:", activeTab);
       return;
     }
     
     const fetchTransactions = async () => {
       try {
-        console.log("[Inventory] 🚀 Starting transaction fetch...");
+        // console.log("[Inventory] 🚀 Starting transaction fetch...");
         setTransactionsLoading(true);
         // Set endDate to end of day to include all transactions created today
         const endOfDay = new Date(endDate);
@@ -1249,23 +1267,23 @@ const Inventory = () => {
           limit: 1000, // Get a large number of transactions
         };
         
-        console.log("[Inventory] 📤 Fetching transactions with filters:", {
-          startDate: filters.startDate?.toISOString(),
-          endDate: filters.endDate?.toISOString(),
-          limit: filters.limit,
-        });
+        // console.log("[Inventory] 📤 Fetching transactions with filters:", {
+        //   startDate: filters.startDate?.toISOString(),
+        //   endDate: filters.endDate?.toISOString(),
+        //   limit: filters.limit,
+        // });
         
         const response = await transactionService.getTransactions(filters);
         
-        console.log("[Inventory] 📊 Transaction fetch response:", {
-          success: response.success,
-          dataLength: response.data?.length || 0,
-          filters: filters,
-        });
+        // console.log("[Inventory] 📊 Transaction fetch response:", {
+        //   success: response.success,
+        //   dataLength: response.data?.length || 0,
+        //   filters: filters,
+        // });
         
         if (response.success && response.data) {
-          console.log("[Inventory] ✅ Received transactions:", response.data.length);
-          console.log("[Inventory] 📋 Sample transaction from API:", response.data[0]);
+          // console.log("[Inventory] ✅ Received transactions:", response.data.length);
+          // console.log("[Inventory] 📋 Sample transaction from API:", response.data[0]);
           
           // Helper function to fetch user name with multiple fallback methods
           const fetchUserName = async (tx) => {
@@ -1288,8 +1306,8 @@ const Inventory = () => {
                     };
                   }
                 }
-              } catch (err) {
-                console.warn(`[Inventory] Failed to fetch user by ID ${tx.user_id}:`, err);
+              } catch {
+                // console.warn(`[Inventory] Failed to fetch user by ID ${tx.user_id}:`, err);
               }
             }
             
@@ -1303,15 +1321,15 @@ const Inventory = () => {
                   const fetchedName = userResponse.data.data.name;
                   const fetchedRole = userResponse.data.data.role;
                   if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
-                    console.log(`[Inventory] ✅ Found user by email from metadata: ${emailFromMetadata}`);
+                    // console.log(`[Inventory] ✅ Found user by email from metadata: ${emailFromMetadata}`);
                     return { 
                       name: fetchedName, 
                       role: fetchedRole || tx.user_role || null 
                     };
                   }
                 }
-              } catch (err) {
-                console.warn(`[Inventory] Failed to fetch user by email ${emailFromMetadata}:`, err);
+              } catch {
+                // console.warn(`[Inventory] Failed to fetch user by email ${emailFromMetadata}:`, err);
               }
             }
             
@@ -1323,15 +1341,15 @@ const Inventory = () => {
                   const fetchedName = userResponse.data.data.name;
                   const fetchedRole = userResponse.data.data.role;
                   if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
-                    console.log(`[Inventory] ✅ Found user by email (user_id): ${tx.user_id}`);
+                    // console.log(`[Inventory] ✅ Found user by email (user_id): ${tx.user_id}`);
                     return { 
                       name: fetchedName, 
                       role: fetchedRole || tx.user_role || null 
                     };
                   }
                 }
-              } catch (err) {
-                console.warn(`[Inventory] Failed to fetch user by email (user_id) ${tx.user_id}:`, err);
+              } catch {
+                // console.warn(`[Inventory] Failed to fetch user by email (user_id) ${tx.user_id}:`, err);
               }
             }
             
@@ -1484,7 +1502,7 @@ const Inventory = () => {
     };
 
     // Always call fetchTransactions since we already checked activeTab above
-    console.log("[Inventory] ✅ Calling fetchTransactions...");
+    // console.log("[Inventory] ✅ Calling fetchTransactions...");
     fetchTransactions();
   }, [startDate, endDate, activeTab, transactionRefreshKey]);
 
@@ -1553,15 +1571,15 @@ const Inventory = () => {
   // Log filtered transactions for debugging
   useEffect(() => {
     if (activeTab === "transaction") {
-      console.log("[Inventory] 📊 Transaction display state:", {
-        transactionDataCount: transactionData.length,
-        filteredTransactionsCount: filteredTransactions.length,
-        transactionTypeFilter,
-        transactionsLoading,
-      });
-      if (filteredTransactions.length > 0) {
-        console.log("[Inventory] 📋 Sample filtered transaction:", filteredTransactions[0]);
-      }
+      // console.log("[Inventory] 📊 Transaction display state:", {
+      //   transactionDataCount: transactionData.length,
+      //   filteredTransactionsCount: filteredTransactions.length,
+      //   transactionTypeFilter,
+      //   transactionsLoading,
+      // });
+      // if (filteredTransactions.length > 0) {
+      //   console.log("[Inventory] 📋 Sample filtered transaction:", filteredTransactions[0]);
+      // }
     }
   }, [transactionData, filteredTransactions, transactionTypeFilter, transactionsLoading, activeTab]);
 
@@ -1759,7 +1777,7 @@ const Inventory = () => {
 
         {/* Inventory Health Section */}
         <div className="mb-4 sm:mb-5 md:mb-6 lg:mb-7 xl:mb-8">
-          <InventoryHealth stats={inventoryHealthStats} />
+          <InventoryHealth stats={inventoryHealthStats} inventoryRows={inventoryData} />
         </div>
 
         {/* Inventory View */}
@@ -1785,15 +1803,15 @@ const Inventory = () => {
 
         {/* Transactions View */}
         {activeTab === "transaction" && (() => {
-          console.log("[Inventory] 🎨 Rendering TransactionsView with props:", {
-            filteredTransactionsCount: filteredTransactions.length,
-            transactionDataCount: transactionData.length,
-            transactionTypeFilter,
-            transactionCounts,
-            transactionsLoading,
-            startDate: startDate?.toISOString(),
-            endDate: endDate?.toISOString(),
-          });
+          // console.log("[Inventory] 🎨 Rendering TransactionsView with props:", {
+          //   filteredTransactionsCount: filteredTransactions.length,
+          //   transactionDataCount: transactionData.length,
+          //   transactionTypeFilter,
+          //   transactionCounts,
+          //   transactionsLoading,
+          //   startDate: startDate?.toISOString(),
+          //   endDate: endDate?.toISOString(),
+          // });
           return (
             <TransactionsView
               startDate={startDate}

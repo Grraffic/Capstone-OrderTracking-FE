@@ -33,8 +33,9 @@ export const useInventoryOutOfStock = (educationLevel = "all") => {
 
   /**
    * Transform API response to table format
-   * Groups items by name and education_level, with each size as a variant row
-   * Filters to only include items with status "Out of Stock"
+   * Groups items by name and education_level, with each size as a variant row.
+   * Out-of-stock is computed from inventory numbers (same rule as Inventory table):
+   * - ending_inventory <= 0 OR available <= 0.
    */
   const transformData = useCallback((apiData) => {
     if (!apiData || !Array.isArray(apiData)) {
@@ -43,9 +44,23 @@ export const useInventoryOutOfStock = (educationLevel = "all") => {
 
     // Filter items out of stock and exclude archived items
     const outOfStockItems = apiData.filter(
-      (item) => 
-        item.status === "Out of Stock" &&
-        (!item.is_archived || item.is_archived === false || item.is_archived === null)
+      (item) => {
+        if (item.is_archived && item.is_archived !== false) return false;
+
+        const beginningInventory = Number(item.beginning_inventory) || 0;
+        const purchases = Number(item.purchases) || 0;
+        const released = Number(item.released) || 0;
+        const returns = Number(item.returns) || 0;
+        const rawEnding = beginningInventory + purchases - released + returns;
+        const endingInventory = Number.isFinite(Number(item.ending_inventory))
+          ? Number(item.ending_inventory)
+          : Math.max(rawEnding, 0);
+        const available = Number.isFinite(Number(item.available))
+          ? Number(item.available)
+          : Math.max(endingInventory, 0);
+
+        return endingInventory <= 0 || available <= 0;
+      }
     );
 
     // Group items by name and education_level

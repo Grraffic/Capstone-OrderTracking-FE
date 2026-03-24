@@ -13,7 +13,7 @@ import { useInventoryOutOfStock } from "../../../hooks/dashboard/useInventoryOut
  * Props:
  * - totalOutOfStock: number - Total count for footer display
  */
-const OutOfStockSection = ({ totalOutOfStock }) => {
+const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
   const [selectedEducationLevel, setSelectedEducationLevel] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4; // Maximum 4 items per page
@@ -25,8 +25,60 @@ const OutOfStockSection = ({ totalOutOfStock }) => {
     setCurrentPage(1);
   }, [selectedEducationLevel]);
 
-  // Ensure data is an array - must be before any conditional returns
-  const safeData = Array.isArray(data) ? data : [];
+  const mappedInventoryRows = useMemo(() => {
+    if (!Array.isArray(inventoryRows) || inventoryRows.length === 0) return [];
+
+    const filteredRows = inventoryRows.filter((row) => {
+      const isOutOfStock = (row?.endingInventory || 0) <= 0 || (row?.available || 0) <= 0;
+      if (!isOutOfStock) return false;
+      if (selectedEducationLevel === "all") return true;
+      return (row?.educationLevel || "").trim() === selectedEducationLevel;
+    });
+
+    const grouped = new Map();
+    filteredRows.forEach((row) => {
+      const key = `${row?.item || ""}_${row?.educationLevel || ""}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          itemName: row?.item || "",
+          educationLevel: row?.educationLevel || "",
+          variants: [],
+          availableSizes: [],
+        });
+      }
+
+      const group = grouped.get(key);
+      const variantLabel = row?.size || "N/A";
+      group.variants.push({
+        id: row?.id || null,
+        variant: variantLabel,
+        beginningInventory: Number(row?.beginningInventory) || 0,
+        purchase: Number(row?.purchases) || 0,
+        releases: Number(row?.released) || 0,
+        returns: Number(row?.returns) || 0,
+        endingInventory: Number(row?.endingInventory) || 0,
+        unit: Number(row?.unitPrice) || Number(row?.price) || 0,
+      });
+      if (variantLabel && variantLabel !== "N/A") {
+        group.availableSizes.push({ size: variantLabel });
+      }
+    });
+
+    return Array.from(grouped.values()).map((group) => ({
+      ...group,
+      availableSizes: group.availableSizes.length
+        ? group.availableSizes
+        : [{ size: "N/A" }],
+    }));
+  }, [inventoryRows, selectedEducationLevel]);
+
+  // Prefer parent-provided transformed rows so section always matches visible table.
+  const safeData =
+    mappedInventoryRows.length > 0 || (Array.isArray(inventoryRows) && inventoryRows.length > 0)
+      ? mappedInventoryRows
+      : Array.isArray(data)
+      ? data
+      : [];
 
   // Calculate pagination
   const totalItems = Array.isArray(safeData) ? safeData.length : 0;
@@ -93,7 +145,7 @@ const OutOfStockSection = ({ totalOutOfStock }) => {
         ) : (
           <InventoryDetailTable
             data={paginatedData}
-            loading={loading}
+            loading={Array.isArray(inventoryRows) && inventoryRows.length > 0 ? false : loading}
             educationLevel={selectedEducationLevel}
             showFooter={false}
             onVariantChange={refetch}

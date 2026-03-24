@@ -55,10 +55,22 @@ export const useInventoryHealthStats = (startDate, endDate) => {
         });
 
         let totalItemVariants = groupStatuses.size;
-        let outOfStock = 0;
-        groupStatuses.forEach((statuses) => {
-          if (statuses.has("Out of Stock")) outOfStock++;
-        });
+        // Keep health count aligned with Inventory table rule:
+        // treat zero/negative computed ending or zero/negative available as Out of Stock.
+        const outOfStock = rows.filter((row) => {
+          const beginning = Number(row.beginning_inventory) || 0;
+          const purchases = Number(row.purchases) || 0;
+          const released = Number(row.released) || 0;
+          const returns = Number(row.returns) || 0;
+          const rawEnding = beginning + purchases - released + returns;
+          const ending = Number.isFinite(Number(row.ending_inventory))
+            ? Number(row.ending_inventory)
+            : Math.max(rawEnding, 0);
+          const available = Number.isFinite(Number(row.available))
+            ? Number(row.available)
+            : Math.max(ending, 0);
+          return ending <= 0 || available <= 0;
+        }).length;
 
         const atReorderPoint = rows.filter(
           (row) => row.status === "At Reorder Point" || row.status === "Critical",

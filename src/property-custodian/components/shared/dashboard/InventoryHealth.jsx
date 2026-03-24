@@ -14,9 +14,10 @@ import OutOfStockSection from "./OutOfStockSection";
  *
  * Props:
  * - stats: Object containing totalItemVariants, atReorderPoint, outOfStock
+ * - inventoryRows: Optional transformed inventory rows from Inventory page
  * - dateRangePicker: Optional React node to render date range picker
  */
-const InventoryHealth = ({ stats, dateRangePicker }) => {
+const InventoryHealth = ({ stats, inventoryRows = [], dateRangePicker }) => {
   const [isDetailSectionVisible, setIsDetailSectionVisible] = useState(false);
   const [isAtReorderPointSectionVisible, setIsAtReorderPointSectionVisible] =
     useState(false);
@@ -130,7 +131,10 @@ const InventoryHealth = ({ stats, dateRangePicker }) => {
 
       {/* Out of Stock Section - appears below cards when visible */}
       {isOutOfStockSectionVisible && (
-        <OutOfStockSection totalOutOfStock={stats.outOfStock || 0} />
+        <OutOfStockSection
+          totalOutOfStock={stats.outOfStock || 0}
+          inventoryRows={inventoryRows}
+        />
       )}
     </>
   );
