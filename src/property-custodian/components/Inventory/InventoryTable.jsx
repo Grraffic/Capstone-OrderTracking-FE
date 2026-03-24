@@ -1,4 +1,5 @@
 import React from "react";
+import { getInventoryDisplayUnitPrice } from "../../utils/inventoryDisplayUnitPrice";
 
 /**
  * InventoryTable Component
@@ -7,7 +8,7 @@ import React from "react";
  * - No., Item, Beginning Inventory, Unreleased, Purchases, Released, Returns, Available, Ending Inventory, Unit Price, Total Amount
  *
  * Unit Price follows FIFO (First In, First Out): display the price of the layer that is "first out".
- * - While beginning inventory has stock: show beginning-inventory unit price (e.g. 110).
+ * - While beginning inventory has stock: show beginning-inventory unit price.
  * - When beginning inventory runs out (0): show purchase unit price. Total Amount remains FIFO (beg×begPrice + purch×purchPrice).
  */
 const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = false }) => {
@@ -23,26 +24,7 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
     if (isCriticalStock) return "bg-[rgba(241,0,0,0.12)]";
     return index % 2 === 0 ? "bg-[#FFF8F0]" : "bg-white";
   };
-  /**
-   * Display unit price for the row using FIFO (First In, First Out).
-   * - If beginning inventory is exhausted (released >= beginningInventory): show purchase unit price.
-   * - Otherwise: show beginning unit price (first in = first to be used).
-   */
-  const getDisplayUnitPrice = (row) => {
-    const beg = row.beginningInventory ?? 0;
-    const released = row.released ?? 0;
-    const unitPrice = row.unitPrice ?? 0;
-    const unitPriceBeginning = row.unitPriceBeginning ?? unitPrice;
-    const itemPrice = row.price != null ? Number(row.price) : undefined;
-    const fallbackPrice = unitPriceBeginning || unitPrice || itemPrice || 0;
-
-    // If beginning inventory is exhausted (released >= beginningInventory), show purchase unit price
-    if (released >= beg && beg > 0) {
-      return unitPrice || fallbackPrice; // Beginning ran out → show purchase unit price
-    }
-    // Beginning inventory still has stock → show beginning unit price
-    return unitPriceBeginning || fallbackPrice;
-  };
+  const getDisplayUnitPrice = getInventoryDisplayUnitPrice;
 
   /**
    * Total Amount column value.

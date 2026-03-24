@@ -15,6 +15,7 @@ import { useSocket } from "../../context/SocketContext";
 import inventoryService from "../../services/inventory.service";
 import transactionService from "../../services/transaction.service";
 import { userAPI } from "../../services/user.service";
+import { getInventoryDisplayUnitPrice } from "../utils/inventoryDisplayUnitPrice";
 
 /**
  * Inventory Page Component
@@ -389,14 +390,7 @@ const Inventory = () => {
     (itemName, variant) => {
       const row = findInventoryRowByItemAndVariant(itemName, variant);
       if (!row) return "";
-      const resolvedPrice =
-        row.purchaseUnitPrice != null
-          ? Number(row.purchaseUnitPrice)
-          : row.unitPrice != null
-          ? Number(row.unitPrice)
-          : row.price != null
-          ? Number(row.price)
-          : 0;
+      const resolvedPrice = Number(getInventoryDisplayUnitPrice(row));
       return Number.isFinite(resolvedPrice) ? String(resolvedPrice) : "";
     },
     [findInventoryRowByItemAndVariant]
