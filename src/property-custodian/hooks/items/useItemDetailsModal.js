@@ -559,40 +559,20 @@ export const useItemDetailsModal = (allItems = []) => {
   }, []);
 
   /**
-   * Calculate total cost summary using FIFO (First In, First Out).
-   * When purchase_batches present: (beginning * beg_price) + Σ(batch.qty * batch.unit_price)
-   * Else: (beginning_inventory * beginning_unit_price) + (purchases * purchase_unit_price)
+   * Calculate total cost summary using WAC valuation.
+   * Formula per variation: ending/current stock x unit price.
    */
   const totalCostSummary = useMemo(() => {
     if (!variations.length) return 0;
     return variations.reduce((total, v) => {
-      const beginningInventory = Number(v.beginning_inventory) || 0;
-      const purchases = Number(v.purchases) || 0;
-      const currentPrice = Number(v.price) || 0;
-      
-      let beginningUnitPrice = Number(v.beginning_inventory_unit_price);
-      if (isNaN(beginningUnitPrice) || beginningUnitPrice === 0) {
-        beginningUnitPrice = currentPrice || 0;
-      }
-      
-      let variationCost = 0;
-      const hasBatches = Array.isArray(v.purchase_batches) && v.purchase_batches.length > 0;
-      if (hasBatches) {
-        const batchTotal = v.purchase_batches.reduce(
-          (sum, b) => sum + (Number(b.qty) || 0) * (Number(b.unit_price) || 0),
-          0
-        );
-        variationCost = beginningInventory * beginningUnitPrice + batchTotal;
-      } else {
-        const purchaseUnitPrice =
-          v.purchase_unit_price != null && !isNaN(Number(v.purchase_unit_price))
-            ? Number(v.purchase_unit_price)
-            : currentPrice || 0;
-        if (isNaN(beginningInventory) || isNaN(purchases) || isNaN(beginningUnitPrice) || isNaN(purchaseUnitPrice)) {
-          return total;
-        }
-        variationCost = beginningInventory * beginningUnitPrice + purchases * purchaseUnitPrice;
-      }
+      const stock = Number(v.stock) || 0;
+      const unitPrice =
+        v.price != null && !isNaN(Number(v.price))
+          ? Number(v.price)
+          : v.purchase_unit_price != null && !isNaN(Number(v.purchase_unit_price))
+          ? Number(v.purchase_unit_price)
+          : 0;
+      const variationCost = stock * unitPrice;
       return total + (isNaN(variationCost) ? 0 : variationCost);
     }, 0);
   }, [variations]);

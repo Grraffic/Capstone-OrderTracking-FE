@@ -279,26 +279,15 @@ const ItemDetailsModal = ({
                     <span className="text-[10px] font-bold text-[#003363] mobile-m:text-xs tablet:text-sm">
                       ₱
                       {(() => {
-                        const beg = Number(displayItem.beginning_inventory) || 0;
-                        const fallbackPrice = Number(displayItem.price) || 0;
-                        const begPrice = displayItem.beginning_inventory_unit_price != null && displayItem.beginning_inventory_unit_price !== ""
-                          ? Number(displayItem.beginning_inventory_unit_price)
-                          : fallbackPrice;
-                        const batches = Array.isArray(displayItem.purchase_batches) ? displayItem.purchase_batches : [];
-                        let costSummary;
-                        if (batches.length > 0) {
-                          const batchTotal = batches.reduce(
-                            (s, b) => s + (Number(b.qty) || 0) * (Number(b.unit_price) || 0),
-                            0
-                          );
-                          costSummary = beg * begPrice + batchTotal;
-                        } else {
-                          const purch = Number(displayItem.purchases) || 0;
-                          const purchPrice = displayItem.purchase_unit_price != null && displayItem.purchase_unit_price !== ""
+                        const stock = Number(displayItem.stock) || 0;
+                        const unitPrice =
+                          displayItem.price != null && displayItem.price !== ""
+                            ? Number(displayItem.price)
+                            : displayItem.purchase_unit_price != null &&
+                              displayItem.purchase_unit_price !== ""
                             ? Number(displayItem.purchase_unit_price)
-                            : fallbackPrice;
-                          costSummary = beg * begPrice + purch * purchPrice;
-                        }
+                            : 0;
+                        const costSummary = stock * unitPrice;
                         return costSummary.toLocaleString("en-PH", { minimumFractionDigits: 2 });
                       })()}
                     </span>

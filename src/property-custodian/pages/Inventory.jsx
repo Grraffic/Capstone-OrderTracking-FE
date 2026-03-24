@@ -931,7 +931,7 @@ const Inventory = () => {
             returns: item.returns || 0,
             available: available, // Calculated: Ending Inventory - Unreleased
             endingInventory: endingInventory, // Calculated: Beginning Inventory + Purchases - Released + Returns
-            unitPrice: item.unit_price || 0,
+            unitPrice: item.unit_price != null ? Number(item.unit_price) : 0,
             purchaseUnitPrice:
               item.purchase_unit_price != null
                 ? Number(item.purchase_unit_price)
@@ -940,7 +940,7 @@ const Inventory = () => {
                 : 0,
             unitPriceBeginning: item.unit_price_beginning ?? item.unit_price ?? 0,
             price: item.price != null ? Number(item.price) : undefined,
-            totalAmount: item.total_amount || 0,
+            totalAmount: item.total_amount != null ? Number(item.total_amount) : 0,
             status: item.status,
             // Preserve backend reorder point so Set Reorder Point modal can prefill current value.
             reorderPoint:
