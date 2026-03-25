@@ -45,18 +45,26 @@ export const useInventoryAtReorderPoint = (educationLevel = "all") => {
 
     // Filter items that need reordering attention (Critical or At Reorder Point)
     // Critical: stock 1-19, At Reorder Point: stock 20-49
-    const atReorderPointItems = apiData.filter(
-      (item) => 
-        item.status === "At Reorder Point" || 
-        item.status === "Critical"
-    );
+    const atReorderPointItems = apiData.filter((item) => {
+      const st = String(item.status || "").toLowerCase();
+      if (st === "out of stock") return false;
+      const ending = Number(item.ending_inventory) || 0;
+      return (
+        (item.status === "At Reorder Point" || item.status === "Critical") &&
+        ending > 0
+      );
+    });
 
     // Transform to flat array - one row per size variant
     const transformedItems = atReorderPointItems.map((item) => {
       // Use the actual stock field from the API response
       // This is the variant's actual stock, not the calculated ending_inventory
       // which may incorrectly use item-level values when per-variant tracking isn't available
-      const currentStock = item.stock !== undefined ? item.stock : (item.ending_inventory || 0);
+      const currentStock = Number.isFinite(Number(item.ending_inventory))
+        ? Number(item.ending_inventory)
+        : item.stock !== undefined
+          ? Number(item.stock)
+          : 0;
 
       return {
         id: item.id || item.item_id,

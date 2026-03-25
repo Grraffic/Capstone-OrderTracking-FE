@@ -20,6 +20,7 @@ const AdminDashboard = () => {
 
   const {
     inventoryHealth,
+    inventoryHealthRows,
     outOfStockItems,
     orderTracking,
     recentAudits,
@@ -54,6 +55,7 @@ const AdminDashboard = () => {
             </div>
             <InventoryHealth 
               stats={inventoryHealth}
+              inventoryRows={inventoryHealthRows}
               dateRangePicker={
                 <DateRangePicker
                   startDate={startDate}

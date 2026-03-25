@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 /**
  * Inventory Service
@@ -53,10 +54,14 @@ class InventoryService {
 
       // Add cache-busting timestamp to ensure fresh data
       const cacheBuster = `&_t=${Date.now()}`;
-      const finalUrl = url.includes('?') ? `${url}${cacheBuster}` : `${url}?${cacheBuster.substring(1)}`;
-      
-      console.log(`[InventoryService] Fetching inventory report from: ${finalUrl}`);
-      
+      const finalUrl = url.includes("?")
+        ? `${url}${cacheBuster}`
+        : `${url}?${cacheBuster.substring(1)}`;
+
+      console.log(
+        `[InventoryService] Fetching inventory report from: ${finalUrl}`,
+      );
+
       const response = await fetch(finalUrl, {
         method: "GET",
         headers: {
@@ -89,15 +94,18 @@ class InventoryService {
    */
   async addStock(itemId, quantity, size = null, unitPrice = null) {
     try {
-      const response = await fetch(`${API_BASE_URL}/items/${itemId}/add-stock`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...this.getAuthHeaders(),
+      const response = await fetch(
+        `${API_BASE_URL}/items/${itemId}/add-stock`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...this.getAuthHeaders(),
+          },
+          credentials: "include",
+          body: JSON.stringify({ quantity, size, unitPrice }),
         },
-        credentials: "include",
-        body: JSON.stringify({ quantity, size, unitPrice }),
-      });
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -125,18 +133,27 @@ class InventoryService {
     size = null,
     unitPrice = null,
     remarks = null,
-    legacyReturn = false
+    legacyReturn = false,
   ) {
     try {
-      const response = await fetch(`${API_BASE_URL}/items/${itemId}/record-return`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...this.getAuthHeaders(),
+      const response = await fetch(
+        `${API_BASE_URL}/items/${itemId}/record-return`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...this.getAuthHeaders(),
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            quantity,
+            size,
+            unitPrice,
+            remarks,
+            legacyReturn,
+          }),
         },
-        credentials: "include",
-        body: JSON.stringify({ quantity, size, unitPrice, remarks, legacyReturn }),
-      });
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -168,7 +185,7 @@ class InventoryService {
           },
           credentials: "include",
           body: JSON.stringify({ size }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -238,7 +255,7 @@ class InventoryService {
             ...this.getAuthHeaders(),
           },
           credentials: "include",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -255,4 +272,3 @@ class InventoryService {
 }
 
 export default new InventoryService();
-

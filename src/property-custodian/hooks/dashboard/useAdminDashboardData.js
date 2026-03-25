@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useOrders } from "../orders/useOrders";
 import { useInventoryHealthStats } from "./useInventoryHealthStats";
+import { useInventoryComputedRows } from "./useInventoryComputedRows";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -15,7 +16,7 @@ const API_BASE_URL =
  * - Recent Audits (transactions from inventory)
  * - Active tab selection
  * - Loading state for skeleton display
- * 
+ *
  * @param {Date} startDate - Start date for filtering data
  * @param {Date} endDate - End date for filtering data
  */
@@ -23,8 +24,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
   const [activeTab, setActiveTab] = useState("Year");
   const [loading, setLoading] = useState(true);
 
-  // Fetch inventory health stats (consistent across all pages) with date range
-  const { stats: inventoryHealth } = useInventoryHealthStats(startDate, endDate);
+  const inventoryHealthRows = [];
 
   // Inventory Alerts (out of stock items)
   const [outOfStockItems, setOutOfStockItems] = useState([]);
@@ -51,22 +51,25 @@ export const useAdminDashboardData = (startDate, endDate) => {
   });
 
   // Fetch claimed orders separately (they're excluded when status is null)
-  const { orders: allClaimedOrders, loading: claimedOrdersLoading } = useOrders({
-    page: 1,
-    limit: 10000,
-    orderType: null,
-    status: "claimed", // Explicitly fetch claimed orders
-    educationLevel: null,
-    search: null,
-  });
+  const { orders: allClaimedOrders, loading: claimedOrdersLoading } = useOrders(
+    {
+      page: 1,
+      limit: 10000,
+      orderType: null,
+      status: "claimed", // Explicitly fetch claimed orders
+      educationLevel: null,
+      search: null,
+    },
+  );
 
   // Combine active and claimed orders for dashboard calculations
   const allOrders = useMemo(() => {
-    return [
-      ...(allActiveOrders || []),
-      ...(allClaimedOrders || []),
-    ];
+    return [...(allActiveOrders || []), ...(allClaimedOrders || [])];
   }, [allActiveOrders, allClaimedOrders]);
+
+  // Fetch inventory health stats (consistent across all pages) with date range + orders applied
+  const { stats: inventoryHealth } = useInventoryHealthStats(startDate, endDate, allOrders);
+  const { rows: computedInventoryHealthRows } = useInventoryComputedRows(startDate, endDate, allOrders);
 
   const ordersLoading = activeOrdersLoading || claimedOrdersLoading;
 
@@ -81,7 +84,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
           limit: "1000", // Fetch more items to filter properly
         });
         const response = await fetch(
-          `${API_BASE_URL}/items?${params.toString()}`
+          `${API_BASE_URL}/items?${params.toString()}`,
         );
         if (!response.ok) throw new Error("Failed to fetch items");
 
@@ -177,7 +180,15 @@ export const useAdminDashboardData = (startDate, endDate) => {
   const normalizeToEndOfDay = (date) => {
     if (!date) return null;
     const d = new Date(date);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    return new Date(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
   };
 
   // Helper function to check if date is within range
@@ -197,9 +208,10 @@ export const useAdminDashboardData = (startDate, endDate) => {
     return allOrders.filter((order) => {
       // For pre-orders and regular orders, use created_at
       // For claimed orders, use claimed_date or updated_at or created_at
-      const orderDate = order.status?.toLowerCase() === "claimed"
-        ? (order.claimed_date || order.updated_at || order.created_at)
-        : order.created_at;
+      const orderDate =
+        order.status?.toLowerCase() === "claimed"
+          ? order.claimed_date || order.updated_at || order.created_at
+          : order.created_at;
       return isDateInRange(orderDate, startDate, endDate);
     });
   }, [allOrders, startDate, endDate]);
@@ -250,7 +262,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
           isInMonth(
             order.claimed_date || order.updated_at || order.created_at,
             currentMonth,
-            currentYear
+            currentYear,
           )
         );
       }).length;
@@ -258,9 +270,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
       const currentMonthOrders = filteredOrders.filter((order) => {
         const orderType = order.order_type?.toLowerCase() || "regular";
         const status = order.status?.toLowerCase();
-        const isRegular =
-          orderType !== "pre-order" &&
-          status !== "claimed";
+        const isRegular = orderType !== "pre-order" && status !== "claimed";
         return (
           isRegular && isInMonth(order.created_at, currentMonth, currentYear)
         );
@@ -281,7 +291,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
           isInMonth(
             order.claimed_date || order.updated_at || order.created_at,
             lastMonth,
-            lastMonthYear
+            lastMonthYear,
           )
         );
       }).length;
@@ -289,9 +299,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
       const lastMonthOrders = filteredOrders.filter((order) => {
         const orderType = order.order_type?.toLowerCase() || "regular";
         const status = order.status?.toLowerCase();
-        const isRegular =
-          orderType !== "pre-order" &&
-          status !== "claimed";
+        const isRegular = orderType !== "pre-order" && status !== "claimed";
         return (
           isRegular && isInMonth(order.created_at, lastMonth, lastMonthYear)
         );
@@ -299,7 +307,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
 
       // Calculate total counts (from filtered orders within date range)
       const totalPreOrders = filteredOrders.filter(
-        (order) => order.order_type?.toLowerCase() === "pre-order"
+        (order) => order.order_type?.toLowerCase() === "pre-order",
       ).length;
 
       const totalClaimed = filteredOrders.filter((order) => {
@@ -310,10 +318,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
       const totalOrders = filteredOrders.filter((order) => {
         const orderType = order.order_type?.toLowerCase() || "regular";
         const status = order.status?.toLowerCase();
-        return (
-          orderType !== "pre-order" &&
-          status !== "claimed"
-        );
+        return orderType !== "pre-order" && status !== "claimed";
       }).length;
 
       // Calculate percentage change (capped at 100% maximum for increases only)
@@ -331,8 +336,14 @@ export const useAdminDashboardData = (startDate, endDate) => {
         return result;
       };
 
-      const preOrdersTrend = calculateTrend(currentMonthPreOrders, lastMonthPreOrders);
-      const claimedTrend = calculateTrend(currentMonthClaimed, lastMonthClaimed);
+      const preOrdersTrend = calculateTrend(
+        currentMonthPreOrders,
+        lastMonthPreOrders,
+      );
+      const claimedTrend = calculateTrend(
+        currentMonthClaimed,
+        lastMonthClaimed,
+      );
       const ordersTrend = calculateTrend(currentMonthOrders, lastMonthOrders);
 
       const trackingData = {
@@ -360,15 +371,17 @@ export const useAdminDashboardData = (startDate, endDate) => {
   const fetchRecentAudits = useCallback(async () => {
     try {
       setRecentAuditsLoading(true);
-      
+
       // Use the date range from props, or default to last 30 days
-      const filterStartDate = startDate || (() => {
-        const d = new Date();
-        d.setDate(d.getDate() - 30);
-        return d;
-      })();
+      const filterStartDate =
+        startDate ||
+        (() => {
+          const d = new Date();
+          d.setDate(d.getDate() - 30);
+          return d;
+        })();
       const filterEndDate = endDate || new Date();
-      
+
       // Normalize dates to ensure proper comparison
       // Use local dates to match the date picker's timezone
       // Set startDate to beginning of day (00:00:00.000) in local time
@@ -376,17 +389,23 @@ export const useAdminDashboardData = (startDate, endDate) => {
         filterStartDate.getFullYear(),
         filterStartDate.getMonth(),
         filterStartDate.getDate(),
-        0, 0, 0, 0
+        0,
+        0,
+        0,
+        0,
       );
-      
+
       // Set endDate to end of day (23:59:59.999) in local time
       const normalizedEndDate = new Date(
         filterEndDate.getFullYear(),
         filterEndDate.getMonth(),
         filterEndDate.getDate(),
-        23, 59, 59, 999
+        23,
+        59,
+        59,
+        999,
       );
-      
+
       // console.log("[Dashboard] 📅 Filtering Recent Audits by date range:", {
       //   originalStartDate: filterStartDate.toISOString(),
       //   originalEndDate: filterEndDate.toISOString(),
@@ -395,7 +414,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
       //   startDateLocal: normalizedStartDate.toLocaleString(),
       //   endDateLocal: normalizedEndDate.toLocaleString(),
       // });
-      
+
       const filters = {
         startDate: normalizedStartDate,
         endDate: normalizedEndDate,
@@ -403,20 +422,26 @@ export const useAdminDashboardData = (startDate, endDate) => {
       };
 
       // Import transactionService dynamically to avoid circular dependencies
-      const transactionService = (await import("../../../services/transaction.service")).default;
+      const transactionService = (
+        await import("../../../services/transaction.service")
+      ).default;
       const response = await transactionService.getTransactions(filters);
 
       if (response.success && response.data && response.data.length > 0) {
         // console.log("[Dashboard] 📥 Received transactions from API:", response.data.length);
-        
+
         // Additional client-side filtering to ensure dates are within range
         // Use the isDateInRange helper function for consistent date comparison
         const filteredTransactions = response.data.filter((tx) => {
           if (!tx.created_at) return false;
-          
+
           // Use the same date range helper function for consistency
-          const isInRange = isDateInRange(tx.created_at, normalizedStartDate, normalizedEndDate);
-          
+          const isInRange = isDateInRange(
+            tx.created_at,
+            normalizedStartDate,
+            normalizedEndDate,
+          );
+
           if (!isInRange) {
             // console.log("[Dashboard] ⚠️ Transaction filtered out:", {
             //   txDate: tx.created_at,
@@ -425,15 +450,15 @@ export const useAdminDashboardData = (startDate, endDate) => {
             //   endDateLocal: normalizedEndDate.toLocaleString(),
             // });
           }
-          
+
           return isInRange;
         });
-        
+
         // console.log("[Dashboard] ✅ Filtered transactions count:", filteredTransactions.length);
 
         // Limit to 5 most recent after filtering
         const limitedTransactions = filteredTransactions.slice(0, 5);
-        
+
         // Transform API data to match RecentAudits component format
         const transformedTransactions = limitedTransactions.map((tx) => {
           // Format date and time
@@ -533,6 +558,7 @@ export const useAdminDashboardData = (startDate, endDate) => {
     activeTab,
     handleTabChange,
     inventoryHealth,
+    inventoryHealthRows: computedInventoryHealthRows,
     outOfStockItems,
     orderTracking,
     recentAudits,

@@ -119,6 +119,7 @@ const InventoryHealth = ({ stats, inventoryRows = [], dateRangePicker }) => {
       {isDetailSectionVisible && (
         <InventoryDetailSection
           totalItemVariants={stats.totalItemVariants || 0}
+          inventoryRows={inventoryRows}
         />
       )}
 
@@ -126,6 +127,7 @@ const InventoryHealth = ({ stats, inventoryRows = [], dateRangePicker }) => {
       {isAtReorderPointSectionVisible && (
         <AtReorderPointSection
           totalAtReorderPoint={stats.atReorderPoint || 0}
+          inventoryRows={inventoryRows}
         />
       )}
 

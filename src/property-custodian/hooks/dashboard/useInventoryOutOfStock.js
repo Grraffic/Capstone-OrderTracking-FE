@@ -55,11 +55,9 @@ export const useInventoryOutOfStock = (educationLevel = "all") => {
         const endingInventory = Number.isFinite(Number(item.ending_inventory))
           ? Number(item.ending_inventory)
           : Math.max(rawEnding, 0);
-        const available = Number.isFinite(Number(item.available))
-          ? Number(item.available)
-          : Math.max(endingInventory, 0);
-
-        return endingInventory <= 0 || available <= 0;
+        // OOS = zero ending on this report row. Ignore parent item.stock (item-level aggregate).
+        // Do not treat "available only" as OOS when ending > 0 (e.g. unreleased orders).
+        return endingInventory <= 0;
       }
     );
 

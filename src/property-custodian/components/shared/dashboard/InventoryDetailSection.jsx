@@ -12,8 +12,52 @@ import { useInventoryDetail } from "../../../hooks/dashboard/useInventoryDetail"
  *
  * Props:
  * - totalItemVariants: number - Total count for footer display
+ * - inventoryRows: optional rows from Inventory page (same transform as main InventoryTable).
+ *   When provided and non-empty, detail ending inventory matches the main table.
  */
-const InventoryDetailSection = ({ totalItemVariants }) => {
+const filterRowsByEducationLevel = (rows, level) => {
+  if (!level || level === "all") return rows;
+  const mapping = {
+    Preschool: "Kindergarten",
+    Elementary: "Elementary",
+    "Junior High School": "Junior High School",
+    "Senior High School": "Senior High School",
+    College: "College",
+  };
+  const target = mapping[level] || level;
+  return rows.filter((r) => (r.educationLevel || "").trim() === target);
+};
+
+const groupInventoryRowsForDetail = (rows) => {
+  const groupedMap = new Map();
+  rows.forEach((row) => {
+    const key = `${(row.item || "").trim()}_${(row.educationLevel || "").trim()}`;
+    if (!groupedMap.has(key)) {
+      groupedMap.set(key, {
+        itemName: row.item,
+        educationLevel: row.educationLevel,
+        variants: [],
+      });
+    }
+    const group = groupedMap.get(key);
+    group.variants.push({
+      id: row.id,
+      variant: row.size || "N/A",
+      beginningInventory: Number(row.beginningInventory) || 0,
+      purchase: Number(row.purchases) || 0,
+      releases: Number(row.released) || 0,
+      returns: Number(row.returns) || 0,
+      endingInventory: Number(row.endingInventory) || 0,
+      unit: Number(row.unitPrice) || Number(row.price) || 0,
+    });
+  });
+  return Array.from(groupedMap.values()).sort((a, b) => {
+    if (a.itemName !== b.itemName) return a.itemName.localeCompare(b.itemName);
+    return a.educationLevel.localeCompare(b.educationLevel);
+  });
+};
+
+const InventoryDetailSection = ({ totalItemVariants, inventoryRows }) => {
   const [selectedEducationLevel, setSelectedEducationLevel] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4; // Maximum 4 items per page
@@ -25,8 +69,22 @@ const InventoryDetailSection = ({ totalItemVariants }) => {
     setCurrentPage(1);
   }, [selectedEducationLevel]);
 
-  // Ensure data is an array - must be before any conditional returns
-  const safeData = Array.isArray(data) ? data : [];
+  const hookData = Array.isArray(data) ? data : [];
+
+  const safeData = useMemo(() => {
+    if (Array.isArray(inventoryRows) && inventoryRows.length > 0) {
+      const filtered = filterRowsByEducationLevel(
+        inventoryRows,
+        selectedEducationLevel
+      );
+      return groupInventoryRowsForDetail(filtered);
+    }
+    return hookData;
+  }, [inventoryRows, selectedEducationLevel, hookData]);
+
+  const usingPageRows =
+    Array.isArray(inventoryRows) && inventoryRows.length > 0;
+  const tableLoading = loading && !usingPageRows;
 
   // Calculate pagination
   const totalItems = Array.isArray(safeData) ? safeData.length : 0;
@@ -52,8 +110,13 @@ const InventoryDetailSection = ({ totalItemVariants }) => {
     }
   };
 
-  // Safety check: ensure data is initialized
-  if (data === undefined && !loading && !error) {
+  // Hook-only init state (skip when using parent inventoryRows — same source as main table)
+  if (
+    !usingPageRows &&
+    data === undefined &&
+    !loading &&
+    !error
+  ) {
     return (
       <div className="mt-4 sm:mt-6 bg-white rounded-lg border border-gray-200 shadow-sm p-2.5 sm:p-3 md:p-4">
         <p className="text-xs sm:text-sm text-gray-500">Loading inventory data...</p>
@@ -93,7 +156,7 @@ const InventoryDetailSection = ({ totalItemVariants }) => {
         ) : (
           <InventoryDetailTable
             data={paginatedData}
-            loading={loading}
+            loading={tableLoading}
             educationLevel={selectedEducationLevel}
             showFooter={false}
             onVariantChange={refetch}

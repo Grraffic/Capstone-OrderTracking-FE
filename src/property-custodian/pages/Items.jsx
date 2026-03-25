@@ -28,6 +28,7 @@ import {
   useItems,
   useItemDetailsModal,
   useInventoryHealthStats,
+  useInventoryComputedRows,
   useOrders,
 } from "../hooks";
 
@@ -141,25 +142,40 @@ const Items = () => {
   // No date filtering: show all items.
   const groupedItems = useMemo(() => {
     const grouped = groupItemsByVariations(filteredItems);
-    if (educationLevelFilter === "All" || educationLevelFilter === "Accessories") {
+    if (
+      educationLevelFilter === "All" ||
+      educationLevelFilter === "Accessories"
+    ) {
       return grouped;
     }
-    const mappedLevel = (mapTabLabelToEducationLevel(educationLevelFilter) || "").trim().toLowerCase();
+    const mappedLevel = (
+      mapTabLabelToEducationLevel(educationLevelFilter) || ""
+    )
+      .trim()
+      .toLowerCase();
     if (!mappedLevel) return grouped;
     return grouped
       .map((g) => ({
         ...g,
         variations: g.variations.filter((v) => {
-          const vLevel = (v.educationLevel || v.education_level || "").trim().toLowerCase();
+          const vLevel = (v.educationLevel || v.education_level || "")
+            .trim()
+            .toLowerCase();
           return vLevel === mappedLevel || vLevel === "all education levels";
         }),
       }))
       .filter((g) => g.variations.length > 0)
       .map((g) => ({
         ...g,
-        totalStock: g.variations.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
+        totalStock: g.variations.reduce(
+          (sum, v) => sum + (Number(v.stock) || 0),
+          0,
+        ),
         stock: g.variations.reduce((sum, v) => sum + (Number(v.stock) || 0), 0),
-        educationLevel: g.variations[0]?.educationLevel ?? g.variations[0]?.education_level ?? g.educationLevel,
+        educationLevel:
+          g.variations[0]?.educationLevel ??
+          g.variations[0]?.education_level ??
+          g.educationLevel,
         id: g.variations[0]?.id ?? g.id,
         price: g.variations[0]?.price ?? g.price,
       }));
@@ -167,7 +183,7 @@ const Items = () => {
 
   // Paginate grouped items - responsive: 3 on mobile, 8 on larger screens
   const [itemsPerPage, setItemsPerPage] = useState(8);
-  
+
   useEffect(() => {
     const updateItemsPerPage = () => {
       if (window.innerWidth < 640) {
@@ -176,19 +192,22 @@ const Items = () => {
         setItemsPerPage(8); // Larger screens
       }
     };
-    
+
     updateItemsPerPage();
-    window.addEventListener('resize', updateItemsPerPage);
-    return () => window.removeEventListener('resize', updateItemsPerPage);
+    window.addEventListener("resize", updateItemsPerPage);
+    return () => window.removeEventListener("resize", updateItemsPerPage);
   }, []);
-  
+
   const paginatedGroupedItems = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     return groupedItems.slice(startIndex, endIndex);
   }, [groupedItems, currentPage, itemsPerPage]);
 
-  const totalPagesGrouped = Math.max(1, Math.ceil(groupedItems.length / itemsPerPage));
+  const totalPagesGrouped = Math.max(
+    1,
+    Math.ceil(groupedItems.length / itemsPerPage),
+  );
   const hasPagination = groupedItems.length > itemsPerPage;
 
   // Sync page input value when currentPage changes
@@ -240,11 +259,20 @@ const Items = () => {
     selectVariation,
   } = useItemDetailsModal(items);
 
-  // Fetch orders to compute unreleased counts (for Available = stock - unreleased in ItemDetailsModal)
-  const { orders: allOrders } = useOrders({
+  // Fetch active orders (pending/processing/etc) + claimed/completed orders for InventoryHealth
+  const { orders: allActiveOrders } = useOrders({
     page: 1,
     limit: 5000,
   });
+  const { orders: allClaimedOrders } = useOrders({
+    page: 1,
+    limit: 5000,
+    status: "claimed",
+  });
+  const allOrders = useMemo(
+    () => [...(allActiveOrders || []), ...(allClaimedOrders || [])],
+    [allActiveOrders, allClaimedOrders],
+  );
 
   const unreleasedCounts = useMemo(() => {
     const counts = {};
@@ -272,7 +300,9 @@ const Items = () => {
     useQRScanner(setSearchTerm);
 
   // Use the shared hook for consistent inventory health stats across all pages
-  const { stats: inventoryHealthStats } = useInventoryHealthStats();
+  // (hook defaults to this-year date window when no dates are passed).
+  const { stats: inventoryHealthStats } = useInventoryHealthStats(null, null, allOrders);
+  const { rows: inventoryHealthRows } = useInventoryComputedRows(null, null, allOrders);
 
   // Helper function to format item type for display
   const formatItemType = (itemType) => {
@@ -328,7 +358,10 @@ const Items = () => {
 
           {/* Inventory Health Section */}
           <div className="mb-4 sm:mb-6 md:mb-8">
-            <InventoryHealth stats={inventoryHealthStats} />
+            <InventoryHealth
+              stats={inventoryHealthStats}
+              inventoryRows={inventoryHealthRows}
+            />
           </div>
 
           {/* Horizontal Level Selection Tabs - Desktop / Dropdown - Mobile */}
@@ -416,8 +449,8 @@ const Items = () => {
                   {appliedFilters.itemStatus === "archived"
                     ? "Archives"
                     : appliedFilters.itemStatus === "deleted"
-                    ? "Deleted Items"
-                    : "Items"}
+                      ? "Deleted Items"
+                      : "Items"}
                 </span>
               </h2>
 
@@ -437,9 +470,7 @@ const Items = () => {
 
                 {/* Search Bar - Middle */}
                 <div className="relative w-48 sm:w-64 md:w-60 max-w-full">
-                  <Search
-                    className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5"
-                  />
+                  <Search className="absolute left-2.5 sm:left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 sm:w-5 sm:h-5" />
                   <input
                     type="text"
                     placeholder="Search items..."
@@ -554,13 +585,16 @@ const Items = () => {
                                 setOpenMenuId(
                                   openMenuId === group.groupKey
                                     ? null
-                                    : group.groupKey
+                                    : group.groupKey,
                                 )
                               }
                               className="p-1.5 sm:p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                               aria-label="More options"
                             >
-                              <MoreHorizontal size={16} className="sm:w-[18px] sm:h-[18px]" />
+                              <MoreHorizontal
+                                size={16}
+                                className="sm:w-[18px] sm:h-[18px]"
+                              />
                             </button>
                             {openMenuId === group.groupKey && (
                               <div className="absolute right-0 mt-2 w-36 sm:w-40 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
@@ -689,7 +723,9 @@ const Items = () => {
                             }
                           }}
                           className={`grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-[#e68b00]/30 transition-colors cursor-pointer ${
-                            isSelected ? "bg-[#FFF5E0]" : "bg-white hover:bg-[#FFF8E7]"
+                            isSelected
+                              ? "bg-[#FFF5E0]"
+                              : "bg-white hover:bg-[#FFF8E7]"
                           }`}
                         >
                           {/* Image */}
@@ -747,9 +783,7 @@ const Items = () => {
                               <Pencil size={18} />
                             </button>
                             <button
-                              onClick={() =>
-                                archiveItem(representativeItem.id)
-                              }
+                              onClick={() => archiveItem(representativeItem.id)}
                               className="p-2 rounded-lg hover:bg-gray-100 text-[#e68b00] transition-colors"
                               title="Archive"
                               aria-label="Archive item"
@@ -768,7 +802,9 @@ const Items = () => {
               <div className="md:hidden space-y-2 sm:space-y-3">
                 {paginatedGroupedItems.length === 0 ? (
                   <div className="px-3 sm:px-4 py-6 sm:py-8 text-center text-gray-500 bg-white rounded-xl shadow-sm border border-gray-200">
-                    <p className="text-xs sm:text-sm font-sf-medium font-medium">No items found</p>
+                    <p className="text-xs sm:text-sm font-sf-medium font-medium">
+                      No items found
+                    </p>
                     <p className="text-[10px] sm:text-xs mt-1 font-sf-medium">
                       Try adjusting your filters or add a new item.
                     </p>
@@ -833,7 +869,9 @@ const Items = () => {
                             {appliedFilters.itemStatus !== "archived" && (
                               <>
                                 <button
-                                  onClick={() => openEditModal(representativeItem)}
+                                  onClick={() =>
+                                    openEditModal(representativeItem)
+                                  }
                                   className="px-1.5 sm:px-2 md:px-2.5 py-1 sm:py-1 md:py-1.5 rounded-md bg-blue-50 text-[9px] sm:text-[10px] md:text-xs font-sf-medium font-medium text-[#003363] hover:bg-blue-100 transition-colors"
                                 >
                                   Edit
@@ -865,7 +903,7 @@ const Items = () => {
               <div className="text-sm text-gray-600">
                 Page {currentPage} of {totalPagesGrouped}
               </div>
-              
+
               {/* Right side - Navigation buttons */}
               <div className="flex items-center gap-2">
                 <button
@@ -877,9 +915,12 @@ const Items = () => {
                 >
                   Previous
                 </button>
-                
+
                 {/* Page Number Input */}
-                <form onSubmit={handlePageInputSubmit} className="flex items-center gap-1">
+                <form
+                  onSubmit={handlePageInputSubmit}
+                  className="flex items-center gap-1"
+                >
                   <input
                     type="text"
                     value={pageInputValue}
@@ -890,7 +931,6 @@ const Items = () => {
                     min="1"
                     max={totalPagesGrouped}
                   />
-                  
                 </form>
 
                 <button
@@ -902,7 +942,6 @@ const Items = () => {
                 >
                   Next
                   <span className="sm:hidden">Next</span>
-                 
                 </button>
               </div>
             </div>
@@ -967,8 +1006,8 @@ const Items = () => {
               // Use current item from list by id so edit modal gets latest note with all sizeVariations (Small, Medium, etc.)
               const itemToEdit =
                 detailsSelectedItem?.id != null
-                  ? items.find((i) => i.id === detailsSelectedItem.id) ??
-                    detailsSelectedItem
+                  ? (items.find((i) => i.id === detailsSelectedItem.id) ??
+                    detailsSelectedItem)
                   : detailsSelectedItem;
               openEditModal(itemToEdit);
             }}
@@ -984,7 +1023,9 @@ const Items = () => {
             onArchive={(variation) => {
               closeItemDetailsModal();
               // Archive the variation/item
-              const itemToArchive = variation?.id ? items.find((i) => i.id === variation.id) : variation;
+              const itemToArchive = variation?.id
+                ? items.find((i) => i.id === variation.id)
+                : variation;
               if (itemToArchive?.id) {
                 archiveItem(itemToArchive.id);
               }

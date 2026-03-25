@@ -11,7 +11,11 @@ import { getInventoryDisplayUnitPrice } from "../../utils/inventoryDisplayUnitPr
  * - While beginning inventory has stock: show beginning-inventory unit price.
  * - When beginning inventory runs out (0): show purchase unit price. Total Amount remains FIFO (beg×begPrice + purch×purchPrice).
  */
-const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = false }) => {
+const InventoryTable = ({
+  inventoryData,
+  allInventoryData,
+  isDateFilterActive = false,
+}) => {
   const formatPrice = (value) =>
     (Number(value) || 0).toLocaleString("en-US", {
       minimumFractionDigits: 0,
@@ -49,14 +53,10 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
   };
 
   /**
-   * Total Inventory Cost column value.
-   * Formula: Ending Inventory x Unit Price
+   * Total Inventory Cost — same basis as Total Amount (WAC / totalAmount from API) so columns
+   * and footer do not diverge.
    */
-  const getTotalInventoryCostPerItem = (item) => {
-    const endingInventory = Number(item.endingInventory) || 0;
-    const displayUnitPrice = Number(getDisplayUnitPrice(item)) || 0;
-    return endingInventory * displayUnitPrice;
-  };
+  const getTotalInventoryCostPerItem = (item) => getTotalAmountPerItem(item);
 
   // Use current filtered inventory dataset so footer matches selected date range/search filters.
   const dataForTotalCost = inventoryData;
@@ -67,10 +67,13 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
    */
   const calculateTotalInventoryCost = () => {
     if (!dataForTotalCost || dataForTotalCost.length === 0) return 0;
-    
+
     return dataForTotalCost.reduce((total, item) => {
       const itemCost = getTotalInventoryCostPerItem(item);
-      return total + (typeof itemCost === 'number' ? itemCost : parseFloat(itemCost) || 0);
+      return (
+        total +
+        (typeof itemCost === "number" ? itemCost : parseFloat(itemCost) || 0)
+      );
     }, 0);
   };
 
@@ -132,7 +135,7 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
                 key={row.id || `${row.item}-${row.size}-${row.no}`}
                 className={`${getRowBackgroundClass(
                   row,
-                  index
+                  index,
                 )} hover:bg-gray-50 transition-all duration-200 ease-in-out`}
               >
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-[#003363] whitespace-nowrap">
@@ -173,23 +176,38 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
                   P {formatPrice(getDisplayUnitPrice(row))}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm text-[#0060BA] whitespace-nowrap">
-                  P {getTotalAmountPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  P{" "}
+                  {getTotalAmountPerItem(row).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </td>
                 <td className="px-2 sm:px-3 md:px-3 lg:px-4 py-2.5 md:py-3 text-[10px] sm:text-xs md:text-xs lg:text-sm font-sf-medium font-medium text-[#0060BA] whitespace-nowrap">
-                  P {getTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  P{" "}
+                  {getTotalInventoryCostPerItem(row).toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
                 </td>
               </tr>
             ))}
           </tbody>
           <tfoot className="bg-gray-50 border-t-2 border-[#003363]">
             <tr>
-              <td colSpan={12} className="px-2 sm:px-3 md:px-3 lg:px-4 py-3 md:py-4 text-right">
+              <td
+                colSpan={12}
+                className="px-2 sm:px-3 md:px-3 lg:px-4 py-3 md:py-4 text-right"
+              >
                 <div className="flex flex-col items-end gap-0.5">
                   <span className="text-[10px] sm:text-xs md:text-xs lg:text-sm font-semibold text-[#003363]">
                     Total Inventory Cost
                   </span>
                   <span className="text-sm sm:text-base md:text-base lg:text-lg font-semibold text-[#E68B00]">
-                    P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    P{" "}
+                    {totalInventoryCost.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
                   </span>
                 </div>
               </td>
@@ -205,7 +223,7 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
             key={row.id || `${row.item}-${row.size}-${row.no}`}
             className={`${getRowBackgroundClass(
               row,
-              index
+              index,
             )} border border-gray-200 rounded-lg p-4 shadow-sm`}
           >
             <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-200">
@@ -276,18 +294,28 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
             <div className="mt-3 pt-3 border-t border-gray-200">
               <span className="text-xs text-gray-600">Total Amount</span>
               <p className="text-base font-sf-medium font-medium text-[#0060BA] mt-0.5">
-                P {getTotalAmountPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                P{" "}
+                {getTotalAmountPerItem(row).toLocaleString("en-US", {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
               </p>
             </div>
           </div>
         ))}
-        
+
         {/* Total Inventory Cost - Mobile (sum of all pages) */}
         <div className="bg-[#003363] border border-gray-200 rounded-lg p-4 shadow-sm font-sf-medium">
           <div className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium text-white">Total Inventory Cost</span>
+            <span className="text-sm font-medium text-white">
+              Total Inventory Cost
+            </span>
             <span className="text-base font-semibold text-[#E68B00]">
-              P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              P{" "}
+              {totalInventoryCost.toLocaleString("en-US", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
             </span>
           </div>
         </div>
@@ -348,7 +376,7 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
                     key={row.id || `${row.item}-${row.size}-${row.no}`}
                     className={`${getRowBackgroundClass(
                       row,
-                      index
+                      index,
                     )} hover:bg-gray-50 transition-all duration-200 ease-in-out`}
                   >
                     <td className="sticky left-0 z-10 px-3 py-3 text-xs text-[#003363] bg-inherit">
@@ -389,10 +417,18 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
                       P {formatPrice(getDisplayUnitPrice(row))}
                     </td>
                     <td className="px-3 py-3 text-xs text-[#0060BA] whitespace-nowrap">
-                      P {getTotalAmountPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      P{" "}
+                      {getTotalAmountPerItem(row).toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
                     </td>
                     <td className="px-3 py-3 text-xs font-sf-medium font-medium text-[#0060BA] whitespace-nowrap">
-                      P {getTotalInventoryCostPerItem(row).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      P{" "}
+                      {getTotalInventoryCostPerItem(row).toLocaleString(
+                        "en-US",
+                        { minimumFractionDigits: 2, maximumFractionDigits: 2 },
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -401,9 +437,15 @@ const InventoryTable = ({ inventoryData, allInventoryData, isDateFilterActive = 
                 <tr>
                   <td colSpan={12} className="px-3 py-3 text-right">
                     <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-xs font-semibold text-[#003363]">Total Inventory Cost</span>
+                      <span className="text-xs font-semibold text-[#003363]">
+                        Total Inventory Cost
+                      </span>
                       <span className="text-sm font-semibold text-[#E68B00]">
-                        P {totalInventoryCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        P{" "}
+                        {totalInventoryCost.toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
                       </span>
                     </div>
                   </td>

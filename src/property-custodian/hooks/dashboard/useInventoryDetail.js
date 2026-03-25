@@ -56,16 +56,15 @@ export const useInventoryDetail = (educationLevel = "all") => {
 
       const group = groupedMap.get(key);
 
-      // Calculate ending inventory: beginning_inventory + purchases - released + returns
       const beginningInventory = item.beginning_inventory || 0;
       const purchases = item.purchases || 0;
       const released = item.released || 0;
       const returns = item.returns || 0;
-      
-      // Use actual stock as ending inventory since it reflects real-time inventory
-      // The calculated ending_inventory may not account for all releases properly
-      // Stock is the actual current available inventory
-      const endingInventory = item.stock !== undefined ? item.stock : (beginningInventory + purchases - released + returns);
+      const rawEnding = beginningInventory + purchases - released + returns;
+      // Use report ending_inventory per row — do not use item.stock here (often parent total across variants).
+      const endingInventory = Number.isFinite(Number(item.ending_inventory))
+        ? Number(item.ending_inventory)
+        : Math.max(rawEnding, 0);
 
       group.variants.push({
         id: item.id,

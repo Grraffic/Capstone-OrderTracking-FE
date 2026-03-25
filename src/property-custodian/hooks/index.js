@@ -27,6 +27,7 @@ export {
 export { useInventoryDetail } from "./dashboard/useInventoryDetail";
 export { useInventoryAtReorderPoint } from "./dashboard/useInventoryAtReorderPoint";
 export { useInventoryOutOfStock } from "./dashboard/useInventoryOutOfStock";
+export { useInventoryComputedRows } from "./dashboard/useInventoryComputedRows";
 
 // Items Hooks
 export { useItemsStats } from "./items/useItemsStats";

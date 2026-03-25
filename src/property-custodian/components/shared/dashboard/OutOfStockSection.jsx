@@ -18,7 +18,9 @@ const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4; // Maximum 4 items per page
 
-  const { data, loading, error, refetch } = useInventoryOutOfStock(selectedEducationLevel);
+  const { data, loading, error, refetch } = useInventoryOutOfStock(
+    selectedEducationLevel,
+  );
 
   // Reset to page 1 when education level changes
   useEffect(() => {
@@ -29,7 +31,7 @@ const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
     if (!Array.isArray(inventoryRows) || inventoryRows.length === 0) return [];
 
     const filteredRows = inventoryRows.filter((row) => {
-      const isOutOfStock = (row?.endingInventory || 0) <= 0 || (row?.available || 0) <= 0;
+      const isOutOfStock = (Number(row?.endingInventory) || 0) <= 0;
       if (!isOutOfStock) return false;
       if (selectedEducationLevel === "all") return true;
       return (row?.educationLevel || "").trim() === selectedEducationLevel;
@@ -74,19 +76,20 @@ const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
 
   // Prefer parent-provided transformed rows so section always matches visible table.
   const safeData =
-    mappedInventoryRows.length > 0 || (Array.isArray(inventoryRows) && inventoryRows.length > 0)
+    mappedInventoryRows.length > 0 ||
+    (Array.isArray(inventoryRows) && inventoryRows.length > 0)
       ? mappedInventoryRows
       : Array.isArray(data)
-      ? data
-      : [];
+        ? data
+        : [];
 
   // Calculate pagination
   const totalItems = Array.isArray(safeData) ? safeData.length : 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedData = Array.isArray(safeData) 
-    ? safeData.slice(startIndex, endIndex) 
+  const paginatedData = Array.isArray(safeData)
+    ? safeData.slice(startIndex, endIndex)
     : [];
 
   // Calculate total items (one row per item now)
@@ -145,7 +148,11 @@ const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
         ) : (
           <InventoryDetailTable
             data={paginatedData}
-            loading={Array.isArray(inventoryRows) && inventoryRows.length > 0 ? false : loading}
+            loading={
+              Array.isArray(inventoryRows) && inventoryRows.length > 0
+                ? false
+                : loading
+            }
             educationLevel={selectedEducationLevel}
             showFooter={false}
             onVariantChange={refetch}
@@ -158,9 +165,13 @@ const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
       <div className="px-4 sm:px-6 py-3 border-t border-gray-200 bg-gray-50">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-gray-600">
-            Out of Stock - {selectedEducationLevel === "all" ? "All Education Levels" : selectedEducationLevel}: {totalItemsCount} Items
+            Out of Stock -{" "}
+            {selectedEducationLevel === "all"
+              ? "All Education Levels"
+              : selectedEducationLevel}
+            : {totalItemsCount} Items
           </p>
-          
+
           {/* Pagination Controls */}
           {totalPages > 1 && (
             <div className="flex items-center gap-2">
@@ -173,11 +184,11 @@ const OutOfStockSection = ({ totalOutOfStock, inventoryRows = [] }) => {
                 <ChevronLeft size={18} />
                 <span>Previous</span>
               </button>
-              
+
               <span className="text-sm text-gray-600 px-3">
                 Page {currentPage} of {totalPages}
               </span>
-              
+
               <button
                 onClick={handleNext}
                 disabled={currentPage >= totalPages}

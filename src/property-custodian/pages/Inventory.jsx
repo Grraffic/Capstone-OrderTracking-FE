@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useSearchParams } from "react-router-dom";
 import { startOfYear } from "date-fns";
 import { InventoryHealth } from "../components/shared";
@@ -6,10 +12,7 @@ import InventoryView from "../components/Inventory/InventoryView";
 import SearchableSelect from "../components/common/SearchableSelect";
 import TransactionsView from "../components/Inventory/TransactionsView";
 import UpdateQuantityModal from "../components/Inventory/UpdateQuantityModal";
-import {
-  useOrders,
-  PC_INVENTORY_HEALTH_REFRESH,
-} from "../hooks";
+import { useOrders, PC_INVENTORY_HEALTH_REFRESH } from "../hooks";
 import { useSocket } from "../../context/SocketContext";
 import inventoryService from "../../services/inventory.service";
 import transactionService from "../../services/transaction.service";
@@ -74,10 +77,7 @@ const Inventory = () => {
 
   // Fetch all orders to calculate unreleased and released counts
   // Fetch active orders (pending, processing, ready, payment_pending)
-  const {
-    orders: allActiveOrders,
-    loading: activeOrdersLoading,
-  } = useOrders({
+  const { orders: allActiveOrders, loading: activeOrdersLoading } = useOrders({
     page: 1,
     limit: 10000,
     status: null, // Gets active orders: pending, processing, ready, payment_pending
@@ -87,24 +87,20 @@ const Inventory = () => {
   });
 
   // Fetch claimed/completed orders separately (backend filters them out when status is null)
-  const {
-    orders: allClaimedOrders,
-    loading: claimedOrdersLoading,
-  } = useOrders({
-    page: 1,
-    limit: 10000,
-    status: "claimed", // Explicitly fetch claimed orders
-    orderType: null,
-    educationLevel: null,
-    search: null,
-  });
+  const { orders: allClaimedOrders, loading: claimedOrdersLoading } = useOrders(
+    {
+      page: 1,
+      limit: 10000,
+      status: "claimed", // Explicitly fetch claimed orders
+      orderType: null,
+      educationLevel: null,
+      search: null,
+    },
+  );
 
   // Combine all orders for calculations
   const allOrders = useMemo(() => {
-    return [
-      ...(allActiveOrders || []),
-      ...(allClaimedOrders || []),
-    ];
+    return [...(allActiveOrders || []), ...(allClaimedOrders || [])];
   }, [allActiveOrders, allClaimedOrders]);
 
   const ordersLoading = activeOrdersLoading || claimedOrdersLoading;
@@ -120,18 +116,23 @@ const Inventory = () => {
   const inventoryHealthStats = useMemo(
     () => ({
       totalItemVariants: inventoryData.length,
-      atReorderPoint: inventoryData.filter(
-        (item) =>
-          item.status === "At Reorder Point" ||
-          item.status === "Critical" ||
-          item.endingInventory <= 0 ||
-          item.available <= 0
-      ).length,
+      atReorderPoint: inventoryData.filter((item) => {
+        const st = String(item.status || "").toLowerCase();
+        if (st === "out of stock") return false;
+        const end = Number(item.endingInventory) || 0;
+        // Reorder/low-stock rows still count when ending > 0 even if available is 0
+        // (e.g. all units tied up in unreleased orders). Parent item.stock can be wrong for variants.
+        return (
+          (item.status === "At Reorder Point" || item.status === "Critical") &&
+          end > 0
+        );
+      }).length,
+      // OOS = no ending inventory on this row (do not use parent item.stock; do not use available-only)
       outOfStock: inventoryData.filter(
-        (item) => item.endingInventory <= 0 || item.available <= 0
+        (item) => (Number(item.endingInventory) || 0) <= 0,
       ).length,
     }),
-    [inventoryData]
+    [inventoryData],
   );
 
   // Update Quantity Modal state
@@ -147,8 +148,9 @@ const Inventory = () => {
   });
   const getSelectedReorderPointRow = useCallback(
     (itemName, variant) =>
-      inventoryData.find((r) => r.item === itemName && r.size === variant) || null,
-    [inventoryData]
+      inventoryData.find((r) => r.item === itemName && r.size === variant) ||
+      null,
+    [inventoryData],
   );
   const [setReorderPointSaving, setSetReorderPointSaving] = useState(false);
   const [setReorderPointError, setSetReorderPointError] = useState(null);
@@ -168,6 +170,7 @@ const Inventory = () => {
     itemId: null,
     variant: "",
   });
+  const updateQuantitySubmitLockRef = useRef(false);
 
   // Handle Update Quantity form submission
   const normalizeInventorySize = (size) =>
@@ -178,6 +181,7 @@ const Inventory = () => {
       .trim();
 
   const handleUpdateQuantity = async () => {
+    if (updateQuantitySubmitLockRef.current) return;
     const form = updateQuantityForm;
     if (form.fieldToEdit === "purchases") {
       const quantity = Number(form.quantity);
@@ -217,17 +221,18 @@ const Inventory = () => {
       });
       if (!match || !match.item_id) {
         alert(
-          "Item not found in current inventory. Please enter an item name from the inventory list and select the correct variant."
+          "Item not found in current inventory. Please enter an item name from the inventory list and select the correct variant.",
         );
         return;
       }
 
+      updateQuantitySubmitLockRef.current = true;
       try {
         const result = await inventoryService.addStock(
           match.item_id,
           quantity,
           sizeForApi,
-          unitPrice
+          unitPrice,
         );
         if (result?.success) {
           setIsUpdateQuantityModalOpen(false);
@@ -252,6 +257,8 @@ const Inventory = () => {
         }
       } catch (err) {
         alert(err.message || "Failed to record purchase.");
+      } finally {
+        updateQuantitySubmitLockRef.current = false;
       }
       return;
     }
@@ -272,16 +279,27 @@ const Inventory = () => {
       const unitPrice = form.unitPrice ? Number(form.unitPrice) : null;
       const remarks = (form.remarks || "").trim();
 
-      const normalizeSize = (s) => (s || "").toLowerCase().trim().replace(/\s*\([^)]*\)/g, "").trim();
+      const normalizeSize = (s) =>
+        (s || "")
+          .toLowerCase()
+          .trim()
+          .replace(/\s*\([^)]*\)/g, "")
+          .trim();
       const match = inventoryData.find((row) => {
-        const nameMatch = (row.item || "").trim().toLowerCase() === itemName.toLowerCase();
+        const nameMatch =
+          (row.item || "").trim().toLowerCase() === itemName.toLowerCase();
         if (!nameMatch) return false;
         const rowSize = (row.size || "N/A").trim();
         if (!variant) return true;
-        return normalizeSize(rowSize) === normalizeSize(variant) || rowSize.toLowerCase() === variant;
+        return (
+          normalizeSize(rowSize) === normalizeSize(variant) ||
+          rowSize.toLowerCase() === variant
+        );
       });
       if (!match || !match.item_id) {
-        alert("Item not found in current inventory. Please enter an item name from the inventory list and select the correct variant.");
+        alert(
+          "Item not found in current inventory. Please enter an item name from the inventory list and select the correct variant.",
+        );
         return;
       }
 
@@ -302,13 +320,15 @@ const Inventory = () => {
       const hasRecordedRelease = Boolean(strictCheckResult.hasRecordedRelease);
 
       if (!hasRecordedRelease && !remarks) {
-        alert("Remarks is required when no recorded releases exist for this item.");
+        alert(
+          "Remarks is required when no recorded releases exist for this item.",
+        );
         return;
       }
 
       if (!hasRecordedRelease && !form.noReleaseAcknowledged) {
         const shouldProceed = window.confirm(
-          "Warning: No recorded releases for this item. Proceed with return?"
+          "Warning: No recorded releases for this item. Proceed with return?",
         );
         if (!shouldProceed) return;
         setUpdateQuantityForm((prev) => ({
@@ -317,6 +337,7 @@ const Inventory = () => {
         }));
       }
 
+      updateQuantitySubmitLockRef.current = true;
       try {
         const result = await inventoryService.recordReturn(
           match.item_id,
@@ -324,7 +345,7 @@ const Inventory = () => {
           sizeForApi,
           unitPrice,
           remarks || null,
-          !hasRecordedRelease
+          !hasRecordedRelease,
         );
         if (result?.success) {
           setIsUpdateQuantityModalOpen(false);
@@ -349,6 +370,8 @@ const Inventory = () => {
         }
       } catch (err) {
         alert(err.message || "Failed to record return.");
+      } finally {
+        updateQuantitySubmitLockRef.current = false;
       }
       return;
     }
@@ -395,7 +418,7 @@ const Inventory = () => {
         }) || null
       );
     },
-    [inventoryData]
+    [inventoryData],
   );
 
   const resolveReturnUnitPrice = useCallback(
@@ -405,14 +428,14 @@ const Inventory = () => {
       const resolvedPrice = Number(getInventoryDisplayUnitPrice(row));
       return Number.isFinite(resolvedPrice) ? String(resolvedPrice) : "";
     },
-    [findInventoryRowByItemAndVariant]
+    [findInventoryRowByItemAndVariant],
   );
 
   const runStrictReleaseCheck = useCallback(async (itemId, variant) => {
     try {
       const response = await inventoryService.checkReturnReleaseHistory(
         itemId,
-        variant || null
+        variant || null,
       );
       return {
         hasRecordedRelease: Boolean(response?.hasRecordedRelease),
@@ -429,7 +452,10 @@ const Inventory = () => {
     let cancelled = false;
 
     const loadReturnReleaseCheck = async () => {
-      if (!isUpdateQuantityModalOpen || updateQuantityForm.fieldToEdit !== "return") {
+      if (
+        !isUpdateQuantityModalOpen ||
+        updateQuantityForm.fieldToEdit !== "return"
+      ) {
         setReturnReleaseCheck({
           loading: false,
           hasRecordedRelease: true,
@@ -442,7 +468,7 @@ const Inventory = () => {
 
       const selectedRow = findInventoryRowByItemAndVariant(
         updateQuantityForm.itemName,
-        updateQuantityForm.variant
+        updateQuantityForm.variant,
       );
       if (!selectedRow?.item_id) {
         setReturnReleaseCheck({
@@ -464,7 +490,7 @@ const Inventory = () => {
 
       const result = await runStrictReleaseCheck(
         selectedRow.item_id,
-        updateQuantityForm.variant || null
+        updateQuantityForm.variant || null,
       );
       if (cancelled) return;
 
@@ -504,10 +530,14 @@ const Inventory = () => {
       if (nextFieldToEdit === "return") {
         const autoPrice = resolveReturnUnitPrice(
           nextForm.itemName,
-          nextForm.variant
+          nextForm.variant,
         );
         nextForm.unitPrice = autoPrice;
-        if (name === "itemName" || name === "variant" || name === "fieldToEdit") {
+        if (
+          name === "itemName" ||
+          name === "variant" ||
+          name === "fieldToEdit"
+        ) {
           nextForm.noReleaseAcknowledged = false;
         }
       } else if (name === "fieldToEdit") {
@@ -520,8 +550,13 @@ const Inventory = () => {
   };
 
   const updateQuantityItemOptions = useMemo(
-    () => [...new Set((inventoryData || []).map((row) => row.item).filter(Boolean))].sort(),
-    [inventoryData]
+    () =>
+      [
+        ...new Set(
+          (inventoryData || []).map((row) => row.item).filter(Boolean),
+        ),
+      ].sort(),
+    [inventoryData],
   );
 
   const updateQuantityVariantOptions = useMemo(() => {
@@ -532,7 +567,7 @@ const Inventory = () => {
         (inventoryData || [])
           .filter((row) => (row.item || "").trim() === selectedItem)
           .map((row) => row.size)
-          .filter(Boolean)
+          .filter(Boolean),
       ),
     ].sort();
   }, [inventoryData, updateQuantityForm.itemName]);
@@ -553,7 +588,7 @@ const Inventory = () => {
         return nextForm;
       });
     },
-    [resolveReturnUnitPrice]
+    [resolveReturnUnitPrice],
   );
 
   const handleUpdateQuantityVariantChange = useCallback(
@@ -568,13 +603,13 @@ const Inventory = () => {
         if (nextForm.fieldToEdit === "return") {
           nextForm.unitPrice = resolveReturnUnitPrice(
             nextForm.itemName,
-            nextForm.variant
+            nextForm.variant,
           );
         }
         return nextForm;
       });
     },
-    [resolveReturnUnitPrice]
+    [resolveReturnUnitPrice],
   );
 
   // Socket connection for real-time updates
@@ -648,7 +683,7 @@ const Inventory = () => {
       // Log all items with purchases > 0 from raw response
       if (response.data && response.data.length > 0) {
         const rawItemsWithPurchases = response.data.filter(
-          (item) => (item.purchases || 0) > 0
+          (item) => (item.purchases || 0) > 0,
         );
         if (rawItemsWithPurchases.length > 0) {
           // console.log(
@@ -743,7 +778,10 @@ const Inventory = () => {
 
               // Use appropriate date based on order status
               const orderDate = isReleased
-                ? order.claimed_date || order.updated_at || order.completed_at || order.created_at // When it was released
+                ? order.claimed_date ||
+                  order.updated_at ||
+                  order.completed_at ||
+                  order.created_at // When it was released
                 : order.created_at; // When it was created
 
               if (orderDate) {
@@ -752,14 +790,14 @@ const Inventory = () => {
                 const orderDateOnly = new Date(
                   orderDateObj.getFullYear(),
                   orderDateObj.getMonth(),
-                  orderDateObj.getDate()
+                  orderDateObj.getDate(),
                 );
 
                 if (startDate) {
                   const startDateOnly = new Date(
                     startDate.getFullYear(),
                     startDate.getMonth(),
-                    startDate.getDate()
+                    startDate.getDate(),
                   );
                   if (orderDateOnly < startDateOnly) {
                     return; // Skip orders before start date
@@ -770,7 +808,7 @@ const Inventory = () => {
                   const endDateOnly = new Date(
                     endDate.getFullYear(),
                     endDate.getMonth(),
-                    endDate.getDate()
+                    endDate.getDate(),
                   );
                   // Include the end date (add 1 day and compare with <)
                   const endDateInclusive = new Date(endDateOnly);
@@ -791,7 +829,7 @@ const Inventory = () => {
                   console.warn(
                     "[Inventory] Failed to parse order items:",
                     e,
-                    order.items
+                    order.items,
                   );
                   orderItems = [];
                 }
@@ -824,7 +862,11 @@ const Inventory = () => {
                 matchLog.push({
                   orderIndex,
                   orderStatus: order.status,
-                  orderItem: { name: orderItem.name, size: orderItem.size, quantity: orderItem.quantity },
+                  orderItem: {
+                    name: orderItem.name,
+                    size: orderItem.size,
+                    quantity: orderItem.quantity,
+                  },
                   inventoryItem: { name: itemName, size: itemSize },
                 });
                 return sum + (Number(orderItem.quantity) || 0);
@@ -837,7 +879,7 @@ const Inventory = () => {
               // Unreleased: pending or processing orders
               if (status === "pending" || status === "processing") {
                 unreleasedCount += matchingQuantity;
-              } 
+              }
               // Released: claimed or completed orders (both count as released)
               else if (status === "claimed" || status === "completed") {
                 releasedCount += matchingQuantity;
@@ -929,10 +971,14 @@ const Inventory = () => {
           // Calculate available: Ending Inventory - Unreleased
           const available = Math.max(
             endingInventory - orderCounts.unreleased,
-            0
+            0,
           );
-          const rowStatus =
-            rawEndingInventory <= 0 ? "Out of Stock" : item.status;
+          const rowStock = Number(item.stock) || 0;
+          const shouldForceOutOfStock =
+            rawEndingInventory <= 0 && available <= 0 && rowStock <= 0;
+          const rowStatus = shouldForceOutOfStock
+            ? "Out of Stock"
+            : item.status;
 
           const transformedItem = {
             no: index + 1,
@@ -946,6 +992,7 @@ const Inventory = () => {
             purchases: originalPurchases, // Preserve original purchases value
             released: orderCounts.released, // Number of orders (claimed) containing this item
             returns: item.returns || 0,
+            stock: rowStock,
             available: available, // Calculated: Ending Inventory - Unreleased
             endingInventory: endingInventory, // Calculated: Beginning Inventory + Purchases - Released + Returns
             unitPrice: item.unit_price != null ? Number(item.unit_price) : 0,
@@ -953,11 +1000,13 @@ const Inventory = () => {
               item.purchase_unit_price != null
                 ? Number(item.purchase_unit_price)
                 : item.unit_price != null
-                ? Number(item.unit_price)
-                : 0,
-            unitPriceBeginning: item.unit_price_beginning ?? item.unit_price ?? 0,
+                  ? Number(item.unit_price)
+                  : 0,
+            unitPriceBeginning:
+              item.unit_price_beginning ?? item.unit_price ?? 0,
             price: item.price != null ? Number(item.price) : undefined,
-            totalAmount: item.total_amount != null ? Number(item.total_amount) : 0,
+            totalAmount:
+              item.total_amount != null ? Number(item.total_amount) : 0,
             status: rowStatus,
             // Preserve backend reorder point so Set Reorder Point modal can prefill current value.
             reorderPoint:
@@ -980,7 +1029,7 @@ const Inventory = () => {
               {
                 name: item.name,
                 size: item.size,
-              }
+              },
             );
           }
 
@@ -989,7 +1038,7 @@ const Inventory = () => {
 
         // Log the final transformed data to verify purchases are included
         const itemsWithPurchases = transformedData.filter(
-          (item) => item.purchases > 0
+          (item) => item.purchases > 0,
         );
         if (itemsWithPurchases.length > 0) {
           // console.log(
@@ -1010,7 +1059,7 @@ const Inventory = () => {
             response.data?.filter((item) => (item.purchases || 0) > 0) || [];
           if (rawItemsWithPurchases.length > 0) {
             console.error(
-              `[Inventory] ❌ CRITICAL: Raw data had ${rawItemsWithPurchases.length} items with purchases, but transformation lost them!`
+              `[Inventory] ❌ CRITICAL: Raw data had ${rawItemsWithPurchases.length} items with purchases, but transformation lost them!`,
             );
           }
         }
@@ -1022,7 +1071,7 @@ const Inventory = () => {
         const transformedPurchasesCount = itemsWithPurchases.length;
         if (rawPurchasesCount !== transformedPurchasesCount) {
           console.error(
-            `[Inventory] ❌ Purchases count mismatch: Raw=${rawPurchasesCount}, Transformed=${transformedPurchasesCount}`
+            `[Inventory] ❌ Purchases count mismatch: Raw=${rawPurchasesCount}, Transformed=${transformedPurchasesCount}`,
           );
         } else if (rawPurchasesCount > 0) {
           // console.log(
@@ -1036,16 +1085,16 @@ const Inventory = () => {
         const calculatedStats = {
           totalItems: response.data.length,
           aboveThreshold: response.data.filter(
-            (item) => item.status === "Above Threshold"
+            (item) => item.status === "Above Threshold",
           ).length,
           atReorderPoint: response.data.filter(
-            (item) => item.status === "At Reorder Point"
+            (item) => item.status === "At Reorder Point",
           ).length,
           critical: response.data.filter((item) => item.status === "Critical")
             .length,
           // Keep this aligned with table-computed stock state.
           outOfStock: transformedData.filter(
-            (item) => item.endingInventory <= 0 || item.available <= 0
+            (item) => item.endingInventory <= 0 || item.available <= 0,
           ).length,
           unreleasedOrders: 0, // Will be calculated from orders
           releasedOrders: 0, // Will be calculated from orders
@@ -1156,7 +1205,14 @@ const Inventory = () => {
       off("order:claimed", handleOrderClaimed);
       off("order:updated", handleOrderUpdated);
     };
-  }, [isConnected, on, off, activeTab, fetchInventoryData, refreshTransactions]);
+  }, [
+    isConnected,
+    on,
+    off,
+    activeTab,
+    fetchInventoryData,
+    refreshTransactions,
+  ]);
 
   // Fetch inventory data
   // Only fetch when orders are loaded (or if ordersLoading is false to avoid waiting forever)
@@ -1165,7 +1221,15 @@ const Inventory = () => {
     if (!ordersLoading) {
       fetchInventoryData();
     }
-  }, [gradeLevel, searchQuery, startDate, endDate, allOrders, ordersLoading, fetchInventoryData]);
+  }, [
+    gradeLevel,
+    searchQuery,
+    startDate,
+    endDate,
+    allOrders,
+    ordersLoading,
+    fetchInventoryData,
+  ]);
 
   // Reset to page 1 when inventory data changes
   useEffect(() => {
@@ -1196,7 +1260,7 @@ const Inventory = () => {
       const unreleasedCount = allOrders.filter(
         (order) =>
           order.status?.toLowerCase() === "pending" ||
-          order.status?.toLowerCase() === "processing"
+          order.status?.toLowerCase() === "processing",
       ).length;
 
       // Released orders = claimed or completed status
@@ -1234,7 +1298,9 @@ const Inventory = () => {
   // Helper function to extract item name from action string
   const extractItemNameFromAction = (action) => {
     // Extract item name from action: "ITEM CREATED SHS Men's Polo"
-    const itemMatch = action.match(/(?:ITEM CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)\s+(.+)$/i);
+    const itemMatch = action.match(
+      /(?:ITEM CREATED|PURCHASE RECORDED|RETURN RECORDED|ITEM RELEASED|ITEM DETAILS UPDATED)\s+(.+)$/i,
+    );
     return itemMatch ? itemMatch[1].trim() : "";
   };
 
@@ -1246,13 +1312,13 @@ const Inventory = () => {
     //   startDate: startDate?.toISOString(),
     //   endDate: endDate?.toISOString(),
     // });
-    
+
     // Early return if not on transaction tab
     if (activeTab !== "transaction") {
       // console.log("[Inventory] ⏸️ Not on transaction tab, skipping fetch. Current tab:", activeTab);
       return;
     }
-    
+
     const fetchTransactions = async () => {
       try {
         // console.log("[Inventory] 🚀 Starting transaction fetch...");
@@ -1260,49 +1326,61 @@ const Inventory = () => {
         // Set endDate to end of day to include all transactions created today
         const endOfDay = new Date(endDate);
         endOfDay.setHours(23, 59, 59, 999);
-        
+
         const filters = {
           startDate: startDate,
           endDate: endOfDay,
           limit: 1000, // Get a large number of transactions
         };
-        
+
         // console.log("[Inventory] 📤 Fetching transactions with filters:", {
         //   startDate: filters.startDate?.toISOString(),
         //   endDate: filters.endDate?.toISOString(),
         //   limit: filters.limit,
         // });
-        
+
         const response = await transactionService.getTransactions(filters);
-        
+
         // console.log("[Inventory] 📊 Transaction fetch response:", {
         //   success: response.success,
         //   dataLength: response.data?.length || 0,
         //   filters: filters,
         // });
-        
+
         if (response.success && response.data) {
           // console.log("[Inventory] ✅ Received transactions:", response.data.length);
           // console.log("[Inventory] 📋 Sample transaction from API:", response.data[0]);
-          
+
           // Helper function to fetch user name with multiple fallback methods
           const fetchUserName = async (tx) => {
             // Try 1: Use stored user_name if valid
-            if (tx.user_name && tx.user_name !== "System" && tx.user_name.trim() !== "") {
+            if (
+              tx.user_name &&
+              tx.user_name !== "System" &&
+              tx.user_name.trim() !== ""
+            ) {
               return { name: tx.user_name, role: tx.user_role || null };
             }
-            
+
             // Try 2: Fetch by user_id
             if (tx.user_id) {
               try {
                 const userResponse = await userAPI.getUserById(tx.user_id);
-                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                if (
+                  userResponse.data &&
+                  userResponse.data.success &&
+                  userResponse.data.data
+                ) {
                   const fetchedName = userResponse.data.data.name;
                   const fetchedRole = userResponse.data.data.role;
-                  if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
-                    return { 
-                      name: fetchedName, 
-                      role: fetchedRole || tx.user_role || null 
+                  if (
+                    fetchedName &&
+                    fetchedName !== "System" &&
+                    fetchedName.trim() !== ""
+                  ) {
+                    return {
+                      name: fetchedName,
+                      role: fetchedRole || tx.user_role || null,
                     };
                   }
                 }
@@ -1310,21 +1388,31 @@ const Inventory = () => {
                 // console.warn(`[Inventory] Failed to fetch user by ID ${tx.user_id}:`, err);
               }
             }
-            
+
             // Try 3: Fetch by email from metadata
-            const emailFromMetadata = tx.metadata?.email || tx.metadata?.student_email;
+            const emailFromMetadata =
+              tx.metadata?.email || tx.metadata?.student_email;
             if (emailFromMetadata && typeof emailFromMetadata === "string") {
               try {
                 // getUserById now supports email lookup if userId is an email
-                const userResponse = await userAPI.getUserById(emailFromMetadata);
-                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                const userResponse =
+                  await userAPI.getUserById(emailFromMetadata);
+                if (
+                  userResponse.data &&
+                  userResponse.data.success &&
+                  userResponse.data.data
+                ) {
                   const fetchedName = userResponse.data.data.name;
                   const fetchedRole = userResponse.data.data.role;
-                  if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                  if (
+                    fetchedName &&
+                    fetchedName !== "System" &&
+                    fetchedName.trim() !== ""
+                  ) {
                     // console.log(`[Inventory] ✅ Found user by email from metadata: ${emailFromMetadata}`);
-                    return { 
-                      name: fetchedName, 
-                      role: fetchedRole || tx.user_role || null 
+                    return {
+                      name: fetchedName,
+                      role: fetchedRole || tx.user_role || null,
                     };
                   }
                 }
@@ -1332,19 +1420,31 @@ const Inventory = () => {
                 // console.warn(`[Inventory] Failed to fetch user by email ${emailFromMetadata}:`, err);
               }
             }
-            
+
             // Try 4: If user_id looks like an email, try fetching by it
-            if (tx.user_id && typeof tx.user_id === "string" && tx.user_id.includes("@")) {
+            if (
+              tx.user_id &&
+              typeof tx.user_id === "string" &&
+              tx.user_id.includes("@")
+            ) {
               try {
                 const userResponse = await userAPI.getUserById(tx.user_id);
-                if (userResponse.data && userResponse.data.success && userResponse.data.data) {
+                if (
+                  userResponse.data &&
+                  userResponse.data.success &&
+                  userResponse.data.data
+                ) {
                   const fetchedName = userResponse.data.data.name;
                   const fetchedRole = userResponse.data.data.role;
-                  if (fetchedName && fetchedName !== "System" && fetchedName.trim() !== "") {
+                  if (
+                    fetchedName &&
+                    fetchedName !== "System" &&
+                    fetchedName.trim() !== ""
+                  ) {
                     // console.log(`[Inventory] ✅ Found user by email (user_id): ${tx.user_id}`);
-                    return { 
-                      name: fetchedName, 
-                      role: fetchedRole || tx.user_role || null 
+                    return {
+                      name: fetchedName,
+                      role: fetchedRole || tx.user_role || null,
                     };
                   }
                 }
@@ -1352,24 +1452,25 @@ const Inventory = () => {
                 // console.warn(`[Inventory] Failed to fetch user by email (user_id) ${tx.user_id}:`, err);
               }
             }
-            
+
             // Fallback: return stored values or System
-            return { 
-              name: tx.user_name || "System", 
-              role: tx.user_role || null 
+            return {
+              name: tx.user_name || "System",
+              role: tx.user_role || null,
             };
           };
-          
+
           // Fetch user names and roles for transactions
           const transactionsWithUsers = await Promise.all(
             response.data.map(async (tx) => {
               const userInfo = await fetchUserName(tx);
               const userName = userInfo.name;
               const userRole = userInfo.role;
-              
+
               // Format role for display
               const formatRole = (role) => {
-                if (!role || role === "system" || role === "unknown") return null;
+                if (!role || role === "system" || role === "unknown")
+                  return null;
                 if (role === "property_custodian") {
                   return "Property Custodian";
                 }
@@ -1389,11 +1490,15 @@ const Inventory = () => {
                   return "Student";
                 }
                 return role
-                  .split('_')
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-                  .join(' ');
+                  .split("_")
+                  .map(
+                    (word) =>
+                      word.charAt(0).toUpperCase() +
+                      word.slice(1).toLowerCase(),
+                  )
+                  .join(" ");
               };
-              
+
               // Transform API data to match component format
               const date = new Date(tx.created_at);
               const formattedDate = date.toLocaleDateString("en-US", {
@@ -1438,11 +1543,11 @@ const Inventory = () => {
               }
 
               // Extract price from metadata if available
-              const price = tx.metadata?.unit_price 
-                ? `P${tx.metadata.unit_price}` 
-                : tx.metadata?.price 
-                ? `P${tx.metadata.price}` 
-                : null;
+              const price = tx.metadata?.unit_price
+                ? `P${tx.metadata.unit_price}`
+                : tx.metadata?.price
+                  ? `P${tx.metadata.price}`
+                  : null;
 
               return {
                 id: tx.id,
@@ -1456,18 +1561,26 @@ const Inventory = () => {
                 price: price,
                 status: displayType, // Use displayType for status (Items, Purchases, Returns, Releases)
                 metadata: meta, // Pass metadata for dynamic formatting
-                itemName: tx.metadata?.item_name || extractItemNameFromAction(tx.action),
+                itemName:
+                  tx.metadata?.item_name ||
+                  extractItemNameFromAction(tx.action),
               };
-            })
+            }),
           );
-          
+
           // Use transactionsWithUsers directly (already transformed with user_name and user_role)
           const transformedTransactions = transactionsWithUsers;
 
           setTransactionData(transformedTransactions);
-          console.log("[Inventory] ✅ Transformed transactions:", transformedTransactions.length);
+          console.log(
+            "[Inventory] ✅ Transformed transactions:",
+            transformedTransactions.length,
+          );
         } else {
-          console.warn("[Inventory] ⚠️ No transaction data in response:", response);
+          console.warn(
+            "[Inventory] ⚠️ No transaction data in response:",
+            response,
+          );
           setTransactionData([]);
         }
       } catch (error) {
@@ -1476,25 +1589,33 @@ const Inventory = () => {
           message: error.message,
           stack: error.stack,
         });
-        
+
         // Handle 403 Forbidden errors with user-friendly message
-        if (error.message === "Forbidden" || error.message.includes("Forbidden")) {
+        if (
+          error.message === "Forbidden" ||
+          error.message.includes("Forbidden")
+        ) {
           console.error("[Inventory] 🔒 Access denied - 403 Forbidden error");
           // Show user-friendly error message
           alert(
             "Access Denied\n\n" +
-            "You don't have permission to view transactions. " +
-            "Please ensure you are logged in with a Property Custodian account.\n\n" +
-            "If you believe this is an error, please contact your administrator."
+              "You don't have permission to view transactions. " +
+              "Please ensure you are logged in with a Property Custodian account.\n\n" +
+              "If you believe this is an error, please contact your administrator.",
           );
-        } else if (error.message.includes("Unauthorized") || error.message.includes("401")) {
-          console.error("[Inventory] 🔐 Authentication error - 401 Unauthorized");
+        } else if (
+          error.message.includes("Unauthorized") ||
+          error.message.includes("401")
+        ) {
+          console.error(
+            "[Inventory] 🔐 Authentication error - 401 Unauthorized",
+          );
           alert(
             "Authentication Error\n\n" +
-            "Your session may have expired. Please log out and log back in."
+              "Your session may have expired. Please log out and log back in.",
           );
         }
-        
+
         setTransactionData([]);
       } finally {
         setTransactionsLoading(false);
@@ -1547,27 +1668,32 @@ const Inventory = () => {
         releases: "Releases",
         items: "Items",
       };
-      const filterType = typeMap[transactionTypeFilter] || transactionTypeFilter;
+      const filterType =
+        typeMap[transactionTypeFilter] || transactionTypeFilter;
       if (transactionTypeFilter === "items") {
         return transaction.type === "Items";
       }
-      return (
-        transaction.type.toLowerCase() === filterType.toLowerCase()
-      );
+      return transaction.type.toLowerCase() === filterType.toLowerCase();
     });
   }, [transactionsInSearchScope, transactionTypeFilter]);
 
   // Paginate filtered transactions (8 items per page)
-  const transactionTotalPages = Math.ceil(filteredTransactions.length / transactionItemsPerPage);
-  const transactionStartIndex = (transactionCurrentPage - 1) * transactionItemsPerPage;
+  const transactionTotalPages = Math.ceil(
+    filteredTransactions.length / transactionItemsPerPage,
+  );
+  const transactionStartIndex =
+    (transactionCurrentPage - 1) * transactionItemsPerPage;
   const transactionEndIndex = transactionStartIndex + transactionItemsPerPage;
-  const paginatedTransactions = filteredTransactions.slice(transactionStartIndex, transactionEndIndex);
+  const paginatedTransactions = filteredTransactions.slice(
+    transactionStartIndex,
+    transactionEndIndex,
+  );
 
   // Reset transaction page to 1 when filter or search changes
   useEffect(() => {
     setTransactionCurrentPage(1);
   }, [transactionTypeFilter, startDate, endDate, searchQuery]);
-  
+
   // Log filtered transactions for debugging
   useEffect(() => {
     if (activeTab === "transaction") {
@@ -1581,7 +1707,13 @@ const Inventory = () => {
       //   console.log("[Inventory] 📋 Sample filtered transaction:", filteredTransactions[0]);
       // }
     }
-  }, [transactionData, filteredTransactions, transactionTypeFilter, transactionsLoading, activeTab]);
+  }, [
+    transactionData,
+    filteredTransactions,
+    transactionTypeFilter,
+    transactionsLoading,
+    activeTab,
+  ]);
 
   // Counts respect the search query so tab badges match the filtered set
   const transactionCounts = useMemo(
@@ -1777,7 +1909,10 @@ const Inventory = () => {
 
         {/* Inventory Health Section */}
         <div className="mb-4 sm:mb-5 md:mb-6 lg:mb-7 xl:mb-8">
-          <InventoryHealth stats={inventoryHealthStats} inventoryRows={inventoryData} />
+          <InventoryHealth
+            stats={inventoryHealthStats}
+            inventoryRows={inventoryData}
+          />
         </div>
 
         {/* Inventory View */}
@@ -1802,39 +1937,40 @@ const Inventory = () => {
         )}
 
         {/* Transactions View */}
-        {activeTab === "transaction" && (() => {
-          // console.log("[Inventory] 🎨 Rendering TransactionsView with props:", {
-          //   filteredTransactionsCount: filteredTransactions.length,
-          //   transactionDataCount: transactionData.length,
-          //   transactionTypeFilter,
-          //   transactionCounts,
-          //   transactionsLoading,
-          //   startDate: startDate?.toISOString(),
-          //   endDate: endDate?.toISOString(),
-          // });
-          return (
-            <TransactionsView
-              startDate={startDate}
-              endDate={endDate}
-              onDateRangeChange={(start, end) => {
-                setStartDate(start);
-                setEndDate(end);
-              }}
-              transactionTypeFilter={transactionTypeFilter}
-              onTransactionTypeFilterChange={setTransactionTypeFilter}
-              transactionCounts={transactionCounts}
-              filteredTransactions={paginatedTransactions}
-              transactionCurrentPage={transactionCurrentPage}
-              transactionPagination={{
-                page: transactionCurrentPage,
-                limit: transactionItemsPerPage,
-                total: filteredTransactions.length,
-                totalPages: transactionTotalPages,
-              }}
-              onTransactionPageChange={setTransactionCurrentPage}
-            />
-          );
-        })()}
+        {activeTab === "transaction" &&
+          (() => {
+            // console.log("[Inventory] 🎨 Rendering TransactionsView with props:", {
+            //   filteredTransactionsCount: filteredTransactions.length,
+            //   transactionDataCount: transactionData.length,
+            //   transactionTypeFilter,
+            //   transactionCounts,
+            //   transactionsLoading,
+            //   startDate: startDate?.toISOString(),
+            //   endDate: endDate?.toISOString(),
+            // });
+            return (
+              <TransactionsView
+                startDate={startDate}
+                endDate={endDate}
+                onDateRangeChange={(start, end) => {
+                  setStartDate(start);
+                  setEndDate(end);
+                }}
+                transactionTypeFilter={transactionTypeFilter}
+                onTransactionTypeFilterChange={setTransactionTypeFilter}
+                transactionCounts={transactionCounts}
+                filteredTransactions={paginatedTransactions}
+                transactionCurrentPage={transactionCurrentPage}
+                transactionPagination={{
+                  page: transactionCurrentPage,
+                  limit: transactionItemsPerPage,
+                  total: filteredTransactions.length,
+                  totalPages: transactionTotalPages,
+                }}
+                onTransactionPageChange={setTransactionCurrentPage}
+              />
+            );
+          })()}
 
         {/* Pagination - Only show for inventory tab and when there's more than 1 page */}
         {activeTab === "inventory" && totalPages > 1 && (
@@ -1843,7 +1979,7 @@ const Inventory = () => {
             <div className="text-sm text-gray-600">
               Page {currentPage} of {totalPages}
             </div>
-            
+
             {/* Right side - Navigation buttons */}
             <div className="flex items-center gap-2">
               <button
@@ -1853,7 +1989,7 @@ const Inventory = () => {
               >
                 Previous
               </button>
-              <form 
+              <form
                 onSubmit={handlePageInputSubmit}
                 className="flex items-center gap-1"
               >
@@ -1865,7 +2001,7 @@ const Inventory = () => {
                   onChange={handlePageInputChange}
                   onBlur={handlePageInputBlur}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if (e.key === "Enter") {
                       e.preventDefault();
                       e.target.blur();
                     }
@@ -1942,8 +2078,18 @@ const Inventory = () => {
                   className="flex items-center justify-center w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors flex-shrink-0"
                   aria-label="Close"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -1957,7 +2103,7 @@ const Inventory = () => {
                 try {
                   const row = getSelectedReorderPointRow(
                     setReorderPointForm.itemName,
-                    setReorderPointForm.variant
+                    setReorderPointForm.variant,
                   );
                   const itemId = row ? row.item_id || row.id : null;
                   if (!itemId) {
@@ -1966,14 +2112,22 @@ const Inventory = () => {
                   await inventoryService.setReorderPoint(
                     itemId,
                     setReorderPointForm.reorderPoint,
-                    setReorderPointForm.variant || undefined
+                    setReorderPointForm.variant || undefined,
                   );
                   setIsSetReorderPointModalOpen(false);
-                  setSetReorderPointForm({ itemName: "", variant: "", reorderPoint: "" });
+                  setSetReorderPointForm({
+                    itemName: "",
+                    variant: "",
+                    reorderPoint: "",
+                  });
                   fetchInventoryData();
-                  window.dispatchEvent(new CustomEvent("inventory-reorder-point-updated"));
+                  window.dispatchEvent(
+                    new CustomEvent("inventory-reorder-point-updated"),
+                  );
                 } catch (err) {
-                  setSetReorderPointError(err.message || "Failed to set reorder point");
+                  setSetReorderPointError(
+                    err.message || "Failed to set reorder point",
+                  );
                 } finally {
                   setSetReorderPointSaving(false);
                 }
@@ -1986,7 +2140,9 @@ const Inventory = () => {
               )}
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Item Name</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Item Name
+                  </label>
                   <SearchableSelect
                     value={setReorderPointForm.itemName}
                     onChange={(selectedValue) => {
@@ -2004,17 +2160,21 @@ const Inventory = () => {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Variant</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Variant
+                  </label>
                   <select
                     value={setReorderPointForm.variant}
                     onChange={(e) => {
                       const selectedVariant = e.target.value;
                       const selectedRow = getSelectedReorderPointRow(
                         setReorderPointForm.itemName,
-                        selectedVariant
+                        selectedVariant,
                       );
                       const currentReorderPoint =
-                        selectedRow?.reorderPoint ?? selectedRow?.reorder_point ?? "";
+                        selectedRow?.reorderPoint ??
+                        selectedRow?.reorder_point ??
+                        "";
                       setSetReorderPointForm((prev) => ({
                         ...prev,
                         variant: selectedVariant,
@@ -2031,19 +2191,27 @@ const Inventory = () => {
                   >
                     <option value="">Choose Variant</option>
                     {setReorderPointForm.itemName &&
-                      [...new Set(
-                        inventoryData
-                          .filter((r) => r.item === setReorderPointForm.itemName)
-                          .map((r) => r.size)
-                      )].sort().map((size) => (
-                        <option key={size} value={size}>
-                          {size}
-                        </option>
-                      ))}
+                      [
+                        ...new Set(
+                          inventoryData
+                            .filter(
+                              (r) => r.item === setReorderPointForm.itemName,
+                            )
+                            .map((r) => r.size),
+                        ),
+                      ]
+                        .sort()
+                        .map((size) => (
+                          <option key={size} value={size}>
+                            {size}
+                          </option>
+                        ))}
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-gray-700">Reorder Point</label>
+                  <label className="text-sm font-medium text-gray-700">
+                    Reorder Point
+                  </label>
                   <input
                     type="number"
                     min="0"
@@ -2066,7 +2234,11 @@ const Inventory = () => {
                   type="button"
                   onClick={() => {
                     setIsSetReorderPointModalOpen(false);
-                    setSetReorderPointForm({ itemName: "", variant: "", reorderPoint: "" });
+                    setSetReorderPointForm({
+                      itemName: "",
+                      variant: "",
+                      reorderPoint: "",
+                    });
                     setSetReorderPointError(null);
                   }}
                   className="px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 text-sm font-medium disabled:opacity-50"
