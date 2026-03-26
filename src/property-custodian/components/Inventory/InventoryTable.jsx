@@ -53,10 +53,15 @@ const InventoryTable = ({
   };
 
   /**
-   * Total Inventory Cost — same basis as Total Amount (WAC / totalAmount from API) so columns
-   * and footer do not diverge.
+   * Total Inventory Cost — Ending Inventory × Unit Price.
+   * This reflects the current value of remaining stock and decreases as items are released,
+   * unlike Total Amount which is fixed to the backend WAC valuation.
    */
-  const getTotalInventoryCostPerItem = (item) => getTotalAmountPerItem(item);
+  const getTotalInventoryCostPerItem = (item) => {
+    const endingInventory = Number(item.endingInventory) || 0;
+    const unitPrice = Number(getDisplayUnitPrice(item)) || 0;
+    return endingInventory * unitPrice;
+  };
 
   // Use current filtered inventory dataset so footer matches selected date range/search filters.
   const dataForTotalCost = inventoryData;
