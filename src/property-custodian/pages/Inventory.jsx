@@ -574,21 +574,39 @@ const Inventory = () => {
 
   const handleUpdateQuantityItemChange = useCallback(
     (selectedValue) => {
+      // Compute variants for the newly selected item so we can auto-select
+      // when there is only one option (e.g. accessories stored as "N/A").
+      const itemVariants = [
+        ...new Set(
+          (inventoryData || [])
+            .filter(
+              (row) =>
+                (row.item || "").trim() === (selectedValue || "").trim(),
+            )
+            .map((row) => row.size)
+            .filter(Boolean),
+        ),
+      ].sort();
+      const autoVariant = itemVariants.length === 1 ? itemVariants[0] : "";
+
       setUpdateQuantityForm((prev) => {
         const nextForm = {
           ...prev,
           itemName: selectedValue || "",
-          variant: "",
+          variant: autoVariant,
           remarks: "",
           noReleaseAcknowledged: false,
         };
         if (nextForm.fieldToEdit === "return") {
-          nextForm.unitPrice = resolveReturnUnitPrice(nextForm.itemName, "");
+          nextForm.unitPrice = resolveReturnUnitPrice(
+            nextForm.itemName,
+            autoVariant,
+          );
         }
         return nextForm;
       });
     },
-    [resolveReturnUnitPrice],
+    [resolveReturnUnitPrice, inventoryData],
   );
 
   const handleUpdateQuantityVariantChange = useCallback(

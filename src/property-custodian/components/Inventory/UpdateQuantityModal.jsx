@@ -27,6 +27,13 @@ const UpdateQuantityModal = ({
   if (!isOpen) return null;
   const isReturnMode = formData.fieldToEdit === "return";
 
+  // Accessories (and any item without meaningful size variants) have only "N/A"
+  // or no variant options at all. In those cases hide the variant selector so
+  // the user is not required to pick a size that doesn't exist.
+  const hasNoMeaningfulVariants =
+    variantOptions.length === 0 ||
+    (variantOptions.length === 1 && variantOptions[0] === "N/A");
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-3 sm:p-4">
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl max-w-3xl w-full max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col font-sf-medium">
@@ -85,27 +92,33 @@ const UpdateQuantityModal = ({
                   <label className="text-sm font-medium text-gray-700">
                     Variant
                   </label>
-                  <select
-                    name="variant"
-                    value={formData.variant}
-                    onChange={(e) => {
-                      if (typeof onVariantChange === "function") {
-                        onVariantChange(e.target.value);
-                      } else {
-                        onFormChange(e);
-                      }
-                    }}
-                    className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    disabled={!formData.itemName}
-                    required
-                  >
-                    <option value="">Choose Variant</option>
-                    {variantOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
+                  {hasNoMeaningfulVariants && formData.itemName ? (
+                    <div className="w-full px-3 py-2.5 rounded-lg border border-gray-200 bg-gray-100 text-sm text-gray-500 italic">
+                      No size variant (Accessories)
+                    </div>
+                  ) : (
+                    <select
+                      name="variant"
+                      value={formData.variant}
+                      onChange={(e) => {
+                        if (typeof onVariantChange === "function") {
+                          onVariantChange(e.target.value);
+                        } else {
+                          onFormChange(e);
+                        }
+                      }}
+                      className="w-full px-3 py-2.5 rounded-lg border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={!formData.itemName}
+                      required={!hasNoMeaningfulVariants}
+                    >
+                      <option value="">Choose Variant</option>
+                      {variantOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 
