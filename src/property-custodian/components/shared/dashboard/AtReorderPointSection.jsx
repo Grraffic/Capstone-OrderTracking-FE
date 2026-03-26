@@ -41,8 +41,9 @@ const AtReorderPointSection = ({ totalAtReorderPoint, inventoryRows = [] }) => {
     if (!Array.isArray(inventoryRows) || inventoryRows.length === 0) {
       return safeData;
     }
-    return safeData.filter((row) => {
-      const match = inventoryRows.find((inv) => {
+
+    const findMatch = (row) =>
+      inventoryRows.find((inv) => {
         const nameMatch =
           (inv.item || "").trim().toLowerCase() ===
           (row.itemName || "").trim().toLowerCase();
@@ -53,9 +54,21 @@ const AtReorderPointSection = ({ totalAtReorderPoint, inventoryRows = [] }) => {
         const rowSz = normalizeSizeForMatch(row.size || "N/A");
         return nameMatch && eduMatch && invSz === rowSz;
       });
-      if (!match) return true;
-      return (Number(match.endingInventory) || 0) > 0;
-    });
+
+    return safeData
+      .filter((row) => {
+        const match = findMatch(row);
+        if (!match) return true;
+        // Hide if the frontend-corrected ending inventory (released orders subtracted) is 0
+        return (Number(match.endingInventory) || 0) > 0;
+      })
+      .map((row) => {
+        const match = findMatch(row);
+        if (!match) return row;
+        // Sync currentStock with the frontend-corrected endingInventory so it
+        // matches the Ending Inventory column in the main table (released orders subtracted).
+        return { ...row, currentStock: Number(match.endingInventory) || 0 };
+      });
   }, [safeData, inventoryRows]);
 
   useEffect(() => {
