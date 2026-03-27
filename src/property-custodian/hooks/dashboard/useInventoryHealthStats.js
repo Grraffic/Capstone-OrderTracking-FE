@@ -159,7 +159,7 @@ export const useInventoryHealthStats = (
 
         setStats({ totalItemVariants, atReorderPoint, outOfStock });
 
-        console.log("[InventoryHealth] Stats:", { totalItemVariants, atReorderPoint, outOfStock });
+        // console.log("[InventoryHealth] Stats:", { totalItemVariants, atReorderPoint, outOfStock });
       } else {
         setStats({ totalItemVariants: 0, atReorderPoint: 0, outOfStock: 0 });
       }

@@ -161,7 +161,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     return () => {
       // Cleanup polling when component unmounts or order changes
       if (pollingIntervalRef.current) {
-        console.log("🧹 QRCodeModal: Cleaning up polling on unmount/order change");
+        // console.log("🧹 QRCodeModal: Cleaning up polling on unmount/order change");
         clearInterval(pollingIntervalRef.current);
         pollingIntervalRef.current = null;
       }
@@ -176,7 +176,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
       pollingIntervalRef.current = null;
     }
     
-    console.log("🔄 QRCodeModal: Starting polling fallback", { orderId, orderNumber });
+    // console.log("🔄 QRCodeModal: Starting polling fallback", { orderId, orderNumber });
     
     pollingIntervalRef.current = setInterval(async () => {
       if (hasClosedRef.current) {
@@ -221,11 +221,11 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
         if (orderData) {
           const status = orderData.status?.toLowerCase();
           if (status === "claimed" || status === "completed") {
-            console.log("✅ QRCodeModal: Polling detected order claimed, closing modal", {
-              orderId: orderData.id,
-              orderNumber: orderData.order_number,
-              status
-            });
+            // console.log("✅ QRCodeModal: Polling detected order claimed, closing modal", {
+            //   orderId: orderData.id,
+            //   orderNumber: orderData.order_number,
+            //   status
+            // });
             hasClosedRef.current = true;
             clearInterval(pollingIntervalRef.current);
             pollingIntervalRef.current = null;
@@ -251,13 +251,13 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     const orderNumber = order.orderNumber || order.order_number;
     const orderId = order.id || order.orderId;
     
-    console.log("🔍 QRCodeModal: Initializing", { 
-      orderNumber, 
-      orderId,
-      orderKeys: Object.keys(order),
-      isConnected,
-      fullOrder: order 
-    });
+    // console.log("🔍 QRCodeModal: Initializing", {
+    //   orderNumber,
+    //   orderId,
+    //   orderKeys: Object.keys(order),
+    //   isConnected,
+    //   fullOrder: order
+    // });
     
     // Early return if we don't have any identifiers
     if (!orderNumber && !orderId) {
@@ -275,7 +275,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
     }
     
     const handleOrderClaimed = (data) => {
-      console.log("📡 QRCodeModal: Received order:claimed event", data);
+      // console.log("📡 QRCodeModal: Received order:claimed event", data);
       
       // Extract order identifiers from event data (checking multiple locations)
       const eventData = extractOrderIdentifiers(data);
@@ -288,15 +288,15 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
       const matches = matchesByNumber || matchesById;
       
       if (matches) {
-        console.log("✅ QRCodeModal: Order claimed/released via socket, closing modal", {
-          matchesByNumber,
-          matchesById,
-          eventOrderNumber,
-          modalOrderNumber: orderNumber,
-          eventOrderId,
-          modalOrderId: orderId,
-          eventData
-        });
+        // console.log("✅ QRCodeModal: Order claimed/released via socket, closing modal", {
+        //   matchesByNumber,
+        //   matchesById,
+        //   eventOrderNumber,
+        //   modalOrderNumber: orderNumber,
+        //   eventOrderId,
+        //   modalOrderId: orderId,
+        //   eventData
+        // });
         hasClosedRef.current = true;
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
@@ -304,21 +304,21 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
         }
         onClose();
       } else {
-        console.log("⚠️ QRCodeModal: Order number/ID mismatch in order:claimed event", { 
-          eventOrderNumber, 
-          modalOrderNumber: orderNumber,
-          eventOrderId,
-          modalOrderId: orderId,
-          matchesByNumber,
-          matchesById,
-          eventData
-        });
+        // console.log("⚠️ QRCodeModal: Order number/ID mismatch in order:claimed event", {
+        //   eventOrderNumber,
+        //   modalOrderNumber: orderNumber,
+        //   eventOrderId,
+        //   modalOrderId: orderId,
+        //   matchesByNumber,
+        //   matchesById,
+        //   eventData
+        // });
       }
     };
 
     // Listen for order updated events
     const handleOrderUpdated = (data) => {
-      console.log("📡 QRCodeModal: Received order:updated event", data);
+      // console.log("📡 QRCodeModal: Received order:updated event", data);
       
       // Extract order identifiers from event data (checking multiple locations)
       const eventData = extractOrderIdentifiers(data);
@@ -332,16 +332,16 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
       const matches = matchesByNumber || matchesById;
       
       if (matches && (status === "claimed" || status === "completed")) {
-        console.log("✅ QRCodeModal: Order status updated to claimed via socket, closing modal", {
-          matchesByNumber,
-          matchesById,
-          eventOrderNumber,
-          modalOrderNumber: orderNumber,
-          eventOrderId,
-          modalOrderId: orderId,
-          status,
-          eventData
-        });
+        // console.log("✅ QRCodeModal: Order status updated to claimed via socket, closing modal", {
+        //   matchesByNumber,
+        //   matchesById,
+        //   eventOrderNumber,
+        //   modalOrderNumber: orderNumber,
+        //   eventOrderId,
+        //   modalOrderId: orderId,
+        //   status,
+        //   eventData
+        // });
         hasClosedRef.current = true;
         if (pollingIntervalRef.current) {
           clearInterval(pollingIntervalRef.current);
@@ -349,23 +349,23 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
         }
         onClose();
       } else if (matches) {
-        console.log("⚠️ QRCodeModal: Order matches but status is not claimed:", { 
-          status, 
-          matchesByNumber, 
-          matchesById,
-          eventData
-        });
+        // console.log("⚠️ QRCodeModal: Order matches but status is not claimed:", {
+        //   status,
+        //   matchesByNumber,
+        //   matchesById,
+        //   eventData
+        // });
       } else {
-        console.log("⚠️ QRCodeModal: Order number/ID mismatch in order:updated event", { 
-          eventOrderNumber, 
-          modalOrderNumber: orderNumber,
-          eventOrderId,
-          modalOrderId: orderId,
-          status,
-          matchesByNumber,
-          matchesById,
-          eventData
-        });
+        // console.log("⚠️ QRCodeModal: Order number/ID mismatch in order:updated event", {
+        //   eventOrderNumber,
+        //   modalOrderNumber: orderNumber,
+        //   eventOrderId,
+        //   modalOrderId: orderId,
+        //   status,
+        //   matchesByNumber,
+        //   matchesById,
+        //   eventData
+        // });
       }
     };
 
@@ -375,7 +375,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
 
     // Cleanup function
     return () => {
-      console.log("🧹 QRCodeModal: Cleaning up listeners and polling");
+      // console.log("🧹 QRCodeModal: Cleaning up listeners and polling");
       off("order:claimed", handleOrderClaimed);
       off("order:updated", handleOrderUpdated);
       if (pollingIntervalRef.current) {
@@ -415,7 +415,7 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
   try {
     // Use the utility function to generate QR data
     qrData = generateOrderReceiptQRData(minimalQRData);
-    console.log("QR Code Generated:", qrData);
+    // console.log("QR Code Generated:", qrData);
   } catch (error) {
     console.error("Error generating QR data:", error);
     setQrError("Failed to generate QR code data: " + error.message);
@@ -636,13 +636,13 @@ const QRCodeModal = ({ order, onClose, profileData }) => {
           <div className="mb-4 sm:mb-6 flex justify-end">
             {remainingDays >= 0 ? (
               <span
-                className="text-sm font-medium italic"
+                className="text-base sm:text-lg font-semibold italic"
                 style={{ color: "rgba(241, 0, 0, 0.6)" }}
               >
                 Expires in ({remainingDays}) days
               </span>
             ) : (
-              <span className="text-sm font-medium text-red-600">
+              <span className="text-base sm:text-lg font-semibold text-red-600">
                 Expired
               </span>
             )}
@@ -1375,6 +1375,21 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
     return "General";
   };
 
+  // Show size only when it contains a meaningful value (e.g., S/M/L/XL).
+  // Hide placeholder values such as N/A or Standard.
+  const getDisplaySize = (item, order) => {
+    const rawSize = item?.size || order?.size || "";
+    const normalized = String(rawSize).trim();
+    if (!normalized) return null;
+
+    const lower = normalized.toLowerCase();
+    if (lower === "n/a" || lower === "na" || lower === "standard") {
+      return null;
+    }
+
+    return normalized;
+  };
+
   // Handle Show QR
   const handleShowQR = (order) => {
     setSelectedOrder(order);
@@ -2035,6 +2050,15 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                 );
                 const showUnsuccessfulClaimNotice =
                   activeCategory === "orders" && unsuccessfulClaimAttempts >= 2;
+                const orderIssuedAt =
+                  rawOrder.created_at ||
+                  order.created_at ||
+                  order.orderDate ||
+                  rawOrder.orderDate ||
+                  null;
+                const orderRemainingDays = orderIssuedAt
+                  ? getRemainingValidityDays(orderIssuedAt, QR_VALID_DAYS)
+                  : null;
                 
                 return (
                 <div 
@@ -2079,9 +2103,11 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                             {/* Item Details - Reorganized */}
                             <div className="flex-1 min-w-0">
                               {/* Size */}
-                              <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">
-                                {item.size || order.size || "Standard"}
-                              </p>
+                              {getDisplaySize(item, order) && (
+                                <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">
+                                  {getDisplaySize(item, order)}
+                                </p>
+                              )}
                               {/* Item Name */}
                               <h4 className="text-sm sm:text-base md:text-lg font-bold text-[#003363] mb-0.5 sm:mb-1 line-clamp-2">
                                 {item.name || order.item}
@@ -2095,6 +2121,18 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
 
                             {/* Price: same as MyCart – strikethrough product price above Free (logo patch etc. use display price when 0) */}
                             <div className="flex-shrink-0 text-right">
+                              {activeCategory === "orders" &&
+                                itemIndex === 0 &&
+                                orderRemainingDays !== null && (
+                                  <span
+                                    className="block text-xs sm:text-sm md:text-base font-semibold italic mb-0.5 sm:mb-1"
+                                    style={{ color: "rgba(241, 0, 0, 0.6)" }}
+                                  >
+                                    {orderRemainingDays >= 0
+                                      ? `Expires in (${orderRemainingDays}) days`
+                                      : "Expired"}
+                                  </span>
+                                )}
                               {(() => {
                                 const itemName = item.name || order.item || "";
                                 const displayUnitPrice = getDisplayPriceForFreeItem(itemName, item.price);
@@ -2130,9 +2168,11 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                         </div>
                         <div className="flex-1 min-w-0">
                           {/* Size */}
-                          <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">
-                            {order.size || "Standard"}
-                          </p>
+                          {getDisplaySize({}, order) && (
+                            <p className="text-xs sm:text-sm text-gray-600 mb-0.5 sm:mb-1">
+                              {getDisplaySize({}, order)}
+                            </p>
+                          )}
                           {/* Item Name */}
                           <h4 className="text-sm sm:text-base md:text-lg font-bold text-[#003363] mb-0.5 sm:mb-1 line-clamp-2">
                             {order.item}
@@ -2144,6 +2184,16 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                         </div>
                         {/* Price: same as MyCart – strikethrough order total above Free (logo patch etc. use display price when 0) */}
                         <div className="flex-shrink-0 text-right">
+                          {activeCategory === "orders" && orderRemainingDays !== null && (
+                            <span
+                              className="block text-xs sm:text-sm md:text-base font-semibold italic mb-0.5 sm:mb-1"
+                              style={{ color: "rgba(241, 0, 0, 0.6)" }}
+                            >
+                              {orderRemainingDays >= 0
+                                ? `Expires in (${orderRemainingDays}) days`
+                                : "Expired"}
+                            </span>
+                          )}
                           {(() => {
                             const orderItemName = order.item || "";
                             const storedTotal = Number(order.total_amount) || 0;
@@ -2241,24 +2291,26 @@ const MyOrders = ({ sortOrder = "newest", variant, profileData: profileDataProp 
                             </button>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 sm:gap-3">
-                            {activeCategory === "orders" && (
+                          <div className="flex flex-col items-end gap-1.5 sm:gap-2">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              {activeCategory === "orders" && (
+                                <button
+                                  onClick={() => setOrderToCancel(order)}
+                                  disabled={cancellingOrders[order.id || order._original?.id]}
+                                  className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title="Cancel this order so you can place a new one"
+                                >
+                                  {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
+                                </button>
+                              )}
                               <button
-                                onClick={() => setOrderToCancel(order)}
-                                disabled={cancellingOrders[order.id || order._original?.id]}
-                                className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-red-500 text-red-600 rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-red-500 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Cancel this order so you can place a new one"
+                                onClick={() => handleShowQR(order)}
+                                className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-[#003363] hover:text-white"
+                                title="Show QR code"
                               >
-                                {cancellingOrders[order.id || order._original?.id] ? "Cancelling…" : "Cancel"}
+                                Show QR
                               </button>
-                            )}
-                            <button
-                              onClick={() => handleShowQR(order)}
-                              className="px-4 sm:px-5 md:px-6 py-1.5 sm:py-2 border-2 border-[#003363] text-[#003363] rounded-full font-semibold text-xs sm:text-sm transition-colors hover:bg-[#003363] hover:text-white"
-                              title="Show QR code"
-                            >
-                              Show QR
-                            </button>
+                            </div>
                           </div>
                         )}
                       </div>

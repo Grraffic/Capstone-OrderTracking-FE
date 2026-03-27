@@ -106,14 +106,14 @@ const StudentProfile = () => {
     
     // Debug logging for order_released activities
     if (type === "order_released" || type === "claimed") {
-      console.log(`🎨 StudentProfile: Rendering ${type} activity:`, {
-        type,
-        orderId: activity.orderId,
-        orderNumber: activity.orderNumber,
-        itemCount: activity.itemCount,
-        hasDescription: !!description,
-        descriptionLength: description?.length || 0
-      });
+      // console.log(`🎨 StudentProfile: Rendering ${type} activity:`, {
+      //   type,
+      //   orderId: activity.orderId,
+      //   orderNumber: activity.orderNumber,
+      //   itemCount: activity.itemCount,
+      //   hasDescription: !!description,
+      //   descriptionLength: description?.length || 0
+      // });
     }
 
     // Parse the description to create title and detail parts
@@ -415,15 +415,15 @@ const StudentProfile = () => {
                         // Debug logging for activities display
                         const orderReleasedActivities = activities.filter(a => a.type === 'order_released' || a.type === 'claimed');
                         if (orderReleasedActivities.length > 0) {
-                          console.log(`🎨 StudentProfile: Rendering ${activities.length} activities, including ${orderReleasedActivities.length} claimed/released orders`);
-                          orderReleasedActivities.forEach(a => {
-                            console.log(`🎨 StudentProfile: Order activity:`, {
-                              type: a.type,
-                              orderNumber: a.orderNumber,
-                              orderId: a.orderId,
-                              hasDescription: !!a.description
-                            });
-                          });
+                          // console.log(`🎨 StudentProfile: Rendering ${activities.length} activities, including ${orderReleasedActivities.length} claimed/released orders`);
+                          // orderReleasedActivities.forEach(a => {
+                          //   console.log(`🎨 StudentProfile: Order activity:`, {
+                          //     type: a.type,
+                          //     orderNumber: a.orderNumber,
+                          //     orderId: a.orderId,
+                          //     hasDescription: !!a.description
+                          //   });
+                          // });
                         }
                         return activities.map((activity) => (
                         <div

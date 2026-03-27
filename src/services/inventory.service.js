@@ -58,9 +58,9 @@ class InventoryService {
         ? `${url}${cacheBuster}`
         : `${url}?${cacheBuster.substring(1)}`;
 
-      console.log(
-        `[InventoryService] Fetching inventory report from: ${finalUrl}`,
-      );
+      // console.log(
+      //   `[InventoryService] Fetching inventory report from: ${finalUrl}`,
+      // );
 
       const response = await fetch(finalUrl, {
         method: "GET",

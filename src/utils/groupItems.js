@@ -18,7 +18,7 @@ export const groupItemsByVariations = (items) => {
     return [];
   }
 
-  console.log(`[groupItemsByVariations] Processing ${items.length} items`);
+  // console.log(`[groupItemsByVariations] Processing ${items.length} items`);
   
   // Create a map to group items by name, item_type, and size
   // Items with same name+size but different IDs will NOT be grouped
@@ -83,13 +83,13 @@ export const groupItemsByVariations = (items) => {
       group.totalStock += itemStock;
       group.stock = group.totalStock;
       
-      console.log(`[groupItemsByVariations] Added to existing group: ${name} - ${size} (ID: ${itemId})`);
+      // console.log(`[groupItemsByVariations] Added to existing group: ${name} - ${size} (ID: ${itemId})`);
     } else {
       // Create new group - this item will be its own group
       // Use name+type as the key (ignore size and education level) to combine items with same name
       // Items with same name+type but different sizes/education levels will be grouped together
       const groupKey = `${name}-${itemType}`;
-      console.log(`[groupItemsByVariations] Creating new group for: ${name} - ${itemType} (ID: ${itemId})`);
+      // console.log(`[groupItemsByVariations] Creating new group for: ${name} - ${itemType} (ID: ${itemId})`);
       groupedMap.set(groupKey, {
         groupKey,
         name,
@@ -141,11 +141,11 @@ export const groupItemsByVariations = (items) => {
     return group;
   });
   
-  console.log(`[groupItemsByVariations] Created ${result.length} groups from ${items.length} items`);
+  // console.log(`[groupItemsByVariations] Created ${result.length} groups from ${items.length} items`);
   result.forEach((group, idx) => {
-    console.log(`[groupItemsByVariations] Group ${idx + 1}: "${group.name}" has ${group.variations.length} variation(s)`, 
-      group.variations.map(v => ({ id: v.id, size: v.size, stock: v.stock, purchases: v.purchases || 0 }))
-    );
+    // console.log(`[groupItemsByVariations] Group ${idx + 1}: "${group.name}" has ${group.variations.length} variation(s)`,
+    //   group.variations.map(v => ({ id: v.id, size: v.size, stock: v.stock, purchases: v.purchases || 0 }))
+    // );
   });
   
   return result;

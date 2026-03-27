@@ -54,7 +54,7 @@ export const useLoginRedirect = (user) => {
       // Get the page user was trying to access before login
       const from = location.state?.from?.pathname || getDefaultRoute(user);
 
-      console.log(`Redirecting user to: ${from}`);
+      // console.log(`Redirecting user to: ${from}`);
       navigate(from, { replace: true });
     }
   }, [user, navigate, location]);
